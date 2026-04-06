@@ -50,6 +50,61 @@ function sendNotification(title, body, icon = '/icons/icon-192.png', tag = 'iot-
   });
 }
 
+// ── Web Audio API Siren Logic ─────────────────────────────────
+let audioCtx = null;
+let oscillator = null;
+let gainNode = null;
+let sirenInterval = null;
+let isSirenPlaying = false;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function playWebSiren() {
+  if (isSirenPlaying) return;
+  initAudio();
+  isSirenPlaying = true;
+  
+  oscillator = audioCtx.createOscillator();
+  gainNode = audioCtx.createGain();
+  
+  oscillator.type = 'square';
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  // Set volume (0.0 to 1.0)
+  gainNode.gain.value = 0.5;
+  oscillator.start();
+  
+  // Create a two-tone European style siren (High/Low frequency)
+  let isHigh = false;
+  sirenInterval = setInterval(() => {
+    oscillator.frequency.setValueAtTime(isHigh ? 800 : 600, audioCtx.currentTime);
+    isHigh = !isHigh;
+  }, 500);
+}
+
+function stopWebSiren() {
+  if (!isSirenPlaying) return;
+  isSirenPlaying = false;
+  clearInterval(sirenInterval);
+  if (oscillator) {
+    oscillator.stop();
+    oscillator.disconnect();
+    oscillator = null;
+  }
+  if (gainNode) {
+    gainNode.disconnect();
+    gainNode = null;
+  }
+}
+
 /**
  * Check status and send notification if status is critical.
  * Prevents duplicate notifications for the same status.
@@ -58,6 +113,14 @@ function sendNotification(title, body, icon = '/icons/icon-192.png', tag = 'iot-
  * @param {number} tegangan - voltage in Volts
  */
 function checkAndNotify(status, arus, tegangan) {
+  // Always evaluate siren state based on current status
+  if (status === 'LEAKAGE' || status === 'DANGER') {
+    // Requires page interaction first! (browser policy)
+    playWebSiren();
+  } else {
+    stopWebSiren();
+  }
+
   if (status === lastNotifiedStatus) return;  // avoid spam
 
   if (status === 'LEAKAGE') {

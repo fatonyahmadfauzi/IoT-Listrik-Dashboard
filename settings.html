@@ -372,27 +372,7 @@
   </div>
 </div>
 
-<!-- ── Reset Password Modal ────────────────────────────────── -->
-<div id="resetPwModal" class="modal-overlay">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title">🔑 Reset Password</h2>
-      <button class="modal-close" id="resetModalClose">✕</button>
-    </div>
-    <input type="hidden" id="resetUid" />
-    <p class="text-sm text-muted mb-16">
-      Reset password untuk: <strong id="resetEmailLabel">—</strong>
-    </p>
-    <div class="form-group">
-      <label class="form-label" for="resetNewPw">Password Baru * (min 8 karakter)</label>
-      <input id="resetNewPw" class="form-input" type="password" placeholder="Password baru" />
-    </div>
-    <div class="modal-footer">
-      <button id="resetCancelBtn" class="btn btn-ghost">Batal</button>
-      <button id="resetSubmitBtn" class="btn btn-warning">Simpan Password</button>
-    </div>
-  </div>
-</div>
+<!-- Reset PW modal dihapus — gunakan sendPasswordResetEmail() via tombol 📧 Reset PW -->
 
 <div id="toastContainer" class="toast-container"></div>
 <script type="module" src="/settings.js"></script>

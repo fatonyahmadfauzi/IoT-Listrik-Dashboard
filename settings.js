@@ -1,30 +1,38 @@
 /**
- * settings.js — Settings page logic (Admin only)
+ * settings.js — Settings page (Admin only) — NO Firebase Functions required
  * ─────────────────────────────────────────────────────────────────────
- * Handles:
- *   A. System/sensor settings  → /settings in Firebase RTDB
- *   B. Telegram config         → /settings/telegramBotToken, telegramChatId
- *   C. Calibration             → /settings/arusCalibration, teganganCalibration
- *   D. Timing                  → /settings/sendIntervalMs
- *   E. User management         → via Firebase Functions (Admin SDK)
+ * User management tanpa Firebase Functions:
  *
- * Runtime Sync: All settings saved here are read periodically by the
- * ESP32 firmware (every ~10 s by default) without reflashing.
+ *   LIST   → baca /users dari RTDB langsung
+ *   CREATE → pakai Secondary Firebase App (admin tidak ter-logout)
+ *   DELETE → hapus /users/{uid} dari RTDB (Auth account tetap ada)
+ *   ROLE   → tulis langsung ke /users/{uid}/role di RTDB
+ *   RESET  → sendPasswordResetEmail() — kirim email ke user
+ *
+ * Tradeoff vs Functions:
+ *  ✅ Tanpa Functions, tanpa Cloud APIs yang perlu diaktifkan
+ *  ✅ Lebih simpel untuk thesis project
+ *  ⚠️  Delete hanya menghapus RTDB profile, bukan Firebase Auth account
+ *      (user masih bisa login tapi tidak punya role → dianggap unauthorized)
+ *  ⚠️  Admin tidak bisa set password langsung — hanya bisa kirim reset email
+ *  ⚠️  List user hanya menampilkan yang pernah login (ada di RTDB /users)
  * ─────────────────────────────────────────────────────────────────────
  */
 
-import { db, functions }  from './firebase-config.js';
+import { db, auth, firebaseConfig }  from './firebase-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout } from './auth.js';
 import { showToast }      from './notifications.js';
-import { ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { httpsCallable }     from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
-
-// ── Cloud Functions refs ──────────────────────────────────────
-const fnListUsers     = httpsCallable(functions, 'listUsers');
-const fnCreateUser    = httpsCallable(functions, 'createUser');
-const fnDeleteUser    = httpsCallable(functions, 'deleteUser');
-const fnSetUserRole   = httpsCallable(functions, 'setUserRole');
-const fnResetPassword = httpsCallable(functions, 'resetUserPassword');
+import { ref, onValue, set, remove, get }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  sendPasswordResetEmail,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  signOut,
+  getAuth,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeApp, deleteApp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
 // ── DOM: System settings ──────────────────────────────────────
 const inpThreshold    = document.getElementById('inpThreshold');
@@ -55,27 +63,22 @@ const formRole        = document.getElementById('newRole');
 const modalSubmit     = document.getElementById('modalSubmitBtn');
 const modalCancel     = document.getElementById('modalCancelBtn');
 const modalClose      = document.getElementById('modalClose');
-const resetModal      = document.getElementById('resetPwModal');
-const resetUidInput   = document.getElementById('resetUid');
-const resetPwInput    = document.getElementById('resetNewPw');
-const resetSubmit     = document.getElementById('resetSubmitBtn');
-const resetCancel     = document.getElementById('resetCancelBtn');
 
 // ═══════════════════════════════════════════════════════════════
-// VALIDATION HELPERS
+// VALIDATION
 // ═══════════════════════════════════════════════════════════════
 
 function setValidation(id, msg, ok) {
   const el = document.getElementById(id);
-  if (!el) return true;
+  if (!el) return ok;
   el.textContent = msg;
   el.className   = `validation-msg ${ok ? 'ok' : 'error'}`;
   return ok;
 }
 
 function clearValidations() {
-  ['valThreshold', 'valSendInterval', 'valArusCal',
-   'valTeganganCal', 'valBotToken', 'valChatId']
+  ['valThreshold','valSendInterval','valArusCal',
+   'valTeganganCal','valBotToken','valChatId']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.textContent = ''; el.className = 'validation-msg'; }
@@ -90,44 +93,35 @@ function validateAll() {
   if (isNaN(threshold) || threshold <= 0 || threshold > 200) {
     setValidation('valThreshold', '⚠ Threshold harus antara 0.1 – 200 A', false);
     valid = false;
-  } else {
-    setValidation('valThreshold', '✓ Valid', true);
-  }
+  } else { setValidation('valThreshold', '✓ Valid', true); }
 
   const interval = parseInt(inpSendInterval?.value);
   if (isNaN(interval) || interval < 500 || interval > 60000) {
     setValidation('valSendInterval', '⚠ Interval harus antara 500 – 60000 ms', false);
     valid = false;
-  } else {
-    setValidation('valSendInterval', '✓ Valid', true);
-  }
+  } else { setValidation('valSendInterval', '✓ Valid', true); }
 
   const arusCal = parseFloat(inpArusCal?.value);
   if (isNaN(arusCal) || arusCal <= 0 || arusCal > 10) {
-    setValidation('valArusCal', '⚠ Harus antara 0.01 – 10.000', false);
+    setValidation('valArusCal', '⚠ Harus antara 0.01 – 10', false);
     valid = false;
-  } else {
-    setValidation('valArusCal', '✓ Valid', true);
-  }
+  } else { setValidation('valArusCal', '✓ Valid', true); }
 
   const tegCal = parseFloat(inpTeganganCal?.value);
   if (isNaN(tegCal) || tegCal <= 0 || tegCal > 2000) {
     setValidation('valTeganganCal', '⚠ Harus antara 0.01 – 2000', false);
     valid = false;
-  } else {
-    setValidation('valTeganganCal', '✓ Valid', true);
-  }
+  } else { setValidation('valTeganganCal', '✓ Valid', true); }
 
-  // Telegram fields are optional — only validate format if non-empty
   const token = inpBotToken?.value.trim();
   if (token && !/^\d+:[A-Za-z0-9_-]{35,}$/.test(token)) {
-    setValidation('valBotToken', '⚠ Format token tidak valid (contoh: 123456789:ABCDEF...)', false);
+    setValidation('valBotToken', '⚠ Format token tidak valid', false);
     valid = false;
   }
 
   const chatId = inpChatId?.value.trim();
   if (chatId && !/^-?\d+$/.test(chatId)) {
-    setValidation('valChatId', '⚠ Chat ID harus berupa angka (contoh: -100123456789)', false);
+    setValidation('valChatId', '⚠ Chat ID harus angka', false);
     valid = false;
   }
 
@@ -135,58 +129,45 @@ function validateAll() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// LOAD SETTINGS from Firebase /settings
+// SETTINGS — LOAD & SAVE (Firebase RTDB langsung)
 // ═══════════════════════════════════════════════════════════════
 
 function loadSettings() {
   onValue(ref(db, '/settings'), (snap) => {
     const d = snap.val() || {};
-
-    if (inpThreshold)    inpThreshold.value    = d.thresholdArus        ?? 10;
-    if (inpSendInterval) inpSendInterval.value  = d.sendIntervalMs       ?? 2000;
-    if (inpBuzzer)       inpBuzzer.checked       = d.buzzerEnabled        ?? true;
-    if (inpAutoCutoff)   inpAutoCutoff.checked   = d.autoCutoffEnabled    ?? true;
-    if (inpArusCal)      inpArusCal.value         = d.arusCalibration     ?? 1.000;
-    if (inpTeganganCal)  inpTeganganCal.value     = d.teganganCalibration ?? 1.0;
-
-    // Telegram — always show placeholder, never clear an existing value
-    // If token is already saved, show masked hint instead of raw value
-    // (we get the actual stored value for display only)
+    if (inpThreshold)    inpThreshold.value     = d.thresholdArus        ?? 10;
+    if (inpSendInterval) inpSendInterval.value   = d.sendIntervalMs       ?? 2000;
+    if (inpBuzzer)       inpBuzzer.checked        = d.buzzerEnabled        ?? true;
+    if (inpAutoCutoff)   inpAutoCutoff.checked    = d.autoCutoffEnabled    ?? true;
+    if (inpArusCal)      inpArusCal.value          = d.arusCalibration     ?? 1.000;
+    if (inpTeganganCal)  inpTeganganCal.value      = d.teganganCalibration ?? 1.0;
     if (inpBotToken) {
       inpBotToken.value       = d.telegramBotToken ?? '';
       inpBotToken.placeholder = d.telegramBotToken
-        ? '••• (tersimpan, isi ulang untuk mengubah)'
+        ? '••• (tersimpan)'
         : '1234567890:ABCDEF...';
     }
-    if (inpChatId) {
-      inpChatId.value = d.telegramChatId ?? '';
+    if (inpChatId) inpChatId.value = d.telegramChatId ?? '';
+    if (saveStatus) {
+      saveStatus.textContent = '✓ Settings dimuat dari Firebase';
+      setTimeout(() => { if (saveStatus) saveStatus.textContent = ''; }, 3000);
     }
-
-    if (saveStatus) saveStatus.textContent = '✓ Settings dimuat dari Firebase';
-    setTimeout(() => { if (saveStatus) saveStatus.textContent = ''; }, 3000);
   });
 }
-
-// ═══════════════════════════════════════════════════════════════
-// SAVE SETTINGS to Firebase /settings
-// ═══════════════════════════════════════════════════════════════
 
 async function saveSettings() {
   if (!validateAll()) {
     showToast('Periksa kembali nilai yang tidak valid', 'error');
     return;
   }
-
   const payload = {
-    thresholdArus:      parseFloat(inpThreshold?.value    || 10),
-    sendIntervalMs:     parseInt(inpSendInterval?.value   || 2000),
-    buzzerEnabled:      inpBuzzer?.checked      ?? true,
-    autoCutoffEnabled:  inpAutoCutoff?.checked  ?? true,
-    arusCalibration:    parseFloat(inpArusCal?.value      || 1),
-    teganganCalibration:parseFloat(inpTeganganCal?.value  || 1),
+    thresholdArus:       parseFloat(inpThreshold?.value    || 10),
+    sendIntervalMs:      parseInt(inpSendInterval?.value   || 2000),
+    buzzerEnabled:       inpBuzzer?.checked      ?? true,
+    autoCutoffEnabled:   inpAutoCutoff?.checked  ?? true,
+    arusCalibration:     parseFloat(inpArusCal?.value      || 1),
+    teganganCalibration: parseFloat(inpTeganganCal?.value  || 1),
   };
-
-  // Only include Telegram fields if user typed something
   const token  = inpBotToken?.value.trim();
   const chatId = inpChatId?.value.trim();
   if (token)  payload.telegramBotToken = token;
@@ -195,17 +176,12 @@ async function saveSettings() {
   try {
     saveBtn.disabled    = true;
     saveBtn.textContent = '⏳ Menyimpan...';
-    if (saveStatus) saveStatus.textContent = '';
-
     await set(ref(db, '/settings'), payload);
-
-    showToast('Settings berhasil disimpan ✅ — ESP32 akan sinkron dalam ~10 detik', 'success');
-    if (saveStatus) {
-      saveStatus.textContent = '✓ Disimpan ' + new Date().toLocaleTimeString('id-ID');
-    }
+    showToast('Settings tersimpan ✅ — ESP32 sinkron dalam ~10 detik', 'success');
+    if (saveStatus) saveStatus.textContent = '✓ Disimpan ' + new Date().toLocaleTimeString('id-ID');
   } catch (err) {
     showToast('Gagal simpan: ' + err.message, 'error');
-    if (saveStatus) saveStatus.textContent = '✗ Gagal disimpan';
+    if (saveStatus) saveStatus.textContent = '✗ Gagal';
   } finally {
     saveBtn.disabled    = false;
     saveBtn.textContent = '💾 Simpan Semua Settings';
@@ -213,83 +189,117 @@ async function saveSettings() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// USER MANAGEMENT (via Firebase Functions)
+// USER MANAGEMENT — Tanpa Firebase Functions
 // ═══════════════════════════════════════════════════════════════
 
-async function loadUsers() {
+/**
+ * LIST USERS
+ * Baca dari /users di RTDB (hanya user yang pernah login akan tampil).
+ * User yang dibuat via "Tambah User" langsung ditulis ke /users juga.
+ */
+let usersUnsubscribe = null;
+
+function loadUsers() {
   usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <div class="spinner"></div>Memuat pengguna...
     </div></td></tr>`;
 
-  try {
-    const result = await fnListUsers();
-    renderUsers(result.data.users || []);
-  } catch (err) {
+  if (usersUnsubscribe) usersUnsubscribe();
+
+  usersUnsubscribe = onValue(ref(db, '/users'), (snap) => {
+    if (!snap.exists()) {
+      usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
+        Belum ada pengguna</td></tr>`;
+      return;
+    }
+    const users = [];
+    snap.forEach(child => users.push({ uid: child.key, ...child.val() }));
+    renderUsers(users);
+  }, (err) => {
     showToast('Gagal memuat users: ' + err.message, 'error');
-    usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">Gagal memuat data</td></tr>`;
-  }
+  });
 }
 
 function renderUsers(users) {
-  if (users.length === 0) {
-    usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">Belum ada pengguna</td></tr>`;
-    return;
-  }
+  const currentUid = auth.currentUser?.uid;
   usersTbody.innerHTML = users.map(u => {
+    const isMe  = u.uid === currentUid;
     const badge = u.role === 'admin'
       ? `<span class="role-pill admin">Admin</span>`
       : `<span class="role-pill user">User</span>`;
     return `<tr>
       <td>
-        <div style="font-weight:600;">${u.displayName || '—'}</div>
+        <div style="font-weight:600;">${u.displayName || '—'}${isMe ? ' <span style="font-size:10px;color:var(--primary-light);">(kamu)</span>' : ''}</div>
         <div style="font-size:12px;color:var(--text-secondary);">${u.email}</div>
       </td>
       <td>${badge}</td>
       <td class="text-sm text-muted">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '—'}</td>
       <td>
+        ${isMe ? '<span class="text-muted text-sm">—</span>' : `
         <select class="form-select" style="width:100px;padding:6px 10px;"
                 onchange="changeRole('${u.uid}', this.value)">
-          <option value="user"  ${u.role === 'user'  ? 'selected' : ''}>User</option>
-          <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
-        </select>
+          <option value="user"  ${u.role !== 'admin' ? 'selected' : ''}>User</option>
+          <option value="admin" ${u.role === 'admin'  ? 'selected' : ''}>Admin</option>
+        </select>`}
       </td>
       <td>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm"
-                  onclick="openResetModal('${u.uid}','${u.email}')">🔑 Reset PW</button>
-          <button class="btn btn-danger btn-sm"
-                  onclick="deleteUser('${u.uid}','${u.email}')">🗑️ Hapus</button>
+                  onclick="sendResetEmail('${u.email}')">📧 Reset PW</button>
+          ${!isMe ? `<button class="btn btn-danger btn-sm"
+                  onclick="deleteUser('${u.uid}','${u.email}')">🗑️ Hapus</button>` : ''}
         </div>
       </td>
     </tr>`;
   }).join('');
 }
 
+// ─── CHANGE ROLE ─────────────────────────────────────────────
 window.changeRole = async (uid, role) => {
   try {
-    await fnSetUserRole({ uid, role });
+    await set(ref(db, `/users/${uid}/role`), role);
     showToast(`Role diubah ke "${role}" ✅`, 'success');
   } catch (err) {
     showToast('Gagal ubah role: ' + err.message, 'error');
-    loadUsers();
   }
 };
 
+// ─── DELETE USER (hapus RTDB profile saja) ───────────────────
 window.deleteUser = async (uid, email) => {
-  if (!confirm(`Hapus akun "${email}"? Aksi ini tidak dapat dibatalkan.`)) return;
+  if (!confirm(
+    `Hapus profile "${email}" dari sistem?\n\n` +
+    `⚠ Akun Firebase Auth-nya tetap ada (bisa login ulang).\n` +
+    `Untuk hapus permanen, gunakan Firebase Console → Authentication.`
+  )) return;
   try {
-    await fnDeleteUser({ uid });
-    showToast(`Akun "${email}" dihapus`, 'success');
-    loadUsers();
+    await remove(ref(db, `/users/${uid}`));
+    showToast(`Profile "${email}" dihapus dari RTDB`, 'success');
+    // Note: loadUsers listener akan otomatis update karena onValue
   } catch (err) {
     showToast('Gagal hapus: ' + err.message, 'error');
   }
 };
 
-// ── Add User Modal ─────────────────────────────────────────────
+// ─── SEND PASSWORD RESET EMAIL ────────────────────────────────
+window.sendResetEmail = async (email) => {
+  if (!confirm(`Kirim email reset password ke "${email}"?`)) return;
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showToast(`Email reset password terkirim ke "${email}" 📧`, 'success');
+  } catch (err) {
+    const msgs = {
+      'auth/user-not-found': 'Email tidak terdaftar di Firebase Auth',
+      'auth/too-many-requests': 'Terlalu banyak percobaan, coba lagi nanti',
+    };
+    showToast(msgs[err.code] || err.message, 'error');
+  }
+};
+
+// ─── CREATE USER (secondary Firebase app — admin tidak ter-logout) ──
 function openAddModal()  { modalOverlay?.classList.add('open');    formEmail?.focus(); }
 function closeAddModal() { modalOverlay?.classList.remove('open'); }
+
 addUserBtn?.addEventListener('click',   openAddModal);
 modalCancel?.addEventListener('click',  closeAddModal);
 modalClose?.addEventListener('click',   closeAddModal);
@@ -304,56 +314,59 @@ modalSubmit?.addEventListener('click', async () => {
   if (!email || !password) { showToast('Email dan password wajib diisi', 'error'); return; }
   if (password.length < 8) { showToast('Password minimal 8 karakter', 'error'); return; }
 
+  modalSubmit.disabled    = true;
+  modalSubmit.textContent = 'Membuat akun...';
+
+  // Pakai secondary app agar admin tidak ter-logout dari sesi utama
+  let secondaryApp = null;
   try {
-    modalSubmit.disabled    = true;
-    modalSubmit.textContent = 'Membuat...';
-    await fnCreateUser({ email, password, displayName, role });
+    secondaryApp = initializeApp(firebaseConfig, 'secondary-' + Date.now());
+    const secondaryAuth = getAuth(secondaryApp);
+
+    // Buat akun di Firebase Auth
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    const newUid = cred.user.uid;
+
+    // Atur display name
+    if (displayName) {
+      await updateProfile(cred.user, { displayName });
+    }
+
+    // Logout dari secondary app sebelum dihapus
+    await signOut(secondaryAuth);
+
+    // Tulis profile ke RTDB (menggunakan admin session utama)
+    await set(ref(db, `/users/${newUid}`), {
+      email,
+      displayName: displayName || '',
+      role,
+      createdAt: new Date().toISOString(),
+    });
+
     showToast(`Akun "${email}" berhasil dibuat ✅`, 'success');
     closeAddModal();
-    loadUsers();
     [formEmail, formPassword, formDisplayName].forEach(el => { if (el) el.value = ''; });
     if (formRole) formRole.value = 'user';
+    // loadUsers() tidak perlu dipanggil manual — onValue listener auto-update
+
   } catch (err) {
-    showToast('Gagal buat user: ' + err.message, 'error');
+    const msgs = {
+      'auth/email-already-in-use': 'Email sudah terdaftar.',
+      'auth/weak-password':        'Password terlalu lemah.',
+      'auth/invalid-email':        'Format email tidak valid.',
+    };
+    showToast('Gagal: ' + (msgs[err.code] || err.message), 'error');
   } finally {
+    if (secondaryApp) {
+      try { await deleteApp(secondaryApp); } catch (_) {}
+    }
     modalSubmit.disabled    = false;
     modalSubmit.textContent = 'Buat Akun';
   }
 });
 
-// ── Reset Password Modal ──────────────────────────────────────
-window.openResetModal = (uid, email) => {
-  if (resetUidInput) resetUidInput.value = uid;
-  if (resetPwInput)  resetPwInput.value  = '';
-  const lbl = document.getElementById('resetEmailLabel');
-  if (lbl) lbl.textContent = email;
-  resetModal?.classList.add('open');
-  resetPwInput?.focus();
-};
-document.getElementById('resetModalClose')?.addEventListener('click', () => resetModal?.classList.remove('open'));
-resetCancel?.addEventListener('click', () => resetModal?.classList.remove('open'));
-
-resetSubmit?.addEventListener('click', async () => {
-  const uid         = resetUidInput?.value;
-  const newPassword = resetPwInput?.value;
-  if (!uid || !newPassword) { showToast('Password wajib diisi', 'error'); return; }
-  if (newPassword.length < 8) { showToast('Password minimal 8 karakter', 'error'); return; }
-  try {
-    resetSubmit.disabled    = true;
-    resetSubmit.textContent = 'Mengubah...';
-    await fnResetPassword({ uid, newPassword });
-    showToast('Password berhasil diubah ✅', 'success');
-    resetModal?.classList.remove('open');
-  } catch (err) {
-    showToast('Gagal ubah password: ' + err.message, 'error');
-  } finally {
-    resetSubmit.disabled    = false;
-    resetSubmit.textContent = 'Simpan Password';
-  }
-});
-
 // ═══════════════════════════════════════════════════════════════
-// PAGE INIT
+// INIT
 // ═══════════════════════════════════════════════════════════════
 initPage({
   requireAdmin: true,
@@ -365,8 +378,6 @@ initPage({
     saveBtn?.addEventListener('click', saveSettings);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
     document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);
-
-    // Real-time validation on input change
     [inpThreshold, inpSendInterval, inpArusCal, inpTeganganCal, inpBotToken, inpChatId]
       .forEach(el => el?.addEventListener('input', validateAll));
   },

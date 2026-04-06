@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME    = 'iot-listrik-v4';
+const CACHE_NAME    = 'iot-listrik-v5';
 const CACHE_URLS    = [
   '/',
   '/',

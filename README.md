@@ -30,15 +30,9 @@
                             └──────────────┬────────────────┘
                                            │
                             ┌──────────────▼────────────────┐
-                            │   Firebase Functions (v2)     │
-                            │   Admin SDK — User CRUD       │
-                            └──────────────┬────────────────┘
-                                           │
-                            ┌──────────────▼────────────────┐
                             │   Web Dashboard (PWA)         │
-                            │   login.html / dashboard.html │
-                            │   history.html                │
-                            │   settings.html  (Admin)      │
+                            │   HTML/JS in /public          │
+                            │   Direct RTDB (Admin role)    │
                             └───────────────────────────────┘
 ```
 
@@ -48,27 +42,25 @@
 
 ```
 /project-root/
-├── index.html              ← Entry redirect (auth-aware)
-├── login.html              ← Login & register
-├── dashboard.html          ← Monitoring realtime + relay control
-├── history.html            ← Log history + chart + export CSV
-├── settings.html           ← Admin: system settings + user CRUD
-├── style.css               ← Global dark glassmorphism design system
-├── firebase-config.js      ← Firebase app init
-├── auth.js                 ← Auth state, role guard, sidebar
-├── app.js                  ← Dashboard logic
-├── history.js              ← History page logic
-├── settings.js             ← Settings + user CRUD via Functions
-├── charts.js               ← Chart.js dual-axis + zoom/pan
-├── notifications.js        ← Browser notifications + toast
-├── manifest.json           ← PWA manifest
-├── service-worker.js       ← PWA cache-first strategy
+├── public/                 ← Web Frontend (PWA)
+│   ├── index.html          ← Entry redirect (auth-aware)
+│   ├── login.html          ← Login & register
+│   ├── dashboard.html      ← Monitoring realtime + relay control
+│   ├── history.html        ← Log history + chart + export CSV
+│   ├── settings.html       ← Admin: system settings + user CRUD
+│   ├── style.css           ← Global dark glassmorphism design system
+│   ├── firebase-config.js  ← Firebase app init
+│   ├── auth.js             ← Auth state, role guard, sidebar
+│   ├── app.js              ← Dashboard logic
+│   ├── history.js          ← History page logic
+│   ├── settings.js         ← Settings + user CRUD via secondary Auth
+│   ├── charts.js           ← Chart.js dual-axis + zoom/pan
+│   ├── notifications.js    ← Browser notifications + toast
+│   ├── manifest.json       ← PWA manifest
+│   ├── service-worker.js   ← PWA cache-first strategy
+│   └── icons/              ← PWA icons (72–512px)
+├── firebase.json           ← Firebase hosting config
 ├── database.rules.json     ← Firebase RTDB security rules
-├── firebase.json           ← Firebase hosting + functions config
-├── icons/                  ← PWA icons (72–512px)
-├── functions/
-│   ├── package.json        ← Node 18 + firebase-admin + firebase-functions
-│   └── index.js            ← listUsers, createUser, deleteUser, setUserRole, resetPassword
 └── esp32/
     ├── config.h            ← TWO-LAYER config: BootstrapConfig + RuntimeSettings
     ├── sensors.h           ← Runtime calibration params
@@ -149,8 +141,7 @@ npx -y firebase-tools@latest use monitoring-listrik-719b1
 ### 2. Firebase Console
 
 - **Authentication** → Sign-in method → Email/Password ✅
-- **Realtime Database** → Create database
-- **Functions** → Blaze plan required ✅
+- **Realtime Database** → Create database ✅
 - **Hosting** → Get started
 
 ### 3. Fill Firebase Config
@@ -177,20 +168,13 @@ device account email. Remove all `/* */` comments, then:
 npx -y firebase-tools@latest deploy --only database
 ```
 
-### 5. Deploy Functions
-
-```bash
-cd functions && npm install && cd ..
-npx -y firebase-tools@latest deploy --only functions
-```
-
-### 6. Deploy Hosting
+### 5. Deploy Hosting
 
 ```bash
 npx -y firebase-tools@latest deploy --only hosting
 ```
 
-### 7. Bootstrap Database
+### 6. Bootstrap Database
 
 In Firebase Console → Realtime Database → set initial data:
 ```json
@@ -209,14 +193,14 @@ In Firebase Console → Realtime Database → set initial data:
 }
 ```
 
-### 8. Create First Admin Account
+### 7. Create First Admin Account
 
-Register at `/login.html`, then in Firebase Console → Realtime Database:
+Register at `login.html`, then in Firebase Console → Realtime Database:
 ```
 /users/{YOUR_UID}/role = "admin"
 ```
 
-### 9. Create IoT Device Account
+### 8. Create IoT Device Account
 
 Firebase Console → Authentication → Add user:
 - Email: `iot-device@yourproject.com`
@@ -334,7 +318,7 @@ Desktop Chrome: click install icon in address bar
   teganganCalibration  float
   sendIntervalMs       int     (ms)
 
-/users/{uid}/       → managed by Firebase Functions only
+/users/{uid}/       → managed by direct RTDB rules + Admin dashboard
   email, displayName, role, createdAt
 ```
 
@@ -348,7 +332,7 @@ Desktop Chrome: click install icon in address bar
 | Relay control | Admin-only write to `/listrik/relay` |
 | Settings modification | Admin-only write to `/settings` |
 | Telegram credentials | Stored in `/settings` (admin-write only, not in firmware) |
-| User CRUD | Via Firebase Functions Admin SDK only (no client-side write) |
+| User CRUD | Secondary Firebase Auth (client) + direct RTDB roles (protected by rules) |
 | WiFi/Firebase bootstrap | Stored in NVS, set via local captive portal (HTTP, local AP only) |
 
 ---
@@ -362,7 +346,6 @@ Desktop Chrome: click install icon in address bar
 | Provisioning | **WiFiManager Captive Portal + ESP32 NVS/Preferences** |
 | Database | Firebase Realtime Database |
 | Auth | Firebase Authentication (Email/Password) |
-| Backend | Firebase Functions v2 (Node 18) + Admin SDK |
 | Hosting | Firebase Hosting |
 | Frontend | Vanilla HTML/CSS/JS (ES Modules) |
 | Charts | Chart.js 4 + chartjs-plugin-zoom |

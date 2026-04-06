@@ -1,15 +1,10 @@
 {
   "hosting": {
-    "public": ".",
+    "public": "public",
     "ignore": [
       "firebase.json",
-      "database.rules.json",
       "**/.*",
-      "**/node_modules/**",
-      "esp32/**",
-      "functions/**",
-      "README.md",
-      "skills-lock.json"
+      "**/node_modules/**"
     ],
     "rewrites": [
       {
@@ -42,18 +37,6 @@
       }
     ]
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ]
-    }
-  ],
   "database": {
     "rules": "database.rules.json"
   }

@@ -15,7 +15,7 @@
 │  Relay Module   │◀───│  Layer 1 Bootstrap (NVS + WiFiManager)       │
 │  Buzzer         │    │   WiFi SSID/password                         │
 └─────────────────┘    │   Firebase API Key / DB URL                  │
-                       │   IoT device email / password               │
+                       │   IoT device email / password                │
          ┌─────────────│                                              │
          │             │  Layer 2 Runtime (Firebase /settings)        │
          │             │   thresholdArus, Telegram token/chatId       │
@@ -23,23 +23,23 @@
          │             └───────────────────┬──────────────────────────┘
          │                                 │
          ▼                                 ▼
-┌─────────────────┐         ┌─────────────────────────────┐
-│  Telegram Bot   │         │     Firebase Realtime DB     │
-│  Notifications  │         │  /listrik  /logs  /settings  │
-└─────────────────┘         │  /users                     │
-                            └──────────────┬──────────────┘
+┌─────────────────┐         ┌───────────────────────────────┐
+│  Telegram Bot   │         │     Firebase Realtime DB      │
+│  Notifications  │         │  /listrik  /logs  /settings   │
+└─────────────────┘         │  /users                       │
+                            └──────────────┬────────────────┘
                                            │
-                            ┌──────────────▼──────────────┐
-                            │   Firebase Functions (v2)    │
-                            │   Admin SDK — User CRUD      │
-                            └──────────────┬──────────────┘
+                            ┌──────────────▼────────────────┐
+                            │   Firebase Functions (v2)     │
+                            │   Admin SDK — User CRUD       │
+                            └──────────────┬────────────────┘
                                            │
-                            ┌──────────────▼──────────────┐
-                            │   Web Dashboard (PWA)        │
-                            │   login.html / dashboard.html│
-                            │   history.html               │
-                            │   settings.html  (Admin)     │
-                            └─────────────────────────────┘
+                            ┌──────────────▼────────────────┐
+                            │   Web Dashboard (PWA)         │
+                            │   login.html / dashboard.html │
+                            │   history.html                │
+                            │   settings.html  (Admin)      │
+                            └───────────────────────────────┘
 ```
 
 ---

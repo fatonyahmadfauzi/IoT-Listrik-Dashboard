@@ -2,7 +2,7 @@
   "name": "IoT Monitoring Listrik",
   "short_name": "Listrik IoT",
   "description": "Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time",
-  "start_url": "/dashboard.html",
+  "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#070c18",
@@ -53,14 +53,14 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Lihat monitoring realtime",
-      "url": "/dashboard.html",
+      "url": "/dashboard",
       "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
     },
     {
       "name": "Riwayat",
       "short_name": "Riwayat",
       "description": "Lihat riwayat event",
-      "url": "/history.html",
+      "url": "/history",
       "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
     }
   ]

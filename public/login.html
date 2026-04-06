@@ -114,7 +114,7 @@ tabRegister.addEventListener('click', () => showTab('register'));
 
 // ── Redirect if already logged in ────────────────────────────
 onAuthStateChanged(auth, user => {
-  if (user) window.location.href = '/dashboard.html';
+  if (user) window.location.href = '/dashboard';
 });
 
 // ── Login ─────────────────────────────────────────────────────

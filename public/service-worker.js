@@ -6,14 +6,14 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME    = 'iot-listrik-v1';
+const CACHE_NAME    = 'iot-listrik-v4';
 const CACHE_URLS    = [
   '/',
-  '/index.html',
-  '/login.html',
-  '/dashboard.html',
-  '/history.html',
-  '/settings.html',
+  '/',
+  '/login',
+  '/dashboard',
+  '/history',
+  '/settings',
   '/style.css',
   '/firebase-config.js',
   '/auth.js',

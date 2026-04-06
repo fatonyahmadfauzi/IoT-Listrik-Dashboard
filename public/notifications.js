@@ -52,10 +52,7 @@ function sendNotification(title, body, icon = '/icons/icon-192.png', tag = 'iot-
 
 // ── Web Audio API Siren Logic ─────────────────────────────────
 let audioCtx = null;
-let oscillator = null;
-let gainNode = null;
 let sirenInterval = null;
-let isSirenPlaying = false;
 
 function initAudio() {
   if (!audioCtx) {
@@ -67,41 +64,41 @@ function initAudio() {
 }
 
 function playWebSiren() {
-  if (isSirenPlaying) return;
+  if (sirenInterval) return; // Sudah bunyi
   initAudio();
-  isSirenPlaying = true;
   
-  oscillator = audioCtx.createOscillator();
-  gainNode = audioCtx.createGain();
-  
-  oscillator.type = 'square';
-  oscillator.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
-  
-  // Set volume (0.0 to 1.0)
-  gainNode.gain.value = 0.5;
-  oscillator.start();
-  
-  // Create a two-tone European style siren (High/Low frequency)
-  let isHigh = false;
+  // Buat suara sirine berulang tiap 600ms
   sirenInterval = setInterval(() => {
-    oscillator.frequency.setValueAtTime(isHigh ? 800 : 600, audioCtx.currentTime);
-    isHigh = !isHigh;
-  }, 500);
+    if (!audioCtx || audioCtx.state === 'suspended') return; // Lewati jika diblokir browser
+    
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      
+      osc.type = 'square';
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      // Efek sirine "ngiung" (frekuensi turun)
+      osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.5);
+      
+      // Kontrol volume 
+      gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    } catch (e) {
+      console.warn("Web audio error:", e);
+    }
+  }, 600);
 }
 
 function stopWebSiren() {
-  if (!isSirenPlaying) return;
-  isSirenPlaying = false;
-  clearInterval(sirenInterval);
-  if (oscillator) {
-    oscillator.stop();
-    oscillator.disconnect();
-    oscillator = null;
-  }
-  if (gainNode) {
-    gainNode.disconnect();
-    gainNode = null;
+  if (sirenInterval) {
+    clearInterval(sirenInterval);
+    sirenInterval = null;
   }
 }
 
@@ -184,4 +181,4 @@ function showToast(message, type = 'success', duration = 4000) {
   }, duration);
 }
 
-export { requestNotificationPermission, sendNotification, checkAndNotify, showToast };
+export { requestNotificationPermission, sendNotification, checkAndNotify, showToast, initAudio };

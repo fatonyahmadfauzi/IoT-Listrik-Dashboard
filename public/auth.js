@@ -57,14 +57,14 @@ async function ensureUserProfile(user, role = 'user') {
  * @param {object} callbacks
  *   onAuthed(user, role)   - called when authenticated
  *   onGuest()              - called when not authenticated (optional)
- *   redirectIfGuest        - redirect URL if not auth (default: '/login.html')
+ *   redirectIfGuest        - redirect URL if not auth (default: '/login')
  *   requireAdmin           - if true, non-admin → redirect to dashboard
  */
 function initPage(callbacks = {}) {
   const {
     onAuthed,
     onGuest,
-    redirectIfGuest = '/login.html',
+    redirectIfGuest = '/login',
     requireAdmin    = false,
   } = callbacks;
 
@@ -75,7 +75,7 @@ function initPage(callbacks = {}) {
 
       // Admin-only page guard
       if (requireAdmin && _currentRole !== 'admin') {
-        window.location.href = '/dashboard.html';
+        window.location.href = '/dashboard';
         return;
       }
 
@@ -138,7 +138,7 @@ function initSidebarToggle() {
 // ─── Logout ──────────────────────────────────────────────────
 async function logout() {
   await signOut(auth);
-  window.location.href = '/login.html';
+  window.location.href = '/login';
 }
 
 export {

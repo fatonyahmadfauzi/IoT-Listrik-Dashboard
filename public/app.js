@@ -12,7 +12,7 @@
 import { db }           from './firebase-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout } from './auth.js';
 import { createRealtimeChart, pushRealtimeData, resetChartZoom } from './charts.js';
-import { requestNotificationPermission, checkAndNotify, showToast } from './notifications.js';
+import { requestNotificationPermission, checkAndNotify, showToast, initAudio } from './notifications.js';
 import { ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ─── DOM refs ────────────────────────────────────────────────
@@ -149,6 +149,11 @@ initPage({
 
     // Request notification permission
     await requestNotificationPermission();
+
+    // Unlock Web Audio API on first user interaction anywhere on the page
+    window.addEventListener('click', () => {
+      initAudio();
+    }, { once: true });
 
     // Relay buttons
     elRelayOn?.addEventListener('click',  () => sendRelayCommand(1));

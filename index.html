@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IoT Monitoring Listrik</title>
+  <meta name="description" content="Sistem Deteksi Kebocoran Arus Listrik Berbasis IoT" />
+  <link rel="manifest"   href="/manifest.json" />
+  <meta name="theme-color" content="#070c18" />
+  <style>
+    body {
+      margin: 0;
+      background: #070c18;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Inter, system-ui, sans-serif;
+      color: #94a3b8;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255,255,255,.15);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <!-- Show spinner while checking auth state, then redirect -->
+  <div class="spinner"></div>
+
+  <script type="module">
+    import { auth }          from '/firebase-config.js';
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        window.location.replace('/dashboard.html');
+      } else {
+        window.location.replace('/login.html');
+      }
+    });
+
+    // Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

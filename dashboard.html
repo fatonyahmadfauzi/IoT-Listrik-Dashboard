@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — IoT Monitoring Listrik</title>
+  <meta name="description" content="Monitoring realtime arus, tegangan, dan status sistem listrik berbasis IoT" />
+  <link rel="stylesheet"  href="/style.css" />
+  <link rel="manifest"    href="/manifest.json" />
+  <meta name="theme-color" content="#070c18" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <!-- Chart.js + zoom plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+</head>
+<body class="page-bg">
+<div class="app-layout">
+
+  <!-- ── Sidebar overlay (mobile) ──────────────────────────── -->
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <!-- ── Sidebar ────────────────────────────────────────────── -->
+  <nav id="sidebar" class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">⚡</div>
+      <div class="sidebar-logo-text">
+        <h2>IoT Listrik</h2>
+        <span>Monitor System</span>
+      </div>
+    </div>
+
+    <div class="sidebar-nav">
+      <a href="/dashboard.html" class="nav-item active">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="/history.html" class="nav-item">
+        <span class="nav-icon">📋</span> Riwayat Log
+      </a>
+      <div class="nav-divider"></div>
+      <a href="/settings.html" class="nav-item" data-admin-only>
+        <span class="nav-icon">⚙️</span> Pengaturan
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-avatar" id="sidebarAvatar">?</div>
+        <div class="user-info">
+          <div class="user-email" id="sidebarEmail">—</div>
+          <div id="sidebarRole" class="role-pill user">User</div>
+        </div>
+      </div>
+      <button id="logoutBtn" class="btn btn-ghost w-full">🚪 Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ────────────────────────────────────────── -->
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button id="hamburgerBtn" class="hamburger">☰</button>
+        <h1 class="topbar-title">📊 Dashboard Monitoring</h1>
+      </div>
+      <div class="topbar-actions">
+        <!-- Install PWA button (hidden until browser fires event) -->
+        <button id="installBtn" class="btn btn-ghost btn-sm hidden">📲 Install App</button>
+        <span id="lastUpdated" class="text-sm text-muted">—</span>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- ── Metric Cards ────────────────────────────────────── -->
+      <div class="metric-grid">
+        <!-- Arus -->
+        <div class="metric-card glass green">
+          <div class="metric-label">⚡ Arus</div>
+          <div class="metric-value" id="valArus">— A</div>
+          <div class="metric-sub">SCT-013 Sensor</div>
+        </div>
+
+        <!-- Tegangan -->
+        <div class="metric-card glass blue">
+          <div class="metric-label">🔌 Tegangan</div>
+          <div class="metric-value" id="valTegangan">— V</div>
+          <div class="metric-sub">ZMPT101B Sensor</div>
+        </div>
+
+        <!-- Daya -->
+        <div class="metric-card glass yellow">
+          <div class="metric-label">💡 Daya Semu</div>
+          <div class="metric-value" id="valDaya">— VA</div>
+          <div class="metric-sub">Estimasi P = V × I</div>
+        </div>
+
+        <!-- Status -->
+        <div class="metric-card glass cyan">
+          <div class="metric-label">🛡️ Status Sistem</div>
+          <div style="margin-top:8px;">
+            <div id="statusBadge" class="status-badge status-NORMAL">NORMAL</div>
+          </div>
+          <div class="metric-sub mt-8">Deteksi otomatis</div>
+        </div>
+      </div>
+
+      <!-- ── Relay Control (Admin only) ─────────────────────── -->
+      <div id="relaySection" class="section-card glass hidden">
+        <div class="section-header">
+          <div class="section-title">🔁 Kontrol Relay</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div id="relayDot" class="relay-indicator on"></div>
+            <span id="valRelay" class="font-mono" style="font-size:16px;font-weight:700;">—</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;">
+          <button id="relayOnBtn"  class="btn btn-success">🟢 Nyalakan Relay</button>
+          <button id="relayOffBtn" class="btn btn-danger">🔴 Matikan Relay</button>
+        </div>
+        <p class="text-sm text-muted mt-8">
+          ⚠️ Auto-cutoff aktif: relay dimatikan otomatis saat terdeteksi kebocoran atau bahaya.
+          Perintah ON ditolak jika kondisi masih berbahaya.
+        </p>
+      </div>
+
+      <!-- ── Realtime Chart ──────────────────────────────────── -->
+      <div class="section-card glass">
+        <div class="section-header">
+          <div class="section-title">📈 Grafik Realtime</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button id="resetZoomBtn" class="btn btn-ghost btn-sm">🔍 Reset Zoom</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="monitorChart"></canvas>
+        </div>
+        <p class="text-xs text-muted mt-8">
+          Scroll untuk zoom • Drag untuk pan • Menampilkan 30 titik terakhir
+        </p>
+      </div>
+
+    </main>
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<!-- Toast -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+{
+  "rules": {
+    /*
+     * ══════════════════════════════════════════════════════════
+     *  Firebase RTDB Security Rules — IoT Listrik Dashboard
+     *  Last updated: Extended settings (Telegram, calibration)
+     * ══════════════════════════════════════════════════════════
+     *
+     *  Auth zones:
+     *   "iot"   = ESP32 device, authenticated with dedicated
+     *             email (IOT_EMAIL from config.h / NVS).
+     *   "admin" = Web admin user, role="admin" in /users/{uid}.
+     *   "user"  = Web regular user, role="user".
+     *
+     *  Key security properties enforced here:
+     *   1. ESP32 can ONLY write /listrik sensor paths + /logs.
+     *   2. ESP32 can READ /settings (needs thresholds, Telegram).
+     *   3. Admin can write /listrik/relay (control) + /settings.
+     *   4. /users is write-protected — only via Firebase Functions.
+     *   5. Telegram Bot Token in /settings is admin-write-only
+     *      (same rule as the rest of /settings).
+     *
+     *  TRADEOFF acknowledged:
+     *   The Telegram Bot Token stored in /settings is readable by
+     *   any authenticated user (including "user" role) because
+     *   ".read": "auth != null" covers the whole /settings node.
+     *   This is acceptable for a thesis/educational project where
+     *   all authenticated users are trusted.
+     *   For production: split /settings/private for sensitive
+     *   credentials with admin-only read.
+     *
+     *  NOTE: Remove all comments before deployment via CLI.
+     *  Run: firebase deploy --only database
+     * ══════════════════════════════════════════════════════════
+     */
+
+    "listrik": {
+      /*
+       * READ: any authenticated user (admin, user, iot-device)
+       *       can monitor realtime data.
+       */
+      ".read": "auth != null",
+
+      /*
+       * Sensor reading paths — ONLY the dedicated IoT device
+       * email account may write these.
+       * Change 'iot-device@yourproject.com' to match IOT_EMAIL
+       * in config.h and the Firebase Auth account you created.
+       */
+      "arus":       { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
+      "tegangan":   { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
+      "status":     { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
+      "updated_at": { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
+
+      /*
+       * Relay: admin can set command, IoT device can update
+       * confirmed state (e.g. after auto-cutoff).
+       */
+      "relay": {
+        ".write": "auth != null && (auth.token.email === 'iot-device@yourproject.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+
+    "logs": {
+      /*
+       * READ: any authenticated user can view history.
+       * WRITE: IoT device (sensor events) OR admin (manual entries).
+       *        Regular users cannot write logs.
+       */
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.email === 'iot-device@yourproject.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+    },
+
+    "settings": {
+      /*
+       * READ: all authenticated users can read /settings.
+       *   - ESP32 needs: thresholdArus, buzzerEnabled, autoCutoffEnabled,
+       *     telegramBotToken, telegramChatId, arusCalibration,
+       *     teganganCalibration, sendIntervalMs.
+       *   - Regular users see read-only values on dashboard (no UI to edit).
+       *
+       * WRITE: only admin may modify any /settings field.
+       *   This protects Telegram token, calibration, and all other settings
+       *   from being modified by regular users or the IoT device.
+       */
+      ".read":  "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+
+    "users": {
+      /*
+       * READ list: only admin can read all user profiles.
+       * READ own: any authenticated user can read their own profile.
+       * WRITE: fully blocked here — only writable via Firebase Functions
+       *        (Admin SDK). This prevents client-side role manipulation.
+       */
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    }
+  }
+}

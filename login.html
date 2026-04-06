@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — IoT Monitoring Listrik</title>
+  <meta name="description" content="Login ke sistem monitoring arus listrik berbasis IoT" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="manifest"   href="/manifest.json" />
+  <meta name="theme-color" content="#070c18" />
+</head>
+<body class="page-bg">
+
+<div class="auth-page">
+  <div class="auth-card glass">
+
+    <div class="auth-logo">
+      <div class="auth-logo-icon">⚡</div>
+      <h1>IoT Listrik Monitor</h1>
+      <p>Alat Deteksi Kebocoran Arus Berbasis IoT</p>
+    </div>
+
+    <!-- Tab: Login / Register -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tabLogin"    role="tab">Masuk</button>
+      <button class="auth-tab"        id="tabRegister" role="tab">Daftar</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="loginEmail">Email</label>
+        <input id="loginEmail" class="form-input" type="email"
+               placeholder="email@contoh.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="loginPassword">Password</label>
+        <input id="loginPassword" class="form-input" type="password"
+               placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <div id="loginError" class="text-sm"
+           style="color:var(--red-light);min-height:18px;margin-bottom:12px;"></div>
+      <button type="submit" id="loginBtn" class="btn btn-primary w-full">
+        Masuk
+      </button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" class="hidden" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="regName">Nama Lengkap</label>
+        <input id="regName" class="form-input" type="text"
+               placeholder="Nama Anda" autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="regEmail">Email</label>
+        <input id="regEmail" class="form-input" type="email"
+               placeholder="email@contoh.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="regPassword">Password</label>
+        <input id="regPassword" class="form-input" type="password"
+               placeholder="Minimal 8 karakter" autocomplete="new-password" required />
+      </div>
+      <div id="regError" class="text-sm"
+           style="color:var(--red-light);min-height:18px;margin-bottom:12px;"></div>
+      <button type="submit" id="registerBtn" class="btn btn-success w-full">
+        Daftar Akun Baru
+      </button>
+      <p class="text-sm text-muted mt-8" style="text-align:center;">
+        Akun baru akan memiliki role <strong>User</strong>.<br/>
+        Hubungi admin untuk upgrade ke Admin.
+      </p>
+    </form>
+
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script type="module">
+import { auth }      from '/firebase-config.js';
+import { ensureUserProfile } from '/auth.js';
+import { showToast } from '/notifications.js';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  updateProfile,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ── Tab switching ─────────────────────────────────────────────
+const loginForm    = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const tabLogin     = document.getElementById('tabLogin');
+const tabRegister  = document.getElementById('tabRegister');
+
+function showTab(tab) {
+  if (tab === 'login') {
+    loginForm.classList.remove('hidden');
+    registerForm.classList.add('hidden');
+    tabLogin.classList.add('active');
+    tabRegister.classList.remove('active');
+  } else {
+    registerForm.classList.remove('hidden');
+    loginForm.classList.add('hidden');
+    tabRegister.classList.add('active');
+    tabLogin.classList.remove('active');
+  }
+}
+tabLogin.addEventListener('click',    () => showTab('login'));
+tabRegister.addEventListener('click', () => showTab('register'));
+
+// ── Redirect if already logged in ────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (user) window.location.href = '/dashboard.html';
+});
+
+// ── Login ─────────────────────────────────────────────────────
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Isi email dan password.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Masuk...';
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    // onAuthStateChanged will redirect
+  } catch (err) {
+    const msgs = {
+      'auth/user-not-found':    'Akun tidak ditemukan.',
+      'auth/wrong-password':    'Password salah.',
+      'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi nanti.',
+      'auth/invalid-email':     'Format email tidak valid.',
+    };
+    errEl.textContent = msgs[err.code] || err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }
+});
+
+// ── Register ──────────────────────────────────────────────────
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name     = document.getElementById('regName').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const errEl    = document.getElementById('regError');
+  const btn      = document.getElementById('registerBtn');
+
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Isi email dan password.'; return; }
+  if (password.length < 8) { errEl.textContent = 'Password minimal 8 karakter.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Mendaftar...';
+
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (name) await updateProfile(cred.user, { displayName: name });
+    await ensureUserProfile(cred.user, 'user');
+    // redirect happens via onAuthStateChanged
+  } catch (err) {
+    const msgs = {
+      'auth/email-already-in-use': 'Email sudah terdaftar.',
+      'auth/weak-password':        'Password terlalu lemah.',
+      'auth/invalid-email':        'Format email tidak valid.',
+    };
+    errEl.textContent = msgs[err.code] || err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Daftar Akun Baru';
+  }
+});
+
+// ── Service Worker ────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+}
+</script>
+</body>
+</html>

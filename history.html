@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Riwayat Log — IoT Monitoring Listrik</title>
+  <meta name="description" content="Riwayat event dan log sensor sistem monitoring listrik IoT" />
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="manifest"   href="/manifest.json" />
+  <meta name="theme-color" content="#070c18" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+</head>
+<body class="page-bg">
+<div class="app-layout">
+
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <nav id="sidebar" class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">⚡</div>
+      <div class="sidebar-logo-text">
+        <h2>IoT Listrik</h2>
+        <span>Monitor System</span>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <a href="/dashboard.html" class="nav-item">
+        <span class="nav-icon">📊</span> Dashboard
+      </a>
+      <a href="/history.html" class="nav-item active">
+        <span class="nav-icon">📋</span> Riwayat Log
+      </a>
+      <div class="nav-divider"></div>
+      <a href="/settings.html" class="nav-item" data-admin-only>
+        <span class="nav-icon">⚙️</span> Pengaturan
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-avatar" id="sidebarAvatar">?</div>
+        <div class="user-info">
+          <div class="user-email" id="sidebarEmail">—</div>
+          <div id="sidebarRole" class="role-pill user">User</div>
+        </div>
+      </div>
+      <button id="logoutBtn" class="btn btn-ghost w-full">🚪 Logout</button>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button id="hamburgerBtn" class="hamburger">☰</button>
+        <h1 class="topbar-title">📋 Riwayat Log</h1>
+      </div>
+      <div class="topbar-actions">
+        <span id="logCount" class="text-sm text-muted">—</span>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- Chart history -->
+      <div class="section-card glass mb-16">
+        <div class="section-header">
+          <div class="section-title">📈 Grafik Riwayat (50 data terakhir)</div>
+        </div>
+        <div class="chart-container">
+          <canvas id="historyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Filter + export -->
+      <div class="section-card glass">
+        <div class="section-header">
+          <div class="section-title">📋 Tabel Log Event</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <select id="filterStatus" class="form-select" style="width:150px;">
+              <option value="ALL">Semua Status</option>
+              <option value="NORMAL">NORMAL</option>
+              <option value="WARNING">WARNING</option>
+              <option value="LEAKAGE">LEAKAGE</option>
+              <option value="DANGER">DANGER</option>
+            </select>
+            <button id="exportBtn" class="btn btn-ghost btn-sm">📥 Export CSV</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Arus (A)</th>
+                <th>Tegangan (V)</th>
+                <th>Status</th>
+                <th>Relay</th>
+                <th>Sumber</th>
+              </tr>
+            </thead>
+            <tbody id="historyTbody">
+              <tr>
+                <td colspan="6" style="text-align:center;padding:32px;color:var(--text-secondary);">
+                  Memuat data...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-muted mt-8">Menampilkan 100 entri log terbaru. Data diperbarui realtime.</p>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+<script type="module" src="/history.js"></script>
+</body>
+</html>

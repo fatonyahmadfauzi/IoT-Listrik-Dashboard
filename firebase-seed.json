@@ -1,0 +1,29 @@
+{
+  "users": {
+    "G3fEp31O8oePXAbl4ycYX1mQBvu2": {
+      "email": "fatonyahmadfauzi@gmail.com",
+      "displayName": "Fatony",
+      "role": "admin",
+      "createdAt": "2026-04-07T00:00:00.000Z"
+    }
+  },
+
+  "listrik": {
+    "arus": 0,
+    "tegangan": 220,
+    "relay": 1,
+    "status": "NORMAL",
+    "updated_at": "0"
+  },
+
+  "settings": {
+    "thresholdArus": 10,
+    "buzzerEnabled": true,
+    "autoCutoffEnabled": true,
+    "arusCalibration": 1.0,
+    "teganganCalibration": 1.0,
+    "sendIntervalMs": 2000,
+    "telegramBotToken": "",
+    "telegramChatId": ""
+  }
+}

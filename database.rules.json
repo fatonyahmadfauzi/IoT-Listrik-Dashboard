@@ -2,18 +2,18 @@
   "rules": {
     "listrik": {
       ".read": "auth != null",
-      "arus":       { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
-      "tegangan":   { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
-      "status":     { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
-      "updated_at": { ".write": "auth != null && auth.token.email === 'iot-device@yourproject.com'" },
+      "arus":       { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "tegangan":   { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "status":     { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "updated_at": { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
       "relay": {
-        ".write": "auth != null && (auth.token.email === 'iot-device@yourproject.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+        ".write": "auth != null && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
       }
     },
 
     "logs": {
       ".read":  "auth != null",
-      ".write": "auth != null && (auth.token.email === 'iot-device@yourproject.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      ".write": "auth != null && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
     },
 
     "settings": {

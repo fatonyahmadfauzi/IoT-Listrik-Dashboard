@@ -52,8 +52,8 @@
 // IoT device account (dedicated Firebase Auth account — NOT user/admin)
 // This account can only write to /listrik and /logs per database rules.
 // (fallback — overridden by captive portal)
-#define DEFAULT_IOT_EMAIL         "iot-device@yourproject.com"
-#define DEFAULT_IOT_PASSWORD      "STRONG_IOT_DEVICE_PASSWORD_MIN16CHARS"
+#define DEFAULT_IOT_EMAIL         "listrik.iot.device@gmail.com"
+#define DEFAULT_IOT_PASSWORD      "Esp32@Listrik2024!"
 
 // ═══════════════════════════════════════════════════════════════
 // LAYER 1B — HARDWARE CONFIG (fixed in firmware)

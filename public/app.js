@@ -61,7 +61,7 @@ function renderRelay(relay) {
 
   // Toast on relay change
   if (lastRelayVal !== -1 && lastRelayVal !== relay) {
-    showToast(`Relay ${isOn ? 'dinyalakan ✅' : 'dimatikan 🔴'}`, isOn ? 'success' : 'warning');
+    showToast(`Relay ${isOn ? 'dinyalakan' : 'dimatikan'}`, isOn ? 'success' : 'warning');
   }
   lastRelayVal = relay;
 }

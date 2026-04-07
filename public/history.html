@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/style.css" />
   <link rel="manifest"   href="/manifest.json" />
   <meta name="theme-color" content="#070c18" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -19,7 +20,7 @@
 
   <nav id="sidebar" class="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-icon">⚡</div>
+      <div class="sidebar-logo-icon"><span class="material-symbols-rounded">bolt</span></div>
       <div class="sidebar-logo-text">
         <h2>IoT Listrik</h2>
         <span>Monitor System</span>
@@ -27,14 +28,14 @@
     </div>
     <div class="sidebar-nav">
       <a href="/dashboard" class="nav-item">
-        <span class="nav-icon">📊</span> Dashboard
+        <span class="material-symbols-rounded nav-icon">dashboard</span> Dashboard
       </a>
       <a href="/history" class="nav-item active">
-        <span class="nav-icon">📋</span> Riwayat Log
+        <span class="material-symbols-rounded nav-icon">history</span> Riwayat Log
       </a>
       <div class="nav-divider"></div>
       <a href="/settings" class="nav-item" data-admin-only>
-        <span class="nav-icon">⚙️</span> Pengaturan
+        <span class="material-symbols-rounded nav-icon">settings</span> Pengaturan
       </a>
     </div>
     <div class="sidebar-footer">
@@ -45,15 +46,15 @@
           <div id="sidebarRole" class="role-pill user">User</div>
         </div>
       </div>
-      <button id="logoutBtn" class="btn btn-ghost w-full">🚪 Logout</button>
+      <button id="logoutBtn" class="btn btn-ghost w-full"><span class="material-symbols-rounded">logout</span>Logout</button>
     </div>
   </nav>
 
   <div class="main-content">
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:12px;">
-        <button id="hamburgerBtn" class="hamburger">☰</button>
-        <h1 class="topbar-title">📋 Riwayat Log</h1>
+        <button id="hamburgerBtn" class="hamburger"><span class="material-symbols-rounded">menu</span></button>
+        <h1 class="topbar-title">Riwayat Log</h1>
       </div>
       <div class="topbar-actions">
         <span id="logCount" class="text-sm text-muted">—</span>
@@ -65,7 +66,7 @@
       <!-- Chart history -->
       <div class="section-card glass mb-16">
         <div class="section-header">
-          <div class="section-title">📈 Grafik Riwayat (50 data terakhir)</div>
+          <div class="section-title">Grafik Riwayat (50 data terakhir)</div>
         </div>
         <div class="chart-container">
           <canvas id="historyChart"></canvas>
@@ -75,7 +76,7 @@
       <!-- Filter + export -->
       <div class="section-card glass">
         <div class="section-header">
-          <div class="section-title">📋 Tabel Log Event</div>
+          <div class="section-title">Tabel Log Event</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             <select id="filterStatus" class="form-select" style="width:150px;">
               <option value="ALL">Semua Status</option>
@@ -84,7 +85,7 @@
               <option value="LEAKAGE">LEAKAGE</option>
               <option value="DANGER">DANGER</option>
             </select>
-            <button id="exportBtn" class="btn btn-ghost btn-sm">📥 Export CSV</button>
+            <button id="exportBtn" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">download</span>Export CSV</button>
           </div>
         </div>
 

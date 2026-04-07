@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/style.css" />
   <link rel="manifest"   href="/manifest.json" />
   <meta name="theme-color" content="#070c18" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
   <style>
     /* ── Settings-specific extra styles ─────────────────────── */
     .settings-grid {
@@ -107,7 +108,7 @@
 
   <nav id="sidebar" class="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-icon">⚡</div>
+      <div class="sidebar-logo-icon"><span class="material-symbols-rounded">bolt</span></div>
       <div class="sidebar-logo-text">
         <h2>IoT Listrik</h2>
         <span>Monitor System</span>
@@ -115,14 +116,14 @@
     </div>
     <div class="sidebar-nav">
       <a href="/dashboard" class="nav-item">
-        <span class="nav-icon">📊</span> Dashboard
+        <span class="material-symbols-rounded nav-icon">dashboard</span> Dashboard
       </a>
       <a href="/history" class="nav-item">
-        <span class="nav-icon">📋</span> Riwayat Log
+        <span class="material-symbols-rounded nav-icon">history</span> Riwayat Log
       </a>
       <div class="nav-divider"></div>
       <a href="/settings" class="nav-item active" data-admin-only>
-        <span class="nav-icon">⚙️</span> Pengaturan
+        <span class="material-symbols-rounded nav-icon">settings</span> Pengaturan
       </a>
     </div>
     <div class="sidebar-footer">
@@ -133,18 +134,18 @@
           <div id="sidebarRole" class="role-pill admin">Admin</div>
         </div>
       </div>
-      <button id="logoutBtn" class="btn btn-ghost w-full">🚪 Logout</button>
+      <button id="logoutBtn" class="btn btn-ghost w-full"><span class="material-symbols-rounded">logout</span>Logout</button>
     </div>
   </nav>
 
   <div class="main-content">
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:12px;">
-        <button id="hamburgerBtn" class="hamburger">☰</button>
-        <h1 class="topbar-title">⚙️ Pengaturan Sistem</h1>
+        <button id="hamburgerBtn" class="hamburger"><span class="material-symbols-rounded">menu</span></button>
+        <h1 class="topbar-title">Pengaturan Sistem</h1>
       </div>
       <div class="topbar-actions">
-        <span class="role-pill admin">🔑 Admin Only</span>
+        <span class="role-pill admin">Admin Only</span>
       </div>
     </header>
 
@@ -154,7 +155,7 @@
       <div style="background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.25);
                   border-radius:var(--radius-md);padding:14px 18px;margin-bottom:22px;
                   font-size:13px;color:var(--primary-light);">
-        ℹ️ <strong>Runtime Configuration:</strong>
+        <strong>Runtime Configuration:</strong>
         Perubahan di halaman ini akan langsung disimpan ke Firebase <code>/settings</code>
         dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa perlu upload ulang firmware</strong>.
       </div>
@@ -164,7 +165,7 @@
 
         <!-- Card 1: Sistem & Sensor ─────────────────────────── -->
         <div class="settings-section">
-          <div class="settings-section-title">🎛️ Sistem &amp; Sensor</div>
+          <div class="settings-section-title">Sistem &amp; Sensor</div>
 
           <div class="form-group">
             <label class="form-label" for="inpThreshold">
@@ -194,7 +195,7 @@
 
           <div class="toggle-row">
             <div class="toggle-info">
-              <h4>🔔 Buzzer</h4>
+              <h4>Buzzer</h4>
               <p>Bunyi saat kondisi abnormal terdeteksi</p>
             </div>
             <label class="toggle-switch">
@@ -205,7 +206,7 @@
 
           <div class="toggle-row">
             <div class="toggle-info">
-              <h4>⚡ Auto-Cutoff Relay</h4>
+              <h4>Auto-Cutoff Relay</h4>
               <p>Relay dimatikan otomatis saat LEAKAGE/DANGER</p>
             </div>
             <label class="toggle-switch">
@@ -217,11 +218,11 @@
 
         <!-- Card 2: Kalibrasi Sensor ─────────────────────────── -->
         <div class="settings-section">
-          <div class="settings-section-title">🔬 Kalibrasi Sensor</div>
+          <div class="settings-section-title">Kalibrasi Sensor</div>
           <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);
                       border-radius:var(--radius-md);padding:12px;margin-bottom:16px;
                       font-size:12px;color:var(--yellow-light);">
-            ⚠️ Prosedur kalibrasi: bandingkan pembacaan ESP32 dengan alat ukur referensi.<br/>
+            Prosedur kalibrasi: bandingkan pembacaan ESP32 dengan alat ukur referensi.<br/>
             <strong>Faktor = nilai_referensi ÷ nilai_raw_ESP32</strong>
           </div>
 
@@ -254,11 +255,11 @@
 
         <!-- Card 3: Telegram ─────────────────────────────────── -->
         <div class="settings-section" style="grid-column: 1 / -1;">
-          <div class="settings-section-title">📱 Konfigurasi Telegram</div>
+          <div class="settings-section-title">Konfigurasi Telegram</div>
           <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.20);
                       border-radius:var(--radius-md);padding:12px;margin-bottom:16px;
                       font-size:12px;color:var(--green-light);">
-            ✅ <strong>Aman:</strong> Token dan Chat ID Telegram disimpan di Firebase (bukan di firmware).
+            <strong>Aman:</strong> Token dan Chat ID Telegram disimpan di Firebase (bukan di firmware).
             Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini dari Firebase setiap sinkronisasi.
           </div>
 
@@ -269,7 +270,7 @@
                 <input id="inpBotToken" class="form-input" type="password"
                        placeholder="1234567890:ABCDEF..." autocomplete="off" />
                 <button type="button" class="reveal-btn" id="revealToken"
-                        title="Tampilkan/sembunyikan token">👁</button>
+                        title="Tampilkan/sembunyikan token"><span class="material-symbols-rounded">visibility</span></button>
               </div>
               <div class="form-hint">
                 Dapat dari @BotFather → /newbot → copy token.
@@ -295,9 +296,9 @@
 
       <!-- ── User Management ────────────────────────────────── -->
       <div class="settings-section" style="margin-bottom:22px;">
-        <div class="settings-section-title">👥 Manajemen Pengguna</div>
+        <div class="settings-section-title">Manajemen Pengguna</div>
         <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-          <button id="refreshUsersBtn" class="btn btn-ghost btn-sm">🔄 Refresh</button>
+          <button id="refreshUsersBtn" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">refresh</span>Refresh</button>
           <button id="addUserBtn"      class="btn btn-primary btn-sm">➕ Tambah User</button>
         </div>
 
@@ -331,7 +332,7 @@
       <div class="save-bar">
         <span id="saveStatus" class="text-sm text-muted" style="align-self:center;"></span>
         <button id="saveSettingsBtn" class="btn btn-primary">
-          💾 Simpan Semua Settings
+          Simpan Semua Settings
         </button>
       </div>
 
@@ -372,7 +373,7 @@
   </div>
 </div>
 
-<!-- Reset PW modal dihapus — gunakan sendPasswordResetEmail() via tombol 📧 Reset PW -->
+<!-- Reset PW modal dihapus — gunakan sendPasswordResetEmail() via tombol Reset PW -->
 
 <div id="toastContainer" class="toast-container"></div>
 <script type="module" src="/settings.js"></script>
@@ -383,7 +384,7 @@
     const inp = document.getElementById('inpBotToken');
     if (!inp) return;
     inp.type = inp.type === 'password' ? 'text' : 'password';
-    document.getElementById('revealToken').textContent = inp.type === 'password' ? '👁' : '🙈';
+    document.getElementById('revealToken').innerHTML = inp.type === 'password' ? '<span class="material-symbols-rounded">visibility</span>' : '<span class="material-symbols-rounded">visibility_off</span>';
   });
 </script>
 </body>

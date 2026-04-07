@@ -91,37 +91,37 @@ function validateAll() {
 
   const threshold = parseFloat(inpThreshold?.value);
   if (isNaN(threshold) || threshold <= 0 || threshold > 200) {
-    setValidation('valThreshold', '⚠ Threshold harus antara 0.1 – 200 A', false);
+    setValidation('valThreshold', 'Threshold harus antara 0.1 – 200 A', false);
     valid = false;
-  } else { setValidation('valThreshold', '✓ Valid', true); }
+  } else { setValidation('valThreshold', 'Valid', true); }
 
   const interval = parseInt(inpSendInterval?.value);
   if (isNaN(interval) || interval < 500 || interval > 60000) {
-    setValidation('valSendInterval', '⚠ Interval harus antara 500 – 60000 ms', false);
+    setValidation('valSendInterval', 'Interval harus antara 500 – 60000 ms', false);
     valid = false;
-  } else { setValidation('valSendInterval', '✓ Valid', true); }
+  } else { setValidation('valSendInterval', 'Valid', true); }
 
   const arusCal = parseFloat(inpArusCal?.value);
   if (isNaN(arusCal) || arusCal <= 0 || arusCal > 10) {
-    setValidation('valArusCal', '⚠ Harus antara 0.01 – 10', false);
+    setValidation('valArusCal', 'Harus antara 0.01 – 10', false);
     valid = false;
-  } else { setValidation('valArusCal', '✓ Valid', true); }
+  } else { setValidation('valArusCal', 'Valid', true); }
 
   const tegCal = parseFloat(inpTeganganCal?.value);
   if (isNaN(tegCal) || tegCal <= 0 || tegCal > 2000) {
-    setValidation('valTeganganCal', '⚠ Harus antara 0.01 – 2000', false);
+    setValidation('valTeganganCal', 'Harus antara 0.01 – 2000', false);
     valid = false;
-  } else { setValidation('valTeganganCal', '✓ Valid', true); }
+  } else { setValidation('valTeganganCal', 'Valid', true); }
 
   const token = inpBotToken?.value.trim();
   if (token && !/^\d+:[A-Za-z0-9_-]{35,}$/.test(token)) {
-    setValidation('valBotToken', '⚠ Format token tidak valid', false);
+    setValidation('valBotToken', 'Format token tidak valid', false);
     valid = false;
   }
 
   const chatId = inpChatId?.value.trim();
   if (chatId && !/^-?\d+$/.test(chatId)) {
-    setValidation('valChatId', '⚠ Chat ID harus angka', false);
+    setValidation('valChatId', 'Chat ID harus angka', false);
     valid = false;
   }
 
@@ -149,7 +149,7 @@ function loadSettings() {
     }
     if (inpChatId) inpChatId.value = d.telegramChatId ?? '';
     if (saveStatus) {
-      saveStatus.textContent = '✓ Settings dimuat dari Firebase';
+      saveStatus.textContent = 'Settings dimuat dari Firebase';
       setTimeout(() => { if (saveStatus) saveStatus.textContent = ''; }, 3000);
     }
   });
@@ -175,16 +175,16 @@ async function saveSettings() {
 
   try {
     saveBtn.disabled    = true;
-    saveBtn.textContent = '⏳ Menyimpan...';
+    saveBtn.textContent = 'Menyimpan...';
     await set(ref(db, '/settings'), payload);
-    showToast('Settings tersimpan ✅ — ESP32 sinkron dalam ~10 detik', 'success');
-    if (saveStatus) saveStatus.textContent = '✓ Disimpan ' + new Date().toLocaleTimeString('id-ID');
+    showToast('Settings tersimpan — ESP32 sinkron dalam ~10 detik', 'success');
+    if (saveStatus) saveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
   } catch (err) {
     showToast('Gagal simpan: ' + err.message, 'error');
-    if (saveStatus) saveStatus.textContent = '✗ Gagal';
+    if (saveStatus) saveStatus.textContent = 'Gagal';
   } finally {
     saveBtn.disabled    = false;
-    saveBtn.textContent = '💾 Simpan Semua Settings';
+    saveBtn.textContent = 'Simpan Semua Settings';
   }
 }
 
@@ -246,9 +246,9 @@ function renderUsers(users) {
       <td>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm"
-                  onclick="sendResetEmail('${u.email}')">📧 Reset PW</button>
+                  onclick="sendResetEmail('${u.email}')"><span class='material-symbols-rounded'>mail</span>Reset PW</button>
           ${!isMe ? `<button class="btn btn-danger btn-sm"
-                  onclick="deleteUser('${u.uid}','${u.email}')">🗑️ Hapus</button>` : ''}
+                  onclick="deleteUser('${u.uid}','${u.email}')"><span class='material-symbols-rounded'>delete</span>Hapus</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -259,7 +259,7 @@ function renderUsers(users) {
 window.changeRole = async (uid, role) => {
   try {
     await set(ref(db, `/users/${uid}/role`), role);
-    showToast(`Role diubah ke "${role}" ✅`, 'success');
+    showToast(`Role diubah ke "${role}"`, 'success');
   } catch (err) {
     showToast('Gagal ubah role: ' + err.message, 'error');
   }
@@ -269,7 +269,7 @@ window.changeRole = async (uid, role) => {
 window.deleteUser = async (uid, email) => {
   if (!confirm(
     `Hapus profile "${email}" dari sistem?\n\n` +
-    `⚠ Akun Firebase Auth-nya tetap ada (bisa login ulang).\n` +
+    `Akun Firebase Auth-nya tetap ada (bisa login ulang).\n` +
     `Untuk hapus permanen, gunakan Firebase Console → Authentication.`
   )) return;
   try {
@@ -286,7 +286,7 @@ window.sendResetEmail = async (email) => {
   if (!confirm(`Kirim email reset password ke "${email}"?`)) return;
   try {
     await sendPasswordResetEmail(auth, email);
-    showToast(`Email reset password terkirim ke "${email}" 📧`, 'success');
+    showToast(`Email reset password terkirim ke "${email}"`, 'success');
   } catch (err) {
     const msgs = {
       'auth/user-not-found': 'Email tidak terdaftar di Firebase Auth',
@@ -343,7 +343,7 @@ modalSubmit?.addEventListener('click', async () => {
       createdAt: new Date().toISOString(),
     });
 
-    showToast(`Akun "${email}" berhasil dibuat ✅`, 'success');
+    showToast(`Akun "${email}" berhasil dibuat`, 'success');
     closeAddModal();
     [formEmail, formPassword, formDisplayName].forEach(el => { if (el) el.value = ''; });
     if (formRole) formRole.value = 'user';

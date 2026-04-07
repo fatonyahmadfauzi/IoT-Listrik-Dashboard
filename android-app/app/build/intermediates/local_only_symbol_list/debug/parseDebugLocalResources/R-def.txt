@@ -16,8 +16,15 @@ drawable bg_glass_red
 drawable bg_input
 drawable bg_status_normal
 drawable bg_status_warning
+drawable ic_bolt
+drawable ic_chart
+drawable ic_dashboard
+drawable ic_history
 drawable ic_launcher_background
 drawable ic_launcher_foreground
+drawable ic_plug
+drawable ic_settings
+drawable ic_warning
 id alarmContainer
 id btnDemoDanger
 id btnDemoNormal

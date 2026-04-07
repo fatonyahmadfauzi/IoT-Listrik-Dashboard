@@ -495,3 +495,4 @@ tbody tr:hover { background:rgba(255,255,255,.03); }
   border-color: rgba(239, 68, 68, 0.6) !important;
   background-color: rgba(239, 68, 68, 0.15) !important;
 }
+iconify-icon { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }

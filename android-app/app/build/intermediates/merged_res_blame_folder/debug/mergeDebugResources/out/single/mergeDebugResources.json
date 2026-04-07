@@ -1,66 +1,94 @@
 [
     {
-        "merged": "com.iot.listrik.app-debug-41:/layout_activity_login.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/layout/activity_login.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_bg_glass.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\bg_glass.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/layout_activity_alarm.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/layout/activity_alarm.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\layout_activity_login.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\activity_login.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/mipmap-hdpi_ic_launcher.png.flat",
-        "source": "com.iot.listrik.app-main-43:/mipmap-hdpi/ic_launcher.png"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\activity_main.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/mipmap-hdpi_ic_launcher_round.png.flat",
-        "source": "com.iot.listrik.app-main-43:/mipmap-hdpi/ic_launcher_round.png"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_ic_launcher_background.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\ic_launcher_background.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_bg_status_normal.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/bg_status_normal.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\layout_activity_alarm.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\activity_alarm.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_dashboard.xml.flat",
+        "source": "com.iot.listrik.app-main-43:/drawable/ic_dashboard.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_bg_glass.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/bg_glass.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\mipmap-hdpi\\ic_launcher_round.png"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/layout_item_history.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/layout/item_history.xml"
+        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_chart.xml.flat",
+        "source": "com.iot.listrik.app-main-43:/drawable/ic_chart.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_bg_status_warning.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/bg_status_warning.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_bg_input.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\bg_input.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_bg_input.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/bg_input.xml"
+        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_plug.xml.flat",
+        "source": "com.iot.listrik.app-main-43:/drawable/ic_plug.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_bg_button_primary.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/bg_button_primary.xml"
+        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_settings.xml.flat",
+        "source": "com.iot.listrik.app-main-43:/drawable/ic_settings.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/layout_activity_main.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/layout/activity_main.xml"
+        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_warning.xml.flat",
+        "source": "com.iot.listrik.app-main-43:/drawable/ic_warning.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_history.xml.flat",
+        "source": "com.iot.listrik.app-main-43:/drawable/ic_history.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_bg_glass_red.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/bg_glass_red.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_bg_status_normal.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\bg_status_normal.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_launcher_background.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/ic_launcher_background.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_bg_button_primary.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\bg_button_primary.xml"
     },
     {
-        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.iot.listrik.app-main-43:/drawable/ic_launcher_foreground.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_bg_glass_red.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\bg_glass_red.xml"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\drawable_bg_status_warning.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\drawable\\bg_status_warning.xml"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\mipmap-hdpi_ic_launcher.png.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\mipmap-hdpi\\ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "com.iot.listrik.app-debug-41:/drawable_ic_bolt.xml.flat",
+        "source": "com.iot.listrik.app-main-43:/drawable/ic_bolt.xml"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-debug-41:\\layout_item_history.xml.flat",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\item_history.xml"
     }
 ]

@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME    = 'iot-listrik-v5';
+const CACHE_NAME    = 'iot-listrik-v6';
 const CACHE_URLS    = [
   '/',
   '/',
@@ -57,9 +57,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = event.request.url;
 
-  // Skip Firebase API calls, analytics, and non-GET requests
+  // Skip Firebase API calls, analytics, Chrome extensions, and non-GET requests
   if (
     event.request.method !== 'GET'  ||
+    url.startsWith('chrome-extension') ||
     url.includes('firebaseio.com')  ||
     url.includes('googleapis.com/identitytoolkit') ||
     url.includes('firebase.googleapis.com') ||

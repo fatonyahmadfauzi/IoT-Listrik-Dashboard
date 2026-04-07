@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -103,8 +104,11 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="⚡ Arus (A)"
+                        android:text="Arus (A)"
+                        app:drawableStartCompat="@drawable/ic_bolt"
+                        android:drawablePadding="6dp"
                         android:textColor="@color/text_secondary"
+                        android:gravity="center_vertical"
                         android:textSize="13sp"/>
                     <TextView
                         android:id="@+id/tvArus"
@@ -128,8 +132,11 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🔌 Tegangan"
+                        android:text="Tegangan"
+                        app:drawableStartCompat="@drawable/ic_plug"
+                        android:drawablePadding="6dp"
                         android:textColor="@color/text_secondary"
+                        android:gravity="center_vertical"
                         android:textSize="13sp"/>
                     <TextView
                         android:id="@+id/tvTegangan"
@@ -310,7 +317,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🛠️ Thesis Demo Mode (Admin)"
+                    android:text="Thesis Demo Mode (Admin)"
+                    app:drawableStartCompat="@drawable/ic_settings"
+                    android:drawablePadding="6dp"
+                    android:gravity="center_vertical"
                     android:textColor="#f59e0b"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp"/>

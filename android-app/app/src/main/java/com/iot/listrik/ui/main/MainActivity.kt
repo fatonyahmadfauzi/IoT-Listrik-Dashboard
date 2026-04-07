@@ -116,10 +116,10 @@ class MainActivity : AppCompatActivity() {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val connected = snapshot.getValue(Boolean::class.java) ?: false
                 if (connected) {
-                    binding.tvConnectionState.text = "● Connected"
+                    binding.tvConnectionState.text = "Connected"
                     binding.tvConnectionState.setTextColor(Color.parseColor("#22c55e"))
                 } else {
-                    binding.tvConnectionState.text = "● Offline / Reconnecting..."
+                    binding.tvConnectionState.text = "Offline / Reconnecting..."
                     binding.tvConnectionState.setTextColor(Color.parseColor("#ef4444"))
                 }
             }

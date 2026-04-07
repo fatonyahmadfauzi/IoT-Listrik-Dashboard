@@ -122,7 +122,7 @@ function checkAndNotify(status, arus, tegangan) {
 
   if (status === 'LEAKAGE') {
     sendNotification(
-      '⚠️ Kebocoran Arus Terdeteksi!',
+      '<iconify-icon icon="lucide:triangle-alert"></iconify-icon> Kebocoran Arus Terdeteksi!',
       `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V\nSistem mendeteksi kebocoran arus listrik.`,
       '/icons/icon-192.png',
       'leakage-alert'
@@ -130,7 +130,7 @@ function checkAndNotify(status, arus, tegangan) {
     lastNotifiedStatus = status;
   } else if (status === 'DANGER') {
     sendNotification(
-      '🚨 BAHAYA! Kondisi Listrik Kritis!',
+      '<iconify-icon icon="lucide:triangle-alert"></iconify-icon> BAHAYA! Kondisi Listrik Kritis!',
       `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V\nRelay akan dimatikan otomatis!`,
       '/icons/icon-192.png',
       'danger-alert'
@@ -138,7 +138,7 @@ function checkAndNotify(status, arus, tegangan) {
     lastNotifiedStatus = status;
   } else if (status === 'WARNING') {
     sendNotification(
-      '🔔 Peringatan Arus Tinggi',
+      '<iconify-icon icon="lucide:bell"></iconify-icon> Peringatan Arus Tinggi',
       `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V\nArus mendekati batas threshold.`,
       '/icons/icon-192.png',
       'warning-alert'
@@ -147,7 +147,7 @@ function checkAndNotify(status, arus, tegangan) {
   } else if (status === 'NORMAL' && lastNotifiedStatus && lastNotifiedStatus !== 'NORMAL') {
     // Notify recovery
     sendNotification(
-      '✅ Sistem Kembali Normal',
+      '<iconify-icon icon="lucide:shield-check"></iconify-icon> Sistem Kembali Normal',
       `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V`,
       '/icons/icon-192.png',
       'normal-recovery'
@@ -169,10 +169,10 @@ function showToast(message, type = 'success', duration = 4000) {
     document.body.appendChild(container);
   }
 
-  const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+  const icons = { success: '<iconify-icon icon="lucide:check-circle-2"></iconify-icon>', error: '<iconify-icon icon="lucide:x-circle"></iconify-icon>', warning: '<iconify-icon icon="lucide:triangle-alert"></iconify-icon>', info: '<iconify-icon icon="lucide:info"></iconify-icon>' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span>${icons[type] ?? 'ℹ️'}</span><span>${message}</span>`;
+  toast.innerHTML = `<span>${icons[type] ?? '<iconify-icon icon="lucide:info"></iconify-icon>'}</span><span>${message}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {

@@ -1,4 +1,4 @@
-#Tue Apr 07 12:39:23 WIB 2026
+#Tue Apr 07 23:56:16 WIB 2026
 base.0=E\:\\Application\\laragon\\www\\IoT Listrik Dashboard\\android-app\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=E\:\\Application\\laragon\\www\\IoT Listrik Dashboard\\android-app\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
 base.2=E\:\\Application\\laragon\\www\\IoT Listrik Dashboard\\android-app\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\10\\classes.dex

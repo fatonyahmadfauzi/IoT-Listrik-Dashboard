@@ -1,11 +1,23 @@
 [
     {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-mergeDebugResources-40:\\layout\\item_history.xml",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\item_history.xml"
+    },
+    {
         "merged": "com.iot.listrik.app-mergeDebugResources-40:/layout/activity_main.xml",
         "source": "com.iot.listrik.app-main-43:/layout/activity_main.xml"
     },
     {
-        "merged": "com.iot.listrik.app-mergeDebugResources-40:/layout/item_history.xml",
-        "source": "com.iot.listrik.app-main-43:/layout/item_history.xml"
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-mergeDebugResources-40:\\layout\\activity_main.xml",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-mergeDebugResources-40:\\layout\\activity_alarm.xml",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\activity_alarm.xml"
+    },
+    {
+        "merged": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-mergeDebugResources-40:\\layout\\activity_login.xml",
+        "source": "C:\\Users\\faton\\.gradle\\daemon\\8.4\\com.iot.listrik.app-main-43:\\layout\\activity_login.xml"
     },
     {
         "merged": "com.iot.listrik.app-mergeDebugResources-40:/layout/activity_login.xml",

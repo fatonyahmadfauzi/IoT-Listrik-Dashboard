@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.iot.listrik.app-mergeDebugResources-39:/values-v18/values-v18.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\faton\\.gradle\\caches\\transforms-3\\448b5a4d79367a2f876017d233d6ce13\\transformed\\appcompat-1.6.1\\res\\values-v18\\values-v18.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "48",
+                        "endOffsets": "99"
+                    }
+                }
+            ]
+        }
+    ]
+}

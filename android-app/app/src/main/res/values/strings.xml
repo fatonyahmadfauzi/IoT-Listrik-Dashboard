@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">IoT Listrik</string>
+    <string name="trigger_fcm">Trigger Full Screen Alarm</string>
+</resources>

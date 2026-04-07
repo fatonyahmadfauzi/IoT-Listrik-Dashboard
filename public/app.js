@@ -33,10 +33,25 @@ let chart        = null;
 let currentRole  = null;
 let lastRelayVal = -1;  // track relay changes for toast
 
-// ─── Status rendering ─────────────────────────────────────────
+function getStatusLabel(status) {
+  if (status === 'DANGER') return 'Critical Leak Detected';
+  if (status === 'WARNING') return 'Check Load';
+  return 'System Stable';
+}
+
 function renderStatus(status) {
-  elStatus.textContent = status;
+  elStatus.textContent = getStatusLabel(status);
   elStatus.className = `status-badge status-${status}`;
+  
+  // Add subtle danger animation to the parent metric card
+  const card = elStatus.closest('.metric-card');
+  if (card) {
+    if (status === 'DANGER') {
+      card.classList.add('status-pulse-danger');
+    } else {
+      card.classList.remove('status-pulse-danger');
+    }
+  }
 }
 
 function renderRelay(relay) {

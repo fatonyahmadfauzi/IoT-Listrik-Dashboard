@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "115654600721",
+    "firebase_url": "https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "monitoring-listrik-719b1",
+    "storage_bucket": "monitoring-listrik-719b1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:115654600721:android:5504db8259a7d99c45a9b0",
+        "android_client_info": {
+          "package_name": "com.iot.listrik"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhv2CWgxxJJ0Ivx68JGE-e2opSL9q3lvg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

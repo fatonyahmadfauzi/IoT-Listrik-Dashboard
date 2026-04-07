@@ -38,6 +38,12 @@ function fmtTime(waktu) {
   });
 }
 
+function getStatusLabel(status) {
+  if (status === 'DANGER') return 'Critical Leak Detected';
+  if (status === 'WARNING') return 'Check Load';
+  return 'System Stable';
+}
+
 // ─── Status chip ─────────────────────────────────────────────
 function statusChip(status) {
   const map = {
@@ -47,7 +53,8 @@ function statusChip(status) {
     DANGER:  ['#ff8080', 'rgba(255,128,128,.20)'],
   };
   const [color, bg] = map[status] || ['#94a3b8', 'rgba(148,163,184,.15)'];
-  return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;">${status}</span>`;
+  const label = getStatusLabel(status);
+  return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;">${label}</span>`;
 }
 
 // ─── Render table ─────────────────────────────────────────────
@@ -72,7 +79,6 @@ function renderTable(logs) {
   `).join('');
 }
 
-// ─── Filter ───────────────────────────────────────────────────
 function applyFilter() {
   const status = filterSel?.value || 'ALL';
   const filtered = status === 'ALL' ? allLogs : allLogs.filter(l => l.status === status);
@@ -80,6 +86,10 @@ function applyFilter() {
   if (chart && filtered.length > 0) {
     loadHistoryIntoChart(chart, filtered.slice().reverse().slice(-50));
   }
+  
+  // Auto-scroll logic
+  const wrapper = document.querySelector('.table-wrap');
+  if (wrapper) wrapper.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ─── Load logs from RTDB ──────────────────────────────────────

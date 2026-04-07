@@ -29,10 +29,14 @@
 └─────────────────┘         │  /users                       │
                             └──────────────┬────────────────┘
                                            │
-                            ┌──────────────▼────────────────┐
                             │   Web Dashboard (PWA)         │
                             │   HTML/JS in /public          │
                             │   Direct RTDB (Admin role)    │
+                            └──────────────┬────────────────┘
+                                           │
+                            ┌──────────────▼────────────────┐
+                            │   Android Native App (FCM)    │
+                            │   Full-Screen Alarm Intents   │
                             └───────────────────────────────┘
 ```
 
@@ -349,9 +353,12 @@ Desktop Chrome: click install icon in address bar
 | Hosting | Firebase Hosting |
 | Frontend | Vanilla HTML/CSS/JS (ES Modules) |
 | Charts | Chart.js 4 + chartjs-plugin-zoom |
-| Push Alerts | Web Notifications API + Telegram Bot API |
+| Push Alerts | Web Notifications API + Telegram Bot API + **Firebase Cloud Messaging (FCM)** |
 | PWA | Web App Manifest + Service Worker |
+| **Android App** | **Native Kotlin (MVVM) + Material Design 3 + Full-Screen Intents** |
+| **Cloud Backend** | **Firebase Cloud Functions (Node.js)** |
 
 ---
 
 *ALAT DETEKSI KEBOCORAN ARUS LISTRIK BERBASIS IoT — Thesis Project v2.0*
+

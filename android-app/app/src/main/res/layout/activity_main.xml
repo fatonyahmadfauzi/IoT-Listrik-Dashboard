@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_base">
+    
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:gravity="center_vertical"
+        android:background="@color/bg_surface">
+        
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dashboard IoT"
+                android:textSize="20sp"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/tvConnectionState"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="● Connecting..."
+                android:textSize="12sp"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/yellow"/>
+        </LinearLayout>
+        
+        <ImageView
+            android:id="@+id/btnLogout"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@android:drawable/ic_lock_power_off"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Logout"
+            android:tint="@color/text_secondary"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:paddingBottom="24dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+            
+            <!-- Animated Status Card -->
+            <LinearLayout
+                android:id="@+id/cardStatusOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_normal"
+                android:padding="24dp"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:gravity="center_horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SISTEM STATUS"
+                    android:letterSpacing="0.1"
+                    android:textSize="12sp"
+                    android:textColor="#CCFFFFFF"/>
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="MEMUAT..."
+                    android:textSize="34sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="4dp"
+                    android:textColor="#FFFFFF"/>
+            </LinearLayout>
+
+            <!-- Metrics Grid -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                
+                <!-- Arus -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_glass"
+                    android:padding="20dp"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="8dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⚡ Arus (A)"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                    <TextView
+                        android:id="@+id/tvArus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+                </LinearLayout>
+
+                <!-- Tegangan -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_glass"
+                    android:padding="20dp"
+                    android:orientation="vertical"
+                    android:layout_marginStart="8dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔌 Tegangan"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"/>
+                    <TextView
+                        android:id="@+id/tvTegangan"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- MPAndroidChart -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:layout_marginBottom="10dp"
+                android:text="GRAFIK REALTIME"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"/>
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:background="@drawable/bg_glass"
+                android:padding="12dp">
+                <TextView
+                    android:id="@+id/tvChartLoading"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:text="Menunggu data..." />
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/lineChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"/>
+            </RelativeLayout>
+
+
+            <!-- Statistics Block -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="22dp"
+                android:layout_marginBottom="10dp"
+                android:gravity="center_vertical">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="STATISTIK (20 DATA TERAKHIR)"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@drawable/bg_glass"
+                android:padding="16dp">
+                
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVG Arus" android:textSize="11sp" android:textColor="@color/text_secondary"/>
+                    <TextView android:id="@+id/tvAvgArus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 A" android:textSize="14sp" android:textColor="@color/cyan" android:textStyle="bold"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MAX Arus" android:textSize="11sp" android:textColor="@color/text_secondary"/>
+                    <TextView android:id="@+id/tvMaxArus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 A" android:textSize="14sp" android:textColor="@color/red" android:textStyle="bold"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVG Teg" android:textSize="11sp" android:textColor="@color/text_secondary"/>
+                    <TextView android:id="@+id/tvAvgTeg" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 V" android:textSize="14sp" android:textColor="@color/yellow" android:textStyle="bold"/>
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MAX Teg" android:textSize="11sp" android:textColor="@color/text_secondary"/>
+                    <TextView android:id="@+id/tvMaxTeg" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 V" android:textSize="14sp" android:textColor="@color/yellow" android:textStyle="bold"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- History Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:layout_marginBottom="10dp"
+                android:text="RIWAYAT LOG (15 TERAKHIR)"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/tvHistoryEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Belum ada riwayat."
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:padding="20dp"
+                android:background="@drawable/bg_glass"/>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvHistory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:clipToPadding="false"/>
+
+            <!-- Relay Control -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_glass"
+                android:padding="24dp"
+                android:orientation="vertical"
+                android:layout_marginTop="22dp"
+                android:gravity="center">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Admin Relay Control"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="16dp"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+                    <Button
+                        android:id="@+id/btnRelayOn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:backgroundTint="@color/green"
+                        android:text="Turn ON"/>
+                    <Space android:layout_width="16dp" android:layout_height="wrap_content"/>
+                    <Button
+                        android:id="@+id/btnRelayOff"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:backgroundTint="@color/red"
+                        android:text="Turn OFF"/>
+                </LinearLayout>
+            </LinearLayout>
+
+    
+            <!-- Demo Mode Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_glass"
+                android:padding="24dp"
+                android:orientation="vertical"
+                android:layout_marginTop="16dp"
+                android:gravity="center">
+                <!-- Demo Mode block omitted for brevity inside script, I will just wrap it properly here -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🛠️ Thesis Demo Mode (Admin)"
+                    android:textColor="#f59e0b"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Force override status to trigger alarms locally."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+                    <Button
+                        android:id="@+id/btnDemoNormal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="8dp"
+                        android:textSize="12sp"
+                        android:backgroundTint="@color/green"
+                        android:text="NORMAL"/>
+                    <Button
+                        android:id="@+id/btnDemoWarning"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="8dp"
+                        android:textSize="12sp"
+                        android:backgroundTint="@color/yellow"
+                        android:textColor="#000000"
+                        android:text="WARN"/>
+                    <Button
+                        android:id="@+id/btnDemoDanger"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:textSize="12sp"
+                        android:backgroundTint="@color/red"
+                        android:text="DANGER"/>
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

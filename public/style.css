@@ -482,5 +482,16 @@ tbody tr:hover { background:rgba(255,255,255,.03); }
 }
 @media (max-width:480px) {
   .metric-value { font-size:24px; }
-  .auth-card { padding:22px; }
+}
+
+/* ── Danger Status Animation ────────────────────────────────────────────── */
+@keyframes danger-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+  50% { transform: scale(1.02); box-shadow: 0 0 40px rgba(239, 68, 68, 0.7), inset 0 0 20px rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.8); }
+  100% { transform: scale(1); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+}
+.status-pulse-danger {
+  animation: danger-pulse 2s ease-in-out infinite !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  background-color: rgba(239, 68, 68, 0.15) !important;
 }

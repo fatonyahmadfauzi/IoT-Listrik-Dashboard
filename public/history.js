@@ -60,7 +60,7 @@ function statusChip(status) {
 // ─── Render table ─────────────────────────────────────────────
 function renderTable(logs) {
   if (logs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-secondary);">📂 Belum ada data log</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-secondary);">Belum ada data log</td></tr>`;
     countEl.textContent = '0 log';
     return;
   }
@@ -73,7 +73,7 @@ function renderTable(logs) {
       <td class="td-mono">${Number(l.arus     || 0).toFixed(2)} A</td>
       <td class="td-mono">${Number(l.tegangan || 0).toFixed(1)} V</td>
       <td>${statusChip(l.status || '—')}</td>
-      <td class="td-mono">${l.relay === 1 ? '🟢 ON' : '🔴 OFF'}</td>
+      <td class="td-mono">${l.relay === 1 ? 'ON' : 'OFF'}</td>
       <td class="text-sm text-muted">${l.source || '—'}</td>
     </tr>
   `).join('');

@@ -1,4 +1,5 @@
 # ⚡ ALAT DETEKSI KEBOCORAN ARUS LISTRIK BERBASIS IoT
+
 ## Dengan Notifikasi Real-Time — v2.0
 
 > Thesis Project — Sistem monitoring dan deteksi kebocoran arus listrik berbasis
@@ -46,31 +47,42 @@
 
 ```
 /project-root/
-├── public/                 ← Web Frontend (PWA)
-│   ├── index.html          ← Entry redirect (auth-aware)
-│   ├── login.html          ← Login & register
-│   ├── dashboard.html      ← Monitoring realtime + relay control
-│   ├── history.html        ← Log history + chart + export CSV
-│   ├── settings.html       ← Admin: system settings + user CRUD
-│   ├── style.css           ← Global dark glassmorphism design system
-│   ├── firebase-config.js  ← Firebase app init
-│   ├── auth.js             ← Auth state, role guard, sidebar
-│   ├── app.js              ← Dashboard logic
-│   ├── history.js          ← History page logic
-│   ├── settings.js         ← Settings + user CRUD via secondary Auth
-│   ├── charts.js           ← Chart.js dual-axis + zoom/pan
-│   ├── notifications.js    ← Browser notifications + toast
-│   ├── manifest.json       ← PWA manifest
-│   ├── service-worker.js   ← PWA cache-first strategy
-│   └── icons/              ← PWA icons (72–512px)
+├── .gitignore              ← Ignore build artifacts & sensitive files
+├── .vscode/                ← VS Code settings
+├── .meta/                  ← Non-essential artifacts
+├── LICENSE                 ← MIT License
+├── README.md               ← This file
 ├── firebase.json           ← Firebase hosting config
 ├── database.rules.json     ← Firebase RTDB security rules
-└── esp32/
-    ├── config.h            ← TWO-LAYER config: BootstrapConfig + RuntimeSettings
-    ├── sensors.h           ← Runtime calibration params
-    ├── firebase_handler.h  ← Firebase RTDB R/W + readAllSettings()
-    ├── telegram_handler.h  ← Runtime token/chatId params
-    └── main.ino            ← WiFiManager + NVS + runtime settings loop
+├── android-app/            ← Android Native App (Kotlin)
+│   ├── app/
+│   │   ├── build.gradle.kts
+│   │   ├── google-services.json
+│   │   └── src/main/
+│   └── gradle/
+├── backend-local/          ← Local Node.js server (optional)
+│   ├── package.json
+│   ├── server.js
+│   └── serviceAccountKey.json
+├── docs/                   ← Documentation
+├── esp32/                  ← ESP32 Firmware
+│   ├── config.h
+│   ├── sensors.h
+│   ├── firebase_handler.h
+│   ├── telegram_handler.h
+│   └── main.ino
+├── functions/              ← Firebase Cloud Functions
+│   ├── package.json
+│   └── index.js
+├── public/                 ← Web Frontend (PWA)
+│   ├── *.html
+│   ├── *.js
+│   ├── style.css
+│   ├── manifest.json
+│   ├── service-worker.js
+│   └── icons/
+├── scripts/                ← Deployment scripts
+└── tools/                  ← Utility scripts
 ```
 
 ---
@@ -81,28 +93,28 @@
 
 Stored in ESP32 Non-Volatile Storage (NVS). Set via captive portal.
 
-| Field | Changed by |
-|-------|-----------|
+| Field                | Changed by                 |
+| -------------------- | -------------------------- |
 | WiFi SSID / Password | WiFiManager captive portal |
-| Firebase API Key | WiFiManager captive portal |
-| Firebase DB URL | WiFiManager captive portal |
-| IoT device email | WiFiManager captive portal |
-| IoT device password | WiFiManager captive portal |
+| Firebase API Key     | WiFiManager captive portal |
+| Firebase DB URL      | WiFiManager captive portal |
+| IoT device email     | WiFiManager captive portal |
+| IoT device password  | WiFiManager captive portal |
 
 ### Layer 2 — Runtime Settings (Firebase /settings, web admin)
 
 Fetched from Firebase every ~10 seconds. No reflashing required.
 
-| Field | Default | Changed by |
-|-------|---------|-----------|
-| thresholdArus | 10.0 A | Web Settings page |
-| buzzerEnabled | true | Web Settings page |
-| autoCutoffEnabled | true | Web Settings page |
-| telegramBotToken | "" | Web Settings page |
-| telegramChatId | "" | Web Settings page |
-| arusCalibration | 1.000 | Web Settings page |
-| teganganCalibration | 1.0 | Web Settings page |
-| sendIntervalMs | 2000 ms | Web Settings page |
+| Field               | Default | Changed by        |
+| ------------------- | ------- | ----------------- |
+| thresholdArus       | 10.0 A  | Web Settings page |
+| buzzerEnabled       | true    | Web Settings page |
+| autoCutoffEnabled   | true    | Web Settings page |
+| telegramBotToken    | ""      | Web Settings page |
+| telegramChatId      | ""      | Web Settings page |
+| arusCalibration     | 1.000   | Web Settings page |
+| teganganCalibration | 1.0     | Web Settings page |
+| sendIntervalMs      | 2000 ms | Web Settings page |
 
 ---
 
@@ -151,15 +163,16 @@ npx -y firebase-tools@latest use monitoring-listrik-719b1
 ### 3. Fill Firebase Config
 
 Edit `firebase-config.js`:
+
 ```javascript
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "monitoring-listrik-719b1.firebaseapp.com",
-  databaseURL:       "https://monitoring-listrik-719b1-default-rtdb.firebaseio.com/",
-  projectId:         "monitoring-listrik-719b1",
-  storageBucket:     "monitoring-listrik-719b1.appspot.com",
+  apiKey: "YOUR_API_KEY",
+  authDomain: "monitoring-listrik-719b1.firebaseapp.com",
+  databaseURL: "https://monitoring-listrik-719b1-default-rtdb.firebaseio.com/",
+  projectId: "monitoring-listrik-719b1",
+  storageBucket: "monitoring-listrik-719b1.appspot.com",
   messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  appId: "YOUR_APP_ID",
 };
 ```
 
@@ -181,9 +194,16 @@ npx -y firebase-tools@latest deploy --only hosting
 ### 6. Bootstrap Database
 
 In Firebase Console → Realtime Database → set initial data:
+
 ```json
 {
-  "listrik": { "arus": 0, "tegangan": 220, "relay": 1, "status": "NORMAL", "updated_at": "0" },
+  "listrik": {
+    "arus": 0,
+    "tegangan": 220,
+    "relay": 1,
+    "status": "NORMAL",
+    "updated_at": "0"
+  },
   "settings": {
     "thresholdArus": 10,
     "buzzerEnabled": true,
@@ -200,6 +220,7 @@ In Firebase Console → Realtime Database → set initial data:
 ### 7. Create First Admin Account
 
 Register at `login.html`, then in Firebase Console → Realtime Database:
+
 ```
 /users/{YOUR_UID}/role = "admin"
 ```
@@ -207,6 +228,7 @@ Register at `login.html`, then in Firebase Console → Realtime Database:
 ### 8. Create IoT Device Account
 
 Firebase Console → Authentication → Add user:
+
 - Email: `iot-device@yourproject.com`
 - Password: strong password (≥ 16 chars)
 
@@ -218,13 +240,13 @@ Then update `database.rules.json` with this email.
 
 ### Required Libraries (Arduino Library Manager)
 
-| Library | Author | Search term |
-|---------|--------|-------------|
-| Firebase ESP Client | Mobizt | `Firebase ESP Client` |
-| ArduinoJson | Benoit Blanchon | `ArduinoJson` |
-| **WiFiManager** | **tzapu** | **`WiFiManager`** |
-| URLEncode | Masoud K | `URLEncode` |
-| LiquidCrystal I2C | Frank de Brabander | `LiquidCrystal I2C` (optional) |
+| Library             | Author             | Search term                    |
+| ------------------- | ------------------ | ------------------------------ |
+| Firebase ESP Client | Mobizt             | `Firebase ESP Client`          |
+| ArduinoJson         | Benoit Blanchon    | `ArduinoJson`                  |
+| **WiFiManager**     | **tzapu**          | **`WiFiManager`**              |
+| URLEncode           | Masoud K           | `URLEncode`                    |
+| LiquidCrystal I2C   | Frank de Brabander | `LiquidCrystal I2C` (optional) |
 
 > WiFiManager by tzapu — this is the **captive portal library**. Install via:
 > Arduino IDE → Tools → Manage Libraries → search "WiFiManager" → install by tzapu.
@@ -270,12 +292,14 @@ LCD SCL        GPIO22       optional
 ### Sensor Calibration
 
 **Arus (SCT-013):**
+
 1. Connect a known load (e.g. 100W lamp = ~0.45A @ 220V)
 2. Note raw reading in Serial Monitor before calibration
 3. `arusCalibration = true_amps / raw_amps`
 4. Enter in web Settings → Kalibrasi Arus
 
 **Tegangan (ZMPT101B):**
+
 1. Measure with reference voltmeter (e.g. 220V)
 2. Note raw ADC RMS value from Serial Monitor (e.g. 0.336 V)
 3. `teganganCalibration = 220.0 / 0.336 ≈ 654.8`
@@ -330,35 +354,34 @@ Desktop Chrome: click install icon in address bar
 
 ## 🔐 Security Notes
 
-| Concern | Approach |
-|---------|---------|
-| ESP32 write scope | Restricted to `/listrik/arus,tegangan,status,updated_at` and `/logs` by email rule |
-| Relay control | Admin-only write to `/listrik/relay` |
-| Settings modification | Admin-only write to `/settings` |
-| Telegram credentials | Stored in `/settings` (admin-write only, not in firmware) |
-| User CRUD | Secondary Firebase Auth (client) + direct RTDB roles (protected by rules) |
-| WiFi/Firebase bootstrap | Stored in NVS, set via local captive portal (HTTP, local AP only) |
+| Concern                 | Approach                                                                           |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| ESP32 write scope       | Restricted to `/listrik/arus,tegangan,status,updated_at` and `/logs` by email rule |
+| Relay control           | Admin-only write to `/listrik/relay`                                               |
+| Settings modification   | Admin-only write to `/settings`                                                    |
+| Telegram credentials    | Stored in `/settings` (admin-write only, not in firmware)                          |
+| User CRUD               | Secondary Firebase Auth (client) + direct RTDB roles (protected by rules)          |
+| WiFi/Firebase bootstrap | Stored in NVS, set via local captive portal (HTTP, local AP only)                  |
 
 ---
 
 ## 📦 Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Hardware | ESP32 DevKitC V4, SCT-013, ZMPT101B, Relay |
-| Firmware | Arduino C++ + Firebase ESP Client + **WiFiManager** |
-| Provisioning | **WiFiManager Captive Portal + ESP32 NVS/Preferences** |
-| Database | Firebase Realtime Database |
-| Auth | Firebase Authentication (Email/Password) |
-| Hosting | Firebase Hosting |
-| Frontend | Vanilla HTML/CSS/JS (ES Modules) |
-| Charts | Chart.js 4 + chartjs-plugin-zoom |
-| Push Alerts | Web Notifications API + Telegram Bot API + **Firebase Cloud Messaging (FCM)** |
-| PWA | Web App Manifest + Service Worker |
-| **Android App** | **Native Kotlin (MVVM) + Material Design 3 + Full-Screen Intents** |
-| **Cloud Backend** | **Firebase Cloud Functions (Node.js)** |
+| Layer             | Technology                                                                    |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Hardware          | ESP32 DevKitC V4, SCT-013, ZMPT101B, Relay                                    |
+| Firmware          | Arduino C++ + Firebase ESP Client + **WiFiManager**                           |
+| Provisioning      | **WiFiManager Captive Portal + ESP32 NVS/Preferences**                        |
+| Database          | Firebase Realtime Database                                                    |
+| Auth              | Firebase Authentication (Email/Password)                                      |
+| Hosting           | Firebase Hosting                                                              |
+| Frontend          | Vanilla HTML/CSS/JS (ES Modules)                                              |
+| Charts            | Chart.js 4 + chartjs-plugin-zoom                                              |
+| Push Alerts       | Web Notifications API + Telegram Bot API + **Firebase Cloud Messaging (FCM)** |
+| PWA               | Web App Manifest + Service Worker                                             |
+| **Android App**   | **Native Kotlin (MVVM) + Material Design 3 + Full-Screen Intents**            |
+| **Cloud Backend** | **Firebase Cloud Functions (Node.js)**                                        |
 
 ---
 
-*ALAT DETEKSI KEBOCORAN ARUS LISTRIK BERBASIS IoT — Thesis Project v2.0*
-
+_ALAT DETEKSI KEBOCORAN ARUS LISTRIK BERBASIS IoT — Thesis Project v2.0_

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000"
+    android:gravity="center">
+
+    <!-- Bergetar dan beranimasi -->
+    <LinearLayout
+        android:id="@+id/alarmContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="#66FF0000"
+        android:padding="32dp">
+
+        <ImageView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            app:srcCompat="@drawable/ic_warning"
+            app:tint="#FFFFFF"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:id="@+id/tvAlarmTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="BAHAYA KRITIS!"
+            android:textSize="36sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:textAlignment="center"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tvAlarmBody"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Deteksi Kebocoran Arus!"
+            android:textSize="20sp"
+            android:textColor="#DDDDDD"
+            android:textAlignment="center"
+            android:layout_marginBottom="64dp"/>
+
+        <!-- Swipe up to dismiss / Button to dismiss -->
+        <Button
+            android:id="@+id/btnDismiss"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:backgroundTint="#FFFFFF"
+            android:textColor="#FF0000"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:text="BUKA APLIKASI &amp; MATIKAN ALARM"/>
+
+    </LinearLayout>
+</LinearLayout>

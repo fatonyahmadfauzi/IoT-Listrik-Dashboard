@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_base">#070c18</color>
+    <color name="bg_surface">#0d1424</color>
+    <color name="cyan">#06b6d4</color>
+    <color name="green">#22c55e</color>
+    <color name="primary">#3b82f6</color>
+    <color name="primary_light">#60a5fa</color>
+    <color name="red">#ef4444</color>
+    <color name="text_primary">#f1f5f9</color>
+    <color name="text_secondary">#94a3b8</color>
+    <color name="yellow">#f59e0b</color>
+    <string name="app_name">IoT Listrik</string>
+    <string name="firebase_database_url" translatable="false">https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app</string>
+    <string name="gcm_defaultSenderId" translatable="false">115654600721</string>
+    <string name="google_api_key" translatable="false">AIzaSyAhv2CWgxxJJ0Ivx68JGE-e2opSL9q3lvg</string>
+    <string name="google_app_id" translatable="false">1:115654600721:android:5504db8259a7d99c45a9b0</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyAhv2CWgxxJJ0Ivx68JGE-e2opSL9q3lvg</string>
+    <string name="google_storage_bucket" translatable="false">monitoring-listrik-719b1.firebasestorage.app</string>
+    <string name="project_id" translatable="false">monitoring-listrik-719b1</string>
+    <string name="trigger_fcm">Trigger Full Screen Alarm</string>
+    <style name="Theme.IoTListrik" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/bg_base</item>
+        <item name="android:statusBarColor">@color/bg_base</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+    </style>
+    <style name="Theme.IoTListrik.Alarm" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/bg_base</item>
+        <item name="android:statusBarColor">@color/red</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

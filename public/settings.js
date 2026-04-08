@@ -229,13 +229,13 @@ function renderUsers(users) {
       ? `<span class="role-pill admin">Admin</span>`
       : `<span class="role-pill user">User</span>`;
     return `<tr>
-      <td>
+      <td data-label="Pengguna">
         <div style="font-weight:600;">${u.displayName || '—'}${isMe ? ' <span style="font-size:10px;color:var(--primary-light);">(kamu)</span>' : ''}</div>
         <div style="font-size:12px;color:var(--text-secondary);">${u.email}</div>
       </td>
-      <td>${badge}</td>
-      <td class="text-sm text-muted">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '—'}</td>
-      <td>
+      <td data-label="Role">${badge}</td>
+      <td data-label="Dibuat" class="text-sm text-muted">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '—'}</td>
+      <td data-label="Ubah Role">
         ${isMe ? '<span class="text-muted text-sm">—</span>' : `
         <select class="form-select" style="width:100px;padding:6px 10px;"
                 onchange="changeRole('${u.uid}', this.value)">
@@ -243,7 +243,7 @@ function renderUsers(users) {
           <option value="admin" ${u.role === 'admin'  ? 'selected' : ''}>Admin</option>
         </select>`}
       </td>
-      <td>
+      <td data-label="Aksi">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm"
                   onclick="sendResetEmail('${u.email}')"><span class='material-symbols-rounded'>mail</span>Reset PW</button>

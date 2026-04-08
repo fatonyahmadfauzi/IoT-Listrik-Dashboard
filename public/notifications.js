@@ -169,10 +169,10 @@ function showToast(message, type = 'success', duration = 4000) {
     document.body.appendChild(container);
   }
 
-  const icons = { success: '<iconify-icon icon="lucide:check-circle-2"></iconify-icon>', error: '<iconify-icon icon="lucide:x-circle"></iconify-icon>', warning: '<iconify-icon icon="lucide:triangle-alert"></iconify-icon>', info: '<iconify-icon icon="lucide:info"></iconify-icon>' };
+  const icons = { success: '<span class="material-symbols-rounded">check_circle</span>', error: '<span class="material-symbols-rounded">error</span>', warning: '<span class="material-symbols-rounded">warning</span>', info: '<span class="material-symbols-rounded">info</span>' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span>${icons[type] ?? '<iconify-icon icon="lucide:info"></iconify-icon>'}</span><span>${message}</span>`;
+  toast.innerHTML = `<span>${icons[type] ?? '<span class="material-symbols-rounded">info</span>'}</span><span>${message}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {

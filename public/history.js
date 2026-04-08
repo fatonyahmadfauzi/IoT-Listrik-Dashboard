@@ -69,12 +69,12 @@ function renderTable(logs) {
 
   tbody.innerHTML = logs.map(l => `
     <tr>
-      <td class="td-mono text-sm">${fmtTime(l.waktu)}</td>
-      <td class="td-mono">${Number(l.arus     || 0).toFixed(2)} A</td>
-      <td class="td-mono">${Number(l.tegangan || 0).toFixed(1)} V</td>
-      <td>${statusChip(l.status || '—')}</td>
-      <td class="td-mono">${l.relay === 1 ? 'ON' : 'OFF'}</td>
-      <td class="text-sm text-muted">${l.source || '—'}</td>
+      <td data-label="Waktu" class="td-mono text-sm">${fmtTime(l.waktu)}</td>
+      <td data-label="Arus" class="td-mono">${Number(l.arus     || 0).toFixed(2)} A</td>
+      <td data-label="Tegangan" class="td-mono">${Number(l.tegangan || 0).toFixed(1)} V</td>
+      <td data-label="Status">${statusChip(l.status || '—')}</td>
+      <td data-label="Relay" class="td-mono">${l.relay === 1 ? 'ON' : 'OFF'}</td>
+      <td data-label="Sumber" class="text-sm text-muted">${l.source || '—'}</td>
     </tr>
   `).join('');
 }

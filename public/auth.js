@@ -124,15 +124,36 @@ function populateSidebar(user, role) {
 
 // ─── Sidebar toggle (mobile) ─────────────────────────────────
 function initSidebarToggle() {
-  const sidebar  = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sidebarOverlay');
-  const hamburger= document.getElementById('hamburgerBtn');
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('sidebarOverlay');
+  const hamburger = document.getElementById('hamburgerBtn');
+  const navItems  = document.querySelectorAll('.nav-item');
 
   function open()  { sidebar?.classList.add('open');  overlay?.classList.add('open'); }
   function close() { sidebar?.classList.remove('open'); overlay?.classList.remove('open'); }
 
-  hamburger?.addEventListener('click', open);
+  function isMobile() {
+    return window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  hamburger?.addEventListener('click', () => {
+    if (isMobile()) {
+      open();
+    }
+  });
   overlay?.addEventListener('click', close);
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      if (isMobile()) close();
+    });
+  });
+
+  window.addEventListener('resize', () => {
+    if (!isMobile()) {
+      close();
+    }
+  });
 }
 
 // ─── Logout ──────────────────────────────────────────────────

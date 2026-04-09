@@ -8,6 +8,32 @@
  */
 
 let lastNotifiedStatus = null;
+try {
+  // Simpan status terakhir agar pindah halaman (dashboard/history/settings) tidak memicu notifikasi ulang.
+  const saved = localStorage.getItem('iot_last_notified_status');
+  if (saved) lastNotifiedStatus = saved;
+} catch (_) {}
+
+// Ulangi notifikasi OS beberapa detik sekali saat kondisi bahaya,
+// agar bunyi tetap terdengar walau halaman di-reload saat pindah menu.
+const REPEAT_INTERVAL_MS = 3000;
+let lastRepeatAt = 0;
+let lastRepeatStatus = null;
+
+try {
+  const at = localStorage.getItem('iot_last_alarm_repeat_at');
+  const st = localStorage.getItem('iot_last_alarm_repeat_status');
+  if (at) lastRepeatAt = Number(at) || 0;
+  if (st) lastRepeatStatus = st;
+} catch (_) {}
+
+function isAlarmDisabled() {
+  try {
+    return localStorage.getItem('iot_alarm_disable') === '1';
+  } catch (_) {
+    return false;
+  }
+}
 
 /**
  * Request notification permission on first user interaction.
@@ -36,13 +62,14 @@ function sendNotification(title, body, icon = '/icons/icon-192.png', tag = 'iot-
     body,
     icon,
     tag,           // same tag replaces previous notification instead of stacking
+    renotify: true, // bila browser mendukung: tetap bunyikan walau ditimpa tag
     badge: '/icons/icon-96.png',
     vibrate: [200, 100, 200],
-    requireInteraction: true,  // stays until user dismisses
+    requireInteraction: false,
   });
 
-  // Auto-close after 10 seconds
-  setTimeout(() => n.close(), 10000);
+  // Auto-close singkat supaya tidak numpuk
+  setTimeout(() => n.close(), 2500);
 
   n.addEventListener('click', () => {
     window.focus();
@@ -110,15 +137,50 @@ function stopWebSiren() {
  * @param {number} tegangan - voltage in Volts
  */
 function checkAndNotify(status, arus, tegangan) {
+  if (isAlarmDisabled()) {
+    stopWebSiren();
+    return;
+  }
+
+  // Normalize
+  status = status || 'NORMAL';
+
   // Always evaluate siren state based on current status
-  if (status === 'LEAKAGE' || status === 'DANGER') {
+  if (status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER') {
     // Requires page interaction first! (browser policy)
     playWebSiren();
   } else {
     stopWebSiren();
   }
 
-  if (status === lastNotifiedStatus) return;  // avoid spam
+  const isDanger = status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER';
+  if (!isDanger) {
+    // Recovery handling + stop repeats
+    if (status === 'NORMAL' && lastNotifiedStatus && lastNotifiedStatus !== 'NORMAL') {
+      // Notify recovery
+      sendNotification(
+        '<iconify-icon icon="lucide:shield-check"></iconify-icon> Sistem Kembali Normal',
+        `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V`,
+        '/icons/icon-192.png',
+        'normal-recovery'
+      );
+      lastNotifiedStatus = status;
+      try { localStorage.setItem('iot_last_notified_status', status); } catch (_) {}
+    }
+    // reset repeat timer
+    lastRepeatAt = 0;
+    lastRepeatStatus = null;
+    try { localStorage.removeItem('iot_last_alarm_repeat_at'); } catch (_) {}
+    try { localStorage.removeItem('iot_last_alarm_repeat_status'); } catch (_) {}
+    return;
+  }
+
+  const now = Date.now();
+  const shouldNotify =
+    status !== lastNotifiedStatus ||
+    (lastRepeatStatus === status && now - lastRepeatAt >= REPEAT_INTERVAL_MS);
+
+  if (!shouldNotify) return;
 
   if (status === 'LEAKAGE') {
     sendNotification(
@@ -127,7 +189,6 @@ function checkAndNotify(status, arus, tegangan) {
       '/icons/icon-192.png',
       'leakage-alert'
     );
-    lastNotifiedStatus = status;
   } else if (status === 'DANGER') {
     sendNotification(
       '<iconify-icon icon="lucide:triangle-alert"></iconify-icon> BAHAYA! Kondisi Listrik Kritis!',
@@ -135,7 +196,6 @@ function checkAndNotify(status, arus, tegangan) {
       '/icons/icon-192.png',
       'danger-alert'
     );
-    lastNotifiedStatus = status;
   } else if (status === 'WARNING') {
     sendNotification(
       '<iconify-icon icon="lucide:bell"></iconify-icon> Peringatan Arus Tinggi',
@@ -143,17 +203,14 @@ function checkAndNotify(status, arus, tegangan) {
       '/icons/icon-192.png',
       'warning-alert'
     );
-    lastNotifiedStatus = status;
-  } else if (status === 'NORMAL' && lastNotifiedStatus && lastNotifiedStatus !== 'NORMAL') {
-    // Notify recovery
-    sendNotification(
-      '<iconify-icon icon="lucide:shield-check"></iconify-icon> Sistem Kembali Normal',
-      `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V`,
-      '/icons/icon-192.png',
-      'normal-recovery'
-    );
-    lastNotifiedStatus = status;
   }
+
+  lastNotifiedStatus = status;
+  lastRepeatAt = now;
+  lastRepeatStatus = status;
+  try { localStorage.setItem('iot_last_notified_status', status); } catch (_) {}
+  try { localStorage.setItem('iot_last_alarm_repeat_at', String(lastRepeatAt)); } catch (_) {}
+  try { localStorage.setItem('iot_last_alarm_repeat_status', String(lastRepeatStatus)); } catch (_) {}
 }
 
 /**
@@ -181,4 +238,4 @@ function showToast(message, type = 'success', duration = 4000) {
   }, duration);
 }
 
-export { requestNotificationPermission, sendNotification, checkAndNotify, showToast, initAudio };
+export { requestNotificationPermission, sendNotification, checkAndNotify, showToast, initAudio, stopWebSiren };

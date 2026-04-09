@@ -4,7 +4,10 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed-demo": "node seed-demo.js",
+    "seed-demo:live": "node seed-demo.js --live",
+    "seed-logs": "node seed-demo.js --logs=80 --clear-logs"
   },
   "keywords": [],
   "author": "",

@@ -12,6 +12,7 @@ import android.os.VibratorManager
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import com.iot.listrik.databinding.ActivityAlarmBinding
+import com.iot.listrik.service.AlarmForegroundService
 
 class AlarmActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAlarmBinding
@@ -50,6 +51,8 @@ class AlarmActivity : AppCompatActivity() {
 
         binding.btnDismiss.setOnClickListener {
             stopSirenAndVibration()
+            // Pastikan alarm global (service) juga berhenti saat user dismiss
+            AlarmForegroundService.stop(this)
             finish() // Close alarm, returns to previous app or home
         }
     }

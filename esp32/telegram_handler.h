@@ -110,9 +110,8 @@ String buildAlertMessage(const String& status,
   const char* emoji;
   const char* title;
 
-  if      (status == "DANGER")  { emoji = "🚨"; title = "<b>BAHAYA KRITIS!</b>"; }
-  else if (status == "LEAKAGE") { emoji = "⚠️"; title = "<b>KEBOCORAN ARUS!</b>"; }
-  else if (status == "WARNING") { emoji = "🔔"; title = "<b>Peringatan Arus Tinggi</b>"; }
+  if      (status == "DANGER")  { emoji = "🚨"; title = "<b>BAHAYA — ARUS ≥ THRESHOLD!</b>"; }
+  else if (status == "WARNING") { emoji = "🔔"; title = "<b>Peringatan Arus Mendekati Batas</b>"; }
   else                          { emoji = "✅"; title = "<b>Sistem Kembali NORMAL</b>"; }
 
   char buf[512];
@@ -138,8 +137,8 @@ String buildAlertMessage(const String& status,
  * critical state. Prevents alert fatigue from repeated messages.
  *
  * Triggers on:
- *  - Transition INTO DANGER, LEAKAGE, or WARNING (from NORMAL)
- *  - Recovery FROM DANGER or LEAKAGE back to NORMAL
+ *  - Transition INTO DANGER or WARNING (from NORMAL)
+ *  - Recovery FROM DANGER back to NORMAL
  *
  * @param newStatus   Current status string
  * @param lastStatus  Previous status string
@@ -157,10 +156,8 @@ void sendAlertIfNeeded(const String& newStatus, const String& lastStatus,
   bool shouldSend = false;
 
   if (newStatus == "DANGER"  && lastStatus != "DANGER")   shouldSend = true;
-  if (newStatus == "LEAKAGE" && lastStatus != "LEAKAGE")  shouldSend = true;
   if (newStatus == "WARNING" && lastStatus == "NORMAL")   shouldSend = true;
-  if (newStatus == "NORMAL"  &&
-     (lastStatus == "DANGER" || lastStatus == "LEAKAGE")) shouldSend = true;
+  if (newStatus == "NORMAL"  && lastStatus == "DANGER")   shouldSend = true;
 
   if (shouldSend) {
     String msg = buildAlertMessage(newStatus, arus, tegangan, relay);

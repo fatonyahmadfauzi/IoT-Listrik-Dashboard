@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LogOut } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
 import { db } from '../lib/firebase';
-import { ref, update, remove, set } from 'firebase/database';
+import { ref, update, remove } from 'firebase/database';
+import {
+  loadClientConfig,
+  saveClientConfig,
+  type ClientBackendConfig,
+} from '../lib/clientConfig';
 
 interface SettingsProps {
   onLogout: () => void;
@@ -11,8 +16,18 @@ interface SettingsProps {
 export function Settings({ onLogout }: SettingsProps) {
   const { settings, users } = useDataStore();
   const { role, user } = useAuthStore();
-  const [tab, setTab] = useState<'system' | 'calibration' | 'telegram' | 'users'>('system');
+  const [tab, setTab] = useState<
+    'system' | 'calibration' | 'telegram' | 'users' | 'backend'
+  >('system');
   const [loading, setLoading] = useState(false);
+  const [clientCfg, setClientCfg] = useState<ClientBackendConfig>(() =>
+    loadClientConfig()
+  );
+  const [localSrvMsg, setLocalSrvMsg] = useState('');
+
+  useEffect(() => {
+    if (tab === 'backend') setClientCfg(loadClientConfig());
+  }, [tab]);
 
   const [threshold, setThreshold] = useState(settings?.threshold || 5);
   const [sendInterval, setSendInterval] = useState(settings?.send_interval || 60);
@@ -133,7 +148,9 @@ export function Settings({ onLogout }: SettingsProps) {
 
       {/* Tabs */}
       <div className="flex space-x-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
-        {(['system', 'calibration', 'telegram', 'users'] as const).map((t) => (
+        {(
+          ['system', 'calibration', 'telegram', 'backend', 'users'] as const
+        ).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -298,6 +315,169 @@ export function Settings({ onLogout }: SettingsProps) {
           >
             {loading ? 'Saving...' : 'Save'}
           </button>
+        </div>
+      )}
+
+      {/* Backend / failover (localStorage + optional local process) */}
+      {tab === 'backend' && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Backend &amp; failover
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Disimpan per aplikasi (localStorage). Sama dengan panel web → Backend
+            klien. Mode AUTO: Firebase dulu, lalu REST lokal jika koneksi RTDB putus.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Public API base (opsional)
+              </label>
+              <input
+                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                value={clientCfg.publicApiBase}
+                onChange={(e) =>
+                  setClientCfg({ ...clientCfg, publicApiBase: e.target.value })
+                }
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Local API base
+              </label>
+              <input
+                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                value={clientCfg.localApiBase}
+                onChange={(e) =>
+                  setClientCfg({ ...clientCfg, localApiBase: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Mode
+              </label>
+              <select
+                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                value={clientCfg.mode}
+                onChange={(e) =>
+                  setClientCfg({
+                    ...clientCfg,
+                    mode: e.target.value as ClientBackendConfig['mode'],
+                  })
+                }
+              >
+                <option value="AUTO">AUTO</option>
+                <option value="PUBLIC">PUBLIC</option>
+                <option value="LOCAL">LOCAL</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Health path
+              </label>
+              <input
+                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                value={clientCfg.healthPath}
+                onChange={(e) =>
+                  setClientCfg({ ...clientCfg, healthPath: e.target.value })
+                }
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={clientCfg.autoFailover}
+                onChange={(e) =>
+                  setClientCfg({ ...clientCfg, autoFailover: e.target.checked })
+                }
+              />
+              <span className="text-sm text-gray-300">Auto failover</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={clientCfg.autoStartLocal}
+                onChange={(e) =>
+                  setClientCfg({ ...clientCfg, autoStartLocal: e.target.checked })
+                }
+              />
+              <span className="text-sm text-gray-300">
+                Auto-start local server (Windows)
+              </span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Working directory (local server)
+              </label>
+              <input
+                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                value={clientCfg.localServerPath}
+                onChange={(e) =>
+                  setClientCfg({ ...clientCfg, localServerPath: e.target.value })
+                }
+                placeholder="E:\\...\\backend-local"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Start command
+              </label>
+              <input
+                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                value={clientCfg.localStartCmd}
+                onChange={(e) =>
+                  setClientCfg({ ...clientCfg, localStartCmd: e.target.value })
+                }
+                placeholder="node server.js"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                saveClientConfig(clientCfg);
+                setLocalSrvMsg('Konfigurasi disimpan.');
+              }}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
+            >
+              Simpan konfigurasi klien
+            </button>
+            {typeof window !== 'undefined' && window.electronAPI?.startLocalServer && (
+              <>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const r = await window.electronAPI!.startLocalServer({
+                      cwd: clientCfg.localServerPath || '.',
+                      command: clientCfg.localStartCmd || 'node server.js',
+                    });
+                    setLocalSrvMsg(r.ok ? 'Server start dipanggil.' : r.error || 'Gagal');
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold"
+                >
+                  Start local server
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await window.electronAPI!.stopLocalServer();
+                    setLocalSrvMsg('Stop dikirim.');
+                  }}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold"
+                >
+                  Stop local server
+                </button>
+              </>
+            )}
+          </div>
+          {localSrvMsg && (
+            <p className="text-sm text-gray-400">{localSrvMsg}</p>
+          )}
         </div>
       )}
 

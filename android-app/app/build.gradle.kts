@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -7,6 +9,16 @@ plugins {
 android {
     namespace = "com.iot.listrik"
     compileSdk = 34
+
+    val keystoreProperties = Properties()
+    // rootProject for this module is already `android-app/`, so don't double-prefix.
+    val keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
+    val hasReleaseSigning = keystorePropertiesFile.exists()
+    if (hasReleaseSigning) {
+        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+    }
+
+    val keystoreDir = rootProject.file("keystore")
 
     defaultConfig {
         applicationId = "com.iot.listrik"
@@ -21,12 +33,28 @@ android {
         viewBinding = true
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                val storeFileName = keystoreProperties.getProperty("storeFile", "release-keystore.jks")
+                storeFile = file(keystoreDir.resolve(storeFileName))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias", "fatony")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8

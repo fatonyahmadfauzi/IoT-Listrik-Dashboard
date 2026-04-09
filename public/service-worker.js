@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME    = 'iot-listrik-v6';
+const CACHE_NAME    = 'iot-listrik-v7';
 const CACHE_URLS    = [
   '/',
   '/',
@@ -22,6 +22,8 @@ const CACHE_URLS    = [
   '/settings.js',
   '/charts.js',
   '/notifications.js',
+  '/client-config.js',
+  '/hybrid-listrik.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',

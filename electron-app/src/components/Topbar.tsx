@@ -18,7 +18,7 @@ export function Topbar({ title }: TopbarProps) {
   };
 
   return (
-    <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
+    <header className="fixed top-0 left-0 w-full h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-6 z-50">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
         {title}
       </h2>

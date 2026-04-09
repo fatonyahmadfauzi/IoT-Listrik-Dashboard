@@ -1,5 +1,15 @@
-import { app, BrowserWindow, Tray, Menu, Notification, ipcMain, dialog, nativeImage } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  Tray,
+  Menu,
+  Notification,
+  ipcMain,
+  dialog,
+  nativeImage,
+} from 'electron';
 import { join } from 'path';
+import { spawn, ChildProcess } from 'child_process';
 import Store from 'electron-store';
 import { autoUpdater } from 'electron-updater';
 
@@ -11,6 +21,21 @@ const store = new Store();
 // Global references
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let localServerChild: ChildProcess | null = null;
+
+// Single instance lock (prevent double app + double tray)
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
 
 // Create main window
 function createWindow(): void {
@@ -61,16 +86,23 @@ function createWindow(): void {
 
 // Create tray
 function createTray(): void {
+  // Guard: should only be created once
+  if (tray) return;
+
   const iconPath = join(__dirname, '../build/icon.ico');
   const fs = require('fs');
   let trayIcon = nativeImage.createEmpty();
 
   if (fs.existsSync(iconPath)) {
     trayIcon = nativeImage.createFromPath(iconPath);
-  }
-
-  if (trayIcon.isEmpty()) {
-    console.warn('Tray icon not found; using empty tray icon fallback.');
+    // Validasi ukuran dan format
+    if (trayIcon.isEmpty()) {
+      console.warn(
+        'Tray icon found but failed to load. Pastikan file .ico valid (256x256 px, 32-bit, <256KB).'
+      );
+    }
+  } else {
+    console.warn('Tray icon not found at', iconPath);
   }
 
   tray = new Tray(trayIcon);
@@ -155,7 +187,7 @@ ipcMain.handle('get-settings', () => {
 });
 
 ipcMain.handle('set-settings', (_, settings) => {
-  Object.keys(settings).forEach(key => {
+  Object.keys(settings).forEach((key) => {
     store.set(key, settings[key]);
   });
 
@@ -166,6 +198,49 @@ ipcMain.handle('set-settings', (_, settings) => {
     });
   }
 });
+
+ipcMain.handle(
+  'local-server:start',
+  async (_, opts: { cwd: string; command: string }) => {
+    try {
+      if (localServerChild && !localServerChild.killed) {
+        return { ok: true as const };
+      }
+      const cwd = opts.cwd || process.cwd();
+      const command = opts.command || 'node server.js';
+      localServerChild = spawn(command, [], {
+        cwd,
+        shell: true,
+        windowsHide: true,
+        detached: false,
+      });
+      localServerChild.on('exit', () => {
+        localServerChild = null;
+      });
+      localServerChild.stdout?.on('data', (d) =>
+        console.log('[local-server]', d.toString())
+      );
+      localServerChild.stderr?.on('data', (d) =>
+        console.error('[local-server]', d.toString())
+      );
+      return { ok: true as const };
+    } catch (e: any) {
+      return { ok: false as const, error: e?.message || String(e) };
+    }
+  }
+);
+
+ipcMain.handle('local-server:stop', async () => {
+  if (localServerChild && !localServerChild.killed) {
+    localServerChild.kill();
+    localServerChild = null;
+  }
+  return { ok: true as const };
+});
+
+ipcMain.handle('local-server:status', async () => ({
+  running: !!(localServerChild && !localServerChild.killed),
+}));
 
 // App event handlers
 app.whenReady().then(() => {
@@ -198,7 +273,10 @@ app.on('before-quit', () => {
 // Error handling
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  dialog.showErrorBox('Error', `An unexpected error occurred: ${error.message}`);
+  dialog.showErrorBox(
+    'Error',
+    `An unexpected error occurred: ${error.message}`
+  );
 });
 
 process.on('unhandledRejection', (reason, promise) => {

@@ -1,3 +1,24 @@
+/* Sidebar button styles for Sidebar component */
+.sidebar-nav li[role='button'] {
+  cursor: pointer;
+}
+
+.sidebar-nav li.active {
+  background: linear-gradient(90deg, #3f67f5, #4d77fb);
+  color: #fff;
+}
+
+.sidebar-nav li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #aab5cd;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

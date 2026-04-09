@@ -10,6 +10,7 @@ import { auth, db }           from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { ref, get, set, serverTimestamp }
                                from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { stopWebSiren } from './notifications.js';
 
 // ─── Internal state ──────────────────────────────────────────
 let _currentUser = null;
@@ -72,6 +73,8 @@ function initPage(callbacks = {}) {
     if (user) {
       _currentUser = user;
       _currentRole = await fetchRole(user.uid);
+      // Aktifkan kembali alarm saat user login
+      try { localStorage.removeItem('iot_alarm_disable'); } catch (_) {}
 
       // Admin-only page guard
       if (requireAdmin && _currentRole !== 'admin') {
@@ -158,6 +161,11 @@ function initSidebarToggle() {
 
 // ─── Logout ──────────────────────────────────────────────────
 async function logout() {
+  // Matikan alarm siren web agar tidak masih bunyi setelah logout/redirect
+  try {
+    stopWebSiren();
+    localStorage.setItem('iot_alarm_disable', '1');
+  } catch (_) {}
   await signOut(auth);
   window.location.href = '/login';
 }

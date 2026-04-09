@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from './store';
 import { useAuthStore, useDataStore } from './lib/store';
 import { Sidebar } from './components/Sidebar';
@@ -8,15 +8,25 @@ import { History } from './components/History';
 import { Analytics } from './components/Analytics';
 import { Settings } from './components/Settings';
 import { Login } from './components/Login';
+import { playAlarm, showNotification, stopAlarm } from './lib/notifikasi';
 
 type Page = 'dashboard' | 'history' | 'analytics' | 'settings';
 
 function App() {
-  const { theme } = useStore();
-  const { user, loading, initAuth, logout } = useAuthStore();
-  const { subscribeToData, subscribeLogs, subscribeSettings, subscribeUsers } = useDataStore();
+  const { theme, notifications } = useStore();
+  const { user, role, loading, initAuth, logout } = useAuthStore();
+  const {
+    currentData,
+    subscribeToData,
+    subscribeLogs,
+    subscribeSettings,
+    subscribeUsers,
+    unsubscribeAll,
+  } =
+    useDataStore();
 
   const [page, setPage] = useState<Page>('dashboard');
+  const prevStatus = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -30,12 +40,61 @@ function App() {
   // Subscribe to data when user is logged in
   useEffect(() => {
     if (user) {
+      // Avoid duplicate listeners when role/user changes.
+      unsubscribeAll();
+
       subscribeToData();
       subscribeLogs();
-      subscribeSettings();
-      subscribeUsers();
+
+      // settings/users are admin-protected by RTDB rules.
+      if (role === 'admin') {
+        subscribeSettings();
+        subscribeUsers();
+      }
+    } else {
+      unsubscribeAll();
     }
-  }, [user, subscribeToData, subscribeLogs, subscribeSettings, subscribeUsers]);
+  }, [
+    user,
+    role,
+    subscribeToData,
+    subscribeLogs,
+    subscribeSettings,
+    subscribeUsers,
+    unsubscribeAll,
+  ]);
+
+  // Global alarm + notification (tetap bunyi walau pindah tab)
+  useEffect(() => {
+    // Saat logout / belum login, pastikan alarm mati
+    if (!user) {
+      stopAlarm();
+      prevStatus.current = undefined;
+      return;
+    }
+
+    const status = currentData?.status;
+
+    if (!notifications || !status) {
+      stopAlarm();
+      prevStatus.current = status;
+      return;
+    }
+
+    const danger = (s: string) =>
+      s === 'WARNING' || s === 'LEAKAGE' || s === 'DANGER';
+    const isDanger = danger(status);
+    const wasDanger = prevStatus.current != null && danger(prevStatus.current);
+
+    if (isDanger && prevStatus.current !== status) {
+      showNotification('Peringatan Listrik', `Status: ${status}`);
+      playAlarm();
+    } else if (!isDanger && wasDanger) {
+      stopAlarm();
+    }
+
+    prevStatus.current = status;
+  }, [user, currentData?.status, notifications]);
 
   const renderPage = () => {
     switch (page) {

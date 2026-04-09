@@ -113,27 +113,23 @@ float computeDaya(float arus, float tegangan) {
 
 // ─── determineStatus() ────────────────────────────────────────
 /**
- * Determine system status based on measured current and threshold.
+ * Three-level status from measured current vs threshold.
  *
- * Decision logic:
- *  DANGER  : arus ≥ threshold × 1.5  OR  voltage outside 170–260 V
- *  LEAKAGE : arus ≥ threshold         (meets or exceeds safe limit)
- *  WARNING : arus ≥ threshold × 0.80  (approaching limit)
- *  NORMAL  : below 80 % of threshold
+ *  DANGER  : arus ≥ threshold
+ *  WARNING : threshold × warnRatio ≤ arus < threshold  (warnRatio = warningPercent/100)
+ *  NORMAL  : arus < threshold × warnRatio
  *
- * @param arus       Measured current (A)
- * @param tegangan   Measured voltage (V) — 0 means sensor not connected
- * @param threshold  Max safe current from RuntimeSettings.thresholdArus
- * @return String    Status label
+ * @param arus            Measured current (A)
+ * @param threshold       Max safe current (A)
+ * @param warningPercent  e.g. 80 → WARNING from 80% of threshold upward
  */
-String determineStatus(float arus, float tegangan, float threshold) {
-  // Voltage out-of-range check (only when sensor is connected, tegangan > 0)
-  bool voltageAbnormal = (tegangan > 5.0f) &&
-                         (tegangan < 170.0f || tegangan > 260.0f);
+String determineStatus(float arus, float threshold, float warningPercent) {
+  float wr = warningPercent / 100.0f;
+  if (wr < 0.05f)  wr = 0.05f;
+  if (wr > 0.99f)  wr = 0.99f;
 
-  if (arus >= threshold * 1.5f || voltageAbnormal) return "DANGER";
-  if (arus >= threshold)                            return "LEAKAGE";
-  if (arus >= threshold * 0.80f)                    return "WARNING";
+  if (arus >= threshold)                        return "DANGER";
+  if (arus >= threshold * wr)                   return "WARNING";
   return "NORMAL";
 }
 

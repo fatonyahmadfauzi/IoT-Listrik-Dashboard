@@ -82,20 +82,25 @@ bool isFirebaseReady() {
  *
  * @param arus      Current RMS (A)
  * @param tegangan  Voltage RMS (V)
- * @param status    Status string: NORMAL|WARNING|LEAKAGE|DANGER
+ * @param status    Status string: NORMAL|WARNING|DANGER
  * @param relay     Relay state: 0=OFF, 1=ON
  * @return true on success
  */
-bool writeMonitorData(float arus, float tegangan,
-                       const String& status, int relay) {
+bool writeMonitorData(float arus, float tegangan, float dayaVa,
+                      float energiKwh, float freqHz, float powerFactor,
+                      const String& status, int relay) {
   if (!isFirebaseReady()) return false;
 
   FirebaseJson json;
-  json.set("arus",       arus);
-  json.set("tegangan",   tegangan);
-  json.set("status",     status);
-  json.set("relay",      relay);
-  json.set("updated_at", String(millis()));
+  json.set("arus",          arus);
+  json.set("tegangan",      tegangan);
+  json.set("daya",          dayaVa);
+  json.set("energi_kwh",    energiKwh);
+  json.set("frekuensi",     freqHz);
+  json.set("power_factor",  powerFactor);
+  json.set("status",        status);
+  json.set("relay",         relay);
+  json.set("updated_at",    String(millis()));
 
   bool ok = Firebase.RTDB.updateNode(&fbData, "/listrik", &json);
   if (!ok) {
@@ -205,6 +210,16 @@ bool readAllSettings(RuntimeSettings& out) {
   // Numeric thresholds
   if (json.get(val, "thresholdArus")     && val.typeNum == FirebaseJson::JSON_FLOAT)
     out.thresholdArus = val.floatValue;
+  if (json.get(val, "warningPercent")) {
+    if (val.typeNum == FirebaseJson::JSON_FLOAT) out.warningPercent = val.floatValue;
+    else if (val.typeNum == FirebaseJson::JSON_INT) out.warningPercent = (float)val.intValue;
+  }
+  if (json.get(val, "powerFactorEstimate") && val.typeNum == FirebaseJson::JSON_FLOAT)
+    out.powerFactorEstimate = val.floatValue;
+  if (json.get(val, "frequencyHz")       && val.typeNum == FirebaseJson::JSON_FLOAT)
+    out.frequencyHz = val.floatValue;
+  if (json.get(val, "frequencyHz")       && val.typeNum == FirebaseJson::JSON_INT)
+    out.frequencyHz = (float)val.intValue;
   if (json.get(val, "arusCalibration")   && val.typeNum == FirebaseJson::JSON_FLOAT)
     out.arusCalibration = val.floatValue;
   if (json.get(val, "teganganCalibration")&& val.typeNum == FirebaseJson::JSON_FLOAT)
@@ -215,6 +230,8 @@ bool readAllSettings(RuntimeSettings& out) {
     out.buzzerEnabled = (val.stringValue == "true" || val.intValue == 1);
   if (json.get(val, "autoCutoffEnabled"))
     out.autoCutoffEnabled = (val.stringValue == "true" || val.intValue == 1);
+  if (json.get(val, "telegramNotifyEnabled"))
+    out.telegramNotifyEnabled = (val.stringValue == "true" || val.intValue == 1);
 
   // Timing
   if (json.get(val, "sendIntervalMs") && val.intValue > 0)
@@ -227,9 +244,10 @@ bool readAllSettings(RuntimeSettings& out) {
     out.telegramChatId = val.stringValue;
 
   Serial.printf(
-    "[Firebase] Settings synced → threshold=%.1fA cal_I=%.3f cal_V=%.2f "
-    "sendMs=%lu buzzer=%d cutoff=%d TG=%s\n",
-    out.thresholdArus, out.arusCalibration, out.teganganCalibration,
+    "[Firebase] Settings synced → thr=%.1fA warn%%=%.0f PF=%.2f f=%.0fHz "
+    "cal_I=%.3f cal_V=%.2f sendMs=%lu buzzer=%d cutoff=%d TG=%s\n",
+    out.thresholdArus, out.warningPercent, out.powerFactorEstimate, out.frequencyHz,
+    out.arusCalibration, out.teganganCalibration,
     out.sendIntervalMs, out.buzzerEnabled, out.autoCutoffEnabled,
     out.telegramBotToken.isEmpty() ? "unconfigured" : "configured"
   );

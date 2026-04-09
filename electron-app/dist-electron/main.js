@@ -13,6 +13,21 @@ const store = new electron_store_1.default();
 // Global references
 let mainWindow = null;
 let tray = null;
+// Single instance lock (prevent double app + double tray)
+const gotTheLock = electron_1.app.requestSingleInstanceLock();
+if (!gotTheLock) {
+    electron_1.app.quit();
+}
+else {
+    electron_1.app.on('second-instance', () => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized())
+                mainWindow.restore();
+            mainWindow.show();
+            mainWindow.focus();
+        }
+    });
+}
 // Create main window
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
@@ -59,14 +74,21 @@ function createWindow() {
 }
 // Create tray
 function createTray() {
+    // Guard: should only be created once
+    if (tray)
+        return;
     const iconPath = (0, path_1.join)(__dirname, '../build/icon.ico');
     const fs = require('fs');
     let trayIcon = electron_1.nativeImage.createEmpty();
     if (fs.existsSync(iconPath)) {
         trayIcon = electron_1.nativeImage.createFromPath(iconPath);
+        // Validasi ukuran dan format
+        if (trayIcon.isEmpty()) {
+            console.warn('Tray icon found but failed to load. Pastikan file .ico valid (256x256 px, 32-bit, <256KB).');
+        }
     }
-    if (trayIcon.isEmpty()) {
-        console.warn('Tray icon not found; using empty tray icon fallback.');
+    else {
+        console.warn('Tray icon not found at', iconPath);
     }
     tray = new electron_1.Tray(trayIcon);
     const contextMenu = electron_1.Menu.buildFromTemplate([
@@ -142,7 +164,7 @@ electron_1.ipcMain.handle('get-settings', () => {
     };
 });
 electron_1.ipcMain.handle('set-settings', (_, settings) => {
-    Object.keys(settings).forEach(key => {
+    Object.keys(settings).forEach((key) => {
         store.set(key, settings[key]);
     });
     if (settings.runAtStartup !== undefined) {

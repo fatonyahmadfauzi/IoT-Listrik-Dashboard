@@ -110,15 +110,15 @@ export function Analytics() {
     },
     scales: {
       y: {
-        type: 'linear',
+        type: 'linear' as const,
         display: true,
-        position: 'left',
+        position: 'left' as const,
         title: { display: true, text: 'Current (A)' },
       },
       y1: {
-        type: 'linear',
+        type: 'linear' as const,
         display: true,
-        position: 'right',
+        position: 'right' as const,
         grid: { drawOnChartArea: false },
         title: { display: true, text: 'Voltage (V)' },
       },

@@ -9,13 +9,16 @@
     "dev": "vite",
     "build:icon": "node scripts/create-icon.mjs",
     "build": "npm run build:icon && tsc -p tsconfig.main.json && vite build",
+    "postbuild": "copy public\\alarm.wav dist\\alarm.wav",
+    "clean:release": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-before-pack.ps1",
     "build:electron": "npm run build && electron-builder",
     "build:win:setup:ia32": "npm run build && electron-builder --win --ia32",
     "build:win:setup:x64": "npm run build && electron-builder --win --x64",
     "build:win:setup:arm64": "npm run build && electron-builder --win --arm64",
-    "build:win:portable:ia32": "npm run build && electron-builder --win --ia32 --config.portable=true",
-    "build:win:portable:x64": "npm run build && electron-builder --win --x64 --config.portable=true",
-    "build:win:portable:arm64": "npm run build && electron-builder --win --arm64 --config.portable=true",
+    "build:win:msi:x64": "npm run build && electron-builder --win msi --x64",
+    "build:win:portable:ia32": "npm run build && electron-builder --win portable --ia32",
+    "build:win:portable:x64": "npm run build && electron-builder --win portable --x64",
+    "build:win:portable:arm64": "npm run build && electron-builder --win portable --arm64",
     "build:win:all": "npm run build:win:setup:ia32 && npm run build:win:setup:x64 && npm run build:win:setup:arm64 && npm run build:win:portable:ia32 && npm run build:win:portable:x64 && npm run build:win:portable:arm64",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -25,11 +28,12 @@
     "appId": "com.iotlistrik.dashboard",
     "productName": "IoT Listrik Dashboard",
     "directories": {
-      "output": "release"
+      "output": "release-build"
     },
     "files": [
       "dist-electron",
-      "dist"
+      "dist",
+      "build/icon.ico"
     ],
     "win": {
       "target": [

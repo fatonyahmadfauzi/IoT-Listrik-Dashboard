@@ -12,7 +12,7 @@
 import { db }           from './firebase-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout } from './auth.js';
 import { createRealtimeChart, loadHistoryIntoChart } from './charts.js';
-import { showToast }    from './notifications.js';
+import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, query, orderByKey, limitToLast, onValue }
                         from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -26,6 +26,20 @@ const canvas      = document.getElementById('historyChart');
 let chart     = null;
 let allLogs   = [];   // raw log array (newest first)
 let unsubLog  = null; // RTDB listener
+let unsubListrik = null; // RTDB status listener untuk alarm
+
+function startAlarmMonitor() {
+  if (unsubListrik) return; // already started
+  const listrikRef = ref(db, '/listrik');
+  unsubListrik = onValue(listrikRef, (snap) => {
+    const d = snap.val();
+    if (!d) return;
+    const status = d.status || 'NORMAL';
+    const arus = Number(d.arus || 0);
+    const tegangan = Number(d.tegangan || 0);
+    checkAndNotify(status, arus, tegangan);
+  });
+}
 
 // ─── Format timestamp ─────────────────────────────────────────
 function fmtTime(waktu) {
@@ -143,6 +157,16 @@ initPage({
 
     // Init history chart
     if (canvas) chart = createRealtimeChart(canvas);
+
+    // Alarm: tetap bunyi walau pindah menu (history/settings) dengan memonitor status /listrik juga.
+    requestNotificationPermission();
+    // Coba unlock lebih awal (kalau browser sudah pernah di-gesture di halaman sebelumnya).
+    try { initAudio(); } catch (_) {}
+    window.addEventListener('click', () => initAudio(), { once: true });
+    startAlarmMonitor();
+    window.addEventListener('beforeunload', () => {
+      try { stopWebSiren(); } catch (_) {}
+    });
 
     loadLogs();
 

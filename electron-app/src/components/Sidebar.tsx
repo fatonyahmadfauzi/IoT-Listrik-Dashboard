@@ -2,7 +2,9 @@ import { Home, Settings, BarChart3, Clock } from 'lucide-react';
 
 type SidebarProps = {
   activePage: 'dashboard' | 'history' | 'analytics' | 'settings';
-  onNavigate: (page: 'dashboard' | 'history' | 'analytics' | 'settings') => void;
+  onNavigate: (
+    page: 'dashboard' | 'history' | 'analytics' | 'settings'
+  ) => void;
 };
 
 export function Sidebar({ activePage, onNavigate }: SidebarProps) {
@@ -21,24 +23,19 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
         </h1>
       </div>
       <nav className="px-4">
-        <ul className="space-y-2">
+        <ul className="sidebar-nav space-y-2">
           {items.map((item) => {
             const Icon = item.icon;
             const active = activePage === item.key;
             return (
-              <li key={item.key}>
-                <button
-                  type="button"
-                  onClick={() => onNavigate(item.key)}
-                  className={`flex items-center w-full px-4 py-2 rounded-lg text-left transition ${
-                    active
-                      ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.label}
-                </button>
+              <li
+                key={item.key}
+                role="button"
+                className={active ? 'active' : ''}
+                onClick={() => onNavigate(item.key)}
+              >
+                <Icon className="w-5 h-5 mr-3" />
+                {item.label}
               </li>
             );
           })}

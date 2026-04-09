@@ -38,7 +38,7 @@ exports.checkAlarmStatus = onValueUpdated(
     }
     
     // Trigger stop alarm if status recovers
-    if (status === "NORMAL" && (previousStatus === "DANGER" || previousStatus === "LEAKAGE")) {
+    if (status === "NORMAL" && (previousStatus === "DANGER" || previousStatus === "WARNING")) {
       const payload = {
         topic: "iot_alarms",
         data: {

@@ -1,0 +1,627 @@
+﻿/* Download showcase — from Pixiv-OAuth-Token web/public/assets/style.css */
+:root {
+  --surface: #101827cc;
+  --border: #2a3655;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: clamp(14px, 2.1vw, 20px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 30px #02061266;
+}
+.download-showcase-main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 24px 54px;
+}
+.download-showcase-hero {
+  text-align: center;
+  padding: 28px 0 60px;
+}
+.download-showcase-hero h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.45rem, 6vw, 4.15rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.download-showcase-hero p {
+  margin: 12px auto 0;
+  max-width: 660px;
+  color: #bfc8de;
+  font-size: clamp(1rem, 1.8vw, 1.12rem);
+  line-height: 1.45;
+}
+.download-showcase-layout {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 22px;
+  align-items: start;
+}
+.download-showcase-sidebar {
+  padding: 14px 0 0;
+}
+.download-showcase-sidebar h3 {
+  margin: 0 0 10px;
+  color: #8f9bb6;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+}
+.download-showcase-sidebar ul {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.download-showcase-sidebar li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #aab5cd;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.download-showcase-sidebar li.active {
+  background: linear-gradient(90deg, #3f67f5, #4d77fb);
+  color: #fff;
+}
+.download-showcase-sidebar li:hover {
+  background: linear-gradient(90deg, #1a1d24, #242933);
+  color: #f2f6ff;
+}
+.download-showcase-sidebar li.active:hover {
+  background: linear-gradient(90deg, #3f67f5, #4d77fb);
+  color: #fff;
+}
+.python-logo,
+.windows-sidebar-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+  opacity: 1;
+  flex: 0 0 20px;
+}
+.python-logo svg,
+.windows-sidebar-logo svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+.download-showcase-sidebar li[role="button"] {
+  cursor: pointer;
+}
+.download-category-panel {
+  display: none;
+}
+.download-category-panel.active {
+  display: block;
+}
+.python-os-icon {
+  background: #0b101a;
+  border-color: #3a4459;
+  box-shadow:
+    0 10px 20px #0007 inset,
+    0 8px 20px #0006;
+}
+.python-hero-logo {
+  width: 54px;
+  height: 54px;
+  display: block;
+}
+.python-install-list {
+  padding-top: 2px;
+  gap: 8px;
+}
+.python-install-list .cmd-command-item {
+  gap: 2px;
+  margin: 0;
+}
+.python-install-list .cmd-command-row {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #2f3c5d;
+  background: #0a0f1a;
+}
+
+.python-direct-list {
+  margin-top: 12px;
+}
+.python-direct-list .cmd-command-item {
+  gap: 8px;
+}
+.download-showcase-panel {
+  background: #0e1118e6;
+  border: none;
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: 0 18px 34px #0008;
+}
+.download-showcase-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.download-os-icon {
+  width: 92px;
+  height: 92px;
+  border-radius: 16px;
+  background: #0a0d12;
+  border: 1px solid #32384a;
+  display: grid;
+  place-items: center;
+}
+.windows-logo-svg {
+  width: 50px;
+  height: 50px;
+  display: block;
+}
+.download-tag {
+  display: inline-block;
+  background: #2a303d;
+  border: 1px solid #3b4455;
+  color: #dce4f7;
+  padding: 2px 8px;
+  border-radius: 7px;
+  font-size: 0.75rem;
+}
+.download-showcase-panel h2 {
+  margin: 8px 0 0;
+  font-size: 2.15rem;
+  line-height: 1.12;
+}
+.download-installation-title {
+  margin: 10px 0 18px;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.download-inline-tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid #2c3447;
+  overflow: auto;
+  margin-bottom: 24px;
+  padding-bottom: 14px;
+}
+.download-inline-tabs a {
+  color: #9ca8c6;
+  text-decoration: none;
+  padding-bottom: 10px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 500;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.download-inline-tabs a.active {
+  color: #74a2ff;
+  border-bottom-color: #74a2ff;
+}
+.download-inline-tabs a:not(.active):hover {
+  color: #fff;
+  border-bottom-color: transparent;
+}
+.download-panel-desc {
+  margin: 0 0 16px;
+  color: #c3cbe1;
+}
+.download-arch-intro {
+  font-size: 0.96rem;
+  max-width: 920px;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+.download-arch-intro a {
+  color: #66a2ff;
+  text-decoration: none;
+}
+.download-arch-intro a:hover {
+  text-decoration: underline;
+}
+.download-arch-list {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.download-arch-row {
+  display: grid;
+  gap: 10px;
+}
+.download-arch-row label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #dce5fb;
+}
+.download-arch-controls {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 10px;
+  align-items: center;
+  max-width: 100%;
+  overflow: hidden;
+}
+.download-arch-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 0;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 11px 36px 11px 14px;
+  border-radius: 10px;
+  border: 1px solid #2f3d61;
+  background: #0a0e18;
+  color: #eef3ff;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c7d2ef' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  box-sizing: border-box;
+}
+.download-arch-select:focus {
+  outline: 0;
+  border-color: #5d8dff;
+  box-shadow: 0 0 0 2px #3868d544;
+}
+.download-action-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-height: 48px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #4f7dff, #3258dd);
+  border: 1px solid #4a6ddb;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.download-action-btn:hover {
+  background: linear-gradient(180deg, #5e89ff, #3a62e8);
+  border-color: #5d7fe0;
+}
+@media (max-width: 640px) {
+  .python-direct-list .cmd-command-code {
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+  .download-action-btn .download-action-btn-text {
+    display: none;
+  }
+  .download-action-btn {
+    padding: 10px 12px;
+    min-width: 48px;
+    justify-content: center;
+  }
+}
+.download-tab-panels {
+  display: grid;
+  padding-top: 6px;
+}
+.download-tab-panel {
+  display: none;
+}
+.download-tab-panel.active {
+  display: block;
+}
+.download-tab-panel .cmd-block {
+  background: 0 0;
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.cmd-block-list {
+  display: grid;
+  gap: 12px;
+}
+.cmd-tab-intro {
+  margin: 0;
+  color: #dbe4f8;
+  font-size: 1.02rem;
+  line-height: 1.45;
+}
+.cmd-command-list {
+  display: grid;
+  gap: 14px;
+}
+.cmd-command-item {
+  display: grid;
+  gap: 6px;
+}
+.cmd-command-row {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid #2f3c5d;
+  background: #0a0f1a;
+}
+.cmd-command-label {
+  color: #dce5fb;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.cmd-command-code {
+  display: block;
+  color: #e8eeff;
+  white-space: pre;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.9rem;
+  background: 0 0;
+  border: 0;
+  padding: 12px 56px 12px 12px;
+  line-height: 1.5;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cmd-copy-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  padding: 0;
+  border-radius: 0 9px 9px 0;
+  border: 0;
+  background: #0a0f1a;
+  color: #c8d4f0;
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
+.cmd-copy-btn:hover {
+  background: #111b2e;
+  color: #fff;
+}
+.download-tab-panel pre {
+  min-height: 180px;
+  background: #060a13;
+  border-color: #24314e;
+}
+.download-tab-panel .btn {
+  min-height: 40px;
+  background: #101a30;
+  border-color: #2f436d;
+  width: fit-content;
+}
+.download-showcase-panel .download-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.download-showcase-panel .download-btn {
+  background: #0b101d;
+  border-color: #2e3c5e;
+  justify-content: space-between;
+}
+.min-req-section {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #2c3447;
+}
+.min-req-title {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #dce5fb;
+  letter-spacing: -0.01em;
+}
+.min-req-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.min-req-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a8b4ce;
+  font-size: 0.97rem;
+  line-height: 1.5;
+}
+.min-req-list li i {
+  color: #5aad82;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.quickcmd-shell {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #2c3447;
+}
+.quickcmd-shell h3 {
+  margin: 0 0 4px;
+  font-size: 1.45rem;
+}
+.quickcmd-shell .muted {
+  margin: 0 0 10px;
+  color: #a9b3cc;
+}
+.quickcmd-shell .cmd-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.quickcmd-shell .cmd-block {
+  background: #0a0f1a;
+  border: 1px solid #2f3c5d;
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+.quickcmd-shell .cmd-block h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+.quickcmd-shell pre {
+  min-height: 70px;
+  background: #060a13;
+  border-color: #24314e;
+}
+.quickcmd-shell .btn {
+  min-height: 40px;
+  background: #101a30;
+  border-color: #2f436d;
+}
+@media (max-width: 980px) {
+  .download-showcase-layout {
+    grid-template-columns: 1fr;
+  }
+  .download-showcase-sidebar {
+    padding: 0;
+  }
+  .download-showcase-sidebar ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .download-showcase-panel .download-grid,
+  .quickcmd-shell .cmd-grid {
+    grid-template-columns: 1fr;
+  }
+  .download-arch-controls {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 10px;
+    align-items: center;
+    max-width: 100%;
+    overflow: hidden;
+  }
+}
+.mobile-platform-select-wrap {
+  display: none;
+  padding: 0 14px 20px;
+}
+.mobile-platform-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #9aa6bf;
+  margin-bottom: 10px;
+}
+.mobile-platform-select-outer {
+  position: relative;
+}
+.mobile-platform-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #0a0e18;
+  border: 2px solid #3f5fd4;
+  border-radius: 10px;
+  color: #eef3ff;
+  font-size: 1rem;
+  padding: 14px 48px 14px 16px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.mobile-platform-select:focus {
+  outline: 0;
+  border-color: #5d8dff;
+}
+.mobile-select-chevron {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9aa6bf;
+  pointer-events: none;
+  font-size: 1.1rem;
+}
+@media (max-width: 800px) {
+  .mobile-platform-select-wrap {
+    display: block;
+  }
+  .download-showcase-sidebar {
+    display: none;
+  }
+  .download-showcase-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .download-showcase-hero h1 {
+    font-size: clamp(2.6rem, 9vw, 4rem);
+    font-weight: 700;
+  }
+  .download-showcase-hero {
+    padding: 32px 0 40px;
+  }
+}
+@media (max-width: 620px) {
+  .download-showcase-main {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .download-showcase-hero {
+    padding-top: 12px;
+  }
+  .download-showcase-panel {
+    padding: 16px;
+  }
+  .download-showcase-panel-head {
+    align-items: flex-start;
+  }
+  .download-showcase-panel h2 {
+    font-size: 2rem;
+  }
+  .python-hero-logo {
+    width: 46px;
+    height: 46px;
+  }
+}
+.min-req-list li .material-symbols-rounded {
+  color: #5aad82;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+.download-action-btn .material-symbols-rounded,
+.cmd-copy-btn .material-symbols-rounded {
+  font-size: 1.05rem;
+}
+.mobile-select-chevron.material-symbols-rounded {
+  font-size: 1.35rem;
+  font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+}
+.download-action-btn.is-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+}

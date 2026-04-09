@@ -39,6 +39,9 @@
       <a href="/history" class="nav-item">
         <span class="material-symbols-rounded nav-icon">history</span> Riwayat Log
       </a>
+      <a href="/downloads" class="nav-item">
+        <span class="material-symbols-rounded nav-icon">download</span> Download App
+      </a>
       <div class="nav-divider"></div>
       <a href="/settings" class="nav-item" data-admin-only>
         <span class="material-symbols-rounded nav-icon">settings</span> Pengaturan
@@ -64,7 +67,12 @@
         <button id="hamburgerBtn" class="hamburger"><span class="material-symbols-rounded">menu</span></button>
         <h1 class="topbar-title">Dashboard Monitoring</h1>
       </div>
-      <div class="topbar-actions">
+      <div class="topbar-actions" style="flex-wrap:wrap;justify-content:flex-end;gap:10px;">
+        <div id="connStrip" class="conn-strip glass" title="Sumber data &amp; koneksi">
+          <span id="endpointBadge" class="ep-badge ep-cloud">CLOUD</span>
+          <span id="connStateText" class="text-sm text-muted">Connected</span>
+          <span id="alertPulse" class="alert-pulse hidden" aria-hidden="true"></span>
+        </div>
         <!-- Install PWA button (hidden until browser fires event) -->
         <button id="installBtn" class="btn btn-ghost btn-sm hidden"><span class="material-symbols-rounded">download</span>Install App</button>
         <span id="lastUpdated" class="text-sm text-muted">—</span>
@@ -89,11 +97,11 @@
           <div class="metric-sub">ZMPT101B Sensor</div>
         </div>
 
-        <!-- Daya -->
+        <!-- Daya (W) -->
         <div class="metric-card glass yellow">
-          <div class="metric-label">Daya Semu</div>
-          <div class="metric-value" id="valDaya">— VA</div>
-          <div class="metric-sub">Estimasi P = V × I</div>
+          <div class="metric-label">Daya (est. W)</div>
+          <div class="metric-value" id="valDayaW">— W</div>
+          <div class="metric-sub">V×I×PF (dari perangkat)</div>
         </div>
 
         <!-- Status -->
@@ -103,6 +111,29 @@
             <div id="statusBadge" class="status-badge status-NORMAL">NORMAL</div>
           </div>
           <div class="metric-sub mt-8">Deteksi otomatis</div>
+        </div>
+      </div>
+
+      <div class="metric-grid" style="margin-top:14px;">
+        <div class="metric-card glass purple">
+          <div class="metric-label">Energi (kWh)</div>
+          <div class="metric-value" id="valEnergi">— kWh</div>
+          <div class="metric-sub">Akumulasi estimasi</div>
+        </div>
+        <div class="metric-card glass">
+          <div class="metric-label">Power Factor</div>
+          <div class="metric-value" id="valPF">—</div>
+          <div class="metric-sub">Estimasi (settings)</div>
+        </div>
+        <div class="metric-card glass">
+          <div class="metric-label">Frekuensi</div>
+          <div class="metric-value" id="valFreq">— Hz</div>
+          <div class="metric-sub">Nominal grid</div>
+        </div>
+        <div class="metric-card glass">
+          <div class="metric-label">Apparent (VA)</div>
+          <div class="metric-value" id="valVA">— VA</div>
+          <div class="metric-sub">V × I</div>
         </div>
       </div>
 
@@ -137,8 +168,30 @@
           <canvas id="monitorChart"></canvas>
         </div>
         <p class="text-xs text-muted mt-8">
-          Scroll untuk zoom • Drag untuk pan • Menampilkan 30 titik terakhir
+          Scroll untuk zoom • Drag untuk pan • Arus, tegangan, daya (W) • 30 titik terakhir
         </p>
+      </div>
+
+      <div class="section-card glass">
+        <div class="section-header">
+          <div class="section-title">Log terkini</div>
+          <span class="text-xs text-muted">15 entri terakhir</span>
+        </div>
+        <div class="table-wrap" style="max-height:280px;overflow-y:auto;">
+          <table class="mini-logs">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Arus</th>
+                <th>Teg.</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="miniLogsBody">
+              <tr><td colspan="4" class="text-muted text-sm" style="padding:16px;">Memuat…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </main>

@@ -13,6 +13,16 @@ firebase-debug.*.log*
 # Firebase config
 firebase-seed.json
 
+# Android signing (do not commit secrets)
+android-app/keystore/*.jks
+android-app/keystore/keystore.properties
+
+# Windows/Electron signing (do not commit secrets)
+electron-app/signing/*.pfx
+electron-app/signing/*.pem
+electron-app/signing/*.key
+electron-app/signing/*.env
+
 # Local Firmware config (contains raw password)
 esp32/config.h
 # Uncomment this if you'd like others to create their own Firebase project.
@@ -50,6 +60,15 @@ build/Release
 # Dependency directories
 node_modules/
 
+# Android build artifacts
+android-app/.gradle/
+android-app/app/build/
+
+# Electron build artifacts
+electron-app/dist/
+electron-app/release/
+electron-app/release-build/
+
 # Optional npm cache directory
 .npm
 
@@ -73,3 +92,5 @@ node_modules/
 
 # service account credentials
 **/serviceAccountKey.json
+
+.vercel

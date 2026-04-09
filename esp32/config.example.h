@@ -120,8 +120,12 @@ struct RuntimeSettings {
 
   // ── Sensor / System ──────────────────────────────────────────
   float         thresholdArus       = 10.0f;   // Max safe current (A)
+  float         warningPercent      = 80.0f;
   bool          buzzerEnabled       = true;
   bool          autoCutoffEnabled   = true;
+
+  float         powerFactorEstimate = 0.85f;
+  float         frequencyHz         = 50.0f;
 
   // ── Calibration (applied per-reading at runtime) ─────────────
   // These multiply the raw RMS result.
@@ -135,6 +139,7 @@ struct RuntimeSettings {
   // They are protected by admin-only write rules in database.rules.json.
   String        telegramBotToken    = "";      // "1234567890:ABCDEF..."
   String        telegramChatId      = "";      // "123456789" or "-100123456789"
+  bool          telegramNotifyEnabled = true;
 
   // ── Timing ───────────────────────────────────────────────────
   unsigned long sendIntervalMs      = 2000;    // Firebase write interval (ms)

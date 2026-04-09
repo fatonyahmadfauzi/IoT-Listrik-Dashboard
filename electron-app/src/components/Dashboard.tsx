@@ -1,16 +1,22 @@
-
 import { useDataStore, useAuthStore } from '../lib/store';
 import { ref, update } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useState } from 'react';
+import { useStore } from '../store';
+import { showNotification } from '../lib/notifikasi';
 
 export function Dashboard() {
-  const { currentData, logs } = useDataStore();
+  const { currentData, logs, connectionMeta } = useDataStore();
   const { role } = useAuthStore();
   const [loadingRelay, setLoadingRelay] = useState(false);
+  // Alarm/notification sekarang dikontrol global dari App.tsx
+  useStore();
 
   const handleRelayToggle = async () => {
-    if (role !== 'admin') return;
+    if (role !== 'admin') {
+      showNotification('Akses ditolak', 'Hanya admin yang bisa mengontrol relay.');
+      return;
+    }
     setLoadingRelay(true);
     try {
       await update(ref(db, 'listrik'), {
@@ -18,6 +24,7 @@ export function Dashboard() {
       });
     } catch (error) {
       console.error('Error toggling relay:', error);
+      showNotification('Gagal mengubah relay', 'Request relay ditolak atau gagal terkirim.');
     } finally {
       setLoadingRelay(false);
     }
@@ -55,19 +62,34 @@ export function Dashboard() {
 
   const formatTime = (timestamp?: number) => {
     if (!timestamp) return '-';
+    if (timestamp < 1e12) return 'Live';
     const date = new Date(timestamp);
     return date.toLocaleString('id-ID');
   };
 
+  const ep = String(connectionMeta?.endpointBadge || 'CLOUD');
+  const conn = String(connectionMeta?.connection || '—');
+  const fb = connectionMeta?.fallbackActive ? ' · FALLBACK' : '';
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <span className="px-2 py-1 rounded-md bg-blue-900/40 text-blue-200 border border-blue-700/50 font-semibold tracking-wide">
+          {ep}
+        </span>
+        <span className="text-gray-400">
+          {conn}
+          {fb}
+        </span>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Arus
           </h3>
           <p className="text-3xl font-bold text-blue-600">
-            {currentData?.arus?.toFixed(2) || '0.00'} <span className="text-lg">A</span>
+            {currentData?.arus?.toFixed(2) || '0.00'}{' '}
+            <span className="text-lg">A</span>
           </p>
         </div>
 
@@ -76,25 +98,66 @@ export function Dashboard() {
             Tegangan
           </h3>
           <p className="text-3xl font-bold text-green-600">
-            {currentData?.tegangan?.toFixed(2) || '0.00'} <span className="text-lg">V</span>
+            {currentData?.tegangan?.toFixed(2) || '0.00'}{' '}
+            <span className="text-lg">V</span>
           </p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Daya Semu
+            Daya (est. W)
           </h3>
           <p className="text-3xl font-bold text-purple-600">
-            {currentData?.apparent_power?.toFixed(2) || '0.00'} <span className="text-lg">VA</span>
+            {currentData?.daya?.toFixed(0) || '0'}{' '}
+            <span className="text-lg">W</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            VA: {currentData?.apparent_power?.toFixed(0) || '0'}
           </p>
         </div>
 
-        <div className={`${getStatusBgColor(currentData?.status)} p-6 rounded-lg shadow`}>
+        <div
+          className={`${getStatusBgColor(currentData?.status)} p-6 rounded-lg shadow`}
+        >
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Status
           </h3>
-          <p className={`text-2xl font-bold ${getStatusColor(currentData?.status)}`}>
+          <p
+            className={`text-2xl font-bold ${getStatusColor(currentData?.status)}`}
+          >
             {currentData?.status || 'UNKNOWN'}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Energi
+          </h3>
+          <p className="text-2xl font-bold text-amber-500">
+            {currentData?.energi_kwh?.toFixed(3) ?? '0.000'} kWh
+          </p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Power factor
+          </h3>
+          <p className="text-2xl font-bold text-gray-200">
+            {currentData?.power_factor?.toFixed(2) ?? '—'}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Frekuensi
+          </h3>
+          <p className="text-2xl font-bold text-gray-200">
+            {currentData?.frekuensi?.toFixed(0) ?? '50'} Hz
+          </p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex items-center">
+          <p className="text-sm text-gray-500">
+            Data: Firebase hybrid + optional REST lokal. Atur di Settings → Backend.
           </p>
         </div>
       </div>
@@ -106,7 +169,9 @@ export function Dashboard() {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                 Relay Status
               </h3>
-              <p className={`text-xl font-bold ${currentData?.relay ? 'text-green-600' : 'text-red-600'}`}>
+              <p
+                className={`text-xl font-bold ${currentData?.relay ? 'text-green-600' : 'text-red-600'}`}
+              >
                 {currentData?.relay ? 'ON' : 'OFF'}
               </p>
             </div>
@@ -152,16 +217,23 @@ export function Dashboard() {
         </h3>
         <div className="space-y-3">
           {logs.length > 0 ? (
-            logs.slice(0, 5).map((log) => (
-              <div key={log.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+            logs.slice(0, 12).map((log) => (
+              <div
+                key={log.id}
+                className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+              >
                 <div>
                   <p className="text-gray-700 dark:text-gray-300">
-                    Status: <span className={`font-semibold ${getStatusColor(log.status)}`}>
+                    Status:{' '}
+                    <span
+                      className={`font-semibold ${getStatusColor(log.status)}`}
+                    >
                       {log.status}
                     </span>
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Arus: {log.arus?.toFixed(2) || '0'} A | Tegangan: {log.tegangan?.toFixed(2) || '0'} V
+                    Arus: {log.arus?.toFixed(2) || '0'} A | Tegangan:{' '}
+                    {log.tegangan?.toFixed(2) || '0'} V
                   </p>
                 </div>
                 <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
@@ -177,4 +249,3 @@ export function Dashboard() {
     </div>
   );
 }
-

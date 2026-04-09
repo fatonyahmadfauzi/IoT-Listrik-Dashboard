@@ -11,18 +11,22 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.iot.listrik.ui.alarm.AlarmActivity
+import com.iot.listrik.service.AlarmForegroundService
 
 class FCMReceiverService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val action = message.data["action"]
         if (action == "TRIGGER_ALARM") {
             Log.d("FCM", "TRIGGER_ALARM received!")
+            // Start alarm global supaya tetap bunyi walau user pindah menu/tab
+            AlarmForegroundService.start(this)
             showFullScreenAlarm(
                 message.data["title"] ?: "BAHAYA!",
                 message.data["message"] ?: "Kebocoran arus dideteksi."
             )
         } else if (action == "STOP_ALARM") {
-            Log.d("FCM", "STOP_ALARM received - ignored for now as user must dismiss manually.")
+            Log.d("FCM", "STOP_ALARM received - stopping service.")
+            AlarmForegroundService.stop(this)
         }
     }
 
@@ -30,7 +34,8 @@ class FCMReceiverService : FirebaseMessagingService() {
         val fullScreenIntent = Intent(this, AlarmActivity::class.java).apply {
             putExtra("EXTRA_TITLE", title)
             putExtra("EXTRA_MESSAGE", message)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // Hindari CLEAR_TASK (sering bikin crash pada beberapa device saat dipanggil dari service)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
 
         val fullScreenPendingIntent = PendingIntent.getActivity(

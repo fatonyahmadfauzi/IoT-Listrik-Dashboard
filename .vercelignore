@@ -1,0 +1,11 @@
+android-app/
+electron-app/
+esp32/
+functions/
+scripts/
+.firebase/
+.vscode/
+public/downloads/**/*.exe
+public/downloads/**/*.msi
+public/downloads/**/*.apk
+public/downloads/**/*.aab

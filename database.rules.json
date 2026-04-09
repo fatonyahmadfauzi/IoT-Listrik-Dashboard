@@ -2,10 +2,14 @@
   "rules": {
     "listrik": {
       ".read": "auth != null",
-      "arus":       { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "tegangan":   { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "status":     { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "updated_at": { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "arus":          { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "tegangan":      { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "daya":          { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "energi_kwh":    { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "frekuensi":     { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "power_factor":  { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "status":        { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "updated_at":    { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
       "relay": {
         ".write": "auth != null && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
       }
@@ -17,7 +21,7 @@
     },
 
     "settings": {
-      ".read":  "auth != null",
+      ".read":  "auth != null && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
       ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
 
@@ -29,7 +33,7 @@
         ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
 
         "role": {
-          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (!data.exists() && auth.uid === $uid))"
+          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (!data.exists() && auth.uid === $uid && newData.val() === 'user'))"
         }
       }
     }

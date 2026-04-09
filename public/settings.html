@@ -124,6 +124,9 @@
       <a href="/history" class="nav-item">
         <span class="material-symbols-rounded nav-icon">history</span> Riwayat Log
       </a>
+      <a href="/downloads" class="nav-item">
+        <span class="material-symbols-rounded nav-icon">download</span> Download App
+      </a>
       <div class="nav-divider"></div>
       <a href="/settings" class="nav-item active" data-admin-only>
         <span class="material-symbols-rounded nav-icon">settings</span> Pengaturan
@@ -177,10 +180,17 @@
             <input id="inpThreshold" class="form-input" type="number"
                    min="0.1" max="200" step="0.1" value="10" />
             <div class="form-hint">
-              Arus ≥ nilai ini → LEAKAGE. Arus ≥ 150% nilai ini → DANGER.<br/>
+              <strong>Logika baru:</strong> NORMAL &lt; threshold × (peringatan%). WARNING antara peringatan% dan 100%. DANGER jika arus ≥ threshold.<br/>
               Range rekomendasi: 1 – 100 A.
             </div>
             <div id="valThreshold" class="validation-msg"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inpWarningPercent">Peringatan mulai (% threshold)</label>
+            <input id="inpWarningPercent" class="form-input" type="number" min="50" max="99" step="1" value="80" />
+            <div class="form-hint">Contoh 80 → WARNING dari 80% threshold sampai &lt; 100%.</div>
+            <div id="valWarningPercent" class="validation-msg"></div>
           </div>
 
           <div class="form-group">
@@ -210,7 +220,7 @@
           <div class="toggle-row">
             <div class="toggle-info">
               <h4>Auto-Cutoff Relay</h4>
-              <p>Relay dimatikan otomatis saat LEAKAGE/DANGER</p>
+              <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold)</p>
             </div>
             <label class="toggle-switch">
               <input type="checkbox" id="inpAutoCutoff" checked />
@@ -254,6 +264,19 @@
             </div>
             <div id="valTeganganCal" class="validation-msg"></div>
           </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inpPowerFactor">Power factor (estimasi)</label>
+            <input id="inpPowerFactor" class="form-input" type="number" min="0.5" max="1" step="0.01" value="0.85" />
+            <div class="form-hint">Untuk hitung daya (W) dan kWh di firmware — bukan pengukuran PF sejati.</div>
+            <div id="valPowerFactor" class="validation-msg"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inpFrequency">Frekuensi nominal (Hz)</label>
+            <input id="inpFrequency" class="form-input" type="number" min="45" max="65" step="1" value="50" />
+            <div id="valFrequency" class="validation-msg"></div>
+          </div>
         </div>
 
         <!-- Card 3: Telegram ─────────────────────────────────── -->
@@ -292,6 +315,79 @@
               </div>
               <div id="valChatId" class="validation-msg"></div>
             </div>
+          </div>
+
+          <div class="toggle-row" style="margin-top:18px;">
+            <div class="toggle-info">
+              <h4>Notifikasi Telegram</h4>
+              <p>Kirim alert saat perubahan status (master switch)</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="inpTelegramNotify" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Client: backend & failover (localStorage — per browser) -->
+        <div class="settings-section" style="grid-column: 1 / -1;">
+          <div class="settings-section-title">
+            <span class="material-symbols-rounded">cloud_sync</span>
+            Backend &amp; failover (klien web)
+          </div>
+          <p class="form-hint" style="margin-bottom:16px;">
+            Disimpan di <strong>browser ini saja</strong> (localStorage). ESP32 tidak membaca bagian ini.
+            Mode <strong>LOCAL</strong> memerlukan <code>backend-local</code> berjalan. Browser tidak bisa auto-start server — gunakan aplikasi Windows.
+          </p>
+          <div class="input-row">
+            <div class="form-group">
+              <label class="form-label" for="inpPublicApiBase">Public API base (opsional)</label>
+              <input id="inpPublicApiBase" class="form-input" type="url" placeholder="https://api.contoh.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inpLocalApiBase">Local API base</label>
+              <input id="inpLocalApiBase" class="form-input" type="text" placeholder="http://localhost:3000" />
+            </div>
+          </div>
+          <div class="input-row">
+            <div class="form-group">
+              <label class="form-label" for="inpDataMode">Mode data</label>
+              <select id="inpDataMode" class="form-select">
+                <option value="AUTO">AUTO (Firebase → fallback REST lokal)</option>
+                <option value="PUBLIC">PUBLIC (hanya Firebase / API publik)</option>
+                <option value="LOCAL">LOCAL (hanya REST lokal)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inpHealthPath">Health check path</label>
+              <input id="inpHealthPath" class="form-input" type="text" value="/health" />
+            </div>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <h4>Auto failover</h4>
+              <p>Saat Firebase putus (AUTO), coba REST lokal</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="inpAutoFailover" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="input-row">
+            <div class="form-group">
+              <label class="form-label" for="inpRetryMs">Retry interval (ms)</label>
+              <input id="inpRetryMs" class="form-input" type="number" min="2000" max="120000" step="500" value="6000" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inpTimeoutMs">Timeout request (ms)</label>
+              <input id="inpTimeoutMs" class="form-input" type="number" min="1000" max="30000" step="500" value="4000" />
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
+            <button type="button" id="saveClientConfigBtn" class="btn btn-primary">
+              Simpan konfigurasi klien
+            </button>
+            <span id="clientSaveStatus" class="text-sm text-muted" style="align-self:center;"></span>
           </div>
         </div>
 

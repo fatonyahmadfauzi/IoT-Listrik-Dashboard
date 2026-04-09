@@ -20,8 +20,9 @@
  */
 
 import { db, auth, firebaseConfig }  from './firebase-config.js';
+import { loadClientConfig, saveClientConfig } from './client-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout } from './auth.js';
-import { showToast }      from './notifications.js';
+import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, onValue, set, remove, get }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
@@ -39,6 +40,21 @@ const inpThreshold    = document.getElementById('inpThreshold');
 const inpSendInterval = document.getElementById('inpSendInterval');
 const inpBuzzer       = document.getElementById('inpBuzzer');
 const inpAutoCutoff   = document.getElementById('inpAutoCutoff');
+const inpWarningPct   = document.getElementById('inpWarningPercent');
+const inpPowerFactor  = document.getElementById('inpPowerFactor');
+const inpFrequency    = document.getElementById('inpFrequency');
+const inpTelegramNotify = document.getElementById('inpTelegramNotify');
+
+// ── DOM: Client backend (localStorage) ────────────────────────
+const inpPublicApiBase = document.getElementById('inpPublicApiBase');
+const inpLocalApiBase  = document.getElementById('inpLocalApiBase');
+const inpDataMode      = document.getElementById('inpDataMode');
+const inpHealthPath    = document.getElementById('inpHealthPath');
+const inpAutoFailover  = document.getElementById('inpAutoFailover');
+const inpRetryMs       = document.getElementById('inpRetryMs');
+const inpTimeoutMs     = document.getElementById('inpTimeoutMs');
+const saveClientBtn    = document.getElementById('saveClientConfigBtn');
+const clientSaveStatus = document.getElementById('clientSaveStatus');
 
 // ── DOM: Calibration ─────────────────────────────────────────
 const inpArusCal      = document.getElementById('inpArusCal');
@@ -77,8 +93,8 @@ function setValidation(id, msg, ok) {
 }
 
 function clearValidations() {
-  ['valThreshold','valSendInterval','valArusCal',
-   'valTeganganCal','valBotToken','valChatId']
+  ['valThreshold','valWarningPercent','valSendInterval','valArusCal',
+   'valTeganganCal','valPowerFactor','valFrequency','valBotToken','valChatId']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.textContent = ''; el.className = 'validation-msg'; }
@@ -94,6 +110,12 @@ function validateAll() {
     setValidation('valThreshold', 'Threshold harus antara 0.1 – 200 A', false);
     valid = false;
   } else { setValidation('valThreshold', 'Valid', true); }
+
+  const wp = parseFloat(inpWarningPct?.value);
+  if (isNaN(wp) || wp < 50 || wp > 99) {
+    setValidation('valWarningPercent', 'Antara 50 – 99 %', false);
+    valid = false;
+  } else { setValidation('valWarningPercent', 'Valid', true); }
 
   const interval = parseInt(inpSendInterval?.value);
   if (isNaN(interval) || interval < 500 || interval > 60000) {
@@ -112,6 +134,18 @@ function validateAll() {
     setValidation('valTeganganCal', 'Harus antara 0.01 – 2000', false);
     valid = false;
   } else { setValidation('valTeganganCal', 'Valid', true); }
+
+  const pf = parseFloat(inpPowerFactor?.value);
+  if (isNaN(pf) || pf < 0.5 || pf > 1) {
+    setValidation('valPowerFactor', 'PF antara 0.5 – 1', false);
+    valid = false;
+  } else { setValidation('valPowerFactor', 'Valid', true); }
+
+  const fq = parseFloat(inpFrequency?.value);
+  if (isNaN(fq) || fq < 45 || fq > 65) {
+    setValidation('valFrequency', '45 – 65 Hz', false);
+    valid = false;
+  } else { setValidation('valFrequency', 'Valid', true); }
 
   const token = inpBotToken?.value.trim();
   if (token && !/^\d+:[A-Za-z0-9_-]{35,}$/.test(token)) {
@@ -136,11 +170,15 @@ function loadSettings() {
   onValue(ref(db, '/settings'), (snap) => {
     const d = snap.val() || {};
     if (inpThreshold)    inpThreshold.value     = d.thresholdArus        ?? 10;
+    if (inpWarningPct)   inpWarningPct.value    = d.warningPercent       ?? 80;
     if (inpSendInterval) inpSendInterval.value   = d.sendIntervalMs       ?? 2000;
     if (inpBuzzer)       inpBuzzer.checked        = d.buzzerEnabled        ?? true;
     if (inpAutoCutoff)   inpAutoCutoff.checked    = d.autoCutoffEnabled    ?? true;
     if (inpArusCal)      inpArusCal.value          = d.arusCalibration     ?? 1.000;
     if (inpTeganganCal)  inpTeganganCal.value      = d.teganganCalibration ?? 1.0;
+    if (inpPowerFactor)  inpPowerFactor.value      = d.powerFactorEstimate ?? 0.85;
+    if (inpFrequency)    inpFrequency.value        = d.frequencyHz         ?? 50;
+    if (inpTelegramNotify) inpTelegramNotify.checked = d.telegramNotifyEnabled !== false;
     if (inpBotToken) {
       inpBotToken.value       = d.telegramBotToken ?? '';
       inpBotToken.placeholder = d.telegramBotToken
@@ -162,11 +200,15 @@ async function saveSettings() {
   }
   const payload = {
     thresholdArus:       parseFloat(inpThreshold?.value    || 10),
+    warningPercent:      parseFloat(inpWarningPct?.value    || 80),
     sendIntervalMs:      parseInt(inpSendInterval?.value   || 2000),
     buzzerEnabled:       inpBuzzer?.checked      ?? true,
     autoCutoffEnabled:   inpAutoCutoff?.checked  ?? true,
     arusCalibration:     parseFloat(inpArusCal?.value      || 1),
     teganganCalibration: parseFloat(inpTeganganCal?.value  || 1),
+    powerFactorEstimate: parseFloat(inpPowerFactor?.value   || 0.85),
+    frequencyHz:         parseFloat(inpFrequency?.value     || 50),
+    telegramNotifyEnabled: inpTelegramNotify?.checked ?? true,
   };
   const token  = inpBotToken?.value.trim();
   const chatId = inpChatId?.value.trim();
@@ -188,6 +230,34 @@ async function saveSettings() {
   }
 }
 
+function loadClientConfigUi() {
+  const c = loadClientConfig();
+  if (inpPublicApiBase) inpPublicApiBase.value = c.publicApiBase || '';
+  if (inpLocalApiBase)  inpLocalApiBase.value  = c.localApiBase || 'http://localhost:3000';
+  if (inpDataMode)      inpDataMode.value      = c.mode || 'AUTO';
+  if (inpHealthPath)    inpHealthPath.value    = c.healthPath || '/health';
+  if (inpAutoFailover)  inpAutoFailover.checked = c.autoFailover !== false;
+  if (inpRetryMs)       inpRetryMs.value       = String(c.retryIntervalMs ?? 6000);
+  if (inpTimeoutMs)     inpTimeoutMs.value     = String(c.timeoutMs ?? 4000);
+}
+
+function saveClientConfigFromForm() {
+  saveClientConfig({
+    publicApiBase: inpPublicApiBase?.value.trim() || '',
+    localApiBase:  inpLocalApiBase?.value.trim()  || 'http://localhost:3000',
+    mode:          inpDataMode?.value || 'AUTO',
+    healthPath:    inpHealthPath?.value.trim() || '/health',
+    autoFailover:  inpAutoFailover?.checked ?? true,
+    retryIntervalMs: parseInt(inpRetryMs?.value || '6000', 10),
+    timeoutMs:       parseInt(inpTimeoutMs?.value || '4000', 10),
+  });
+  if (clientSaveStatus) {
+    clientSaveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
+    setTimeout(() => { if (clientSaveStatus) clientSaveStatus.textContent = ''; }, 4000);
+  }
+  showToast('Konfigurasi klien disimpan (browser ini)', 'success');
+}
+
 // ═══════════════════════════════════════════════════════════════
 // USER MANAGEMENT — Tanpa Firebase Functions
 // ═══════════════════════════════════════════════════════════════
@@ -198,6 +268,19 @@ async function saveSettings() {
  * User yang dibuat via "Tambah User" langsung ditulis ke /users juga.
  */
 let usersUnsubscribe = null;
+let unsubListrik = null;
+
+function startAlarmMonitor() {
+  if (unsubListrik) return; // already started
+  unsubListrik = onValue(ref(db, '/listrik'), (snap) => {
+    const d = snap.val();
+    if (!d) return;
+    const status = d.status || 'NORMAL';
+    const arus = Number(d.arus || 0);
+    const tegangan = Number(d.tegangan || 0);
+    checkAndNotify(status, arus, tegangan);
+  });
+}
 
 function loadUsers() {
   usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
@@ -374,11 +457,24 @@ initPage({
     populateSidebar(user, role);
     initSidebarToggle();
     loadSettings();
+    loadClientConfigUi();
     loadUsers();
     saveBtn?.addEventListener('click', saveSettings);
+    saveClientBtn?.addEventListener('click', saveClientConfigFromForm);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
     document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);
-    [inpThreshold, inpSendInterval, inpArusCal, inpTeganganCal, inpBotToken, inpChatId]
+    [inpThreshold, inpWarningPct, inpSendInterval, inpArusCal, inpTeganganCal,
+     inpPowerFactor, inpFrequency, inpBotToken, inpChatId]
       .forEach(el => el?.addEventListener('input', validateAll));
+
+    // Alarm: tetap bunyi walau pindah menu (settings) dengan memonitor status /listrik
+    requestNotificationPermission();
+    // Coba unlock lebih awal (kalau browser sudah pernah di-gesture di halaman sebelumnya).
+    try { initAudio(); } catch (_) {}
+    window.addEventListener('click', () => initAudio(), { once: true });
+    startAlarmMonitor();
+    window.addEventListener('beforeunload', () => {
+      try { stopWebSiren(); } catch (_) {}
+    });
   },
 });

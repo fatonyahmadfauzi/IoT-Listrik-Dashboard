@@ -10,6 +10,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import android.widget.Toast
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -21,6 +22,7 @@ import com.iot.listrik.R
 import com.iot.listrik.data.model.HistoryLog
 import com.iot.listrik.databinding.ActivityMainBinding
 import com.iot.listrik.ui.auth.LoginActivity
+import com.iot.listrik.service.AlarmForegroundService
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -38,6 +40,19 @@ class MainActivity : AppCompatActivity() {
     private var currentStatusColor = Color.parseColor("#22c55e")
     private var lastStatus = ""
     private var dangerPulseAnimator: ValueAnimator? = null
+
+    // Keep listener references so we can detach them and avoid duplicate callbacks.
+    private var connectedRef: DatabaseReference? = null
+    private var connectedListener: ValueEventListener? = null
+    private var dashboardRef: DatabaseReference? = null
+    private var dashboardListener: ValueEventListener? = null
+
+    private var historyQuery: Query? = null
+    private var historyChildListener: ChildEventListener? = null
+    private val historyByKey = mutableMapOf<String, HistoryLog>()
+    private var listenersAttached = false
+
+    private var isAdmin = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +72,8 @@ class MainActivity : AppCompatActivity() {
         FirebaseMessaging.getInstance().subscribeToTopic("iot_alarms")
 
         binding.btnLogout.setOnClickListener {
+            // Stop alarm supaya tidak lanjut bunyi setelah logout
+            AlarmForegroundService.stop(this)
             auth.signOut()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
@@ -71,10 +88,81 @@ class MainActivity : AppCompatActivity() {
 
         setupChart()
         setupRecyclerView()
-        
-        startConnectionListener()
-        startDashboardListener()
-        startHistoryListener()
+
+        // Default: sembunyikan kontrol write sampai role diketahui.
+        binding.relaySection.visibility = View.GONE
+        binding.demoSection.visibility = View.GONE
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!listenersAttached) {
+            startConnectionListener()
+            startDashboardListener()
+            startHistoryListener()
+            listenersAttached = true
+        }
+
+        refreshRoleAndApplyUi()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (listenersAttached) {
+            detachListeners()
+            listenersAttached = false
+        }
+    }
+
+    private fun detachListeners() {
+        connectedListener?.let { connectedRef?.removeEventListener(it) }
+        connectedRef = null
+        connectedListener = null
+
+        dashboardListener?.let { dashboardRef?.removeEventListener(it) }
+        dashboardRef = null
+        dashboardListener = null
+
+        historyChildListener?.let { historyQuery?.removeEventListener(it) }
+        historyQuery = null
+        historyChildListener = null
+        historyByKey.clear()
+    }
+
+    private fun refreshRoleAndApplyUi() {
+        val uid = auth.currentUser?.uid ?: run {
+            isAdmin = false
+            applyRoleUi()
+            return
+        }
+
+        val roleRef = db.getReference("users").child(uid).child("role")
+        roleRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val role = snapshot.getValue(String::class.java) ?: "user"
+                isAdmin = role == "admin"
+                applyRoleUi()
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                isAdmin = false
+                applyRoleUi()
+            }
+        })
+    }
+
+    private fun applyRoleUi() {
+        if (isAdmin) {
+            binding.relaySection.visibility = View.VISIBLE
+            binding.demoSection.visibility = View.VISIBLE
+        } else {
+            binding.relaySection.visibility = View.GONE
+            binding.demoSection.visibility = View.GONE
+        }
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun setupChart() {
@@ -111,8 +199,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startConnectionListener() {
-        val connectedRef = db.getReference(".info/connected")
-        connectedRef.addValueEventListener(object : ValueEventListener {
+        if (connectedListener != null) return
+
+        connectedRef = db.getReference(".info/connected")
+        connectedListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val connected = snapshot.getValue(Boolean::class.java) ?: false
                 if (connected) {
@@ -124,75 +214,143 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             override fun onCancelled(error: DatabaseError) { }
-        })
+        }
+        connectedRef?.addValueEventListener(connectedListener!!)
     }
 
     private fun startDashboardListener() {
-        db.getReference("listrik").addValueEventListener(object : ValueEventListener {
+        if (dashboardListener != null) return
+
+        dashboardRef = db.getReference("listrik")
+        dashboardListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if(!snapshot.exists()) return
                 
                 val status = snapshot.child("status").getValue(String::class.java) ?: "NORMAL"
                 val arus = snapshot.child("arus").getValue(Double::class.java) ?: 0.0
                 val tegangan = snapshot.child("tegangan").getValue(Double::class.java) ?: 0.0
+                val pf = snapshot.child("power_factor").getValue(Double::class.java) ?: 0.85
+                val apparent = snapshot.child("daya").getValue(Double::class.java) ?: (arus * tegangan)
+                val dayaW = apparent * pf
+                val energi = snapshot.child("energi_kwh").getValue(Double::class.java) ?: 0.0
                 
                 val statusText = when (status) {
-                    "DANGER" -> "Critical Leak Detected"
-                    "WARNING" -> "Check Load"
-                    else -> "System Stable"
+                    "DANGER", "LEAKAGE" -> "Critical — arus tinggi"
+                    "WARNING" -> "Peringatan beban"
+                    else -> "Sistem stabil"
                 }
                 
                 binding.tvStatus.text = statusText
                 binding.tvArus.text = String.format("%.2f", arus)
                 binding.tvTegangan.text = String.format("%.1f", tegangan)
+                binding.tvDayaW.text = String.format("%.0f", dayaW)
+                binding.tvEnergiKwh.text = String.format("%.3f", energi)
+                binding.tvDataSource.text = "CLOUD"
 
                 updateStatusColor(status)
                 addChartEntry(arus.toFloat(), tegangan.toFloat())
             }
             override fun onCancelled(error: DatabaseError) { }
-        })
+        }
+        dashboardRef?.addValueEventListener(dashboardListener!!)
     }
 
     private fun startHistoryListener() {
+        if (historyChildListener != null) return
+
+        historyByKey.clear()
+        historyList.clear()
+        binding.tvHistoryEmpty.visibility = View.VISIBLE
+        binding.rvHistory.visibility = View.GONE
+
         val logsQuery = db.getReference("logs").orderByKey().limitToLast(15)
-        logsQuery.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                historyList.clear()
-                for (child in snapshot.children) {
-                    val log = child.getValue(HistoryLog::class.java)
-                    if (log != null) {
-                        historyList.add(0, log.copy(key = child.key)) // Reverse order (newest first)
-                    }
-                }
-                if (historyList.isEmpty()) {
-                    binding.tvHistoryEmpty.visibility = View.VISIBLE
-                    binding.rvHistory.visibility = View.GONE
-                } else {
-                    binding.tvHistoryEmpty.visibility = View.GONE
-                    binding.rvHistory.visibility = View.VISIBLE
-                    historyAdapter.updateData(historyList)
-                    binding.rvHistory.smoothScrollToPosition(0)
-                }
+        historyQuery = logsQuery
+        historyChildListener = object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                upsertHistory(snapshot)
+                renderHistory()
             }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                upsertHistory(snapshot)
+                renderHistory()
+            }
+
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
+                // We don't rely on ordering shifts for this UI (history is rebuilt from keys),
+                // but we must implement the callback to satisfy ChildEventListener contract.
+                upsertHistory(snapshot)
+                renderHistory()
+            }
+
+            override fun onChildRemoved(snapshot: DataSnapshot) {
+                val key = snapshot.key
+                if (key != null) historyByKey.remove(key)
+                renderHistory()
+            }
+
             override fun onCancelled(error: DatabaseError) { }
-        })
+        }
+        logsQuery.addChildEventListener(historyChildListener!!)
+    }
+
+    private fun upsertHistory(snapshot: DataSnapshot) {
+        val key = snapshot.key ?: return
+        val log = snapshot.getValue(HistoryLog::class.java) ?: return
+        historyByKey[key] = log.copy(key = key)
+    }
+
+    private fun renderHistory() {
+        historyList.clear()
+        val keysDesc = historyByKey.keys.sortedDescending()
+        for (k in keysDesc) {
+            historyByKey[k]?.let { historyList.add(it) }
+        }
+
+        val wasEmpty = binding.tvHistoryEmpty.visibility == View.VISIBLE
+        if (historyList.isEmpty()) {
+            binding.tvHistoryEmpty.visibility = View.VISIBLE
+            binding.rvHistory.visibility = View.GONE
+            historyAdapter.updateData(emptyList())
+        } else {
+            binding.tvHistoryEmpty.visibility = View.GONE
+            binding.rvHistory.visibility = View.VISIBLE
+            historyAdapter.updateData(historyList)
+            if (wasEmpty) binding.rvHistory.smoothScrollToPosition(0)
+        }
     }
 
     private fun updateStatusColor(status: String) {
         if (status == lastStatus) return
         
         // --- 🚨 TRIGGER ALARM LOKAL UNTUK DEMO 🚨 ---
-        if (status == "DANGER" && lastStatus != "DANGER") {
+        val dangerStatuses = setOf("WARNING", "LEAKAGE", "DANGER")
+        val isDanger = dangerStatuses.contains(status)
+        val wasDanger = dangerStatuses.contains(lastStatus)
+
+        if (isDanger && !wasDanger) {
             // Munculkan di Notification Tray Android
-            triggerLocalNotification("BAHAYA KRITIS!", "Kebocoran arus tingkat bahaya dideteksi!")
+            val notifTitle = if (status == "DANGER") "BAHAYA KRITIS!" else "PERINGATAN!"
+            val notifBody = when (status) {
+                "DANGER" -> "Kebocoran arus tingkat bahaya dideteksi!"
+                "LEAKAGE" -> "Terdeteksi kebocoran arus. Periksa instalasi!"
+                else -> "Beban listrik melebihi batas. Periksa pemakaian!"
+            }
+            triggerLocalNotification(notifTitle, notifBody)
+
+            // Start alarm global: tetap bunyi walau pindah menu/tab lain
+            AlarmForegroundService.start(this)
             
             // Buka halaman Alarm merah Full-Screen yang berisi codingan Suara Sirene & Getar
             val intent = Intent(this, com.iot.listrik.ui.alarm.AlarmActivity::class.java).apply {
-                putExtra("EXTRA_TITLE", "BAHAYA!")
-                putExtra("EXTRA_MESSAGE", "Kebocoran arus tingkat bahaya dideteksi!")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("EXTRA_TITLE", notifTitle)
+                putExtra("EXTRA_MESSAGE", notifBody)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
             startActivity(intent)
+        } else if (!isDanger && wasDanger) {
+            // Status kembali normal/non-danger -> stop alarm global
+            AlarmForegroundService.stop(this)
         }
         
         lastStatus = status
@@ -327,10 +485,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setRelay(value: Int) {
-        db.getReference("listrik/relay").setValue(value)
+        if (!isAdmin) {
+            showToast("Akses ditolak: hanya admin yang bisa mengontrol relay.")
+            return
+        }
+
+        db.getReference("listrik/relay")
+            .setValue(value)
+            .addOnFailureListener { e ->
+                val msg = e.message ?: "Gagal mengirim perintah relay."
+                showToast("Gagal mengirim perintah relay: $msg")
+            }
     }
 
     private fun triggerDemoMode(state: String) {
+        if (!isAdmin) {
+            showToast("Demo mode hanya tersedia untuk admin.")
+            return
+        }
+
         // Force fully overriding the RTDB so FCM Web and Cloud Functions will catch it instantly
         // Wait, Cloud Functions requires it to hit /listrik/status!
         db.getReference("listrik/status").setValue(state)

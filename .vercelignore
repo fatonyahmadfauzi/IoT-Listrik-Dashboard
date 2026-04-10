@@ -1,11 +1,27 @@
-android-app/
-electron-app/
-esp32/
+# Platform apps — tidak perlu di-deploy ke Vercel
+platforms/
+hardware/
+
+# Backend & functions — deploy terpisah
+backend-local/
 functions/
+
+# Scripts & tooling
 scripts/
+docs/
+
+# Build artifacts & binaries
+node_modules/
 .firebase/
 .vscode/
+.git/
+
+# Public downloads (binary installers, served dari GitHub Releases)
 public/downloads/**/*.exe
 public/downloads/**/*.msi
 public/downloads/**/*.apk
 public/downloads/**/*.aab
+public/downloads/**/*.7z
+
+# Firebase redirect (bukan bagian web app utama)
+firebase-redirect/

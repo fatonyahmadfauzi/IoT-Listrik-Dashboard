@@ -1,490 +1,765 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pengaturan — IoT Monitoring Listrik</title>
-  <meta name="description" content="Pengaturan sistem IoT dan manajemen pengguna (Admin only)" />
-  <link rel="stylesheet" href="/style.css" />
-  <link rel="manifest"   href="/manifest.json" />
-  <meta name="theme-color" content="#070c18" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
-  <style>
-    /* ── Settings-specific extra styles ─────────────────────── */
-    .settings-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 22px;
-      margin-bottom: 22px;
-    }
-    @media (max-width: 900px) {
-      .settings-grid { grid-template-columns: 1fr; }
-    }
-    .settings-section {
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      padding: 22px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
-    .settings-section-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      color: var(--text-primary);
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--glass-border);
-    }
-    .input-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    @media (max-width: 600px) {
-      .input-row { grid-template-columns: 1fr; }
-    }
-    .form-hint {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 5px;
-      line-height: 1.5;
-    }
-    .save-bar {
-      position: static;
-      display: flex;
-      justify-content: flex-end;
-      gap: 16px;
-      padding: 18px 24px;
-      min-height: 68px;
-      background: rgba(7, 12, 24, 0.92);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      box-shadow: var(--shadow-lg);
-      margin-top: 32px;
-      width: 100%;
-    }
-    .save-bar .btn-primary {
-      min-width: 190px;
-    }
-    .field-sensitive .form-input {
-      font-family: 'JetBrains Mono', monospace;
-      letter-spacing: 0.5px;
-    }
-    .reveal-btn {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      cursor: pointer;
-      font-size: 16px;
-      padding: 0 8px;
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-    .input-reveal-wrap {
-      position: relative;
-    }
-    .input-reveal-wrap .form-input {
-      padding-right: 40px;
-    }
-    .validation-msg {
-      font-size: 11px;
-      min-height: 16px;
-      margin-top: 4px;
-      transition: color 0.2s;
-    }
-    .validation-msg.ok    { color: var(--green-light); }
-    .validation-msg.error { color: var(--red-light); }
-  </style>
-</head>
-<body class="page-bg">
-<div class="app-layout">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pengaturan — IoT Monitoring Listrik</title>
+    <meta
+      name="description"
+      content="Pengaturan sistem IoT dan manajemen pengguna (Admin only)"
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#070c18" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
+    />
+    <style>
+      /* ── Settings-specific extra styles ─────────────────────── */
+      .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 22px;
+        margin-bottom: 22px;
+      }
+      @media (max-width: 900px) {
+        .settings-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .settings-section {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 22px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .settings-section-title {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--text-primary);
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--glass-border);
+      }
+      .input-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 600px) {
+        .input-row {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 768px) {
+        .settings-grid {
+          grid-template-columns: 1fr;
+          gap: 14px;
+          margin-bottom: 14px;
+        }
+        .settings-section {
+          padding: 16px;
+        }
+        .settings-section-title {
+          margin-bottom: 12px;
+          font-size: 13px;
+        }
+        .form-group {
+          margin-bottom: 12px;
+        }
+        .form-hint {
+          margin-top: 4px;
+          font-size: 11px;
+        }
+        .save-bar {
+          padding: 14px 16px;
+          min-height: auto;
+          margin-top: 18px;
+          flex-direction: column;
+        }
+        .save-bar .btn-primary {
+          min-width: 100%;
+        }
+      }
+      .form-hint {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 5px;
+        line-height: 1.5;
+      }
+      .save-bar {
+        position: static;
+        display: flex;
+        justify-content: flex-end;
+        gap: 16px;
+        padding: 18px 24px;
+        min-height: 68px;
+        background: rgba(7, 12, 24, 0.92);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: var(--shadow-lg);
+        margin-top: 32px;
+        width: 100%;
+      }
+      .save-bar .btn-primary {
+        min-width: 190px;
+      }
+      .field-sensitive .form-input {
+        font-family: "JetBrains Mono", monospace;
+        letter-spacing: 0.5px;
+      }
+      .reveal-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0 8px;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      .input-reveal-wrap {
+        position: relative;
+      }
+      .input-reveal-wrap .form-input {
+        padding-right: 40px;
+      }
+      .validation-msg {
+        font-size: 11px;
+        min-height: 16px;
+        margin-top: 4px;
+        transition: color 0.2s;
+      }
+      .validation-msg.ok {
+        color: var(--green-light);
+      }
+      .validation-msg.error {
+        color: var(--red-light);
+      }
+    </style>
+  </head>
+  <body class="page-bg">
+    <div class="app-layout">
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-  <div id="sidebarOverlay" class="sidebar-overlay"></div>
-
-  <nav id="sidebar" class="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-icon"><span class="material-symbols-rounded">bolt</span></div>
-      <div class="sidebar-logo-text">
-        <h2>IoT Listrik</h2>
-        <span>Monitor System</span>
-      </div>
-    </div>
-    <div class="sidebar-nav">
-      <a href="/dashboard" class="nav-item">
-        <span class="material-symbols-rounded nav-icon">dashboard</span> Dashboard
-      </a>
-      <a href="/history" class="nav-item">
-        <span class="material-symbols-rounded nav-icon">history</span> Riwayat Log
-      </a>
-      <a href="/downloads" class="nav-item">
-        <span class="material-symbols-rounded nav-icon">download</span> Download App
-      </a>
-      <div class="nav-divider"></div>
-      <a href="/settings" class="nav-item active" data-admin-only>
-        <span class="material-symbols-rounded nav-icon">settings</span> Pengaturan
-      </a>
-    </div>
-    <div class="sidebar-footer">
-      <div class="user-badge">
-        <div class="user-avatar" id="sidebarAvatar">?</div>
-        <div class="user-info">
-          <div class="user-email" id="sidebarEmail">—</div>
-          <div id="sidebarRole" class="role-pill admin">Admin</div>
-        </div>
-      </div>
-      <button id="logoutBtn" class="btn btn-ghost w-full"><span class="material-symbols-rounded">logout</span>Logout</button>
-    </div>
-  </nav>
-
-  <div class="main-content">
-    <header class="topbar">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button id="hamburgerBtn" class="hamburger"><span class="material-symbols-rounded">menu</span></button>
-        <h1 class="topbar-title">Pengaturan Sistem</h1>
-      </div>
-      <div class="topbar-actions">
-        <span class="role-pill admin">Admin Only</span>
-      </div>
-    </header>
-
-    <main class="page-content">
-
-      <!-- ── Runtime Config notice ─────────────────────────── -->
-      <div style="background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.25);
-                  border-radius:var(--radius-md);padding:14px 18px;margin-bottom:22px;
-                  font-size:13px;color:var(--primary-light);">
-        <strong>Runtime Configuration:</strong>
-        Perubahan di halaman ini akan langsung disimpan ke Firebase <code>/settings</code>
-        dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa perlu upload ulang firmware</strong>.
-      </div>
-
-      <!-- ── Settings grid (2 columns) ─────────────────────── -->
-      <div class="settings-grid">
-
-        <!-- Card 1: Sistem & Sensor ─────────────────────────── -->
-        <div class="settings-section">
-          <div class="settings-section-title">Sistem &amp; Sensor</div>
-
-          <div class="form-group">
-            <label class="form-label" for="inpThreshold">
-              Threshold Arus Maksimal (A)
-            </label>
-            <input id="inpThreshold" class="form-input" type="number"
-                   min="0.1" max="200" step="0.1" value="10" />
-            <div class="form-hint">
-              <strong>Logika baru:</strong> NORMAL &lt; threshold × (peringatan%). WARNING antara peringatan% dan 100%. DANGER jika arus ≥ threshold.<br/>
-              Range rekomendasi: 1 – 100 A.
-            </div>
-            <div id="valThreshold" class="validation-msg"></div>
+      <nav id="sidebar" class="sidebar">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">
+            <span class="material-symbols-rounded">bolt</span>
           </div>
-
-          <div class="form-group">
-            <label class="form-label" for="inpWarningPercent">Peringatan mulai (% threshold)</label>
-            <input id="inpWarningPercent" class="form-input" type="number" min="50" max="99" step="1" value="80" />
-            <div class="form-hint">Contoh 80 → WARNING dari 80% threshold sampai &lt; 100%.</div>
-            <div id="valWarningPercent" class="validation-msg"></div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="inpSendInterval">
-              Interval Kirim Data (ms)
-            </label>
-            <input id="inpSendInterval" class="form-input" type="number"
-                   min="500" max="60000" step="100" value="2000" />
-            <div class="form-hint">
-              Seberapa sering ESP32 menulis data ke Firebase.<br/>
-              Min: 500 ms | Rekomendasi: 2000 ms.
-            </div>
-            <div id="valSendInterval" class="validation-msg"></div>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-info">
-              <h4>Buzzer</h4>
-              <p>Bunyi saat kondisi abnormal terdeteksi</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="inpBuzzer" checked />
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-info">
-              <h4>Auto-Cutoff Relay</h4>
-              <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold)</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="inpAutoCutoff" checked />
-              <span class="toggle-slider"></span>
-            </label>
+          <div class="sidebar-logo-text">
+            <h2>IoT Listrik</h2>
+            <span>Monitor System</span>
           </div>
         </div>
-
-        <!-- Card 2: Kalibrasi Sensor ─────────────────────────── -->
-        <div class="settings-section">
-          <div class="settings-section-title">Kalibrasi Sensor</div>
-          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);
-                      border-radius:var(--radius-md);padding:12px;margin-bottom:16px;
-                      font-size:12px;color:var(--yellow-light);">
-            Prosedur kalibrasi: bandingkan pembacaan ESP32 dengan alat ukur referensi.<br/>
-            <strong>Faktor = nilai_referensi ÷ nilai_raw_ESP32</strong>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="inpArusCal">
-              Faktor Kalibrasi Arus
-            </label>
-            <input id="inpArusCal" class="form-input" type="number"
-                   min="0.01" max="10" step="0.001" value="1.000" />
-            <div class="form-hint">
-              Nilai default: 1.000 (tidak ada koreksi).<br/>
-              Contoh: clamp meter baca 5 A, ESP32 baca 4.8 A → faktor = 5/4.8 = 1.042
-            </div>
-            <div id="valArusCal" class="validation-msg"></div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="inpTeganganCal">
-              Faktor Kalibrasi Tegangan
-            </label>
-            <input id="inpTeganganCal" class="form-input" type="number"
-                   min="0.01" max="2000" step="0.1" value="1.0" />
-            <div class="form-hint">
-              Faktor konversi ADC → Volt AC.<br/>
-              Contoh: voltmeter = 220 V, raw ADC RMS = 0.336 V → faktor ≈ 654.8
-            </div>
-            <div id="valTeganganCal" class="validation-msg"></div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="inpPowerFactor">Power factor (estimasi)</label>
-            <input id="inpPowerFactor" class="form-input" type="number" min="0.5" max="1" step="0.01" value="0.85" />
-            <div class="form-hint">Untuk hitung daya (W) dan kWh di firmware — bukan pengukuran PF sejati.</div>
-            <div id="valPowerFactor" class="validation-msg"></div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="inpFrequency">Frekuensi nominal (Hz)</label>
-            <input id="inpFrequency" class="form-input" type="number" min="45" max="65" step="1" value="50" />
-            <div id="valFrequency" class="validation-msg"></div>
-          </div>
+        <div class="sidebar-nav">
+          <a href="/dashboard" class="nav-item">
+            <span class="material-symbols-rounded nav-icon">dashboard</span>
+            Dashboard
+          </a>
+          <a href="/history" class="nav-item">
+            <span class="material-symbols-rounded nav-icon">history</span>
+            Riwayat Log
+          </a>
+          <a href="/downloads" class="nav-item">
+            <span class="material-symbols-rounded nav-icon">download</span>
+            Download App
+          </a>
+          <div class="nav-divider"></div>
+          <a href="/settings" class="nav-item active" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">settings</span>
+            Pengaturan
+          </a>
         </div>
-
-        <!-- Card 3: Telegram ─────────────────────────────────── -->
-        <div class="settings-section" style="grid-column: 1 / -1;">
-          <div class="settings-section-title">Konfigurasi Telegram</div>
-          <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.20);
-                      border-radius:var(--radius-md);padding:12px;margin-bottom:16px;
-                      font-size:12px;color:var(--green-light);">
-            <strong>Aman:</strong> Token dan Chat ID Telegram disimpan di Firebase (bukan di firmware).
-            Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini dari Firebase setiap sinkronisasi.
-          </div>
-
-          <div class="input-row">
-            <div class="form-group field-sensitive">
-              <label class="form-label" for="inpBotToken">Bot Token</label>
-              <div class="input-reveal-wrap">
-                <input id="inpBotToken" class="form-input" type="password"
-                       placeholder="1234567890:ABCDEF..." autocomplete="off" />
-                <button type="button" class="reveal-btn" id="revealToken"
-                        title="Tampilkan/sembunyikan token"><span class="material-symbols-rounded">visibility</span></button>
-              </div>
-              <div class="form-hint">
-                Dapat dari @BotFather → /newbot → copy token.
-              </div>
-              <div id="valBotToken" class="validation-msg"></div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="inpChatId">Chat ID / Group ID</label>
-              <input id="inpChatId" class="form-input" type="text"
-                     placeholder="-100123456789 atau 123456789"
-                     autocomplete="off" />
-              <div class="form-hint">
-                Untuk grup: awali dengan -100. Untuk pribadi: ID numerik positif.<br/>
-                Cara cek: kirim pesan ke bot → buka api.telegram.org/bot{TOKEN}/getUpdates
-              </div>
-              <div id="valChatId" class="validation-msg"></div>
+        <div class="sidebar-footer">
+          <div class="user-badge">
+            <div class="user-avatar" id="sidebarAvatar">?</div>
+            <div class="user-info">
+              <div class="user-email" id="sidebarEmail">—</div>
+              <div id="sidebarRole" class="role-pill admin">Admin</div>
             </div>
           </div>
-
-          <div class="toggle-row" style="margin-top:18px;">
-            <div class="toggle-info">
-              <h4>Notifikasi Telegram</h4>
-              <p>Kirim alert saat perubahan status (master switch)</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="inpTelegramNotify" checked />
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
+          <button id="logoutBtn" class="btn btn-ghost w-full">
+            <span class="material-symbols-rounded">logout</span>Logout
+          </button>
         </div>
+      </nav>
 
-        <!-- Client: backend & failover (localStorage — per browser) -->
-        <div class="settings-section" style="grid-column: 1 / -1;">
-          <div class="settings-section-title">
-            <span class="material-symbols-rounded">cloud_sync</span>
-            Backend &amp; failover (klien web)
-          </div>
-          <p class="form-hint" style="margin-bottom:16px;">
-            Disimpan di <strong>browser ini saja</strong> (localStorage). ESP32 tidak membaca bagian ini.
-            Mode <strong>LOCAL</strong> memerlukan <code>backend-local</code> berjalan. Browser tidak bisa auto-start server — gunakan aplikasi Windows.
-          </p>
-          <div class="input-row">
-            <div class="form-group">
-              <label class="form-label" for="inpPublicApiBase">Public API base (opsional)</label>
-              <input id="inpPublicApiBase" class="form-input" type="url" placeholder="https://api.contoh.com" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="inpLocalApiBase">Local API base</label>
-              <input id="inpLocalApiBase" class="form-input" type="text" placeholder="http://localhost:3000" />
-            </div>
-          </div>
-          <div class="input-row">
-            <div class="form-group">
-              <label class="form-label" for="inpDataMode">Mode data</label>
-              <select id="inpDataMode" class="form-select">
-                <option value="AUTO">AUTO (Firebase → fallback REST lokal)</option>
-                <option value="PUBLIC">PUBLIC (hanya Firebase / API publik)</option>
-                <option value="LOCAL">LOCAL (hanya REST lokal)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="inpHealthPath">Health check path</label>
-              <input id="inpHealthPath" class="form-input" type="text" value="/health" />
-            </div>
-          </div>
-          <div class="toggle-row">
-            <div class="toggle-info">
-              <h4>Auto failover</h4>
-              <p>Saat Firebase putus (AUTO), coba REST lokal</p>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="inpAutoFailover" checked />
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-          <div class="input-row">
-            <div class="form-group">
-              <label class="form-label" for="inpRetryMs">Retry interval (ms)</label>
-              <input id="inpRetryMs" class="form-input" type="number" min="2000" max="120000" step="500" value="6000" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="inpTimeoutMs">Timeout request (ms)</label>
-              <input id="inpTimeoutMs" class="form-input" type="number" min="1000" max="30000" step="500" value="4000" />
-            </div>
-          </div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;">
-            <button type="button" id="saveClientConfigBtn" class="btn btn-primary">
-              Simpan konfigurasi klien
+      <div class="main-content">
+        <header class="topbar">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <button id="hamburgerBtn" class="hamburger">
+              <span class="material-symbols-rounded">menu</span>
             </button>
-            <span id="clientSaveStatus" class="text-sm text-muted" style="align-self:center;"></span>
+            <h1 class="topbar-title">Pengaturan Sistem</h1>
           </div>
-        </div>
+          <div class="topbar-actions">
+            <span class="role-pill admin">Admin Only</span>
+          </div>
+        </header>
 
-      </div><!-- /settings-grid -->
+        <main class="page-content">
+          <!-- ── Runtime Config notice ─────────────────────────── -->
+          <div
+            style="
+              background: rgba(59, 130, 246, 0.1);
+              border: 1px solid rgba(59, 130, 246, 0.25);
+              border-radius: var(--radius-md);
+              padding: 14px 18px;
+              margin-bottom: 22px;
+              font-size: 13px;
+              color: var(--primary-light);
+            "
+          >
+            <strong>Runtime Configuration:</strong>
+            Perubahan di halaman ini akan langsung disimpan ke Firebase
+            <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10
+            detik — <strong>tanpa perlu upload ulang firmware</strong>.
+          </div>
 
-      <!-- ── User Management ────────────────────────────────── -->
-      <div class="settings-section" style="margin-bottom:22px;">
-        <div class="settings-section-title">Manajemen Pengguna</div>
-        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-          <button id="refreshUsersBtn" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">refresh</span>Refresh</button>
-          <button id="addUserBtn"      class="btn btn-primary btn-sm"><span class="material-symbols-rounded">person_add</span>Tambah User</button>
-        </div>
+          <!-- ── Settings grid (2 columns) ─────────────────────── -->
+          <div class="settings-grid">
+            <!-- Card 1: Sistem & Sensor ─────────────────────────── -->
+            <div class="settings-section">
+              <div class="settings-section-title">Sistem &amp; Sensor</div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Pengguna</th>
-                <th>Role</th>
-                <th>Dibuat</th>
-                <th>Ubah Role</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="usersTbody">
-              <tr>
-                <td colspan="5"
-                    style="text-align:center;padding:28px;color:var(--text-secondary);">
-                  Memuat pengguna...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="text-xs text-muted mt-8">
-          Manajemen user via Firebase Functions (Admin SDK). Password dikelola aman di server.
-        </p>
+              <div class="form-group">
+                <label class="form-label" for="inpThreshold">
+                  Threshold Arus Maksimal (A)
+                </label>
+                <input
+                  id="inpThreshold"
+                  class="form-input"
+                  type="number"
+                  min="0.1"
+                  max="200"
+                  step="0.1"
+                  value="10"
+                />
+                <div class="form-hint">
+                  <strong>Logika baru:</strong> NORMAL &lt; threshold ×
+                  (peringatan%). WARNING antara peringatan% dan 100%. DANGER
+                  jika arus ≥ threshold.<br />
+                  Range rekomendasi: 1 – 100 A.
+                </div>
+                <div id="valThreshold" class="validation-msg"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="inpWarningPercent"
+                  >Peringatan mulai (% threshold)</label
+                >
+                <input
+                  id="inpWarningPercent"
+                  class="form-input"
+                  type="number"
+                  min="50"
+                  max="99"
+                  step="1"
+                  value="80"
+                />
+                <div class="form-hint">
+                  Contoh 80 → WARNING dari 80% threshold sampai &lt; 100%.
+                </div>
+                <div id="valWarningPercent" class="validation-msg"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="inpSendInterval">
+                  Interval Kirim Data (ms)
+                </label>
+                <input
+                  id="inpSendInterval"
+                  class="form-input"
+                  type="number"
+                  min="500"
+                  max="60000"
+                  step="100"
+                  value="2000"
+                />
+                <div class="form-hint">
+                  Seberapa sering ESP32 menulis data ke Firebase.<br />
+                  Min: 500 ms | Rekomendasi: 2000 ms.
+                </div>
+                <div id="valSendInterval" class="validation-msg"></div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <h4>Buzzer</h4>
+                  <p>Bunyi saat kondisi abnormal terdeteksi</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpBuzzer" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <h4>Auto-Cutoff Relay</h4>
+                  <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold)</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpAutoCutoff" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Card 2: Kalibrasi Sensor ─────────────────────────── -->
+            <div class="settings-section">
+              <div class="settings-section-title">Kalibrasi Sensor</div>
+              <div
+                style="
+                  background: rgba(245, 158, 11, 0.08);
+                  border: 1px solid rgba(245, 158, 11, 0.25);
+                  border-radius: var(--radius-md);
+                  padding: 12px;
+                  margin-bottom: 16px;
+                  font-size: 12px;
+                  color: var(--yellow-light);
+                "
+              >
+                Prosedur kalibrasi: bandingkan pembacaan ESP32 dengan alat ukur
+                referensi.<br />
+                <strong>Faktor = nilai_referensi ÷ nilai_raw_ESP32</strong>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="inpArusCal">
+                  Faktor Kalibrasi Arus
+                </label>
+                <input
+                  id="inpArusCal"
+                  class="form-input"
+                  type="number"
+                  min="0.01"
+                  max="10"
+                  step="0.001"
+                  value="1.000"
+                />
+                <div class="form-hint">
+                  Nilai default: 1.000 (tidak ada koreksi).<br />
+                  Contoh: clamp meter baca 5 A, ESP32 baca 4.8 A → faktor =
+                  5/4.8 = 1.042
+                </div>
+                <div id="valArusCal" class="validation-msg"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="inpTeganganCal">
+                  Faktor Kalibrasi Tegangan
+                </label>
+                <input
+                  id="inpTeganganCal"
+                  class="form-input"
+                  type="number"
+                  min="0.01"
+                  max="2000"
+                  step="0.1"
+                  value="1.0"
+                />
+                <div class="form-hint">
+                  Faktor konversi ADC → Volt AC.<br />
+                  Contoh: voltmeter = 220 V, raw ADC RMS = 0.336 V → faktor ≈
+                  654.8
+                </div>
+                <div id="valTeganganCal" class="validation-msg"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="inpPowerFactor"
+                  >Power factor (estimasi)</label
+                >
+                <input
+                  id="inpPowerFactor"
+                  class="form-input"
+                  type="number"
+                  min="0.5"
+                  max="1"
+                  step="0.01"
+                  value="0.85"
+                />
+                <div class="form-hint">
+                  Untuk hitung daya (W) dan kWh di firmware — bukan pengukuran
+                  PF sejati.
+                </div>
+                <div id="valPowerFactor" class="validation-msg"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="inpFrequency"
+                  >Frekuensi nominal (Hz)</label
+                >
+                <input
+                  id="inpFrequency"
+                  class="form-input"
+                  type="number"
+                  min="45"
+                  max="65"
+                  step="1"
+                  value="50"
+                />
+                <div id="valFrequency" class="validation-msg"></div>
+              </div>
+            </div>
+
+            <!-- Card 3: Telegram ─────────────────────────────────── -->
+            <div class="settings-section" style="grid-column: 1 / -1">
+              <div class="settings-section-title">Konfigurasi Telegram</div>
+              <div
+                style="
+                  background: rgba(34, 197, 94, 0.08);
+                  border: 1px solid rgba(34, 197, 94, 0.2);
+                  border-radius: var(--radius-md);
+                  padding: 12px;
+                  margin-bottom: 16px;
+                  font-size: 12px;
+                  color: var(--green-light);
+                "
+              >
+                <strong>Aman:</strong> Token dan Chat ID Telegram disimpan di
+                Firebase (bukan di firmware). Hanya admin yang dapat
+                mengubahnya. ESP32 membaca nilai ini dari Firebase setiap
+                sinkronisasi.
+              </div>
+
+              <div class="input-row">
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpBotToken">Bot Token</label>
+                  <div class="input-reveal-wrap">
+                    <input
+                      id="inpBotToken"
+                      class="form-input"
+                      type="password"
+                      placeholder="1234567890:ABCDEF..."
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="reveal-btn"
+                      id="revealToken"
+                      title="Tampilkan/sembunyikan token"
+                    >
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                  <div class="form-hint">
+                    Dapat dari @BotFather → /newbot → copy token.
+                  </div>
+                  <div id="valBotToken" class="validation-msg"></div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="inpChatId"
+                    >Chat ID / Group ID</label
+                  >
+                  <input
+                    id="inpChatId"
+                    class="form-input"
+                    type="text"
+                    placeholder="-100123456789 atau 123456789"
+                    autocomplete="off"
+                  />
+                  <div class="form-hint">
+                    Untuk grup: awali dengan -100. Untuk pribadi: ID numerik
+                    positif.<br />
+                    Cara cek: kirim pesan ke bot → buka
+                    api.telegram.org/bot{TOKEN}/getUpdates
+                  </div>
+                  <div id="valChatId" class="validation-msg"></div>
+                </div>
+              </div>
+
+              <div class="toggle-row" style="margin-top: 18px">
+                <div class="toggle-info">
+                  <h4>Notifikasi Telegram</h4>
+                  <p>Kirim alert saat perubahan status (master switch)</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpTelegramNotify" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Client: backend & failover (localStorage — per browser) -->
+            <div class="settings-section" style="grid-column: 1 / -1">
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded">cloud_sync</span>
+                Backend &amp; failover (klien web)
+              </div>
+              <p class="form-hint" style="margin-bottom: 16px">
+                Disimpan di <strong>browser ini saja</strong> (localStorage).
+                ESP32 tidak membaca bagian ini. Mode
+                <strong>LOCAL</strong> memerlukan
+                <code>backend-local</code> berjalan. Browser tidak bisa
+                auto-start server — gunakan aplikasi Windows.
+              </p>
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="inpPublicApiBase"
+                    >Public API base (opsional)</label
+                  >
+                  <input
+                    id="inpPublicApiBase"
+                    class="form-input"
+                    type="url"
+                    placeholder="https://api.contoh.com"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="inpLocalApiBase"
+                    >Local API base</label
+                  >
+                  <input
+                    id="inpLocalApiBase"
+                    class="form-input"
+                    type="text"
+                    placeholder="http://localhost:3000"
+                  />
+                </div>
+              </div>
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="inpDataMode">Mode data</label>
+                  <select id="inpDataMode" class="form-select">
+                    <option value="AUTO">
+                      AUTO (Firebase → fallback REST lokal)
+                    </option>
+                    <option value="PUBLIC">
+                      PUBLIC (hanya Firebase / API publik)
+                    </option>
+                    <option value="LOCAL">LOCAL (hanya REST lokal)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="inpHealthPath"
+                    >Health check path</label
+                  >
+                  <input
+                    id="inpHealthPath"
+                    class="form-input"
+                    type="text"
+                    value="/health"
+                  />
+                </div>
+              </div>
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <h4>Auto failover</h4>
+                  <p>Saat Firebase putus (AUTO), coba REST lokal</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpAutoFailover" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="inpRetryMs"
+                    >Retry interval (ms)</label
+                  >
+                  <input
+                    id="inpRetryMs"
+                    class="form-input"
+                    type="number"
+                    min="2000"
+                    max="120000"
+                    step="500"
+                    value="6000"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="inpTimeoutMs"
+                    >Timeout request (ms)</label
+                  >
+                  <input
+                    id="inpTimeoutMs"
+                    class="form-input"
+                    type="number"
+                    min="1000"
+                    max="30000"
+                    step="500"
+                    value="4000"
+                  />
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  gap: 12px;
+                  flex-wrap: wrap;
+                  margin-top: 12px;
+                "
+              >
+                <button
+                  type="button"
+                  id="saveClientConfigBtn"
+                  class="btn btn-primary"
+                >
+                  Simpan konfigurasi klien
+                </button>
+                <span
+                  id="clientSaveStatus"
+                  class="text-sm text-muted"
+                  style="align-self: center"
+                ></span>
+              </div>
+            </div>
+          </div>
+          <!-- /settings-grid -->
+
+          <!-- ── User Management ────────────────────────────────── -->
+          <div class="settings-section" style="margin-bottom: 22px">
+            <div class="settings-section-title">Manajemen Pengguna</div>
+            <div
+              style="
+                display: flex;
+                gap: 12px;
+                margin-bottom: 16px;
+                flex-wrap: wrap;
+              "
+            >
+              <button id="refreshUsersBtn" class="btn btn-ghost btn-sm">
+                <span class="material-symbols-rounded">refresh</span>Refresh
+              </button>
+              <button id="addUserBtn" class="btn btn-primary btn-sm">
+                <span class="material-symbols-rounded">person_add</span>Tambah
+                User
+              </button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pengguna</th>
+                    <th>Role</th>
+                    <th>Dibuat</th>
+                    <th>Ubah Role</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTbody">
+                  <tr>
+                    <td
+                      colspan="5"
+                      style="
+                        text-align: center;
+                        padding: 28px;
+                        color: var(--text-secondary);
+                      "
+                    >
+                      Memuat pengguna...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-xs text-muted mt-8">
+              Manajemen user via Firebase Functions (Admin SDK). Password
+              dikelola aman di server.
+            </p>
+          </div>
+
+          <!-- ── Sticky save bar ────────────────────────────────────── -->
+          <div class="save-bar">
+            <span
+              id="saveStatus"
+              class="text-sm text-muted"
+              style="align-self: center"
+            ></span>
+            <button id="saveSettingsBtn" class="btn btn-primary">
+              Simpan Semua Settings
+            </button>
+          </div>
+        </main>
       </div>
+    </div>
 
-      <!-- ── Sticky save bar ────────────────────────────────────── -->
-      <div class="save-bar">
-        <span id="saveStatus" class="text-sm text-muted" style="align-self:center;"></span>
-        <button id="saveSettingsBtn" class="btn btn-primary">
-          Simpan Semua Settings
-        </button>
+    <!-- ── Add User Modal ──────────────────────────────────────── -->
+    <div id="addUserModal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <span class="material-symbols-rounded">person_add</span>Tambah
+            Pengguna
+          </h2>
+          <button class="modal-close" id="modalClose">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="newDisplayName">Nama Lengkap</label>
+          <input
+            id="newDisplayName"
+            class="form-input"
+            type="text"
+            placeholder="Nama pengguna"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="newEmail">Email *</label>
+          <input
+            id="newEmail"
+            class="form-input"
+            type="email"
+            placeholder="email@contoh.com"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="newPassword"
+            >Password * (min 8 karakter)</label
+          >
+          <input
+            id="newPassword"
+            class="form-input"
+            type="password"
+            placeholder="••••••••"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="newRole">Role</label>
+          <select id="newRole" class="form-select">
+            <option value="user">User (Monitoring only)</option>
+            <option value="admin">Admin (Full access)</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button id="modalCancelBtn" class="btn btn-ghost">Batal</button>
+          <button id="modalSubmitBtn" class="btn btn-primary">Buat Akun</button>
+        </div>
       </div>
+    </div>
 
-    </main>
-  </div>
-</div>
+    <!-- Reset PW modal dihapus — gunakan sendPasswordResetEmail() via tombol Reset PW -->
 
-<!-- ── Add User Modal ──────────────────────────────────────── -->
-<div id="addUserModal" class="modal-overlay">
-  <div class="modal">
-    <div class="modal-header">
-      <h2 class="modal-title"><span class="material-symbols-rounded">person_add</span>Tambah Pengguna</h2>
-      <button class="modal-close" id="modalClose"><span class="material-symbols-rounded">close</span></button>
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="newDisplayName">Nama Lengkap</label>
-      <input id="newDisplayName" class="form-input" type="text" placeholder="Nama pengguna" />
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="newEmail">Email *</label>
-      <input id="newEmail" class="form-input" type="email" placeholder="email@contoh.com" />
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="newPassword">Password * (min 8 karakter)</label>
-      <input id="newPassword" class="form-input" type="password" placeholder="••••••••" />
-    </div>
-    <div class="form-group">
-      <label class="form-label" for="newRole">Role</label>
-      <select id="newRole" class="form-select">
-        <option value="user">User (Monitoring only)</option>
-        <option value="admin">Admin (Full access)</option>
-      </select>
-    </div>
-    <div class="modal-footer">
-      <button id="modalCancelBtn" class="btn btn-ghost">Batal</button>
-      <button id="modalSubmitBtn" class="btn btn-primary">Buat Akun</button>
-    </div>
-  </div>
-</div>
+    <div id="toastContainer" class="toast-container"></div>
+    <script type="module" src="/settings.js"></script>
 
-<!-- Reset PW modal dihapus — gunakan sendPasswordResetEmail() via tombol Reset PW -->
-
-<div id="toastContainer" class="toast-container"></div>
-<script type="module" src="/settings.js"></script>
-
-<!-- Reveal token button -->
-<script>
-  document.getElementById('revealToken')?.addEventListener('click', () => {
-    const inp = document.getElementById('inpBotToken');
-    if (!inp) return;
-    inp.type = inp.type === 'password' ? 'text' : 'password';
-    document.getElementById('revealToken').innerHTML = inp.type === 'password' ? '<span class="material-symbols-rounded">visibility</span>' : '<span class="material-symbols-rounded">visibility_off</span>';
-  });
-</script>
-</body>
+    <!-- Reveal token button -->
+    <script>
+      document.getElementById("revealToken")?.addEventListener("click", () => {
+        const inp = document.getElementById("inpBotToken");
+        if (!inp) return;
+        inp.type = inp.type === "password" ? "text" : "password";
+        document.getElementById("revealToken").innerHTML =
+          inp.type === "password"
+            ? '<span class="material-symbols-rounded">visibility</span>'
+            : '<span class="material-symbols-rounded">visibility_off</span>';
+      });
+    </script>
+  </body>
 </html>

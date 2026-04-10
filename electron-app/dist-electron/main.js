@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = require("path");
+const child_process_1 = require("child_process");
 const electron_store_1 = __importDefault(require("electron-store"));
 const electron_updater_1 = require("electron-updater");
 const isDev = process.env.NODE_ENV === 'development';
@@ -13,6 +14,7 @@ const store = new electron_store_1.default();
 // Global references
 let mainWindow = null;
 let tray = null;
+let localServerChild = null;
 // Single instance lock (prevent double app + double tray)
 const gotTheLock = electron_1.app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -174,6 +176,40 @@ electron_1.ipcMain.handle('set-settings', (_, settings) => {
         });
     }
 });
+electron_1.ipcMain.handle('local-server:start', async (_, opts) => {
+    try {
+        if (localServerChild && !localServerChild.killed) {
+            return { ok: true };
+        }
+        const cwd = opts.cwd || process.cwd();
+        const command = opts.command || 'node server.js';
+        localServerChild = (0, child_process_1.spawn)(command, [], {
+            cwd,
+            shell: true,
+            windowsHide: true,
+            detached: false,
+        });
+        localServerChild.on('exit', () => {
+            localServerChild = null;
+        });
+        localServerChild.stdout?.on('data', (d) => console.log('[local-server]', d.toString()));
+        localServerChild.stderr?.on('data', (d) => console.error('[local-server]', d.toString()));
+        return { ok: true };
+    }
+    catch (e) {
+        return { ok: false, error: e?.message || String(e) };
+    }
+});
+electron_1.ipcMain.handle('local-server:stop', async () => {
+    if (localServerChild && !localServerChild.killed) {
+        localServerChild.kill();
+        localServerChild = null;
+    }
+    return { ok: true };
+});
+electron_1.ipcMain.handle('local-server:status', async () => ({
+    running: !!(localServerChild && !localServerChild.killed),
+}));
 // App event handlers
 electron_1.app.whenReady().then(() => {
     createTray();

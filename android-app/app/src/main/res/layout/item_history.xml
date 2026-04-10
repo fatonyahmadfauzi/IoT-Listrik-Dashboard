@@ -61,8 +61,10 @@
         android:text="NORMAL"
         android:textSize="11sp"
         android:textStyle="bold"
-        android:paddingHorizontal="10dp"
-        android:paddingVertical="4dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
         android:background="#3322c55e"
         android:textColor="@color/green"/>
 

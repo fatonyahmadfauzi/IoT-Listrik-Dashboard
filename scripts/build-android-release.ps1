@@ -15,18 +15,25 @@ Push-Location $androidDir
 
 Pop-Location
 
-$apkPath = Join-Path $androidDir "app/build/outputs/apk/release/app-release.apk"
-if (-not (Test-Path $apkPath)) {
-  throw "APK release tidak ditemukan di: $apkPath"
+# Find the renamed APK (IoT Listrik Dashboard 1.0.0.apk)
+$apkDir = Join-Path $androidDir "app/build/outputs/apk/release"
+$apkFiles = Get-ChildItem -Path $apkDir -Filter "*.apk" | Sort-Object LastWriteTime -Descending
+if ($apkFiles.Count -eq 0) {
+  throw "APK release tidak ditemukan di: $apkDir"
 }
+
+$apkPath = $apkFiles[0].FullName
 
 $webDownloadsDir = Join-Path $repoRoot "public/downloads/android"
 New-Item -ItemType Directory -Force -Path $webDownloadsDir | Out-Null
 
-$targetPath = Join-Path $webDownloadsDir "iot-listrik-dashboard-release.apk"
-Copy-Item $apkPath $targetPath -Force
+# Clean old APK files
+Get-ChildItem -Path $webDownloadsDir -Filter "*.apk" | Remove-Item -Force
+
+# Copy new APK
+Copy-Item $apkPath (Join-Path $webDownloadsDir $apkFiles[0].Name) -Force
 
 Write-Host ""
 Write-Host "APK siap untuk web download:"
-Write-Host $targetPath
+Write-Host (Join-Path $webDownloadsDir $apkFiles[0].Name)
 

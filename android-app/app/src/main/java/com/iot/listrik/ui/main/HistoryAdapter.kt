@@ -26,8 +26,11 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val log = logs[position]
         
-        holder.binding.tvHistArus.text = String.format("%.2f A", log.arus)
-        holder.binding.tvHistTegangan.text = String.format("%.0f V", log.tegangan)
+        val arusValue = (log.arus as? Number)?.toDouble() ?: 0.0
+        val teganganValue = (log.tegangan as? Number)?.toDouble() ?: 0.0
+        
+        holder.binding.tvHistArus.text = String.format("%.2f A", arusValue)
+        holder.binding.tvHistTegangan.text = String.format("%.0f V", teganganValue)
         
         val displayStatus = when (log.status) {
             "DANGER" -> "Critical Leak Detected"
@@ -52,14 +55,14 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
             }
         }
 
-        // Parse waktu string (Assume "YYYY-MM-DD HH:mm:ss" or timestamp)
-        // For simplicity, just split if it has space
-        val parts = log.waktu.split(" ")
+        // Parse waktu (Handle both String and Long timestamp)
+        val waktuStr = log.waktu.toString()
+        val parts = waktuStr.split(" ")
         if (parts.size >= 2) {
             holder.binding.tvHistDate.text = parts[0]
             holder.binding.tvHistTime.text = parts[1]
         } else {
-            holder.binding.tvHistDate.text = log.waktu
+            holder.binding.tvHistDate.text = waktuStr
             holder.binding.tvHistTime.text = "-"
         }
     }

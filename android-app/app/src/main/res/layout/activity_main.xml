@@ -11,7 +11,10 @@
         android:layout_width="match_parent"
         android:layout_height="72dp"
         android:orientation="horizontal"
-        android:paddingHorizontal="20dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:paddingTop="0dp"
+        android:paddingBottom="0dp"
         android:gravity="center_vertical"
         android:background="@color/bg_surface">
         
@@ -41,7 +44,7 @@
             android:id="@+id/btnLogout"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:src="@android:drawable/ic_lock_power_off"
+            android:src="@drawable/ic_bolt"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Logout"
             android:tint="@color/text_secondary"/>

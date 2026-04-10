@@ -20,8 +20,8 @@
     "build:win:portable:x64": "npm run build && electron-builder --win portable --x64",
     "build:win:portable:arm64": "npm run build && electron-builder --win portable --arm64",
     "build:win:all": "npm run build:win:setup:ia32 && npm run build:win:setup:x64 && npm run build:win:setup:arm64 && npm run build:win:portable:ia32 && npm run build:win:portable:x64 && npm run build:win:portable:arm64",
+    "build:win:unified": "npm run build && electron-builder --win --ia32 --x64 --arm64",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix"
   },
   "build": {
@@ -52,6 +52,12 @@
             "x64",
             "arm64"
           ]
+        },
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico"
@@ -61,6 +67,12 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false
+    },
+    "msi": {
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "IoT Listrik Dashboard"
     }
   },
   "dependencies": {

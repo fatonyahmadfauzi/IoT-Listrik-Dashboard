@@ -7,6 +7,9 @@ electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     showNotification: (title, body) => electron_1.ipcRenderer.invoke('show-notification', { title, body }),
     getSettings: () => electron_1.ipcRenderer.invoke('get-settings'),
     setSettings: (settings) => electron_1.ipcRenderer.invoke('set-settings', settings),
+    startLocalServer: (opts) => electron_1.ipcRenderer.invoke('local-server:start', opts),
+    stopLocalServer: () => electron_1.ipcRenderer.invoke('local-server:stop'),
+    localServerStatus: () => electron_1.ipcRenderer.invoke('local-server:status'),
     onNotificationClick: (callback) => electron_1.ipcRenderer.on('notification-click', callback),
     removeNotificationClick: (callback) => electron_1.ipcRenderer.removeListener('notification-click', callback),
 });

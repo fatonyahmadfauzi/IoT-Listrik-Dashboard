@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Listrik Demo Simulator</title>
+    <meta
+      name="description"
+      content="PWA Simulator untuk mengontrol data demo IoT Listrik Dashboard dengan pengaturan sistem khusus demo."
+    />
+    <link rel="manifest" href="/manifest-simulator.json" />
+    <script>
+      // Hanya izinkan akses jika dibuka dari PWA terinstall
+      if (!window.matchMedia("(display-mode: standalone)").matches) {
+        window.location.href = "/";
+      }
+    </script>
+    <link rel="stylesheet" href="/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
+    />
+  </head>
+  <body class="page-bg">
+    <header class="landing-nav-wrap">
+      <nav class="landing-nav">
+        <a href="/" class="landing-brand">
+          <span class="material-symbols-rounded">bolt</span>
+          <span>IoT Listrik Simulator</span>
+        </a>
+        <div class="landing-links">
+          <a href="/">Beranda</a>
+          <a href="/pwa-simulator.html">Simulator</a>
+          <a href="/settings" class="btn btn-ghost btn-sm">
+            Pengaturan Sistem
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main
+      class="landing-main"
+      style="padding: 1rem; max-width: 100%; margin: 0 auto"
+    >
+      <section class="landing-section" style="padding: 1rem 0">
+        <div class="section-card glass" style="padding: 1.5rem">
+          <div class="section-header">
+            <div
+              class="section-title"
+              style="display: flex; align-items: center; gap: 0.75rem"
+            >
+              <span
+                class="material-symbols-rounded"
+                style="font-size: 1.75rem; color: #3b82f6"
+                >smart_toy</span
+              >
+              <span>PWA Simulator Demo</span>
+            </div>
+          </div>
+          <p class="text-sm text-muted" style="margin-bottom: 16px">
+            Aplikasi PWA khusus untuk mengontrol data demo. Buat akun demo,
+            generate data random, hapus data demo, dan gunakan notifikasi.
+          </p>
+
+          <div class="landing-demo-grid" style="display: grid; gap: 1rem">
+            <div class="landing-card glass" style="padding: 1.25rem">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.75rem;
+                  margin-bottom: 1rem;
+                "
+              >
+                <span
+                  class="material-symbols-rounded"
+                  style="font-size: 1.75rem; color: #3b82f6"
+                  >account_circle</span
+                >
+                <h3 style="margin: 0">Akun Demo</h3>
+              </div>
+              <p class="text-sm text-muted">
+                Login demo hanya berisi email dan password. Data demo disimpan
+                terpisah, tanpa manajemen pengguna.
+              </p>
+              <div style="display: grid; gap: 0.85rem; margin-bottom: 1rem">
+                <label class="form-label" for="demoEmailInput"
+                  >Email demo</label
+                >
+                <input
+                  id="demoEmailInput"
+                  class="form-input"
+                  type="email"
+                  placeholder="demo_user@example.com"
+                  autocomplete="off"
+                />
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.75rem;
+                    background: rgba(59, 130, 246, 0.1);
+                    border-radius: 0.5rem;
+                  "
+                >
+                  <span
+                    class="material-symbols-rounded"
+                    style="font-size: 1.25rem; color: #60a5fa"
+                    >key</span
+                  >
+                  <div style="flex: 1">
+                    <div
+                      style="
+                        font-size: 0.75rem;
+                        color: var(--text-muted);
+                        margin-bottom: 0.25rem;
+                      "
+                    >
+                      Password:
+                    </div>
+                    <div style="font-weight: 600; font-family: monospace">
+                      <span id="demoPassword">-</span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.75rem;
+                    background: rgba(59, 130, 246, 0.08);
+                    border-radius: 0.5rem;
+                  "
+                >
+                  <span
+                    class="material-symbols-rounded"
+                    style="font-size: 1.25rem; color: #f59e0b"
+                    >info</span
+                  >
+                  <div style="flex: 1">
+                    <div
+                      style="
+                        font-size: 0.75rem;
+                        color: var(--text-muted);
+                        margin-bottom: 0.25rem;
+                      "
+                    >
+                      Status:
+                    </div>
+                    <div style="font-weight: 600">
+                      <span id="demoStatus">Belum aktif</span>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.75rem;
+                    background: rgba(168, 85, 247, 0.08);
+                    border-radius: 0.5rem;
+                  "
+                >
+                  <span
+                    class="material-symbols-rounded"
+                    style="font-size: 1.25rem; color: #a855f7"
+                    >schedule</span
+                  >
+                  <div style="flex: 1">
+                    <div
+                      style="
+                        font-size: 0.75rem;
+                        color: var(--text-muted);
+                        margin-bottom: 0.25rem;
+                      "
+                    >
+                      Sisa waktu:
+                    </div>
+                    <div style="font-weight: 600; font-family: monospace">
+                      <span id="demoTimer">00:00</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 0.75rem;
+                  align-items: center;
+                "
+              >
+                <button
+                  id="demoCreateBtn"
+                  class="btn btn-primary"
+                  type="button"
+                >
+                  <span class="material-symbols-rounded">person_add</span>
+                  Buat Akun Demo
+                </button>
+                <button id="demoResetBtn" class="btn btn-ghost" type="button">
+                  <span class="material-symbols-rounded">delete</span>
+                  Hapus Data
+                </button>
+                <button
+                  id="installBtn"
+                  class="btn btn-ghost btn-sm hidden"
+                  type="button"
+                >
+                  <span class="material-symbols-rounded">download</span>
+                  Install App
+                </button>
+              </div>
+              <p
+                id="installHint"
+                class="text-sm text-muted"
+                style="margin-top: 12px"
+              >
+                Install aplikasi ini setelah halaman dimuat untuk pengalaman PWA
+                penuh.
+              </p>
+            </div>
+
+            <div class="landing-card glass" style="padding: 1.25rem">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.75rem;
+                  margin-bottom: 1rem;
+                "
+              >
+                <span
+                  class="material-symbols-rounded"
+                  style="font-size: 1.75rem; color: #10b981"
+                  >dataset</span
+                >
+                <h3 style="margin: 0">Kontrol Simulator</h3>
+              </div>
+              <p class="text-sm text-muted">
+                Gunakan tombol berikut untuk mensimulasikan perangkat IoT demo.
+              </p>
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 0.75rem;
+                  margin-bottom: 1rem;
+                "
+              >
+                <button
+                  id="demoGenerateDataBtn"
+                  class="btn btn-primary"
+                  type="button"
+                >
+                  <span class="material-symbols-rounded">autorenew</span>
+                  Generate Data
+                </button>
+                <button id="demoNotifyBtn" class="btn btn-ghost" type="button">
+                  <span class="material-symbols-rounded"
+                    >notifications_active</span
+                  >
+                  Test Notifikasi
+                </button>
+              </div>
+              <div
+                style="
+                  padding: 1rem;
+                  background: rgba(255, 255, 255, 0.05);
+                  border-left: 3px solid #10b981;
+                  border-radius: 0.75rem;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  <span
+                    class="material-symbols-rounded"
+                    style="font-size: 1.25rem; color: #10b981"
+                    >data_object</span
+                  >
+                  <strong>Data terakhir:</strong>
+                </div>
+                <pre
+                  id="demoDataOutput"
+                  style="
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    margin: 0.5rem 0;
+                    font-size: 0.85rem;
+                  "
+                >
+Tidak ada data.</pre
+                >
+                <small
+                  class="text-sm text-muted"
+                  style="
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                    margin-top: 0.75rem;
+                  "
+                >
+                  <span
+                    class="material-symbols-rounded"
+                    style="font-size: 1rem; flex-shrink: 0"
+                    >info</span
+                  >
+                  <span
+                    >Data demo hanya untuk simulasi. Akun ini dapat login di
+                    Web, Windows, dan Android.</span
+                  >
+                </small>
+              </div>
+            </div>
+
+            <div class="landing-card glass" style="padding: 1.25rem">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 0.75rem;
+                  margin-bottom: 1rem;
+                "
+              >
+                <span
+                  class="material-symbols-rounded"
+                  style="font-size: 1.75rem; color: #a855f7"
+                  >settings</span
+                >
+                <h3 style="margin: 0">Pengaturan Sistem</h3>
+              </div>
+              <p class="text-sm text-muted">
+                Admin-only runtime configuration khusus demo. Semua perubahan
+                tersimpan lokal di PWA ini.
+              </p>
+              <div
+                class="settings-grid"
+                style="grid-template-columns: 1fr; gap: 1rem"
+              >
+                <div class="settings-section">
+                  <label class="form-label" for="inpThreshold"
+                    >Threshold Arus Maksimal (A)</label
+                  >
+                  <input
+                    id="inpThreshold"
+                    class="form-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="0.1"
+                    value="10"
+                  />
+                  <div class="form-hint">
+                    NORMAL &lt; threshold × peringatan%. WARNING antara
+                    peringatan% dan 100%. DANGER jika arus ≥ threshold. Range
+                    rekomendasi: 1 – 100 A.
+                  </div>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpWarningPercent"
+                    >Peringatan mulai (% threshold)</label
+                  >
+                  <input
+                    id="inpWarningPercent"
+                    class="form-input"
+                    type="number"
+                    min="50"
+                    max="99"
+                    step="1"
+                    value="80"
+                  />
+                  <div class="form-hint">
+                    Contoh 80 → WARNING dari 80% threshold sampai &lt; 100%.
+                  </div>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpSendInterval"
+                    >Interval Kirim Data (ms)</label
+                  >
+                  <input
+                    id="inpSendInterval"
+                    class="form-input"
+                    type="number"
+                    min="500"
+                    max="60000"
+                    step="100"
+                    value="2000"
+                  />
+                  <div class="form-hint">
+                    Seberapa sering ESP32 menulis data ke Firebase. Min: 500 ms
+                    | Rekomendasi: 2000 ms.
+                  </div>
+                </div>
+                <div
+                  class="settings-section"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1rem;
+                  "
+                >
+                  <div>
+                    <div
+                      class="settings-section-title"
+                      style="font-size: 1rem; margin-bottom: 0.5rem"
+                    >
+                      Buzzer
+                    </div>
+                    <p class="text-sm text-muted">
+                      Bunyi saat kondisi abnormal terdeteksi.
+                    </p>
+                  </div>
+                  <label class="toggle-switch"
+                    ><input type="checkbox" id="inpBuzzer" checked /><span
+                      class="toggle-slider"
+                    ></span
+                  ></label>
+                </div>
+                <div
+                  class="settings-section"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1rem;
+                  "
+                >
+                  <div>
+                    <div
+                      class="settings-section-title"
+                      style="font-size: 1rem; margin-bottom: 0.5rem"
+                    >
+                      Auto-Cutoff Relay
+                    </div>
+                    <p class="text-sm text-muted">
+                      Relay dimatikan otomatis saat DANGER (arus ≥ threshold).
+                    </p>
+                  </div>
+                  <label class="toggle-switch"
+                    ><input type="checkbox" id="inpAutoCutoff" checked /><span
+                      class="toggle-slider"
+                    ></span
+                  ></label>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpArusCal"
+                    >Faktor Kalibrasi Arus</label
+                  >
+                  <input
+                    id="inpArusCal"
+                    class="form-input"
+                    type="number"
+                    min="0.01"
+                    max="10"
+                    step="0.001"
+                    value="1.000"
+                  />
+                  <div class="form-hint">
+                    Nilai default: 1.000 (tidak ada koreksi). Contoh: clamp
+                    meter baca 5 A, ESP32 baca 4.8 A → faktor = 1.042
+                  </div>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpTeganganCal"
+                    >Faktor Kalibrasi Tegangan</label
+                  >
+                  <input
+                    id="inpTeganganCal"
+                    class="form-input"
+                    type="number"
+                    min="0.01"
+                    max="2000"
+                    step="0.1"
+                    value="1.0"
+                  />
+                  <div class="form-hint">Faktor konversi ADC → Volt AC.</div>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpPowerFactor"
+                    >Power factor (estimasi)</label
+                  >
+                  <input
+                    id="inpPowerFactor"
+                    class="form-input"
+                    type="number"
+                    min="0.5"
+                    max="1"
+                    step="0.01"
+                    value="0.85"
+                  />
+                  <div class="form-hint">
+                    Untuk hitung daya (W) dan kWh di firmware — bukan pengukuran
+                    PF sejati.
+                  </div>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpFrequency"
+                    >Frekuensi nominal (Hz)</label
+                  >
+                  <input
+                    id="inpFrequency"
+                    class="form-input"
+                    type="number"
+                    min="45"
+                    max="65"
+                    step="1"
+                    value="50"
+                  />
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpBotToken">Bot Token</label>
+                  <input
+                    id="inpBotToken"
+                    class="form-input"
+                    type="password"
+                    placeholder="••••••••••••••••••••••••••••••••••"
+                    autocomplete="off"
+                  />
+                  <div class="form-hint">
+                    Dapat dari @BotFather → /newbot → copy token.
+                  </div>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpChatId"
+                    >Chat ID / Group ID</label
+                  >
+                  <input
+                    id="inpChatId"
+                    class="form-input"
+                    type="text"
+                    placeholder="5080707943 atau -100123456789"
+                    autocomplete="off"
+                  />
+                  <div class="form-hint">
+                    Untuk grup: awali dengan -100. Untuk pribadi: ID numerik
+                    positif.
+                  </div>
+                </div>
+                <div class="settings-section" style="grid-column: 1 / -1">
+                  <label class="form-label" for="inpTelegramNotify"
+                    >Notifikasi Telegram</label
+                  >
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                    "
+                  >
+                    <span class="text-sm text-muted"
+                      >Kirim alert saat perubahan status (master switch).</span
+                    ><label class="toggle-switch"
+                      ><input
+                        type="checkbox"
+                        id="inpTelegramNotify"
+                        checked /><span class="toggle-slider"></span
+                    ></label>
+                  </div>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpPublicApiBase"
+                    >Public API base (opsional)</label
+                  >
+                  <input
+                    id="inpPublicApiBase"
+                    class="form-input"
+                    type="url"
+                    placeholder="https://api.contoh.com"
+                  />
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpLocalApiBase"
+                    >Local API base</label
+                  >
+                  <input
+                    id="inpLocalApiBase"
+                    class="form-input"
+                    type="text"
+                    placeholder="http://localhost:3000"
+                  />
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpDataMode">Mode data</label>
+                  <select id="inpDataMode" class="form-select">
+                    <option value="AUTO">
+                      AUTO (Firebase → fallback REST lokal)
+                    </option>
+                    <option value="PUBLIC">
+                      PUBLIC (hanya Firebase / API publik)
+                    </option>
+                    <option value="LOCAL">LOCAL (hanya REST lokal)</option>
+                  </select>
+                </div>
+                <div
+                  class="settings-section"
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 1rem;
+                  "
+                >
+                  <div>
+                    <div
+                      class="settings-section-title"
+                      style="font-size: 1rem; margin-bottom: 0.5rem"
+                    >
+                      Auto failover
+                    </div>
+                    <p class="text-sm text-muted">
+                      Saat Firebase putus (AUTO), coba REST lokal.
+                    </p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="inpAutoFailover" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-section">
+                  <label class="form-label" for="inpHealthPath"
+                    >Health check path</label
+                  >
+                  <input
+                    id="inpHealthPath"
+                    class="form-input"
+                    type="text"
+                    value="/health"
+                  />
+                </div>
+                <div
+                  class="settings-section"
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 0.75rem;
+                  "
+                >
+                  <div>
+                    <label class="form-label" for="inpRetryMs"
+                      >Retry interval (ms)</label
+                    >
+                    <input
+                      id="inpRetryMs"
+                      class="form-input"
+                      type="number"
+                      min="2000"
+                      max="120000"
+                      step="500"
+                      value="6000"
+                    />
+                  </div>
+                  <div>
+                    <label class="form-label" for="inpTimeoutMs"
+                      >Timeout request (ms)</label
+                    >
+                    <input
+                      id="inpTimeoutMs"
+                      class="form-input"
+                      type="number"
+                      min="1000"
+                      max="30000"
+                      step="500"
+                      value="4000"
+                    />
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                    align-items: center;
+                  "
+                >
+                  <button
+                    id="saveSettingsBtn"
+                    class="btn btn-primary btn-sm"
+                    type="button"
+                  >
+                    Simpan Pengaturan Demo
+                  </button>
+                  <span id="settingsStatus" class="text-sm text-muted"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="landing-footer" style="margin-top: 2rem">
+      <div
+        class="landing-footer-inner"
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+        "
+      >
+        <div style="display: flex; align-items: center; gap: 0.5rem">
+          <span
+            class="material-symbols-rounded"
+            style="font-size: 1.5rem; color: #3b82f6"
+            >copyright</span
+          >
+          <div>© 2026 IoT Listrik Dashboard Simulator</div>
+        </div>
+        <div
+          class="text-muted"
+          style="display: flex; align-items: center; gap: 0.5rem"
+        >
+          <span
+            class="material-symbols-rounded"
+            style="font-size: 1.25rem; color: #10b981"
+            >verified</span
+          >
+          <span
+            >Demo app terpisah untuk simulasi data IoT dan pengaturan demo</span
+          >
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/simulator.js"></script>
+  </body>
+</html>

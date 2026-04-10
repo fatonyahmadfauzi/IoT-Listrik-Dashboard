@@ -15,15 +15,15 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Auto login check
+        binding = ActivityLoginBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        
+        // Auto login check - harus setelah setContentView
         if (auth.currentUser != null) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
         }
-
-        binding = ActivityLoginBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString()

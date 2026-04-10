@@ -1,237 +1,413 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IoT Listrik Dashboard — Smart Power Monitoring</title>
-  <meta name="description" content="Platform monitoring listrik berbasis IoT untuk memantau arus, tegangan, status bahaya, dan kontrol relay secara realtime." />
-  <link rel="stylesheet" href="/style.css" />
-  <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#070c18" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
-</head>
-<body class="page-bg">
-  <header class="landing-nav-wrap">
-    <nav class="landing-nav">
-      <a href="/" class="landing-brand">
-        <span class="material-symbols-rounded">bolt</span>
-        <span>IoT Listrik Dashboard</span>
-      </a>
-      <button id="menuBtn" class="landing-menu-btn" aria-label="Toggle menu">
-        <span class="material-symbols-rounded">menu</span>
-      </button>
-      <div id="navLinks" class="landing-links">
-        <a href="/">Beranda</a>
-        <a href="#monitoring">Fitur</a>
-        <a href="/downloads">Download</a>
-        <a href="/login" class="btn btn-primary btn-sm">
-          <span class="material-symbols-rounded">login</span>Get Started
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Listrik Dashboard — Smart Power Monitoring</title>
+    <meta
+      name="description"
+      content="Platform monitoring listrik berbasis IoT untuk memantau arus, tegangan, status bahaya, dan kontrol relay secara realtime."
+    />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#070c18" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
+    />
+  </head>
+  <body class="page-bg">
+    <header class="landing-nav-wrap">
+      <nav class="landing-nav">
+        <a href="/" class="landing-brand">
+          <span>IoT Listrik Dashboard</span>
         </a>
-      </div>
-    </nav>
-  </header>
-
-  <main class="landing-main">
-    <section id="monitoring" class="landing-hero">
-      <div class="landing-hero-content">
-        <span class="landing-badge glass">Smart Monitoring • Realtime • Multi Platform</span>
-        <h1>Monitor sistem listrik secara realtime, aman, dan mudah dipantau dari mana saja</h1>
-        <p>
-          IoT Listrik Dashboard membantu kamu memantau arus, tegangan, daya semu, histori kejadian,
-          serta status kebocoran listrik dengan notifikasi cepat dan kontrol relay berbasis role.
-          Project ini dibuat untuk deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan
-          secara terintegrasi. Sistem membaca data sensor dari perangkat IoT, mengirim data ke cloud, lalu
-          menampilkan dashboard interaktif untuk analisis cepat dan tindakan preventif.
-        </p>
-        <div class="landing-cta">
-          <a href="/login" class="btn btn-primary">
-            <span class="material-symbols-rounded">rocket_launch</span>Get Started
-          </a>
-          <a href="/downloads" class="btn btn-ghost">
-            <span class="material-symbols-rounded">download</span>Download App
-          </a>
-          <a href="https://t.me/iot_kebocoran_bot" class="btn btn-ghost" target="_blank" rel="noopener noreferrer">
-            <span class="material-symbols-rounded">send</span>Telegram
-          </a>
-          <button id="pwaInstallBtn" class="btn btn-ghost pwa-btn" type="button">
-            <span class="material-symbols-rounded">install_mobile</span>
-            <span>PWA</span>
-          </button>
-        </div>
-        <p id="pwaHint" class="text-sm text-muted landing-pwa-hint" aria-live="polite"></p>
-      </div>
-      <div class="landing-hero-panel">
-        <div class="landing-stat-grid">
-          <div class="landing-stat" data-stat-key="stat1">
-            <div class="label">Monitoring</div>
-            <div class="value">24/7</div>
-          </div>
-          <div class="landing-stat" data-stat-key="stat2">
-            <div class="label">Platform</div>
-            <div class="value">Web + Android + Windows</div>
-          </div>
-          <div class="landing-stat" data-stat-key="stat3">
-            <div class="label">Data</div>
-            <div class="value">Realtime Firebase</div>
-          </div>
-          <div class="landing-stat" data-stat-key="stat4">
-            <div class="label">Proteksi</div>
-            <div class="value">Auto-cutoff Relay</div>
-          </div>
-          <div class="landing-stat" data-stat-key="stat5">
-            <div class="label">CLI Support</div>
-            <div class="value">Command-line Ready</div>
-          </div>
-          <div class="landing-stat" data-stat-key="stat6">
-            <div class="label">Telegram Alert</div>
-            <div class="value">Notifikasi Otomatis</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="downloads" class="landing-section">
-      <div class="section-card glass">
-        <div class="section-header">
-          <div class="section-title">Download Aplikasi</div>
-        </div>
-        <p class="text-sm text-muted" style="margin-bottom:12px;">
-          Gunakan file berikut untuk instalasi langsung dari website.
-        </p>
-        <div class="landing-download-grid">
-          <a class="btn btn-primary" href="/downloads/windows/iot-listrik-dashboard-x64.msi" download>
-            <span class="material-symbols-rounded">download</span>Windows MSI (x64)
-          </a>
-          <a class="btn btn-ghost" href="/downloads/windows/iot-listrik-dashboard-setup-x64.exe" download>
-            <span class="material-symbols-rounded">download</span>Windows Setup EXE
-          </a>
-          <a class="btn btn-ghost" href="/downloads/windows/iot-listrik-dashboard-portable-x64.exe" download>
-            <span class="material-symbols-rounded">download</span>Windows Portable EXE
-          </a>
-          <a class="btn btn-ghost" href="/downloads/android/iot-listrik-dashboard-release.apk" download>
-            <span class="material-symbols-rounded">android</span>Android APK
+        <button id="menuBtn" class="landing-menu-btn" aria-label="Toggle menu">
+          <span class="material-symbols-rounded">menu</span>
+        </button>
+        <div id="navLinks" class="landing-links">
+          <a href="/">Beranda</a>
+          <a href="#monitoring">Fitur</a>
+          <a href="/downloads">Download</a>
+          <a href="/login" class="btn btn-primary btn-sm">
+            <span class="material-symbols-rounded">login</span>Get Started
           </a>
         </div>
+      </nav>
+    </header>
+
+    <main class="landing-main">
+      <section id="monitoring" class="landing-hero">
+        <div class="landing-hero-content">
+          <span class="landing-badge glass"
+            >Smart Monitoring • Realtime • Multi Platform</span
+          >
+          <h1>
+            Monitor sistem listrik secara realtime, aman, dan mudah dipantau
+            dari mana saja
+          </h1>
+          <p>
+            IoT Listrik Dashboard membantu kamu memantau arus, tegangan, daya
+            semu, histori kejadian, serta status kebocoran listrik dengan
+            notifikasi cepat dan kontrol relay berbasis role. Project ini dibuat
+            untuk deteksi dini kebocoran arus listrik dan monitoring kondisi
+            kelistrikan secara terintegrasi. Sistem membaca data sensor dari
+            perangkat IoT, mengirim data ke cloud, lalu menampilkan dashboard
+            interaktif untuk analisis cepat dan tindakan preventif.
+          </p>
+          <div class="landing-cta">
+            <a href="/login" class="btn btn-primary btn-large"> Get Started </a>
+            <a href="/downloads" class="btn btn-secondary btn-large">
+              Download App
+            </a>
+          </div>
+          <p
+            id="pwaHint"
+            class="text-sm text-muted landing-pwa-hint"
+            aria-live="polite"
+          ></p>
+        </div>
+        <div class="landing-hero-panel">
+          <div class="landing-stat-grid">
+            <div class="landing-stat" data-stat-key="stat1">
+              <div class="label">Monitoring</div>
+              <div class="value">24/7</div>
+            </div>
+            <div class="landing-stat" data-stat-key="stat2">
+              <div class="label">Platform</div>
+              <div class="value">Web + Android + Windows</div>
+            </div>
+            <div class="landing-stat" data-stat-key="stat3">
+              <div class="label">Data</div>
+              <div class="value">Realtime Firebase</div>
+            </div>
+            <div class="landing-stat" data-stat-key="stat4">
+              <div class="label">Proteksi</div>
+              <div class="value">Auto-cutoff Relay</div>
+            </div>
+            <div class="landing-stat" data-stat-key="stat5">
+              <div class="label">CLI Support</div>
+              <div class="value">Command-line Ready</div>
+            </div>
+            <div class="landing-stat" data-stat-key="stat6">
+              <div class="label">Telegram Alert</div>
+              <div class="value">Notifikasi Otomatis</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" class="landing-section">
+        <div class="section-card glass">
+          <div class="section-header">
+            <div class="section-title demo-title">
+              <span class="material-symbols-rounded demo-icon"
+                >play_circle</span
+              >
+              <span>Try it Demo</span>
+            </div>
+          </div>
+          <p class="text-sm text-muted demo-description">
+            Buat akun demo dan coba aplikasi PWA simulasi data random. Sesi demo
+            hanya berlaku 5 menit, lalu akan diarahkan untuk daftar, login, atau
+            lanjut ke produk asli.
+          </p>
+          <div class="landing-demo-grid">
+            <div class="landing-card glass demo-card">
+              <div class="demo-card-header">
+                <span
+                  class="material-symbols-rounded demo-card-icon smartphone-icon"
+                  >smartphone</span
+                >
+                <h3 class="demo-card-title">Download PWA Simulator</h3>
+              </div>
+              <p class="text-sm text-muted demo-card-description">
+                Download aplikasi PWA Simulator sebagai aplikasi mandiri.
+                Gunakan untuk membuat akun demo, generate data random, hapus
+                data, test notifikasi, dan mengatur sistem IoT.
+              </p>
+              <div class="demo-features">
+                <div class="demo-feature">
+                  <span class="material-symbols-rounded feature-icon"
+                    >check_circle</span
+                  >
+                  <span>Buat akun demo dengan email & password</span>
+                </div>
+                <div class="demo-feature">
+                  <span class="material-symbols-rounded feature-icon"
+                    >check_circle</span
+                  >
+                  <span>Generate data fake dari perangkat IoT</span>
+                </div>
+                <div class="demo-feature">
+                  <span class="material-symbols-rounded feature-icon"
+                    >check_circle</span
+                  >
+                  <span>Hapus data demo kapan saja</span>
+                </div>
+                <div class="demo-feature">
+                  <span class="material-symbols-rounded feature-icon"
+                    >check_circle</span
+                  >
+                  <span>Pengaturan sistem admin khusus demo</span>
+                </div>
+                <div class="demo-feature">
+                  <span class="material-symbols-rounded feature-icon"
+                    >check_circle</span
+                  >
+                  <span>Notifikasi dan test alert</span>
+                </div>
+              </div>
+              <div class="demo-actions">
+                <button
+                  id="simulatorInstallBtn"
+                  class="btn btn-primary demo-install-btn"
+                  type="button"
+                >
+                  <span class="material-symbols-rounded">download</span>
+                  Download & Install App
+                </button>
+              </div>
+              <p class="text-xs text-muted demo-note">
+                <strong
+                  >Aplikasi PWA Simulator hanya bisa diakses setelah
+                  diinstall.</strong
+                >
+                Browser harus support PWA install (Chrome, Edge, Firefox). Jika
+                tidak ada tombol download, buka melalui browser menu → Install
+                app / Add to Home Screen / Add to Home.
+              </p>
+            </div>
+
+            <div class="landing-card glass demo-card">
+              <div class="demo-card-header">
+                <span class="material-symbols-rounded demo-card-icon info-icon"
+                  >info</span
+                >
+                <h3 class="demo-card-title">Cara Menggunakan</h3>
+              </div>
+              <p class="text-sm text-muted demo-card-description">
+                Setelah install PWA Simulator:
+              </p>
+              <div class="demo-steps">
+                <div class="demo-step step-1">
+                  <div class="step-header">
+                    <span class="material-symbols-rounded step-icon"
+                      >person_add</span
+                    >
+                    <div class="step-title">1. Buat Akun Demo</div>
+                  </div>
+                  <div class="step-description">
+                    Masukkan email dan klik tombol untuk generate password demo
+                  </div>
+                </div>
+                <div class="demo-step step-2">
+                  <div class="step-header">
+                    <span class="material-symbols-rounded step-icon"
+                      >dataset</span
+                    >
+                    <div class="step-title">2. Control Data</div>
+                  </div>
+                  <div class="step-description">
+                    Generate data random, hapus data, dan test notifikasi
+                  </div>
+                </div>
+                <div class="demo-step step-3">
+                  <div class="step-header">
+                    <span class="material-symbols-rounded step-icon"
+                      >login</span
+                    >
+                    <div class="step-title">3. Login di Aplikasi</div>
+                  </div>
+                  <div class="step-description">
+                    Gunakan email & password dari simulator untuk login di Web,
+                    Windows, atau Android
+                  </div>
+                </div>
+                <div class="demo-step step-4">
+                  <div class="step-header">
+                    <span class="material-symbols-rounded step-icon"
+                      >settings</span
+                    >
+                    <div class="step-title">4. Atur Sistem</div>
+                  </div>
+                  <div class="step-description">
+                    Konfigurasi threshold, warning, interval, buzzer, dan
+                    pengaturan lainnya
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="landing-footer">
+      <div class="landing-footer-inner">
+        <div>© 2026 IoT Listrik Dashboard</div>
+        <div class="text-muted">Built with Firebase, Android, and Electron</div>
       </div>
-    </section>
-  </main>
+    </footer>
 
-  <footer class="landing-footer">
-    <div class="landing-footer-inner">
-      <div>© 2026 IoT Listrik Dashboard</div>
-      <div class="text-muted">Built with Firebase, Android, and Electron</div>
-    </div>
-  </footer>
+    <script>
+      const menuBtn = document.getElementById("menuBtn");
+      const navLinks = document.getElementById("navLinks");
+      const navWrap = document.querySelector(".landing-nav-wrap");
+      if (menuBtn && navLinks) {
+        menuBtn.addEventListener("click", () => {
+          navLinks.classList.toggle("open");
+        });
+      }
+      const syncNavbarState = () => {
+        if (!navWrap) return;
+        if (window.scrollY > 8) navWrap.classList.add("scrolled");
+        else navWrap.classList.remove("scrolled");
+      };
+      syncNavbarState();
+      window.addEventListener("scroll", syncNavbarState, { passive: true });
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      }
 
-  <script>
-    const menuBtn = document.getElementById('menuBtn');
-    const navLinks = document.getElementById('navLinks');
-    const navWrap = document.querySelector('.landing-nav-wrap');
-    if (menuBtn && navLinks) {
-      menuBtn.addEventListener('click', () => {
-        navLinks.classList.toggle('open');
+      // PWA install button for landing page
+      let deferredPrompt = null;
+      const pwaInstallBtn = document.getElementById("pwaInstallBtn");
+      const simulatorInstallBtn = document.getElementById(
+        "simulatorInstallBtn",
+      );
+      const pwaHint = document.getElementById("pwaHint");
+      const ua = navigator.userAgent || "";
+      const isIOS = /iPad|iPhone|iPod/.test(ua);
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (pwaHint) pwaHint.textContent = "";
+        if (simulatorInstallBtn) simulatorInstallBtn.style.display = "flex";
       });
-    }
-    const syncNavbarState = () => {
-      if (!navWrap) return;
-      if (window.scrollY > 8) navWrap.classList.add('scrolled');
-      else navWrap.classList.remove('scrolled');
-    };
-    syncNavbarState();
-    window.addEventListener('scroll', syncNavbarState, { passive: true });
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
-    }
 
-    // PWA install button for landing page
-    let deferredPrompt = null;
-    const pwaInstallBtn = document.getElementById('pwaInstallBtn');
-    const pwaHint = document.getElementById('pwaHint');
-    const ua = navigator.userAgent || '';
-    const isIOS = /iPad|iPhone|iPod/.test(ua);
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      if (pwaHint) pwaHint.textContent = '';
-    });
-
-    if (pwaInstallBtn) {
-      pwaInstallBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) {
-          if (pwaHint) {
-            pwaHint.textContent = isIOS
-              ? 'Di iPhone/iPad: buka Share > Add to Home Screen untuk install PWA.'
-              : 'Install otomatis belum tersedia di browser ini. Gunakan menu browser > Install App/Add to Home Screen.';
+      if (pwaInstallBtn) {
+        pwaInstallBtn.addEventListener("click", async () => {
+          if (!deferredPrompt) {
+            if (pwaHint) {
+              pwaHint.textContent = isIOS
+                ? "Di iPhone/iPad: buka Share > Add to Home Screen untuk install PWA."
+                : "Install otomatis belum tersedia di browser ini. Gunakan menu browser > Install App/Add to Home Screen.";
+            }
+            return;
           }
-          return;
-        }
-        deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        if (pwaHint && choice && choice.outcome === 'dismissed') {
-          pwaHint.textContent = 'Install dibatalkan. Kamu bisa coba lagi kapan saja.';
-        }
-        deferredPrompt = null;
-      });
-    }
+          deferredPrompt.prompt();
+          const choice = await deferredPrompt.userChoice;
+          if (pwaHint && choice && choice.outcome === "dismissed") {
+            pwaHint.textContent =
+              "Install dibatalkan. Kamu bisa coba lagi kapan saja.";
+          }
+          deferredPrompt = null;
+        });
+      }
 
-    // Looping animation per stat box
-    const statSequences = {
-      stat1: [
-        ["Monitoring", "24/7"],
-        ["Histori & Alert", "Catat riwayat kejadian dan kirim notifikasi saat kondisi berbahaya."]
-      ],
-      stat2: [
-        ["Platform", "Web + Android + Windows"],
-        ["Role-based Access", "Kontrol relay dan pengaturan hanya dapat diakses oleh admin."]
-      ],
-      stat3: [
-        ["Data", "Realtime Firebase"],
-        ["Realtime Dashboard", "Pantau arus, tegangan, daya, dan status sistem secara langsung."]
-      ],
-      stat4: [
-        ["Proteksi", "Auto-cutoff Relay"],
-        ["Safety Action", "Relay dimatikan otomatis saat terdeteksi kondisi berisiko."]
-      ],
-      stat5: [
-        ["CLI Support", "Command-line Ready"],
-        ["CLI & Automation", "Mendukung workflow CLI untuk build, setup, dan automasi operasional."]
-      ],
-      stat6: [
-        ["Telegram Alert", "Notifikasi Otomatis"],
-        ["Telegram Notification", "Kirim peringatan cepat ke Telegram saat terdeteksi kondisi berisiko."]
-      ]
-    };
+      // PWA Simulator install button
+      if (simulatorInstallBtn) {
+        simulatorInstallBtn.addEventListener("click", async () => {
+          if (!deferredPrompt) {
+            alert(
+              isIOS
+                ? "Di iPhone/iPad: buka Share > Add to Home Screen untuk install PWA Simulator."
+                : "Install otomatis belum tersedia. Buka menu browser > Install App / Add to Home Screen, atau akses melalui link Web.",
+            );
+            return;
+          }
+          deferredPrompt.prompt();
+          const choice = await deferredPrompt.userChoice;
+          if (choice && choice.outcome === "accepted") {
+            alert(
+              "PWA Simulator berhasil diinstall! Buka aplikasi untuk membuat akun demo.",
+            );
+          }
+          deferredPrompt = null;
+        });
+      }
 
-    const statIndexes = {};
-    const statBoxes = document.querySelectorAll('.landing-stat[data-stat-key]');
+      // Looping animation per stat box
+      const statSequences = {
+        stat1: [
+          ["Monitoring", "24/7"],
+          [
+            "Histori & Alert",
+            "Catat riwayat kejadian dan kirim notifikasi saat kondisi berbahaya.",
+          ],
+        ],
+        stat2: [
+          ["Platform", "Web + Android + Windows"],
+          [
+            "Role-based Access",
+            "Kontrol relay dan pengaturan hanya dapat diakses oleh admin.",
+          ],
+        ],
+        stat3: [
+          ["Data", "Realtime Firebase"],
+          [
+            "Realtime Dashboard",
+            "Pantau arus, tegangan, daya, dan status sistem secara langsung.",
+          ],
+        ],
+        stat4: [
+          ["Proteksi", "Auto-cutoff Relay"],
+          [
+            "Safety Action",
+            "Relay dimatikan otomatis saat terdeteksi kondisi berisiko.",
+          ],
+        ],
+        stat5: [
+          ["CLI Support", "Command-line Ready"],
+          [
+            "CLI & Automation",
+            "Mendukung workflow CLI untuk build, setup, dan automasi operasional.",
+          ],
+        ],
+        stat6: [
+          ["Telegram Alert", "Notifikasi Otomatis"],
+          [
+            "Telegram Notification",
+            "Kirim peringatan cepat ke Telegram saat terdeteksi kondisi berisiko.",
+          ],
+        ],
+      };
 
-    statBoxes.forEach((box) => {
-      const key = box.getAttribute('data-stat-key');
-      statIndexes[key] = 0;
-    });
+      const statIndexes = {};
+      const statBoxes = document.querySelectorAll(
+        ".landing-stat[data-stat-key]",
+      );
 
-    setInterval(() => {
       statBoxes.forEach((box) => {
-        const key = box.getAttribute('data-stat-key');
-        const seq = statSequences[key];
-        if (!seq || seq.length < 2) return;
-
-        const labelEl = box.querySelector('.label');
-        const valueEl = box.querySelector('.value');
-        if (!labelEl || !valueEl) return;
-
-        box.classList.add('swapping');
-
-        setTimeout(() => {
-          statIndexes[key] = (statIndexes[key] + 1) % seq.length;
-          const [nextLabel, nextValue] = seq[statIndexes[key]];
-          labelEl.textContent = nextLabel;
-          valueEl.textContent = nextValue;
-          box.classList.remove('swapping');
-        }, 360);
+        const key = box.getAttribute("data-stat-key");
+        statIndexes[key] = 0;
       });
-    }, 3200);
-  </script>
-</body>
+
+      setInterval(() => {
+        statBoxes.forEach((box) => {
+          const key = box.getAttribute("data-stat-key");
+          const seq = statSequences[key];
+          if (!seq || seq.length < 2) return;
+
+          const labelEl = box.querySelector(".label");
+          const valueEl = box.querySelector(".value");
+          if (!labelEl || !valueEl) return;
+
+          box.classList.add("swapping");
+
+          setTimeout(() => {
+            statIndexes[key] = (statIndexes[key] + 1) % seq.length;
+            const [nextLabel, nextValue] = seq[statIndexes[key]];
+            labelEl.textContent = nextLabel;
+            valueEl.textContent = nextValue;
+            box.classList.remove("swapping");
+          }, 360);
+        });
+      }, 3200);
+
+      // Demo session control removed from homepage. Akses PWA Simulator di /pwa-simulator.html untuk kontrol data demo penuh.
+    </script>
+  </body>
 </html>

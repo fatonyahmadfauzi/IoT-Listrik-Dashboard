@@ -4,7 +4,8 @@
   "description": "CLI for IoT Listrik Dashboard - Real-time monitoring via terminal.",
   "main": "index.js",
   "bin": {
-    "iot-listrik": "./index.js"
+    "iot-listrik": "./index.js",
+    "iot-listrik-download": "./download-cli.js"
   },
   "type": "module",
   "scripts": {

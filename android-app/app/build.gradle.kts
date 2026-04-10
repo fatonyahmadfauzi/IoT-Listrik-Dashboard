@@ -6,6 +6,8 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val appVersionName = "1.0.0"
+
 android {
     namespace = "com.iot.listrik"
     compileSdk = 34
@@ -25,7 +27,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -62,6 +64,27 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+}
+
+val renameReleaseApk by tasks.registering {
+    doLast {
+        val apkDir = file("$buildDir/outputs/apk/release")
+        val original = apkDir.resolve("app-release.apk")
+        val renamed = apkDir.resolve("IoT Listrik Dashboard $appVersionName.apk")
+
+        if (original.exists()) {
+            original.copyTo(renamed, overwrite = true)
+            original.delete()
+            println("Renamed release APK to: ${renamed.name}")
+        } else {
+            throw GradleException("Expected release APK not found: ${original.absolutePath}")
+        }
+    }
+}
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    finalizedBy(renameReleaseApk)
 }
 
 dependencies {

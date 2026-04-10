@@ -56,42 +56,52 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        try {
+            binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding.root)
 
-        // Request POST_NOTIFICATIONS for Android 13+
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=
-                android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+            // Request POST_NOTIFICATIONS for Android 13+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+                }
             }
-        }
 
-        // Sub to FCM Alarms
-        FirebaseMessaging.getInstance().subscribeToTopic("iot_alarms")
+            // Sub to FCM Alarms
+            try {
+                FirebaseMessaging.getInstance().subscribeToTopic("iot_alarms")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "FCM subscription failed", e)
+            }
 
-        binding.btnLogout.setOnClickListener {
-            // Stop alarm supaya tidak lanjut bunyi setelah logout
-            AlarmForegroundService.stop(this)
-            auth.signOut()
-            startActivity(Intent(this, LoginActivity::class.java))
+            binding.btnLogout.setOnClickListener {
+                // Stop alarm supaya tidak lanjut bunyi setelah logout
+                AlarmForegroundService.stop(this)
+                auth.signOut()
+                startActivity(Intent(this, LoginActivity::class.java))
+                finish()
+            }
+
+            binding.btnRelayOn?.setOnClickListener { setRelay(1) }
+            binding.btnRelayOff?.setOnClickListener { setRelay(0) }
+
+            binding.btnDemoNormal?.setOnClickListener { triggerDemoMode("NORMAL") }
+            binding.btnDemoWarning?.setOnClickListener { triggerDemoMode("WARNING") }
+            binding.btnDemoDanger?.setOnClickListener { triggerDemoMode("DANGER") }
+
+            setupChart()
+            setupRecyclerView()
+
+            // Default: sembunyikan kontrol write sampai role diketahui.
+            binding.relaySection?.visibility = View.GONE
+            binding.demoSection?.visibility = View.GONE
+        } catch (e: Exception) {
+            Log.e("MainActivity", "onCreate failed", e)
+            Toast.makeText(this, "Initialization error: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
         }
-
-        binding.btnRelayOn.setOnClickListener { setRelay(1) }
-        binding.btnRelayOff.setOnClickListener { setRelay(0) }
-
-        binding.btnDemoNormal.setOnClickListener { triggerDemoMode("NORMAL") }
-        binding.btnDemoWarning.setOnClickListener { triggerDemoMode("WARNING") }
-        binding.btnDemoDanger.setOnClickListener { triggerDemoMode("DANGER") }
-
-        setupChart()
-        setupRecyclerView()
-
-        // Default: sembunyikan kontrol write sampai role diketahui.
-        binding.relaySection.visibility = View.GONE
-        binding.demoSection.visibility = View.GONE
     }
 
     override fun onStart() {

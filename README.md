@@ -49,6 +49,53 @@ ESP32 + sensor (SCT-013, ZMPT101B)
 - Desktop: Electron + React/TypeScript + electron-builder.
 - Deployment web: Vercel.
 
+## Auto-Update System
+
+Sistem otomatis untuk mendeteksi dan download versi terbaru aplikasi.
+
+### Web Dashboard
+
+Tombol download di halaman `/downloads` otomatis mengarah ke versi terbaru berdasarkan `app-version.json`.
+
+### CLI Auto-Download
+
+Download aplikasi versi terbaru via command line:
+
+```bash
+# Download untuk platform saat ini
+npx iot-listrik-dashboard download
+
+# Atau manual dengan Node.js
+node cli-app/download-cli.js
+
+# Download spesifik
+node cli-app/download-cli.js --platform windows --type setup
+node cli-app/download-cli.js --platform windows --type portable
+node cli-app/download-cli.js --platform windows --type msi
+
+# Lihat versi tersedia
+node cli-app/download-cli.js --list
+```
+
+### Release Management
+
+Untuk membuat release versi baru:
+
+```powershell
+# Build semua platform dengan versi baru
+.\scripts\build-all-release.ps1 -NewVersion 1.0.2
+
+# Atau build terpisah
+.\scripts\build-android-release.ps1
+.\scripts\build-win-all-preserve.ps1
+```
+
+Sistem akan otomatis:
+
+- Update `app-version.json` dengan versi baru
+- Update semua URL download di web dashboard
+- Update CLI commands di halaman downloads
+
 ## Setup Awal
 
 ### 1) Prasyarat
@@ -118,6 +165,7 @@ npx -y firebase-tools@latest deploy --only database
 - Runtime settings (`/settings`) diubah dari web admin tanpa reflashing.
 
 Library penting:
+
 - Firebase ESP Client
 - ArduinoJson
 - WiFiManager (tzapu)
@@ -136,6 +184,7 @@ powershell -ExecutionPolicy Bypass -File "scripts\build-android-release.ps1"
 ```
 
 Output APK:
+
 - `public/downloads/android/iot-listrik-dashboard-release.apk`
 
 ### Windows (MSI/Setup/Portable)
@@ -150,6 +199,7 @@ powershell -ExecutionPolicy Bypass -File "electron-app\scripts\build-win-sign.ps
 ```
 
 Output Windows:
+
 - `public/downloads/windows/iot-listrik-dashboard-x64.msi`
 - `public/downloads/windows/iot-listrik-dashboard-setup-x64.exe`
 - `public/downloads/windows/iot-listrik-dashboard-portable-x64.exe`
@@ -171,6 +221,7 @@ npx -y vercel --prod
 ```
 
 Catatan:
+
 - Konfigurasi route dan header ada di `vercel.json`.
 - File biner (`.exe/.msi/.apk/.aab`) di-ignore lewat `.vercelignore`.
 - Untuk distribusi file installer, gunakan GitHub Releases atau storage eksternal.

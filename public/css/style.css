@@ -1632,8 +1632,8 @@ body > header > nav {
 }
 
 .arch-tree {
-  min-width: 800px;
-  max-width: 900px;
+  min-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -1643,14 +1643,14 @@ body > header > nav {
 .arch-box {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 12px;
+  padding: 14px 16px;
   background: rgba(17, 17, 17, 0.95);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-  min-width: 280px;
-  max-width: 320px;
+  min-width: 220px;
+  max-width: 300px;
   position: relative;
   z-index: 2;
   margin: 0 auto;
@@ -1723,14 +1723,37 @@ body > header > nav {
 
 .arch-leaves {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);
   width: 100%;
+  gap: 0;
 }
 
 .arch-leaves .arch-box {
   width: 100%;
   min-width: 0;
 }
+
+@media (max-width: 980px) {
+  .arch-leaves {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .arch-tree {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .arch-tree-container {
+    overflow-x: unset;
+  }
+}
+
+@media (max-width: 480px) {
+  .arch-leaves {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+}
+
 
 @media (max-width: 480px) {
   .clean-features-grid {

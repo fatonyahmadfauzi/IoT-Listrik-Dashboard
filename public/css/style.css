@@ -1845,8 +1845,7 @@ body > header > nav {
 /* ── New Footer ───────────────────────────────────────────── */
 /* ── Full-Width Footer ─────────────────────────────────────── */
 .landing-footer {
-  /* Background FULL WIDTH — tidak ada box mengambang */
-  background: rgb(7, 11, 22);
+  background: transparent;
   border-top: none;
   position: relative;
   margin-top: 0;
@@ -1860,7 +1859,7 @@ body > header > nav {
   left: 0;
   right: 0;
   height: 80px;
-  background: linear-gradient(to bottom, transparent, rgb(7, 11, 22));
+  background: linear-gradient(to bottom, transparent, #000000);
   pointer-events: none;
   z-index: 0;
 }

@@ -1,7 +1,7 @@
 # IoT Listrik Dashboard
 
-Sistem deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan secara terintegrasi.
-Platform yang didukung: Web (PWA), Android, dan Windows desktop.
+Sistem deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan secara terintegrasi.  
+Platform yang didukung: **Web (PWA)**, **Android**, dan **Windows desktop**.
 
 ## Ringkasan Fitur
 
@@ -17,37 +17,75 @@ Platform yang didukung: Web (PWA), Android, dan Windows desktop.
 ESP32 + sensor (SCT-013, ZMPT101B)
   -> Firebase Realtime Database (/listrik, /logs, /settings, /users)
   -> Client apps:
-     - Web dashboard (public/*.html, JS modules, PWA)
-     - Android native app (Kotlin)
-     - Windows desktop app (Electron)
+     - Web dashboard (public/js/*.js, public/css/*.css, PWA)
+     - Android native app (Kotlin)   → platforms/android/
+     - Windows desktop app (Electron) → platforms/electron/
 ```
 
 ## Struktur Project
 
 ```text
 .
-|- android-app/                # Android native app (Kotlin)
-|- electron-app/               # Windows desktop app (Electron/React/TS)
-|- esp32/                      # Firmware ESP32
-|- functions/                  # Firebase Cloud Functions (Node.js)
-|- public/                     # Web app + landing + downloads page
-|- scripts/                    # Root automation scripts (build/release)
-|- database.rules.json         # RTDB security rules
-|- firebase.json               # Firebase config (database + functions)
-|- vercel.json                 # Vercel routing/headers config
-|- .vercelignore               # Exclude heavy/binary files on Vercel deploy
-|- SIGNING.md                  # Detail signing Android/Windows
-`- README.md
+├── docs/                          # Dokumentasi teknis
+│   ├── SIGNING.md                 # Detail signing Android & Windows
+│   └── VERSION_MANAGEMENT.md     # Manajemen versi & release flow
+│
+├── hardware/                      # Firmware ESP32
+│
+├── platforms/                     # Aplikasi per-platform
+│   ├── android/                   # Android native (Kotlin/Gradle)
+│   ├── electron/                  # Windows desktop (Electron + React/TS)
+│   └── cli/                       # CLI download utility (Node.js)
+│
+├── public/                        # Web app (Vercel deploy)
+│   ├── assets/icons/              # App icons (PWA)
+│   ├── css/                       # Stylesheets
+│   │   ├── style.css
+│   │   └── downloads.css
+│   ├── js/                        # JavaScript modules
+│   │   ├── firebase-config.js
+│   │   ├── app.js
+│   │   ├── auth.js
+│   │   ├── charts.js
+│   │   ├── history.js
+│   │   ├── hybrid-listrik.js
+│   │   ├── notifications.js
+│   │   ├── settings.js
+│   │   ├── simulator.js
+│   │   ├── client-config.js
+│   │   └── version-manager.js
+│   ├── index.html                 # Landing page
+│   ├── dashboard.html
+│   ├── history.html
+│   ├── login.html
+│   ├── settings.html
+│   ├── downloads.html
+│   ├── pwa-simulator.html
+│   ├── manifest.json              # PWA manifest
+│   └── service-worker.js          # PWA service worker (harus di root)
+│
+├── backend-local/                 # Local REST API (opsional/offline)
+├── firebase-redirect/             # Firebase Hosting fallback
+├── functions/                     # Firebase Cloud Functions (Node.js)
+├── scripts/                       # Automation scripts (build/release/deploy)
+│
+├── app-version.json               # Versi aktif & URL download
+├── database.rules.json            # RTDB security rules
+├── firebase.json                  # Firebase config
+├── vercel.json                    # Vercel routing/headers config
+└── .vercelignore
 ```
 
 ## Tech Stack
 
-- Firmware: Arduino C++ (ESP32), WiFiManager, Firebase ESP Client.
-- Backend data/auth: Firebase Realtime Database + Firebase Authentication.
-- Web: HTML/CSS/Vanilla JS + PWA.
-- Android: Kotlin + Android Studio/Gradle.
-- Desktop: Electron + React/TypeScript + electron-builder.
-- Deployment web: Vercel.
+| Layer | Teknologi |
+|-------|-----------|
+| Firmware | Arduino C++ (ESP32), WiFiManager, Firebase ESP Client |
+| Backend | Firebase Realtime Database + Firebase Authentication |
+| Web | HTML / CSS / Vanilla JS + PWA |
+| Android | Kotlin + Android Studio / Gradle |
+| Desktop | Electron + React / TypeScript + electron-builder |
+| Deploy Web | Vercel |
 
 ## Auto-Update System
 
@@ -55,26 +93,24 @@ Sistem otomatis untuk mendeteksi dan download versi terbaru aplikasi.
 
 ### Web Dashboard
 
-Tombol download di halaman `/downloads` otomatis mengarah ke versi terbaru berdasarkan `app-version.json`.
+Tombol download di `/downloads` otomatis mengarah ke versi terbaru berdasarkan `app-version.json`.
 
 ### CLI Auto-Download
-
-Download aplikasi versi terbaru via command line:
 
 ```bash
 # Download untuk platform saat ini
 npx iot-listrik-dashboard download
 
 # Atau manual dengan Node.js
-node cli-app/download-cli.js
+node platforms/cli/download-cli.js
 
 # Download spesifik
-node cli-app/download-cli.js --platform windows --type setup
-node cli-app/download-cli.js --platform windows --type portable
-node cli-app/download-cli.js --platform windows --type msi
+node platforms/cli/download-cli.js --platform windows --type setup
+node platforms/cli/download-cli.js --platform windows --type portable
+node platforms/cli/download-cli.js --platform windows --type msi
 
 # Lihat versi tersedia
-node cli-app/download-cli.js --list
+node platforms/cli/download-cli.js --list
 ```
 
 ### Release Management
@@ -87,14 +123,11 @@ Untuk membuat release versi baru:
 
 # Atau build terpisah
 .\scripts\build-android-release.ps1
-.\scripts\build-win-all-preserve.ps1
+.\scripts\build-release-for-web.ps1 -Secret <SECRET>
+
+# Upload ke GitHub Releases
+.\scripts\upload-release.ps1 -Version 1.0.2
 ```
-
-Sistem akan otomatis:
-
-- Update `app-version.json` dengan versi baru
-- Update semua URL download di web dashboard
-- Update CLI commands di halaman downloads
 
 ## Setup Awal
 
@@ -170,13 +203,13 @@ Library penting:
 - ArduinoJson
 - WiFiManager (tzapu)
 
+Firmware ada di `hardware/`.
+
 ## Build dan Signing
 
-Dokumentasi lengkap ada di `SIGNING.md`.
+Dokumentasi lengkap ada di `docs/SIGNING.md`.
 
 ### Android (APK)
-
-Contoh:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "scripts\generate-android-keystore.ps1" -Secret "<SECRET>"
@@ -189,13 +222,11 @@ Output APK:
 
 ### Windows (MSI/Setup/Portable)
 
-Contoh:
-
 ```powershell
-powershell -ExecutionPolicy Bypass -File "electron-app\scripts\generate-electron-pfx.ps1" -Secret "<SECRET>"
-powershell -ExecutionPolicy Bypass -File "electron-app\scripts\build-win-sign.ps1" -Arch "x64" -Target "msi"
-powershell -ExecutionPolicy Bypass -File "electron-app\scripts\build-win-sign.ps1" -Arch "x64" -Target "setup"
-powershell -ExecutionPolicy Bypass -File "electron-app\scripts\build-win-sign.ps1" -Arch "x64" -Target "portable"
+powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\generate-electron-pfx.ps1" -Secret "<SECRET>"
+powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\build-win-sign.ps1" -Arch "x64" -Target "msi"
+powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\build-win-sign.ps1" -Arch "x64" -Target "setup"
+powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\build-win-sign.ps1" -Arch "x64" -Target "portable"
 ```
 
 Output Windows:
@@ -212,8 +243,6 @@ powershell -ExecutionPolicy Bypass -File "scripts\build-release-for-web.ps1" -Se
 
 ## Deploy Web (Vercel)
 
-Project web sekarang diarahkan ke Vercel.
-
 ```bash
 npx -y vercel login
 npx -y vercel link
@@ -223,15 +252,16 @@ npx -y vercel --prod
 Catatan:
 
 - Konfigurasi route dan header ada di `vercel.json`.
+- Subfolder `public/js/` dan `public/css/` sudah dikonfigurasi cache header di `vercel.json`.
 - File biner (`.exe/.msi/.apk/.aab`) di-ignore lewat `.vercelignore`.
-- Untuk distribusi file installer, gunakan GitHub Releases atau storage eksternal.
+- Untuk distribusi file installer, gunakan GitHub Releases (via `scripts/upload-release.ps1`).
 
 ## Firebase Scope Saat Ini
 
 - `firebase.json` hanya menyimpan config:
   - `database.rules.json`
   - `functions` source
-- Hosting Firebase tidak dipakai sebagai target deploy web utama.
+- Hosting Firebase tidak dipakai sebagai target deploy web utama (Vercel).
 
 ## Security Notes
 
@@ -239,15 +269,22 @@ Catatan:
 - Role escalation pada path user dibatasi oleh rules.
 - Credential sensitif (keystore/pfx/env) di-ignore dari git.
 - Jangan commit file `.jks`, `.pfx`, `.env`, private key, dan artifacts build.
+- `backend-local/serviceAccountKey.json` ada di `.gitignore` — **jangan pernah di-commit**.
 
 ## Troubleshooting
 
-- Gagal deploy Firebase Hosting karena executable: gunakan Vercel untuk web dan taruh binary di GitHub Releases.
-- Build Electron gagal file lock: tutup proses yang mengunci file, bersihkan folder output, jalankan build ulang.
-- APK unsigned: pastikan `keystore.properties` dan path signing Android benar.
+- **Gagal deploy Vercel karena file besar**: gunakan `.vercelignore` dan simpan binary di GitHub Releases.
+- **Build Electron gagal file lock**: tutup proses yang mengunci file, bersihkan `platforms/electron/dist/`, jalankan build ulang.
+- **APK unsigned**: pastikan `keystore.properties` ada di `platforms/android/keystore/` dan path signing benar.
+- **PWA tidak load offline**: pastikan `service-worker.js` tetap di `public/` root (bukan di subfolder).
 
 ## Catatan Pengembangan
 
 - Halaman landing dan download ada di `public/index.html` dan `public/downloads.html`.
-- Download page sudah mendukung pilihan arsitektur dan validasi ketersediaan file.
-- Untuk fitur baru, jaga konsistensi style di `public/style.css`.
+- Semua logic JS ada di `public/js/` — import antar modul menggunakan relative path (`./`).
+- Semua style ada di `public/css/style.css` — jaga konsistensi CSS variable yang sudah ada.
+- Untuk versi info baru, update `app-version.json` lalu jalankan `scripts/upload-release.ps1`.
+
+## Lisensi
+
+MIT © 2026 Fatony Ahmad Fauzi

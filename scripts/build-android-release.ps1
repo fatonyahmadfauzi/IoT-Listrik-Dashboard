@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$androidDir = Join-Path $repoRoot "android-app"
+$androidDir = Join-Path $repoRoot "platforms\android"
 $propsPath = Join-Path $androidDir "keystore/keystore.properties"
 
 if (-not (Test-Path $propsPath)) {

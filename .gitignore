@@ -14,17 +14,17 @@ firebase-debug.*.log*
 firebase-seed.json
 
 # Android signing (do not commit secrets)
-android-app/keystore/*.jks
-android-app/keystore/keystore.properties
+platforms/android/keystore/*.jks
+platforms/android/keystore/keystore.properties
 
 # Windows/Electron signing (do not commit secrets)
-electron-app/signing/*.pfx
-electron-app/signing/*.pem
-electron-app/signing/*.key
-electron-app/signing/*.env
+platforms/electron/signing/*.pfx
+platforms/electron/signing/*.pem
+platforms/electron/signing/*.key
+platforms/electron/signing/*.env
 
 # Local Firmware config (contains raw password)
-esp32/config.h
+hardware/config.h
 # Uncomment this if you'd like others to create their own Firebase project.
 # For a team working on the same Firebase project(s), it is recommended to leave
 # it commented so all members can deploy to the same project(s) in .firebaserc.
@@ -61,13 +61,14 @@ build/Release
 node_modules/
 
 # Android build artifacts
-android-app/.gradle/
-android-app/app/build/
+platforms/android/.gradle/
+platforms/android/app/build/
 
 # Electron build artifacts
-electron-app/dist/
-electron-app/release/
-electron-app/release-build/
+platforms/electron/dist/
+platforms/electron/release/
+platforms/electron/release-build/
+platforms/electron/release-build-all/
 
 # Optional npm cache directory
 .npm
@@ -94,3 +95,9 @@ electron-app/release-build/
 **/serviceAccountKey.json
 
 .vercel
+
+# Local downloads and binaries
+public/downloads/
+
+# Junk binary files
+test-msi-download.msi

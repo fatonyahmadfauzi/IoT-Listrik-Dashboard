@@ -20,10 +20,10 @@ if (-not $SkipAndroid) {
 if (-not $SkipWindows) {
   Write-Host ""
   Write-Host "== Windows =="
-  powershell -ExecutionPolicy Bypass -File "electron-app\scripts\generate-electron-pfx.ps1" -Password $Secret
-  powershell -ExecutionPolicy Bypass -File "electron-app\scripts\build-win-sign.ps1" -Arch "x64" -Target "msi"
-  powershell -ExecutionPolicy Bypass -File "electron-app\scripts\build-win-sign.ps1" -Arch "x64" -Target "setup"
-  powershell -ExecutionPolicy Bypass -File "electron-app\scripts\build-win-sign.ps1" -Arch "x64" -Target "portable"
+  powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\generate-electron-pfx.ps1" -Password $Secret
+  powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\build-win-sign.ps1" -Arch "x64" -Target "msi"
+  powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\build-win-sign.ps1" -Arch "x64" -Target "setup"
+  powershell -ExecutionPolicy Bypass -File "platforms\electron\scripts\build-win-sign.ps1" -Arch "x64" -Target "portable"
 }
 
 Write-Host ""

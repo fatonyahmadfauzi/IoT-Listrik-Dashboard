@@ -55,7 +55,7 @@ async function requestNotificationPermission() {
  * @param {string} icon - path to icon image
  * @param {string} tag  - unique tag to prevent notification spam
  */
-function sendNotification(title, body, icon = '/icons/icon-192.png', tag = 'iot-alert') {
+function sendNotification(title, body, icon = '/assets/icons/icon-192.png', tag = 'iot-alert') {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   const n = new Notification(title, {
@@ -63,7 +63,7 @@ function sendNotification(title, body, icon = '/icons/icon-192.png', tag = 'iot-
     icon,
     tag,           // same tag replaces previous notification instead of stacking
     renotify: true, // bila browser mendukung: tetap bunyikan walau ditimpa tag
-    badge: '/icons/icon-96.png',
+    badge: '/assets/icons/icon-96.png',
     vibrate: [200, 100, 200],
     requireInteraction: false,
   });
@@ -161,7 +161,7 @@ function checkAndNotify(status, arus, tegangan) {
       sendNotification(
         '<iconify-icon icon="lucide:shield-check"></iconify-icon> Sistem Kembali Normal',
         `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V`,
-        '/icons/icon-192.png',
+        '/assets/icons/icon-192.png',
         'normal-recovery'
       );
       lastNotifiedStatus = status;

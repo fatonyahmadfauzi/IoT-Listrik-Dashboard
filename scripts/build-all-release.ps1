@@ -54,7 +54,7 @@ if (-not $SkipAndroid) {
 # Build Windows
 if (-not $SkipWindows) {
     Write-Host "=== Building Windows Release ===" -ForegroundColor Green
-    Push-Location (Join-Path $repoRoot "electron-app")
+    Push-Location (Join-Path $repoRoot "platforms\electron")
     & "powershell" "-ExecutionPolicy" "Bypass" "-File" "scripts\build-win-all-preserve.ps1"
     Pop-Location
     Write-Host ""

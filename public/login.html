@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login — IoT Monitoring Listrik</title>
   <meta name="description" content="Login ke sistem monitoring arus listrik berbasis IoT" />
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/style.css" />
   <link rel="manifest"   href="/manifest.json" />
   <meta name="theme-color" content="#070c18" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
@@ -81,9 +81,9 @@
 <div id="toastContainer" class="toast-container"></div>
 
 <script type="module">
-import { auth }      from '/firebase-config.js';
-import { ensureUserProfile } from '/auth.js';
-import { showToast } from '/notifications.js';
+import { auth }      from '/js/firebase-config.js';
+import { ensureUserProfile } from '/js/auth.js';
+import { showToast } from '/js/notifications.js';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,

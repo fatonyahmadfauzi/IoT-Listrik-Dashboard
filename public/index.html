@@ -8,7 +8,7 @@
       name="description"
       content="Platform monitoring listrik berbasis IoT untuk memantau arus, tegangan, status bahaya, dan kontrol relay secara realtime."
     />
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/css/style.css" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#070c18" />
     <link
@@ -37,16 +37,15 @@
     </header>
 
     <main class="landing-main">
-      <section id="monitoring" class="landing-hero">
-        <div class="landing-hero-content">
+      <section id="monitoring" class="landing-hero clean-hero">
+        <div class="clean-hero-content">
           <span class="landing-badge glass"
             >Smart Monitoring • Realtime • Multi Platform</span
           >
           <h1>
-            Monitor sistem listrik secara realtime, aman, dan mudah dipantau
-            dari mana saja
+            Monitor sistem listrik secara realtime, aman, dan mudah dipantau dari mana saja
           </h1>
-          <p>
+          <p class="hero-desc text-muted">
             IoT Listrik Dashboard membantu kamu memantau arus, tegangan, daya
             semu, histori kejadian, serta status kebocoran listrik dengan
             notifikasi cepat dan kontrol relay berbasis role. Project ini dibuat
@@ -55,188 +54,185 @@
             perangkat IoT, mengirim data ke cloud, lalu menampilkan dashboard
             interaktif untuk analisis cepat dan tindakan preventif.
           </p>
-          <div class="landing-cta">
+          <div class="landing-cta clean-cta">
             <a href="/login" class="btn btn-primary btn-large"> Get Started </a>
             <a href="/downloads" class="btn btn-secondary btn-large">
               Download App
             </a>
           </div>
-          <p
-            id="pwaHint"
-            class="text-sm text-muted landing-pwa-hint"
-            aria-live="polite"
-          ></p>
+          <p id="pwaHint" class="text-sm text-muted landing-pwa-hint" aria-live="polite"></p>
         </div>
-        <div class="landing-hero-panel">
-          <div class="landing-stat-grid">
-            <div class="landing-stat" data-stat-key="stat1">
-              <div class="label">Monitoring</div>
-              <div class="value">24/7</div>
+      </section>
+
+      <section class="clean-features-wrap">
+        <div class="clean-features-grid">
+          <div class="clean-feature-item">
+            <span class="material-symbols-rounded">history</span>
+            <h3>Histori & Alert</h3>
+            <p>Catat riwayat kejadian dan kirim notifikasi saat kondisi berbahaya.</p>
+          </div>
+          <div class="clean-feature-item">
+            <span class="material-symbols-rounded">admin_panel_settings</span>
+            <h3>Role-based Access</h3>
+            <p>Kontrol relay dan pengaturan hanya dapat diakses oleh admin.</p>
+          </div>
+          <div class="clean-feature-item">
+            <span class="material-symbols-rounded">monitoring</span>
+            <h3>Realtime Dashboard</h3>
+            <p>Pantau arus, tegangan, daya, dan status sistem secara langsung.</p>
+          </div>
+          <div class="clean-feature-item">
+            <span class="material-symbols-rounded">power_settings_new</span>
+            <h3>Safety Action</h3>
+            <p>Relay dimatikan otomatis saat terdeteksi kondisi berisiko.</p>
+          </div>
+          <div class="clean-feature-item">
+            <span class="material-symbols-rounded">terminal</span>
+            <h3>CLI & Automation</h3>
+            <p>Mendukung workflow CLI untuk build, setup, dan automasi operasional.</p>
+          </div>
+          <div class="clean-feature-item">
+            <span class="material-symbols-rounded">send</span>
+            <h3>Telegram Notification</h3>
+            <p>Kirim peringatan cepat ke Telegram saat terdeteksi kondisi berisiko.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" class="landing-section demo-section-clean">
+        <div class="demo-clean-container">
+          <div class="demo-clean-hero">
+            <span class="material-symbols-rounded demo-clean-icon">rocket_launch</span>
+            <h2 class="demo-clean-title">Try PWA Simulator</h2>
+            <p class="demo-clean-desc text-muted">
+              Buat akun demo, generate data sensor secara acak, dan pantau sistem tanpa hardware nyata. Sesi demo Anda dilindungi dan akan direset otomatis dalam 5 menit.
+            </p>
+            <div class="demo-clean-actions">
+              <button id="simulatorInstallBtn" class="btn btn-primary demo-dl-btn" type="button">
+                <span class="material-symbols-rounded">download</span>
+                Download Simulator PWA
+              </button>
             </div>
-            <div class="landing-stat" data-stat-key="stat2">
-              <div class="label">Platform</div>
-              <div class="value">Web + Android + Windows</div>
+            <p class="text-xs text-muted demo-note-text">
+              Browser Anda harus mendukung fitur instalasi PWA (Chrome, Edge, dsb). Jika di mobile gunakan "Add to Home Screen".
+            </p>
+          </div>
+
+          <div class="demo-clean-steps">
+            <div class="clean-step">
+              <span class="material-symbols-rounded step-icon">person_add</span>
+              <h4>1. Buat Akun</h4>
+              <p>Dapatkan kredensial demo</p>
             </div>
-            <div class="landing-stat" data-stat-key="stat3">
-              <div class="label">Data</div>
-              <div class="value">Realtime Firebase</div>
+            <div class="clean-step">
+              <span class="material-symbols-rounded step-icon">dataset</span>
+              <h4>2. Generate Data</h4>
+              <p>Kirim data sensor fiktif</p>
             </div>
-            <div class="landing-stat" data-stat-key="stat4">
-              <div class="label">Proteksi</div>
-              <div class="value">Auto-cutoff Relay</div>
+            <div class="clean-step">
+              <span class="material-symbols-rounded step-icon">login</span>
+              <h4>3. Login Dashboard</h4>
+              <p>Pantau sistem realtime</p>
             </div>
-            <div class="landing-stat" data-stat-key="stat5">
-              <div class="label">CLI Support</div>
-              <div class="value">Command-line Ready</div>
-            </div>
-            <div class="landing-stat" data-stat-key="stat6">
-              <div class="label">Telegram Alert</div>
-              <div class="value">Notifikasi Otomatis</div>
+            <div class="clean-step">
+              <span class="material-symbols-rounded step-icon">settings</span>
+              <h4>4. Simulasi Warning</h4>
+              <p>Uji notifikasi & relay cutoff</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="demo" class="landing-section">
-        <div class="section-card glass">
-          <div class="section-header">
-            <div class="section-title demo-title">
-              <span class="material-symbols-rounded demo-icon"
-                >play_circle</span
-              >
-              <span>Try it Demo</span>
-            </div>
+      <section id="architecture" class="landing-section architecture-section">
+        <div class="demo-clean-container">
+          <div class="section-header" style="justify-content: center; margin-bottom: 32px;">
+            <h2 class="demo-clean-title" style="display: flex; align-items: center; gap: 12px; margin: 0;">
+              <span class="material-symbols-rounded" style="color: var(--yellow-light); font-size: 28px;">account_tree</span>
+              Arsitektur Sistem
+            </h2>
           </div>
-          <p class="text-sm text-muted demo-description">
-            Buat akun demo dan coba aplikasi PWA simulasi data random. Sesi demo
-            hanya berlaku 5 menit, lalu akan diarahkan untuk daftar, login, atau
-            lanjut ke produk asli.
-          </p>
-          <div class="landing-demo-grid">
-            <div class="landing-card glass demo-card">
-              <div class="demo-card-header">
-                <span
-                  class="material-symbols-rounded demo-card-icon smartphone-icon"
-                  >smartphone</span
-                >
-                <h3 class="demo-card-title">Download PWA Simulator</h3>
-              </div>
-              <p class="text-sm text-muted demo-card-description">
-                Download aplikasi PWA Simulator sebagai aplikasi mandiri.
-                Gunakan untuk membuat akun demo, generate data random, hapus
-                data, test notifikasi, dan mengatur sistem IoT.
-              </p>
-              <div class="demo-features">
-                <div class="demo-feature">
-                  <span class="material-symbols-rounded feature-icon"
-                    >check_circle</span
-                  >
-                  <span>Buat akun demo dengan email & password</span>
-                </div>
-                <div class="demo-feature">
-                  <span class="material-symbols-rounded feature-icon"
-                    >check_circle</span
-                  >
-                  <span>Generate data fake dari perangkat IoT</span>
-                </div>
-                <div class="demo-feature">
-                  <span class="material-symbols-rounded feature-icon"
-                    >check_circle</span
-                  >
-                  <span>Hapus data demo kapan saja</span>
-                </div>
-                <div class="demo-feature">
-                  <span class="material-symbols-rounded feature-icon"
-                    >check_circle</span
-                  >
-                  <span>Pengaturan sistem admin khusus demo</span>
-                </div>
-                <div class="demo-feature">
-                  <span class="material-symbols-rounded feature-icon"
-                    >check_circle</span
-                  >
-                  <span>Notifikasi dan test alert</span>
+          <div class="arch-tree-container">
+            <div class="arch-tree">
+              <!-- Node 1 -->
+              <div class="arch-box glass">
+                <div class="arch-box-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--green);"><span class="material-symbols-rounded">memory</span></div>
+                <div class="arch-box-content">
+                  <h4>Hardware Node (ESP32)</h4>
+                  <p>Sensor SCT-013, ZMPT101B & Relay</p>
                 </div>
               </div>
-              <div class="demo-actions">
-                <button
-                  id="simulatorInstallBtn"
-                  class="btn btn-primary demo-install-btn"
-                  type="button"
-                >
-                  <span class="material-symbols-rounded">download</span>
-                  Download & Install App
-                </button>
-              </div>
-              <p class="text-xs text-muted demo-note">
-                <strong
-                  >Aplikasi PWA Simulator hanya bisa diakses setelah
-                  diinstall.</strong
-                >
-                Browser harus support PWA install (Chrome, Edge, Firefox). Jika
-                tidak ada tombol download, buka melalui browser menu → Install
-                app / Add to Home Screen / Add to Home.
-              </p>
-            </div>
 
-            <div class="landing-card glass demo-card">
-              <div class="demo-card-header">
-                <span class="material-symbols-rounded demo-card-icon info-icon"
-                  >info</span
-                >
-                <h3 class="demo-card-title">Cara Menggunakan</h3>
+              <!-- Vertical Line 1 -->
+              <div class="arch-conn-v">
+                <svg width="6" height="40">
+                  <line x1="3" y1="0" x2="3" y2="40" class="anim-line anim-line-v"/>
+                </svg>
               </div>
-              <p class="text-sm text-muted demo-card-description">
-                Setelah install PWA Simulator:
-              </p>
-              <div class="demo-steps">
-                <div class="demo-step step-1">
-                  <div class="step-header">
-                    <span class="material-symbols-rounded step-icon"
-                      >person_add</span
-                    >
-                    <div class="step-title">1. Buat Akun Demo</div>
-                  </div>
-                  <div class="step-description">
-                    Masukkan email dan klik tombol untuk generate password demo
-                  </div>
-                </div>
-                <div class="demo-step step-2">
-                  <div class="step-header">
-                    <span class="material-symbols-rounded step-icon"
-                      >dataset</span
-                    >
-                    <div class="step-title">2. Control Data</div>
-                  </div>
-                  <div class="step-description">
-                    Generate data random, hapus data, dan test notifikasi
-                  </div>
-                </div>
-                <div class="demo-step step-3">
-                  <div class="step-header">
-                    <span class="material-symbols-rounded step-icon"
-                      >login</span
-                    >
-                    <div class="step-title">3. Login di Aplikasi</div>
-                  </div>
-                  <div class="step-description">
-                    Gunakan email & password dari simulator untuk login di Web,
-                    Windows, atau Android
-                  </div>
-                </div>
-                <div class="demo-step step-4">
-                  <div class="step-header">
-                    <span class="material-symbols-rounded step-icon"
-                      >settings</span
-                    >
-                    <div class="step-title">4. Atur Sistem</div>
-                  </div>
-                  <div class="step-description">
-                    Konfigurasi threshold, warning, interval, buzzer, dan
-                    pengaturan lainnya
-                  </div>
+
+              <!-- Node 2 -->
+              <div class="arch-box glass" style="border-color: rgba(59, 130, 246, 0.3);">
+                <div class="arch-box-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--brand-light);"><span class="material-symbols-rounded">cloud_sync</span></div>
+                <div class="arch-box-content">
+                  <h4>Firebase Cloud</h4>
+                  <p>Realtime Database (RTDB) & Auth</p>
                 </div>
               </div>
+
+              <!-- Branching -->
+              <div class="arch-branch">
+                <!-- Trunk -->
+                <svg width="6" height="20" style="overflow: visible;">
+                  <line x1="3" y1="0" x2="3" y2="20" class="anim-line anim-line-v"/>
+                </svg>
+                <!-- Split -->
+                <svg width="100%" height="20" style="overflow: visible;">
+                  <!-- Horizontal connections -->
+                  <line x1="50%" y1="2" x2="16.66%" y2="2" class="anim-line anim-line-h-left"/>
+                  <line x1="50%" y1="2" x2="83.33%" y2="2" class="anim-line anim-line-h-right"/>
+                  <!-- Vertical drops -->
+                  <line x1="16.66%" y1="0" x2="16.66%" y2="20" class="anim-line anim-line-v"/>
+                  <line x1="50%" y1="0" x2="50%" y2="20" class="anim-line anim-line-v"/>
+                  <line x1="83.33%" y1="0" x2="83.33%" y2="20" class="anim-line anim-line-v"/>
+                  <!-- Branch point dots -->
+                  <circle cx="50%" cy="2" r="4" fill="var(--purple)" style="filter: drop-shadow(0 0 4px var(--purple));"/>
+                  <circle cx="16.66%" cy="2" r="4" fill="var(--purple)" style="filter: drop-shadow(0 0 4px var(--purple));"/>
+                  <circle cx="83.33%" cy="2" r="4" fill="var(--purple)" style="filter: drop-shadow(0 0 4px var(--purple));"/>
+                </svg>
+              </div>
+
+              <!-- Leaves -->
+              <div class="arch-leaves">
+                <div style="padding: 0 10px;">
+                  <div class="arch-box glass">
+                    <div class="arch-box-icon" style="background: rgba(14, 165, 233, 0.1); color: var(--cyan);"><span class="material-symbols-rounded">smart_toy</span></div>
+                    <div class="arch-box-content">
+                      <h4>Telegram Bot</h4>
+                      <p>Notifikasi Cutoff & Alert</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="padding: 0 10px;">
+                  <div class="arch-box glass">
+                    <div class="arch-box-icon" style="background: rgba(124, 58, 237, 0.1); color: #c084fc;"><span class="material-symbols-rounded">desktop_windows</span></div>
+                    <div class="arch-box-content">
+                      <h4>Web Dashboard</h4>
+                      <p>HTML/JS PWA App</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="padding: 0 10px;">
+                  <div class="arch-box glass">
+                    <div class="arch-box-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--green-light);"><span class="material-symbols-rounded">phone_iphone</span></div>
+                    <div class="arch-box-content">
+                      <h4>Android App</h4>
+                      <p>Native Alerts (FCM)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>

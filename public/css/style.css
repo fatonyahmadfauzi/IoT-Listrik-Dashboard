@@ -1794,21 +1794,158 @@ body > header > nav {
 #downloads {
   scroll-margin-top: 92px;
 }
-.landing-footer {
-  border-top: 1px solid var(--glass-border);
-  background: rgba(11, 17, 28, 0.75);
+/* ── Tech Stack Row ───────────────────────────────────────── */
+.tech-stack-section {
+  text-align: center;
+  padding: 48px 0 60px;
+  max-width: 1000px;
+  margin: 0 auto;
 }
-.landing-footer-inner {
+
+.tech-stack-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.tech-stack-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.tech-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.25s ease;
+}
+
+.tech-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.tech-chip .material-symbols-rounded {
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+/* ── New Footer ───────────────────────────────────────────── */
+.landing-footer {
+  background: transparent;
+  border-top: none;
+  position: relative;
+  margin-top: 0;
+}
+
+/* Gradient fade — footer menyatu dengan page background */
+.landing-footer::before {
+  content: '';
+  display: block;
+  height: 80px;
+  background: linear-gradient(to bottom, transparent, rgba(7, 12, 24, 0.6));
+  pointer-events: none;
+}
+
+.landing-footer-main {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 16px var(--page-gutter);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--text-secondary);
-  font-size: 13px;
+  padding: 40px var(--page-gutter) 32px;
+  background: rgba(7, 12, 24, 0.6);
 }
+
+.landing-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+}
+
+.footer-col-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 0 0 16px;
+}
+
+.footer-col-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-col-links a {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.footer-col-links a:hover {
+  color: var(--text-primary);
+}
+
+.landing-footer-bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px var(--page-gutter) 32px;
+  text-align: center;
+  background: rgba(7, 12, 24, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.footer-copy {
+  font-size: 12px;
+  color: rgba(148, 163, 184, 0.55);
+  margin: 0;
+}
+
+/* Responsive footer */
+@media (max-width: 900px) {
+  .landing-footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .tech-stack-section {
+    padding: 28px 16px 36px;
+  }
+}
+
 
 @media (max-width: 1200px) {
   :root {

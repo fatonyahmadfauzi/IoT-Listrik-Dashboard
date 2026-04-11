@@ -15,7 +15,7 @@
 ---
 
 Sistem deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan secara terintegrasi.  
-Platform yang didukung: **Web (PWA)**, **Android**, dan **Windows desktop**.
+Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan **Terminal (CLI)**.
 
 
 
@@ -25,6 +25,7 @@ Platform yang didukung: **Web (PWA)**, **Android**, dan **Windows desktop**.
 - Role-based access: aksi kritikal (relay/settings) hanya untuk admin.
 - Histori kejadian dan notifikasi cepat (web + Telegram).
 - Auto-cutoff relay saat kondisi berbahaya.
+- Terminal UI (Hacker Mode) portabel untuk eksekusi tanpa GUI (Mendukung CLI Node.js & Python).
 - Build pipeline untuk Android APK dan Windows installer.
 
 ## Arsitektur Singkat
@@ -36,6 +37,7 @@ ESP32 + Sensor Arus & Relay
      - Web dashboard (public/js/*.js, public/css/*.css, PWA)
      - Android native app (Kotlin)   → platforms/android/
      - Windows desktop app (Electron) → platforms/electron/
+     - Terminal OS (Bash/CMD)         → platforms/cli-node/ & cli-python/
 ```
 
 ## Struktur Project
@@ -51,13 +53,18 @@ ESP32 + Sensor Arus & Relay
 ├── platforms/                     # Aplikasi per-platform
 │   ├── android/                   # Android native (Kotlin/Gradle)
 │   ├── electron/                  # Windows desktop (Electron + React/TS)
-│   └── cli/                       # CLI download utility (Node.js)
+│   ├── cli-node/                  # Terminal UI & download utility (Node.js)
+│   └── cli-python/                # Terminal UI varian (Python)
 │
 ├── public/                        # Web app (Vercel deploy)
 │   ├── assets/icons/              # App icons (PWA)
 │   ├── css/                       # Stylesheets
 │   │   ├── style.css
 │   │   └── downloads.css
+│   ├── downloads/                 # Binary installer cache (di-ignore Vercel)
+│   │   ├── android/
+│   │   ├── cli/
+│   │   └── windows/
 │   ├── js/                        # JavaScript modules
 │   │   ├── firebase-config.js
 │   │   ├── app.js
@@ -70,6 +77,7 @@ ESP32 + Sensor Arus & Relay
 │   │   ├── simulator.js
 │   │   ├── client-config.js
 │   │   └── version-manager.js
+│   ├── app-version.json           # Salinan versi untuk browser (sync via script)
 │   ├── index.html                 # Landing page
 │   ├── dashboard.html
 │   ├── history.html
@@ -78,14 +86,19 @@ ESP32 + Sensor Arus & Relay
 │   ├── downloads.html
 │   ├── pwa-simulator.html
 │   ├── manifest.json              # PWA manifest
-│   └── service-worker.js          # PWA service worker (harus di root)
+│   └── service-worker.js          # PWA service worker
 │
 ├── backend-local/                 # Local REST API (opsional/offline)
 ├── firebase-redirect/             # Firebase Hosting fallback
 ├── functions/                     # Firebase Cloud Functions (Node.js)
 ├── scripts/                       # Automation scripts (build/release/deploy)
+│   ├── sync-app-version.ps1       # Sinkronisasi app-version.json ke public/
+│   ├── build-all-release.ps1
+│   ├── build-android-release.ps1
+│   ├── build-release-for-web.ps1
+│   └── upload-release.ps1
 │
-├── app-version.json               # Versi aktif & URL download
+├── app-version.json               # Source of truth versi & URL download
 ├── database.rules.json            # RTDB security rules
 ├── firebase.json                  # Firebase config
 ├── vercel.json                    # Vercel routing/headers config
@@ -101,6 +114,7 @@ ESP32 + Sensor Arus & Relay
 | Web | HTML / CSS / Vanilla JS + PWA |
 | Android | Kotlin + Android Studio / Gradle |
 | Desktop | Electron + React / TypeScript + electron-builder |
+| Terminal | Node.js (Inquirer+Chalk) / Python (Questionary+Rich) |
 | Deploy Web | Vercel |
 
 ## Auto-Update System
@@ -111,37 +125,49 @@ Sistem otomatis untuk mendeteksi dan download versi terbaru aplikasi.
 
 Tombol download di `/downloads` otomatis mengarah ke versi terbaru berdasarkan `app-version.json`.
 
-### CLI Auto-Download
+### CLI Auto-Download (Versi Distribusi Lama)
 
 ```bash
 # Download untuk platform saat ini
 npx iot-listrik-dashboard download
 
 # Atau manual dengan Node.js
-node platforms/cli/download-cli.js
+node platforms/cli-node/download-cli.js
 
 # Download spesifik
-node platforms/cli/download-cli.js --platform windows --type setup
-node platforms/cli/download-cli.js --platform windows --type portable
-node platforms/cli/download-cli.js --platform windows --type msi
+node platforms/cli-node/download-cli.js --platform windows --type setup
+node platforms/cli-node/download-cli.js --platform windows --type portable
+node platforms/cli-node/download-cli.js --platform windows --type msi
 
 # Lihat versi tersedia
-node platforms/cli/download-cli.js --list
+node platforms/cli-node/download-cli.js --list
 ```
+
+### CLI Terminal Dashboard (Hacker Mode)
+
+Instalasi sebaris cepat khusus untuk pengguna **Linux, WSL, OS X, dan Termux Android**:
+```bash
+curl -sL "https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh" | bash
+```
+Atau Anda dapat mengunduh langsung eksekusinya yang terkompilasi penuh via `pkg` (Node.js) atau `pyinstaller` (Python) khusus untuk `.exe` Windows pada halaman `/downloads`.
 
 ### Release Management
 
 Untuk membuat release versi baru:
 
 ```powershell
-# Build semua platform dengan versi baru
+# 1. Update versi di app-version.json (root)
+# 2. Sinkronisasi ke public/ agar website terbaca:
+.\scripts\sync-app-version.ps1
+
+# 3. Build semua platform dengan versi baru
 .\scripts\build-all-release.ps1 -NewVersion 1.0.2
 
 # Atau build terpisah
 .\scripts\build-android-release.ps1
 .\scripts\build-release-for-web.ps1 -Secret <SECRET>
 
-# Upload ke GitHub Releases
+# 4. Upload ke GitHub Releases
 .\scripts\upload-release.ps1 -Version 1.0.2
 ```
 

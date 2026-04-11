@@ -38,7 +38,7 @@
           <h3>Android APK</h3>
           <p>Aplikasi native Android berbasis Kotlin dengan monitoring realtime, kontrol relay, dan notifikasi cepat.</p>
           <div class="dl-card-actions">
-            <a href="/downloads/android/iot-listrik-dashboard.apk" download class="btn btn-android">Download APK</a>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.apk" download class="btn btn-android">Download APK</a>
           </div>
           <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
             <strong>Min. Requirements:</strong> Android 8.0 (Oreo) atau lebih baru, 2GB RAM.
@@ -66,16 +66,46 @@
           <h3>Windows Desktop</h3>
           <p>Aplikasi PC berbasis Electron untuk laboratorium atau monitoring skala besar terpusat.</p>
           <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;">
-            <a href="/downloads/windows/iot-listrik-dashboard-setup-x64.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download for x64</a>
-            <a href="/downloads/windows/iot-listrik-dashboard-setup-arm64.exe" download class="btn" style="background: #E8EAED; color: #202124; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download for ARM64</a>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup-1.0.0.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download Setup (x64)</a>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable-1.0.0.exe" download class="btn" style="background: #E8EAED; color: #202124; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download Portable</a>
           </div>
           <div style="font-size: 0.9rem; margin-top: 8px;">
             <span style="color: var(--text-muted); margin-right: 8px;">Opsi lain:</span>
-            <a href="/downloads/windows/iot-listrik-dashboard-setup-ia32.exe" download style="color: var(--text-muted); text-decoration: underline; margin-right: 12px; transition: 0.2s;">.exe (x86)</a>
-            <a href="/downloads/windows/iot-listrik-dashboard-setup-x64.msi" download style="color: var(--text-muted); text-decoration: underline; transition: 0.2s;">.msi (x64)</a>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.msi" download style="color: var(--text-muted); text-decoration: underline; transition: 0.2s;">.msi (x64)</a>
           </div>
           <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
             <strong>Min. Requirements:</strong> Windows 10/11 (64-bit/ARM), 4GB RAM, 200MB Storage.
+          </div>
+        </div>
+
+        </div>
+
+        <!-- CLI Portable -->
+        <div class="dl-clean-card dl-cli-card">
+          <span class="material-symbols-rounded dl-icon-cli">terminal</span>
+          <h3>CLI Portable <span style="font-size: 0.7rem; background:#38bdf8; color:#09090b; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left:8px; font-weight:700;">HACKER MODE</span></h3>
+          <p>Dashboard versi teks baris perintah lintas platform. Berjalan ringan tanpa butuh UI instalasi (Berkas executable `.exe` khusus untuk Windows).</p>
+          
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;">
+            <a href="/downloads/cli/iot-listrik-cli-node.exe" download class="btn" style="background: #38bdf8; color: #0f172a; border-radius: 999px; padding: 12px 24px; font-weight: 600; font-size: 0.95rem; text-decoration: none; transition: 0.2s;"> Node.js Ver (Win x64) </a>
+            <a href="/downloads/cli/iot-listrik-cli-python.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); padding: 12px 24px; font-weight: 500; font-size: 0.95rem; text-decoration: none; transition: 0.2s;"> Python Ver (Win x64) </a>
+          </div>
+
+          <div style="font-size: 0.9rem; margin-top: auto;">
+            <span style="color: var(--text-muted); margin-bottom: 8px; display: inline-block;">Perintah eksekusi Windows (Buka CMD / PowerShell):</span>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+               <code style="background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 6px; color: #38bdf8; font-size: 0.9em; box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.2);">.\iot-listrik-cli-node.exe</code>
+               <code style="background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 6px; color: #e2e8f0; font-size: 0.9em; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);">.\iot-listrik-cli-python.exe</code>
+            </div>
+          </div>
+          
+          <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; margin-top: 24px;">
+            <strong style="color:#fff;">Linux, MacOS & Termux Android:</strong> Jangan unduh executabel manual. Jalankan perintah instalasi online ini di terminal Anda:
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+               <code style="background: rgba(0,0,0,0.5); padding: 10px 16px; border-radius: 6px; color: #10b981; font-size: 0.9em; box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2); flex-grow: 1; word-break: break-all;">curl -sL "https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh" | bash</code>
+               <button class="cmd-copy-btn" data-copy='curl -sL "https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh" | bash' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text-muted); width: 42px; cursor: pointer; display: grid; place-items: center; transition: 0.2s;"><span class="material-symbols-rounded" style="font-size: 20px;">content_copy</span></button>
+            </div>
+            <div style="margin-top: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.4);">Pemasang akan mengatur alias. Setelah terpasang, cukup ketik: <code style="color:#38bdf8; background:transparent;">iot-listrik</code></div>
           </div>
         </div>
 
@@ -85,21 +115,35 @@
       <section class="dl-terminal-wrap">
         <div class="dl-terminal-header">
           <span class="material-symbols-rounded">terminal</span>
-          <h2>Install via Terminal (Senyap)</h2>
+          <h2>Install via Terminal <span id="terminalVersionBadge" style="font-size:0.75rem; background: rgba(56,189,248,0.15); color:#38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px;"></span></h2>
         </div>
         <div class="dl-terminal-grid">
           <div class="dl-term-box">
-            <div class="dl-term-label">PowerShell</div>
+            <div class="dl-term-label">PowerShell — Windows Setup</div>
             <div class="dl-code-row">
-              <code>Invoke-WebRequest -Uri "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe" -OutFile "iot-listrik-dashboard.exe"</code>
-              <button class="cmd-copy-btn" data-copy='Invoke-WebRequest -Uri "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe" -OutFile "iot-listrik-dashboard.exe"'><span class="material-symbols-rounded">content_copy</span></button>
+              <code id="termCmdPS"></code>
+              <button class="cmd-copy-btn" id="termCopyPS"><span class="material-symbols-rounded">content_copy</span></button>
             </div>
           </div>
           <div class="dl-term-box">
-            <div class="dl-term-label">CMD / Linux (cURL)</div>
+            <div class="dl-term-label">CMD / Linux / WSL — cURL (Windows Setup)</div>
             <div class="dl-code-row">
-              <code>curl -L -o "iot-listrik-dashboard-setup-x64.exe" "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe"</code>
-              <button class="cmd-copy-btn" data-copy='curl -L -o "iot-listrik-dashboard-setup-x64.exe" "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe"'><span class="material-symbols-rounded">content_copy</span></button>
+              <code id="termCmdCurl"></code>
+              <button class="cmd-copy-btn" id="termCopyCurl"><span class="material-symbols-rounded">content_copy</span></button>
+            </div>
+          </div>
+          <div class="dl-term-box">
+            <div class="dl-term-label">CMD / Linux — cURL (Android APK)</div>
+            <div class="dl-code-row">
+              <code id="termCmdApk"></code>
+              <button class="cmd-copy-btn" id="termCopyApk"><span class="material-symbols-rounded">content_copy</span></button>
+            </div>
+          </div>
+          <div class="dl-term-box">
+            <div class="dl-term-label">CMD / Linux — cURL (CLI Node.js Portable)</div>
+            <div class="dl-code-row">
+              <code id="termCmdCli"></code>
+              <button class="cmd-copy-btn" id="termCopyCli"><span class="material-symbols-rounded">content_copy</span></button>
             </div>
           </div>
         </div>
@@ -111,35 +155,68 @@
 
     <script src="/js/version-manager.js"></script>
     <script>
-      // Fitur integrasi dinamis ke Github Release API (jika terdeteksi version-manager)
-      if (typeof window.versionManager !== 'undefined') {
-        const updateLinks = setInterval(() => {
-          if (window.versionManager.releases && window.versionManager.releases.length > 0) {
-            clearInterval(updateLinks);
-            document.querySelectorAll('a[download]').forEach(a => {
-               const href = a.getAttribute('href');
-               if (href.includes('setup-x64')) a.href = window.versionManager.getDownloadUrl('windows', 'setup');
-               else if (href.includes('portable-x64')) a.href = window.versionManager.getDownloadUrl('windows', 'portable');
-            });
-            console.log("Download links hydrated from GitHub Release");
-          }
-        }, 500);
+      // Hydrate terminal commands & download links directly from app-version.json
+      async function hydrateDownloads() {
+        let d;
+        try {
+          const res = await fetch('/app-version.json');
+          d = await res.json();
+        } catch(e) { console.warn('Could not load app-version.json', e); return; }
+
+        // -- version badge --
+        const badge = document.getElementById('terminalVersionBadge');
+        if (badge) badge.textContent = 'v' + d.version;
+
+        // -- download button hrefs --
+        document.querySelectorAll('a[download]').forEach(a => {
+          const href = a.getAttribute('href');
+          if (href.includes('Setup-'))       a.href = d.downloads.windows?.setup?.url    || a.href;
+          else if (href.includes('Portable-'))a.href = d.downloads.windows?.portable?.url || a.href;
+          else if (href.includes('.apk'))     a.href = d.downloads.android?.url           || a.href;
+          else if (href.includes('cli-node')) a.href = d.downloads.cli?.node?.url         || a.href;
+          else if (href.includes('cli-python'))a.href= d.downloads.cli?.python?.url       || a.href;
+          else if (href.includes('.msi'))     a.href = d.downloads.windows?.msi?.url      || a.href;
+        });
+
+        // -- terminal commands --
+        const winUrl  = d.downloads.windows?.setup?.url    || '';
+        const winFile = d.downloads.windows?.setup?.filename|| 'IoT-Listrik-Dashboard-Setup.exe';
+        const apkUrl  = d.downloads.android?.url            || '';
+        const apkFile = d.downloads.android?.filename       || 'IoT-Listrik-Dashboard.apk';
+        const cliUrl  = d.downloads.cli?.node?.url          || '';
+        const cliFile = d.downloads.cli?.node?.filename     || 'iot-listrik-cli-node.exe';
+
+        const cmds = {
+          termCmdPS:   `Invoke-WebRequest -Uri "${winUrl}" -OutFile "${winFile}"`,
+          termCmdCurl: `curl -L -o "${winFile}" "${winUrl}"`,
+          termCmdApk:  `curl -L -o "${apkFile}" "${apkUrl}"`,
+          termCmdCli:  `curl -L -o "${cliFile}" "${cliUrl}"`,
+        };
+
+        Object.entries(cmds).forEach(([id, cmd]) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = cmd;
+          const btn = document.getElementById(id.replace('Cmd', 'Copy'));
+          if (btn) btn.setAttribute('data-copy', cmd);
+        });
+
+        console.log('[Downloads] Hydrated for v' + d.version);
       }
 
-      // Simple copy button handler
-      const copyButtons = document.querySelectorAll('.cmd-copy-btn');
-      copyButtons.forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const text = btn.getAttribute('data-copy');
-          try {
-            await navigator.clipboard.writeText(text);
-            const icon = btn.querySelector('.material-symbols-rounded');
-            icon.textContent = 'check';
-            setTimeout(() => icon.textContent = 'content_copy', 2000);
-          } catch (err) {
-            console.error('Failed to copy', err);
-          }
-        });
+      // Run immediately — script is at bottom of body so DOM is ready
+      hydrateDownloads();
+
+      // Copy button handler — event delegation (supports dynamically filled buttons)
+      document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.cmd-copy-btn');
+        if (!btn) return;
+        const text = btn.getAttribute('data-copy');
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          const icon = btn.querySelector('.material-symbols-rounded');
+          if (icon) { icon.textContent = 'check'; setTimeout(() => icon.textContent = 'content_copy', 2000); }
+        } catch (err) { console.error('Failed to copy', err); }
       });</script>
     <script>
       // PWA Install Logic for Downloads Page

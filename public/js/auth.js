@@ -167,7 +167,14 @@ async function logout() {
     localStorage.setItem('iot_alarm_disable', '1');
   } catch (_) {}
   await signOut(auth);
-  window.location.href = '/login';
+  
+  // Redirect ke /login jika di dalam PWA, ke / (Homepage) jika di browser biasa
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (isStandalone) {
+    window.location.href = '/login';
+  } else {
+    window.location.href = '/';
+  }
 }
 
 export {

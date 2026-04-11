@@ -52,13 +52,14 @@
 .dl-icon-android { font-size: 40px; color: #3DDC84; margin-bottom: 16px; }
 .dl-icon-pwa { font-size: 40px; color: #FFCA28; margin-bottom: 16px; }
 .dl-icon-windows { font-size: 40px; color: #00A4EF; margin-bottom: 16px; }
+.dl-icon-cli { font-size: 40px; color: #38bdf8; margin-bottom: 16px; }
 
 /* Desktop arrangement */
 @media(min-width: 1024px){
   .dl-grid { 
     grid-template-columns: 1fr 1fr; 
   }
-  .dl-windows-card { 
+  .dl-windows-card, .dl-cli-card { 
     grid-column: 1 / -1; 
   }
 }

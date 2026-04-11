@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "buildDate": "2026-04-09",
+  "downloads": {
+    "android": {
+      "filename": "IoT-Listrik-Dashboard-1.0.0.apk",
+      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.apk",
+      "size": "6.80 MB"
+    },
+    "windows": {
+      "setup": {
+        "filename": "IoT-Listrik-Dashboard-Setup-1.0.0.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup-1.0.0.exe",
+        "size": "263.35 MB",
+        "architectures": ["ia32", "x64", "arm64"],
+        "type": "unified"
+      },
+      "portable": {
+        "filename": "IoT-Listrik-Dashboard-Portable-1.0.0.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable-1.0.0.exe",
+        "size": "72.22 MB",
+        "architectures": ["ia32", "x64", "arm64"],
+        "type": "unified"
+      },
+      "msi": {
+        "filename": "IoT-Listrik-Dashboard-1.0.0.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.msi",
+        "size": "94.10 MB",
+        "architectures": ["x64"],
+        "type": "installer"
+      }
+    },
+    "cli": {
+      "node": {
+        "filename": "iot-listrik-cli-node.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-node.exe",
+        "size": "165.60 MB"
+      },
+      "python": {
+        "filename": "iot-listrik-cli-python.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-python.exe",
+        "size": "39.00 MB"
+      }
+    }
+  },
+  "notes": "Update version number to automatically sync download links across the website and CLI. Includes CLI Portable executables."
+}

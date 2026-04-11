@@ -30,6 +30,10 @@ class VersionManager {
     switch (platform.toLowerCase()) {
       case "android":
         return this.versionData.downloads.android?.url;
+      case "cli":
+        if (type === "node") return this.versionData.downloads.cli?.node?.url;
+        if (type === "python") return this.versionData.downloads.cli?.python?.url;
+        return null;
       case "windows":
         if (type === "setup") {
           return this.versionData.downloads.windows?.setup?.url;
@@ -51,6 +55,10 @@ class VersionManager {
     switch (platform.toLowerCase()) {
       case "android":
         return this.versionData.downloads.android?.filename;
+      case "cli":
+        if (type === "node") return this.versionData.downloads.cli?.node?.filename;
+        if (type === "python") return this.versionData.downloads.cli?.python?.filename;
+        return null;
       case "windows":
         if (type === "setup") {
           return this.versionData.downloads.windows?.setup?.filename;

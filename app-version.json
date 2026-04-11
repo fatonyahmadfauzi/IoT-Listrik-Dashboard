@@ -29,7 +29,19 @@
         "architectures": ["x64"],
         "type": "installer"
       }
+    },
+    "cli": {
+      "node": {
+        "filename": "iot-listrik-cli-node.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-node.exe",
+        "size": "165.60 MB"
+      },
+      "python": {
+        "filename": "iot-listrik-cli-python.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-python.exe",
+        "size": "39.00 MB"
+      }
     }
   },
-  "notes": "Update version number to automatically sync download links across the website and CLI. Links now point directly to GitHub Releases. All Windows executables contain all architecture variants (32-bit, 64-bit, ARM)."
+  "notes": "Update version number to automatically sync download links across the website and CLI. Includes CLI Portable executables."
 }

@@ -1,0 +1,108 @@
+/* Features layout matched to Homepage styling with modern vivid colors */
+.feat-page-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 120px var(--page-gutter) 80px;
+}
+
+.feat-hero {
+  margin-bottom: 60px;
+}
+
+.feat-hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.feat-hero p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* Glassmorphism clean cards */
+.feat-clean-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 40px 32px;
+  display: flex;
+  flex-direction: column;
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.feat-clean-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, transparent);
+  transition: all var(--transition);
+}
+
+.feat-clean-card:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hi);
+  transform: translateY(-4px);
+}
+
+.feat-clean-card:hover::before {
+  background: linear-gradient(90deg, var(--brand), var(--cyan));
+}
+
+.feat-clean-card h3 {
+  font-size: 1.4rem;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.feat-clean-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+.feat-icon-wrap {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 24px;
+  font-size: 28px;
+}
+
+.feat-icon-wrap .material-symbols-rounded {
+  font-size: 28px;
+}
+
+/* Colorful icons */
+.icon-monitoring { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+.icon-shield { background: rgba(34, 197, 94, 0.15); color: #86EFAC; }
+.icon-security { background: rgba(245, 158, 11, 0.15); color: #FCD34D; }
+.icon-history { background: rgba(168, 85, 247, 0.15); color: #D8B4FE; }
+.icon-platform { background: rgba(236, 72, 153, 0.15); color: #F9A8D4; }
+.icon-bot { background: rgba(14, 165, 233, 0.15); color: #7DD3FC; }
+
+/* Desktop arrangement */
+@media(min-width: 1024px){
+  .feat-grid { 
+    grid-template-columns: repeat(3, 1fr); 
+  }
+}

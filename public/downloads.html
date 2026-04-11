@@ -18,932 +18,164 @@
     />
   </head>
   <body class="page-bg downloads-page">
-    <header class="landing-nav-wrap">
-      <nav class="landing-nav">
-        <a href="/" class="landing-brand">
-          <span class="material-symbols-rounded">bolt</span>
-          <span>IoT Listrik Dashboard</span>
-        </a>
-        <button id="menuBtn" class="landing-menu-btn" aria-label="Toggle menu">
-          <span class="material-symbols-rounded">menu</span>
-        </button>
-        <div id="navLinks" class="landing-links">
-          <a href="/">Beranda</a>
-          <a href="/#monitoring">Fitur</a>
-          <a href="/downloads">Download</a>
-          <a href="/login" class="btn btn-primary btn-sm">
-            <span class="material-symbols-rounded">login</span>Get Started
-          </a>
-        </div>
-      </nav>
-    </header>
+    <app-navbar></app-navbar>
 
-    <main class="download-showcase-main">
-      <section class="download-showcase-hero">
-        <h1>Downloads</h1>
-        <p>Download latest build directly from project releases.</p>
+                <main class="dl-page-main">
+      <!-- HERO -->
+      <section class="dl-hero text-center">
+        <h1 class="landing-title">Unduhan Aplikasi</h1>
+        <p class="landing-subtitle">
+          Aplikasi resmi dan alat bantu IoT Listrik Dashboard untuk seluruh perangkat.
+        </p>
       </section>
 
-      <div class="mobile-platform-select-wrap">
-        <label class="mobile-platform-label" for="mobilePlatformSelect"
-          >Select a Platform</label
-        >
-        <div class="mobile-platform-select-outer">
-          <select id="mobilePlatformSelect" class="mobile-platform-select">
-            <option value="windowsPanel">Windows</option>
-            <option value="pythonPanel">Python SDK</option>
-          </select>
-          <span
-            class="material-symbols-rounded mobile-select-chevron"
-            aria-hidden="true"
-            >expand_more</span
-          >
+      <!-- DOWNLOAD GRID -->
+      <section class="dl-grid">
+        
+        <!-- Android -->
+        <div class="dl-clean-card">
+          <span class="material-symbols-rounded dl-icon-android">android</span>
+          <h3>Android APK</h3>
+          <p>Aplikasi native Android berbasis Kotlin dengan monitoring realtime, kontrol relay, dan notifikasi cepat.</p>
+          <div class="dl-card-actions">
+            <a href="/downloads/android/iot-listrik-dashboard.apk" download class="btn btn-android">Download APK</a>
+          </div>
+          <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+            <strong>Min. Requirements:</strong> Android 8.0 (Oreo) atau lebih baru, 2GB RAM.
+          </div>
         </div>
-      </div>
 
-      <section class="download-showcase-layout">
-        <aside
-          class="download-showcase-sidebar"
-          aria-label="Download categories"
-        >
-          <h3>AGENTS</h3>
-          <ul>
-            <li
-              class="active"
-              role="button"
-              tabindex="0"
-              data-download-panel="windowsPanel"
-            >
-              <span class="windows-sidebar-logo" aria-hidden="true">
-                <svg viewBox="0 0 32 32" class="shrink-0 size-5">
-                  <path
-                    fill="currentColor"
-                    d="m4 7.32 9.8-1.34.01 9.46-9.8.06L4 7.32Z"
-                  ></path>
-                  <path
-                    fill="currentColor"
-                    d="m15 5.8 13-1.9v11.42l-13 .1V5.81Z"
-                  ></path>
-                  <path
-                    fill="currentColor"
-                    d="m13.8 16.53.01 9.47-9.8-1.35v-8.18l9.8.06Z"
-                  ></path>
-                  <path
-                    fill="currentColor"
-                    d="M28 16.62v11.36l-13-1.83-.03-9.55 13.03.02Z"
-                  ></path>
-                </svg>
-              </span>
-              <span>Windows</span>
-            </li>
-          </ul>
-          <h3>SDKS</h3>
-          <ul>
-            <li
-              class="sdk-python-item"
-              role="button"
-              tabindex="0"
-              data-download-panel="pythonPanel"
-            >
-              <span class="python-logo" aria-hidden="true">
-                <svg viewBox="0 0 32 32" role="img" aria-label="Python logo">
-                  <path
-                    fill="#fff"
-                    d="M15.85 2.5c-1.08 0-2.1.1-3 .26-2.66.48-3.14 1.49-3.14 3.34v2.45h6.27v.81H7.36c-1.82 0-3.42 1.13-3.92 3.26-.57 2.45-.6 3.97 0 6.53.45 1.9 1.51 3.26 3.33 3.26h2.16v-2.94c0-2.12 1.8-3.99 3.92-3.99h6.26a3.2 3.2 0 0 0 3.14-3.26V6.1c0-1.74-1.44-3.05-3.14-3.34a19.1 19.1 0 0 0-3.26-.26Zm-3.4 1.97c.65 0 1.18.55 1.18 1.23a1.2 1.2 0 0 1-1.18 1.22 1.2 1.2 0 0 1-1.17-1.22c0-.68.52-1.23 1.17-1.23Z"
-                  ></path>
-                  <path
-                    fill="#fff"
-                    d="M23.03 9.36v2.86a4.07 4.07 0 0 1-3.92 4.07h-6.26a3.24 3.24 0 0 0-3.14 3.26v6.12c0 1.74 1.48 2.76 3.14 3.26 1.98.6 3.89.7 6.26 0 1.58-.46 3.14-1.4 3.14-3.26v-2.45h-6.27v-.81h9.4c1.83 0 2.5-1.3 3.14-3.26.65-2.01.63-3.95 0-6.53-.45-1.86-1.31-3.26-3.14-3.26h-2.35Zm-3.52 15.5c.65 0 1.17.54 1.17 1.21a1.2 1.2 0 0 1-1.17 1.23 1.2 1.2 0 0 1-1.18-1.23c0-.67.53-1.22 1.18-1.22Z"
-                  ></path>
-                </svg>
-              </span>
-              <span>Python</span>
-            </li>
-          </ul>
-        </aside>
+        <!-- Web PWA -->
+        <div class="dl-clean-card">
+          <span class="material-symbols-rounded dl-icon-pwa">public</span>
+          <h3>Web (PWA)</h3>
+          <p>Akses dashboard dari browser tanpa instalasi. Mendukung ditambahkan ke layar Utama (Progressive Web App).</p>
+          <div class="dl-card-actions" style="gap: 12px; flex-wrap: wrap;">
+            <a href="/login" class="btn btn-secondary">Buka Dashboard</a>
+            <button id="pwaInstallBtnDl" class="btn" style="display: none; background: #FFCA28; color: #000; font-weight: 600; box-shadow: 0 4px 14px rgba(255, 202, 40, 0.4); border:none; padding: 12px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;">Install PWA</button>
+          </div>
+          <p id="pwaHintDl" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; margin-bottom: 0;"></p>
+          <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+            <strong>Min. Requirements:</strong> Chrome / Edge / Safari (Versi terbaru).
+          </div>
+        </div>
 
-        <article
-          id="windowsPanel"
-          class="download-showcase-panel card download-category-panel active"
-        >
-          <div class="download-showcase-panel-head">
-            <div class="download-os-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 32 32"
-                class="windows-logo-svg"
-                role="img"
-                aria-label="Windows logo"
-              >
-                <path
-                  fill="#F8682C"
-                  d="m4 7.32 9.8-1.34.01 9.46-9.8.06L4 7.32Z"
-                ></path>
-                <path
-                  fill="#91C300"
-                  d="m15 5.8 13-1.9v11.42l-13 .1V5.81Z"
-                ></path>
-                <path
-                  fill="#00B4F1"
-                  d="m13.8 16.53.01 9.47-9.8-1.35v-8.18l9.8.06Z"
-                ></path>
-                <path
-                  fill="#FFC300"
-                  d="M28 16.62v11.36l-13-1.83-.03-9.55 13.03.02Z"
-                ></path>
-              </svg>
-            </div>
-            <div>
-              <span class="download-tag">Agent</span>
-              <h2>Windows</h2>
-            </div>
+        <!-- Windows Desktop -->
+        <div class="dl-clean-card dl-windows-card">
+          <span class="material-symbols-rounded dl-icon-windows">window</span>
+          <h3>Windows Desktop</h3>
+          <p>Aplikasi PC berbasis Electron untuk laboratorium atau monitoring skala besar terpusat.</p>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;">
+            <a href="/downloads/windows/iot-listrik-dashboard-setup-x64.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download for x64</a>
+            <a href="/downloads/windows/iot-listrik-dashboard-setup-arm64.exe" download class="btn" style="background: #E8EAED; color: #202124; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download for ARM64</a>
           </div>
-          <h3 class="download-installation-title">Instalasi</h3>
-          <div
-            class="download-inline-tabs"
-            role="tablist"
-            aria-label="Opsi instalasi"
-          >
-            <a
-              href="#"
-              role="tab"
-              class="active"
-              data-tab-target="downloadTabPanel"
-              >Download</a
-            >
-            <a href="#" role="tab" data-tab-target="powershellTabPanel"
-              >PowerShell</a
-            >
-            <a href="#" role="tab" data-tab-target="cmdTabPanel">CMD</a>
+          <div style="font-size: 0.9rem; margin-top: 8px;">
+            <span style="color: var(--text-muted); margin-right: 8px;">Opsi lain:</span>
+            <a href="/downloads/windows/iot-listrik-dashboard-setup-ia32.exe" download style="color: var(--text-muted); text-decoration: underline; margin-right: 12px; transition: 0.2s;">.exe (x86)</a>
+            <a href="/downloads/windows/iot-listrik-dashboard-setup-x64.msi" download style="color: var(--text-muted); text-decoration: underline; transition: 0.2s;">.msi (x64)</a>
           </div>
-          <div class="download-tab-panels">
-            <section
-              id="downloadTabPanel"
-              role="tabpanel"
-              class="download-tab-panel active"
-            >
-              <p class="download-panel-desc download-arch-intro">
-                Download executable sesuai arsitektur perangkat kamu.
-              </p>
-              <div
-                class="download-arch-list"
-                aria-label="Architecture downloads"
-              >
-                <div class="download-arch-row">
-                  <label for="archSelectSetup">Setup</label>
-                  <div class="download-arch-controls">
-                    <select
-                      id="archSelectSetup"
-                      class="download-arch-select"
-                      data-kind="setup"
-                    >
-                      <option value="x64">Download for Windows (64-bit)</option>
-                      <option value="ia32">
-                        Download for Windows (32-bit)
-                      </option>
-                      <option value="arm64">
-                        Download for Windows (ARM64)
-                      </option>
-                    </select>
-                    <a
-                      class="download-action-btn"
-                      href="/downloads/windows/iot-listrik-dashboard-setup-x64.exe"
-                      download
-                      aria-label="Download"
-                    >
-                      <span class="material-symbols-rounded" aria-hidden="true"
-                        >download</span
-                      ><span class="download-action-btn-text">Download</span>
-                    </a>
-                  </div>
-                </div>
-                <div class="download-arch-row">
-                  <label for="archSelectPortable">Portable</label>
-                  <div class="download-arch-controls">
-                    <select
-                      id="archSelectPortable"
-                      class="download-arch-select"
-                      data-kind="portable"
-                    >
-                      <option value="x64">Download for Windows (64-bit)</option>
-                      <option value="ia32">
-                        Download for Windows (32-bit)
-                      </option>
-                      <option value="arm64">
-                        Download for Windows (ARM64)
-                      </option>
-                    </select>
-                    <a
-                      class="download-action-btn"
-                      href="/downloads/windows/iot-listrik-dashboard-portable-x64.exe"
-                      download
-                      aria-label="Download"
-                    >
-                      <span class="material-symbols-rounded" aria-hidden="true"
-                        >download</span
-                      ><span class="download-action-btn-text">Download</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </section>
-            <section
-              id="powershellTabPanel"
-              role="tabpanel"
-              class="download-tab-panel"
-            >
-              <div class="cmd-block cmd-block-list">
-                <p class="cmd-tab-intro">
-                  Unduh file ke folder saat ini dengan PowerShell (satu perintah
-                  per baris):
-                </p>
-                <div
-                  id="powershellDlCmdList"
-                  class="cmd-command-list"
-                  aria-live="polite"
-                >
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Setup 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >Invoke-WebRequest -Uri
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-setup-x64.exe"
-                        -OutFile "iot-listrik-dashboard-setup-x64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Setup 32-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >Invoke-WebRequest -Uri
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-setup-ia32.exe"
-                        -OutFile "iot-listrik-dashboard-setup-ia32.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Setup ARM 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >Invoke-WebRequest -Uri
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-setup-arm64.exe"
-                        -OutFile "iot-listrik-dashboard-setup-arm64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Portable 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >Invoke-WebRequest -Uri
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-portable-x64.exe"
-                        -OutFile "iot-listrik-dashboard-portable-x64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Portable 32-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >Invoke-WebRequest -Uri
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-portable-ia32.exe"
-                        -OutFile "iot-listrik-dashboard-portable-ia32.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Portable ARM 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >Invoke-WebRequest -Uri
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-portable-arm64.exe"
-                        -OutFile
-                        "iot-listrik-dashboard-portable-arm64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-            <section
-              id="cmdTabPanel"
-              role="tabpanel"
-              class="download-tab-panel"
-            >
-              <div class="cmd-block cmd-block-list">
-                <p class="cmd-tab-intro">
-                  Unduh dengan curl dari CMD atau PowerShell (satu perintah per
-                  baris):
-                </p>
-                <div
-                  id="cmdDlCmdList"
-                  class="cmd-command-list"
-                  aria-live="polite"
-                >
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Setup 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >curl -L -o "iot-listrik-dashboard-setup-x64.exe"
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-setup-x64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Setup 32-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >curl -L -o "iot-listrik-dashboard-setup-ia32.exe"
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-setup-ia32.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Setup ARM 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >curl -L -o "iot-listrik-dashboard-setup-arm64.exe"
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-setup-arm64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Portable 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >curl -L -o "iot-listrik-dashboard-portable-x64.exe"
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-portable-x64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Portable 32-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >curl -L -o "iot-listrik-dashboard-portable-ia32.exe"
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-portable-ia32.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                  <div class="cmd-command-item cmd-dl-row">
-                    <small class="cmd-command-label">Portable ARM 64-Bit</small>
-                    <div class="cmd-command-row">
-                      <code class="cmd-command-code"
-                        >curl -L -o "iot-listrik-dashboard-portable-arm64.exe"
-                        "__ORIGIN__/downloads/windows/iot-listrik-dashboard-portable-arm64.exe"</code
-                      >
-                      <button
-                        class="cmd-copy-btn"
-                        type="button"
-                        data-copy=""
-                        aria-label="Salin perintah"
-                      >
-                        <span
-                          class="material-symbols-rounded"
-                          aria-hidden="true"
-                          >content_copy</span
-                        >
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
+          <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+            <strong>Min. Requirements:</strong> Windows 10/11 (64-bit/ARM), 4GB RAM, 200MB Storage.
           </div>
-          <div class="min-req-section">
-            <h3 class="min-req-title">Minimum Requirements</h3>
-            <ul class="min-req-list">
-              <li>
-                <span class="material-symbols-rounded" aria-hidden="true"
-                  >check</span
-                >
-                <span>Windows 10 or later (64-bit or ARM64)</span>
-              </li>
-              <li>
-                <span class="material-symbols-rounded" aria-hidden="true"
-                  >check</span
-                >
-                <span>x64, ia32, or ARM64 architecture</span>
-              </li>
-              <li>
-                <span class="material-symbols-rounded" aria-hidden="true"
-                  >check</span
-                >
-                <span>Internet connection (first run only)</span>
-              </li>
-            </ul>
-          </div>
-        </article>
+        </div>
 
-        <article
-          id="pythonPanel"
-          class="download-showcase-panel card download-category-panel"
-          hidden
-        >
-          <div class="download-showcase-panel-head">
-            <div class="download-os-icon python-os-icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 32 32"
-                class="python-hero-logo shrink-0 size-14"
-                role="img"
-                aria-label="Python logo"
-              >
-                <path
-                  fill="url(#iotPyGrad1)"
-                  d="M15.85 2.5c-1.08 0-2.1.1-3 .26-2.66.48-3.14 1.49-3.14 3.34v2.45h6.27v.81H7.36c-1.82 0-3.42 1.13-3.92 3.26-.57 2.45-.6 3.97 0 6.53.45 1.9 1.51 3.26 3.33 3.26h2.16v-2.94c0-2.12 1.8-3.99 3.92-3.99h6.26a3.2 3.2 0 0 0 3.14-3.26V6.1c0-1.74-1.44-3.05-3.14-3.34a19.1 19.1 0 0 0-3.26-.26Zm-3.4 1.97c.65 0 1.18.55 1.18 1.23a1.2 1.2 0 0 1-1.18 1.22 1.2 1.2 0 0 1-1.17-1.22c0-.68.52-1.23 1.17-1.23Z"
-                ></path>
-                <path
-                  fill="url(#iotPyGrad2)"
-                  d="M23.03 9.36v2.86a4.07 4.07 0 0 1-3.92 4.07h-6.26a3.24 3.24 0 0 0-3.14 3.26v6.12c0 1.74 1.48 2.76 3.14 3.26 1.98.6 3.89.7 6.26 0 1.58-.46 3.14-1.4 3.14-3.26v-2.45h-6.27v-.81h9.4c1.83 0 2.5-1.3 3.14-3.26.65-2.01.63-3.95 0-6.53-.45-1.86-1.31-3.26-3.14-3.26h-2.35Zm-3.52 15.5c.65 0 1.17.54 1.17 1.21a1.2 1.2 0 0 1-1.17 1.23 1.2 1.2 0 0 1-1.18-1.23c0-.67.53-1.22 1.18-1.22Z"
-                ></path>
-                <defs>
-                  <linearGradient
-                    id="iotPyGrad1"
-                    x1="1.22"
-                    x2="13.45"
-                    y1="1.42"
-                    y2="11.6"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop stop-color="#5A9FD4"></stop>
-                    <stop offset="1" stop-color="#306998"></stop>
-                  </linearGradient>
-                  <linearGradient
-                    id="iotPyGrad2"
-                    x1="14.78"
-                    x2="10.34"
-                    y1="20.8"
-                    y2="14.72"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop stop-color="#FFD43B"></stop>
-                    <stop offset="1" stop-color="#FFE873"></stop>
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-            <div>
-              <span class="download-tag">SDK</span>
-              <h2>Python</h2>
-            </div>
-          </div>
-          <h3 class="download-installation-title">Instalasi</h3>
-          <div class="download-tab-panels">
-            <section
-              id="pyDirectTabPanel"
-              role="region"
-              class="python-direct-panel"
-            >
-              <p class="cmd-tab-intro">
-                Install directly with one command. Choose your platform below:
-              </p>
-              <div
-                class="cmd-command-list python-direct-list"
-                aria-live="polite"
-              >
-                <div class="cmd-command-item">
-                  <small class="cmd-command-label">Windows (PowerShell)</small>
-                  <div class="cmd-command-row">
-                    <code class="cmd-command-code"
-                      >irm
-                      https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.ps1
-                      | iex</code
-                    >
-                    <button
-                      class="cmd-copy-btn"
-                      type="button"
-                      data-copy="irm https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.ps1 | iex"
-                      aria-label="Copy PowerShell command"
-                    >
-                      <span class="material-symbols-rounded" aria-hidden="true"
-                        >content_copy</span
-                      >
-                    </button>
-                  </div>
-                </div>
-                <div class="cmd-command-item">
-                  <small class="cmd-command-label">Windows (CMD)</small>
-                  <div class="cmd-command-row">
-                    <code class="cmd-command-code"
-                      >powershell -Command "irm
-                      https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.ps1
-                      | iex"</code
-                    >
-                    <button
-                      class="cmd-copy-btn"
-                      type="button"
-                      data-copy='powershell -Command "irm https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.ps1 | iex"'
-                      aria-label="Copy CMD command"
-                    >
-                      <span class="material-symbols-rounded" aria-hidden="true"
-                        >content_copy</span
-                      >
-                    </button>
-                  </div>
-                </div>
-                <div class="cmd-command-item">
-                  <small class="cmd-command-label">Linux / macOS / WSL</small>
-                  <div class="cmd-command-row">
-                    <code class="cmd-command-code"
-                      >bash &lt;(curl -sL
-                      https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.sh)</code
-                    >
-                    <button
-                      class="cmd-copy-btn"
-                      type="button"
-                      data-copy="bash &lt;(curl -sL https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.sh)"
-                      aria-label="Copy bash command"
-                    >
-                      <span class="material-symbols-rounded" aria-hidden="true"
-                        >content_copy</span
-                      >
-                    </button>
-                  </div>
-                </div>
-                <div class="cmd-command-item">
-                  <small class="cmd-command-label">Termux</small>
-                  <div class="cmd-command-row">
-                    <code class="cmd-command-code"
-                      >pkg update -y &amp;&amp; pkg install -y bash curl
-                      &amp;&amp; bash &lt;(curl -sL
-                      https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.sh)</code
-                    >
-                    <button
-                      class="cmd-copy-btn"
-                      type="button"
-                      data-copy="pkg update -y &amp;&amp; pkg install -y bash curl &amp;&amp; bash &lt;(curl -sL https://raw.githubusercontent.com/fatonyahmadfauzi/Pixiv-OAuth-Token/master/install.sh)"
-                      aria-label="Copy Termux command"
-                    >
-                      <span class="material-symbols-rounded" aria-hidden="true"
-                        >content_copy</span
-                      >
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-          <div class="min-req-section">
-            <h3 class="min-req-title">Minimum Requirements</h3>
-            <ul class="min-req-list">
-              <li>
-                <span class="material-symbols-rounded" aria-hidden="true"
-                  >check</span
-                >
-                <span>Python 3.11 or later</span>
-              </li>
-              <li>
-                <span class="material-symbols-rounded" aria-hidden="true"
-                  >check</span
-                >
-                <span>pip (included with Python)</span>
-              </li>
-              <li>
-                <span class="material-symbols-rounded" aria-hidden="true"
-                  >check</span
-                >
-                <span>Internet connection</span>
-              </li>
-              <li>
-                <span class="material-symbols-rounded" aria-hidden="true"
-                  >check</span
-                >
-                <span>PowerShell (Windows) or Bash-compatible shell</span>
-              </li>
-            </ul>
-          </div>
-        </article>
       </section>
+
+      <!-- TERMINAL -->
+      <section class="dl-terminal-wrap">
+        <div class="dl-terminal-header">
+          <span class="material-symbols-rounded">terminal</span>
+          <h2>Install via Terminal (Senyap)</h2>
+        </div>
+        <div class="dl-terminal-grid">
+          <div class="dl-term-box">
+            <div class="dl-term-label">PowerShell</div>
+            <div class="dl-code-row">
+              <code>Invoke-WebRequest -Uri "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe" -OutFile "iot-listrik-dashboard.exe"</code>
+              <button class="cmd-copy-btn" data-copy='Invoke-WebRequest -Uri "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe" -OutFile "iot-listrik-dashboard.exe"'><span class="material-symbols-rounded">content_copy</span></button>
+            </div>
+          </div>
+          <div class="dl-term-box">
+            <div class="dl-term-label">CMD / Linux (cURL)</div>
+            <div class="dl-code-row">
+              <code>curl -L -o "iot-listrik-dashboard-setup-x64.exe" "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe"</code>
+              <button class="cmd-copy-btn" data-copy='curl -L -o "iot-listrik-dashboard-setup-x64.exe" "https://iot-listrik-dashboard.vercel.app/downloads/windows/iot-listrik-dashboard-setup-x64.exe"'><span class="material-symbols-rounded">content_copy</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
+
+    <app-footer></app-footer>
 
     <script src="/js/version-manager.js"></script>
     <script>
-      (function initWindowsDownloadCliUrls() {
-        const origin = window.location.origin;
-        document
-          .querySelectorAll(
-            "#powershellDlCmdList .cmd-dl-row, #cmdDlCmdList .cmd-dl-row",
-          )
-          .forEach((row) => {
-            const code = row.querySelector(".cmd-command-code");
-            const btn = row.querySelector(".cmd-copy-btn");
-            if (!code || !btn) return;
-            const text = code.textContent.replace(/__ORIGIN__/g, origin);
-            code.textContent = text;
-            btn.setAttribute("data-copy", text);
-          });
-      })();
-
-      const menuBtn = document.getElementById("menuBtn");
-      const navLinks = document.getElementById("navLinks");
-      if (menuBtn && navLinks) {
-        menuBtn.addEventListener("click", () =>
-          navLinks.classList.toggle("open"),
-        );
+      // Fitur integrasi dinamis ke Github Release API (jika terdeteksi version-manager)
+      if (typeof window.versionManager !== 'undefined') {
+        const updateLinks = setInterval(() => {
+          if (window.versionManager.releases && window.versionManager.releases.length > 0) {
+            clearInterval(updateLinks);
+            document.querySelectorAll('a[download]').forEach(a => {
+               const href = a.getAttribute('href');
+               if (href.includes('setup-x64')) a.href = window.versionManager.getDownloadUrl('windows', 'setup');
+               else if (href.includes('portable-x64')) a.href = window.versionManager.getDownloadUrl('windows', 'portable');
+            });
+            console.log("Download links hydrated from GitHub Release");
+          }
+        }, 500);
       }
 
-      const tabLinks = document.querySelectorAll(
-        ".download-inline-tabs a[data-tab-target]",
-      );
-      const tabPanels = document.querySelectorAll(
-        "#windowsPanel .download-tab-panel",
-      );
-      tabLinks.forEach((a) => {
-        a.addEventListener("click", (e) => {
-          e.preventDefault();
-          const target = a.getAttribute("data-tab-target");
-          tabLinks.forEach((x) => x.classList.toggle("active", x === a));
-          tabPanels.forEach((p) =>
-            p.classList.toggle("active", p.id === target),
-          );
-        });
-      });
-
-      const copyButtons = document.querySelectorAll(".cmd-copy-btn[data-copy]");
-      copyButtons.forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const text = btn.getAttribute("data-copy") || "";
+      // Simple copy button handler
+      const copyButtons = document.querySelectorAll('.cmd-copy-btn');
+      copyButtons.forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const text = btn.getAttribute('data-copy');
           try {
             await navigator.clipboard.writeText(text);
-            const icon = btn.querySelector(".material-symbols-rounded");
-            const prev = icon ? icon.textContent : "";
-            if (icon) icon.textContent = "check";
-            setTimeout(() => {
-              if (icon) icon.textContent = prev || "content_copy";
-            }, 1100);
-          } catch (_) {}
+            const icon = btn.querySelector('.material-symbols-rounded');
+            icon.textContent = 'check';
+            setTimeout(() => icon.textContent = 'content_copy', 2000);
+          } catch (err) {
+            console.error('Failed to copy', err);
+          }
         });
+      });</script>
+    <script>
+      // PWA Install Logic for Downloads Page
+      let deferredPromptDl = null;
+      const pwaBtnDl = document.getElementById("pwaInstallBtnDl");
+      const pwaHintDl = document.getElementById("pwaHintDl");
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPromptDl = e;
+        if (pwaHintDl) pwaHintDl.textContent = "";
+        if (pwaBtnDl) pwaBtnDl.style.display = "inline-flex";
       });
 
-      const categoryButtons = document.querySelectorAll(
-        "[data-download-panel]",
-      );
-      const categoryPanels = document.querySelectorAll(
-        ".download-category-panel",
-      );
-      const mobilePlatformSelect = document.getElementById(
-        "mobilePlatformSelect",
-      );
-      const showPanel = (targetId) => {
-        categoryButtons.forEach((btn) =>
-          btn.classList.toggle(
-            "active",
-            btn.getAttribute("data-download-panel") === targetId,
-          ),
-        );
-        categoryPanels.forEach((panel) => {
-          const active = panel.id === targetId;
-          panel.classList.toggle("active", active);
-          panel.hidden = !active;
-        });
-        if (mobilePlatformSelect) mobilePlatformSelect.value = targetId;
-      };
-      categoryButtons.forEach((btn) => {
-        btn.addEventListener("click", () =>
-          showPanel(btn.getAttribute("data-download-panel")),
-        );
-        if (btn.getAttribute("role") === "button") {
-          btn.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              showPanel(btn.getAttribute("data-download-panel"));
+      if (pwaBtnDl) {
+        pwaBtnDl.addEventListener("click", async () => {
+          if (!deferredPromptDl) {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || "");
+            if (pwaHintDl) {
+              pwaHintDl.textContent = isIOS
+                ? "Di iPhone/iPad: buka Share > Add to Home Screen."
+                : "Install otomatis tidak tersedia.";
             }
-          });
-        }
-      });
-      if (mobilePlatformSelect)
-        mobilePlatformSelect.addEventListener("change", (e) =>
-          showPanel(e.target.value),
-        );
-
-      const makeWindowsLink = (kind, arch) => {
-        if (kind === "msi")
-          return "/downloads/windows/iot-listrik-dashboard-x64.msi";
-        if (kind === "setup")
-          return `/downloads/windows/iot-listrik-dashboard-setup-${arch}.exe`;
-        return `/downloads/windows/iot-listrik-dashboard-portable-${arch}.exe`;
-      };
-
-      const downloadIconHtml =
-        '<span class="material-symbols-rounded" aria-hidden="true">download</span>';
-      const downloadLabelHtml =
-        '<span class="download-action-btn-text">Download</span>';
-
-      // Initialize version manager and update all download links
-      (async () => {
-        if (window.versionManager) {
-          await window.versionManager.loadVersion();
-
-          // Update Windows download links
-          const archSelects = document.querySelectorAll(
-            ".download-arch-select[data-kind]",
-          );
-          archSelects.forEach((selectEl) => {
-            const kind = selectEl.getAttribute("data-kind");
-            const row = selectEl.closest(".download-arch-row");
-            const downloadBtn = row
-              ? row.querySelector("a.download-action-btn")
-              : null;
-            if (!downloadBtn) return;
-
-            const syncLink = () => {
-              const arch = selectEl.value || "x64";
-              // Use version manager to get the correct URL
-              const targetUrl = window.versionManager.getDownloadUrl(
-                "windows",
-                kind === "setup" ? "setup" : "portable",
-              );
-              if (targetUrl) {
-                downloadBtn.setAttribute("href", targetUrl);
-                downloadBtn.classList.remove("is-disabled");
-                downloadBtn.setAttribute("aria-disabled", "false");
-                downloadBtn.setAttribute("aria-label", "Download");
-                downloadBtn.innerHTML = `${downloadIconHtml}${downloadLabelHtml}`;
-              }
-            };
-
-            syncLink();
-            selectEl.addEventListener("change", syncLink);
-          });
-
-          // Update CLI command URLs
-          const updateCliCommands = () => {
-            const origin = window.location.origin;
-            document
-              .querySelectorAll(
-                "#powershellDlCmdList .cmd-dl-row, #cmdDlCmdList .cmd-dl-row",
-              )
-              .forEach((row) => {
-                const code = row.querySelector(".cmd-command-code");
-                const btn = row.querySelector(".cmd-copy-btn");
-                if (!code || !btn) return;
-
-                // Extract the architecture and type from the command label
-                const label = row
-                  .querySelector(".cmd-command-label")
-                  .textContent.toLowerCase();
-                let platform = "windows";
-                let type = "setup";
-
-                if (label.includes("portable")) {
-                  type = "portable";
-                }
-
-                const url = window.versionManager.getDownloadUrl(
-                  platform,
-                  type,
-                );
-                if (url) {
-                  // Replace the hardcoded URL with the version-managed URL
-                  const filename = window.versionManager.getDownloadFilename(
-                    platform,
-                    type,
-                  );
-                  const command = code.textContent.replace(
-                    /\/downloads\/windows\/[^"]+/,
-                    url,
-                  );
-                  code.textContent = command;
-                  btn.setAttribute("data-copy", command);
-                }
-              });
-          };
-
-          updateCliCommands();
-        }
-      })();
+            return;
+          }
+          deferredPromptDl.prompt();
+          const choice = await deferredPromptDl.userChoice;
+          if (pwaHintDl && choice && choice.outcome === "dismissed") {
+            pwaHintDl.textContent = "Install dibatalkan.";
+          }
+          deferredPromptDl = null;
+          pwaBtnDl.style.display = "none";
+        });
+      }
     </script>
-  </body>
+    <script src="/js/components/navbar.js"></script>
+    <script src="/js/components/footer.js"></script>
+    </body>
 </html>

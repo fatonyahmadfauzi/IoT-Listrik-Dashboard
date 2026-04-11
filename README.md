@@ -1,7 +1,23 @@
-# IoT Listrik Dashboard
+# Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time
+
+> **Skripsi S1 — Program Studi Teknik Informatika**  
+> Universitas Bina Insani, Bekasi — 2026
+
+| Info | Detail |
+|------|--------|
+| **Mahasiswa** | Fatony Ahmad Fauzi |
+| **NPM** | 2021310132 |
+| **Kelas** | TI21C |
+| **Dosen Pembimbing** | Dr. Ir. Saludin Muis, M.Kom. |
+| **Ketua Program Studi** | Rully Pramudita, S.T., M.Kom. |
+| **Institusi** | Fakultas Informatika, Universitas Bina Insani |
+
+---
 
 Sistem deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan secara terintegrasi.  
 Platform yang didukung: **Web (PWA)**, **Android**, dan **Windows desktop**.
+
+
 
 ## Ringkasan Fitur
 
@@ -14,7 +30,7 @@ Platform yang didukung: **Web (PWA)**, **Android**, dan **Windows desktop**.
 ## Arsitektur Singkat
 
 ```text
-ESP32 + sensor (SCT-013, ZMPT101B)
+ESP32 + Sensor Arus & Relay
   -> Firebase Realtime Database (/listrik, /logs, /settings, /users)
   -> Client apps:
      - Web dashboard (public/js/*.js, public/css/*.css, PWA)

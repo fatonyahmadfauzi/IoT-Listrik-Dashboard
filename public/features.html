@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fitur Lengkap — IoT Listrik Dashboard</title>
+    <meta
+      name="description"
+      content="Detail lengkap fitur IoT Listrik Dashboard: monitoring realtime, role-based access, automasi kontrol dan lainnya."
+    />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/features.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#070c18" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
+    />
+  </head>
+  <body class="page-bg">
+    <app-navbar></app-navbar>
+
+    <main class="feat-page-main">
+      <!-- HERO -->
+      <section class="feat-hero text-center" style="text-align: center;">
+        <h1>Fitur Lengkap</h1>
+        <p>Eksplorasi seluruh kemampuan Dashboard IoT Listrik. Dirancang untuk kontrol maksimal, keamanan tinggi, dan kemudahan pemantauan.</p>
+      </section>
+
+      <!-- FEAT GRID -->
+      <section class="feat-grid">
+        
+        <!-- 1 -->
+        <div class="feat-clean-card">
+          <div class="feat-icon-wrap icon-monitoring">
+            <span class="material-symbols-rounded">monitoring</span>
+          </div>
+          <h3>Realtime Monitoring</h3>
+          <p>Dapatkan data arus, tegangan, daya semu, dan indikasi kebocoran secara langsung (real-time) dengan latensi sub-detik melalui Firebase RTDB.</p>
+        </div>
+
+        <!-- 2 -->
+        <div class="feat-clean-card">
+          <div class="feat-icon-wrap icon-shield">
+            <span class="material-symbols-rounded">power_settings_new</span>
+          </div>
+          <h3>Auto Cut-off & Proteksi</h3>
+          <p>Relay akan otomatis memutus aliran listrik jika mendeteksi anomali berbahaya atau kebocoran arus untuk mencegah risiko korsleting dan kebakaran.</p>
+        </div>
+
+        <!-- 3 -->
+        <div class="feat-clean-card">
+          <div class="feat-icon-wrap icon-security">
+            <span class="material-symbols-rounded">admin_panel_settings</span>
+          </div>
+          <h3>Role-Based Access</h3>
+          <p>Akses manajemen hanya untuk admin terverifikasi (Auth Email/Pass). User biasa hanya dapat memantau data tanpa bisa melakukan kontrol relay.</p>
+        </div>
+
+        <!-- 4 -->
+        <div class="feat-clean-card">
+          <div class="feat-icon-wrap icon-history">
+            <span class="material-symbols-rounded">history</span>
+          </div>
+          <h3>Log & Histori Kejadian</h3>
+          <p>Semua peristiwa penting seperti trigger kebocoran, perubahan status relay oleh admin, hingga error tercatat rapi secara real-time di panel History.</p>
+        </div>
+
+        <!-- 5 -->
+        <div class="feat-clean-card">
+          <div class="feat-icon-wrap icon-platform">
+            <span class="material-symbols-rounded">devices</span>
+          </div>
+          <h3>Lintas Platform</h3>
+          <p>Nikmati pengalaman yang sama di berbagai perangkat: Desktop Windows/Mac (via Electron App), Android Native (Kotlin), dan Web PWA.</p>
+        </div>
+
+        <!-- 6 -->
+        <div class="feat-clean-card">
+          <div class="feat-icon-wrap icon-bot">
+            <span class="material-symbols-rounded">robot_2</span>
+          </div>
+          <h3>Notifikasi Telegram</h3>
+          <p>Notifikasi peringatan dini (Alert) dan update status sistem langsung terkirim ke Telegram Anda untuk tindakan preventif secara secepat mungkin.</p>
+        </div>
+
+      </section>
+
+      <!-- TELEGRAM INTEGRATION -->
+      <section class="feat-telegram-wrap" style="margin-top: 60px; background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: var(--radius-lg); padding: 40px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50%; left: 50%; transform: translateX(-50%); width: 300px; height: 300px; background: rgba(14, 165, 233, 0.2); filter: blur(80px); border-radius: 50%; z-index: 0;"></div>
+        <div style="position: relative; z-index: 1;">
+          <span class="material-symbols-rounded" style="font-size: 48px; color: #38bdf8; margin-bottom: 16px;">smart_toy</span>
+          <h2 style="font-size: 2rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Integrasi Bot Telegram Tersedia</h2>
+          <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 24px auto; font-size: 1.05rem; line-height: 1.6;">
+            Sistem IoT Listrik Dashboard sudah terhubung secara realtime dengan Telegram. Gunakan bot resmi kami <strong>@iot_kebocoran_bot</strong> untuk menerima alert (peringatan kebocoran/overload) langsung ke HP Anda tanpa harus membuka aplikasi.
+          </p>
+          <a href="https://t.me/iot_kebocoran_bot" target="_blank" class="btn" style="background: #0088cc; color: white; border: none; padding: 12px 28px; font-size: 16px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 136, 204, 0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; transition: transform 0.2s, filter 0.2s;">
+            <span class="material-symbols-rounded" style="font-size: 20px;">send</span>
+            Hubungkan Bot Sekarang
+          </a>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 16px;">
+            Pastikan Anda telah mendaftarkan Chat ID Anda di halaman Pengaturan Dashboard agar notifikasi dapat terkirim.
+          </p>
+        </div>
+      </section>
+      
+      <!-- CTA -->
+      <section style="margin-top: 80px; text-align: center;">
+        <h2 style="font-size: 1.8rem; margin-bottom: 24px;">Siap memantau sistem Anda?</h2>
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+            <a href="/login" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Buka Dashboard</a>
+            <a href="/downloads" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px;">Download App</a>
+        </div>
+      </section>
+
+    </main>
+
+    <app-footer></app-footer>
+
+    <script src="/js/components/navbar.js"></script>
+    <script src="/js/components/footer.js"></script>
+  </body>
+</html>

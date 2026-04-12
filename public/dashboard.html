@@ -108,7 +108,7 @@
             <button id="installBtn" class="btn btn-ghost btn-sm hidden">
               <span class="material-symbols-rounded">download</span>Install App
             </button>
-            <span id="lastUpdated" class="text-sm text-muted">—</span>
+            <span id="lastUpdated" class="text-sm text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">—</span>
           </div>
         </header>
 
@@ -185,12 +185,12 @@
                 >
               </div>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 12px">
-              <button id="relayOnBtn" class="btn btn-success">
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+              <button id="relayOnBtn" class="btn btn-success" style="flex:1;min-width:140px;">
                 <span class="material-symbols-rounded">toggle_on</span>Nyalakan
                 Relay
               </button>
-              <button id="relayOffBtn" class="btn btn-danger">
+              <button id="relayOffBtn" class="btn btn-danger" style="flex:1;min-width:140px;">
                 <span class="material-symbols-rounded">toggle_off</span>Matikan
                 Relay
               </button>

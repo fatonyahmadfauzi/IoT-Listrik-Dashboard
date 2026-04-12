@@ -71,7 +71,7 @@
         <div class="section-header">
           <div class="section-title">Grafik Riwayat (50 data terakhir)</div>
         </div>
-        <div class="chart-container">
+        <div class="chart-container" style="height: clamp(180px, 35vw, 300px);">
           <canvas id="historyChart"></canvas>
         </div>
       </div>
@@ -80,8 +80,8 @@
       <div class="section-card glass">
         <div class="section-header">
           <div class="section-title">Tabel Log Event</div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <select id="filterStatus" class="form-select" style="width:150px;">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+            <select id="filterStatus" class="form-select" style="min-width:130px;flex:1;max-width:200px;">
               <option value="ALL">Semua Status</option>
               <option value="NORMAL">NORMAL</option>
               <option value="WARNING">WARNING</option>

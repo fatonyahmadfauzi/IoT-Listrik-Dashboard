@@ -44,7 +44,7 @@
           <div class="feat-icon-wrap icon-shield">
             <span class="material-symbols-rounded">power_settings_new</span>
           </div>
-          <h3>Auto Cut-off & Proteksi</h3>
+          <h3>Auto Cut-off &amp; Proteksi</h3>
           <p>Relay akan otomatis memutus aliran listrik jika mendeteksi anomali berbahaya atau kebocoran arus untuk mencegah risiko korsleting dan kebakaran.</p>
         </div>
 
@@ -62,7 +62,7 @@
           <div class="feat-icon-wrap icon-history">
             <span class="material-symbols-rounded">history</span>
           </div>
-          <h3>Log & Histori Kejadian</h3>
+          <h3>Log &amp; Histori Kejadian</h3>
           <p>Semua peristiwa penting seperti trigger kebocoran, perubahan status relay oleh admin, hingga error tercatat rapi secara real-time di panel History.</p>
         </div>
 
@@ -80,37 +80,62 @@
           <div class="feat-icon-wrap icon-bot">
             <span class="material-symbols-rounded">robot_2</span>
           </div>
-          <h3>Notifikasi Telegram</h3>
-          <p>Notifikasi peringatan dini (Alert) dan update status sistem langsung terkirim ke Telegram Anda untuk tindakan preventif secara secepat mungkin.</p>
+          <h3>Notifikasi Multi-Channel</h3>
+          <p>Alert dikirim secara real-time ke <strong>Telegram</strong> dan <strong>Discord</strong> (4 channel terpisah: alerts, relay, monitoring, logs). Dikonfigurasi langsung dari admin panel tanpa menyentuh kode.</p>
         </div>
 
       </section>
 
-      <!-- TELEGRAM INTEGRATION -->
-      <section class="feat-telegram-wrap" style="margin-top: 60px; background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: var(--radius-lg); padding: 40px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -50%; left: 50%; transform: translateX(-50%); width: 300px; height: 300px; background: rgba(14, 165, 233, 0.2); filter: blur(80px); border-radius: 50%; z-index: 0;"></div>
-        <div style="position: relative; z-index: 1;">
-          <span class="material-symbols-rounded" style="font-size: 48px; color: #38bdf8; margin-bottom: 16px;">smart_toy</span>
-          <h2 style="font-size: 2rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">Integrasi Bot Telegram Tersedia</h2>
-          <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 24px auto; font-size: 1.05rem; line-height: 1.6;">
-            Sistem IoT Listrik Dashboard sudah terhubung secara realtime dengan Telegram. Gunakan bot resmi kami <strong>@iot_kebocoran_bot</strong> untuk menerima alert (peringatan kebocoran/overload) langsung ke HP Anda tanpa harus membuka aplikasi.
-          </p>
-          <a href="https://t.me/iot_kebocoran_bot" target="_blank" class="btn" style="background: #0088cc; color: white; border: none; padding: 12px 28px; font-size: 16px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0, 136, 204, 0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; transition: transform 0.2s, filter 0.2s;">
-            <span class="material-symbols-rounded" style="font-size: 20px;">send</span>
-            Hubungkan Bot Sekarang
-          </a>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 16px;">
-            Pastikan Anda telah mendaftarkan Chat ID Anda di halaman Pengaturan Dashboard agar notifikasi dapat terkirim.
-          </p>
+      <!-- NOTIFICATION INTEGRATIONS -->
+      <section class="feat-notif-grid">
+
+        <!-- Telegram -->
+        <div style="background: rgba(0, 136, 204, 0.07); border: 1px solid rgba(0, 136, 204, 0.25); border-radius: var(--radius-lg); padding: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -40%; left: 50%; transform: translateX(-50%); width: 220px; height: 220px; background: rgba(0,136,204,0.18); filter: blur(60px); border-radius: 50%; z-index: 0;"></div>
+          <div style="position: relative; z-index: 1;">
+            <span class="material-symbols-rounded" style="font-size: 44px; color: #38bdf8; margin-bottom: 12px;">smart_toy</span>
+            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;">Bot Telegram</h2>
+            <p style="color: var(--text-secondary); margin: 0 auto 20px auto; font-size: 0.95rem; line-height: 1.6;">
+              Gunakan <strong>@iot_kebocoran_bot</strong> untuk menerima alert kebocoran/overload langsung ke HP Anda tanpa membuka aplikasi.
+            </p>
+            <a href="https://t.me/iot_kebocoran_bot" target="_blank" class="btn" style="background: #0088cc; color: white; border: none; padding: 10px 24px; font-size: 15px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,136,204,0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+              <span class="material-symbols-rounded" style="font-size: 18px;">send</span>
+              Hubungkan Bot
+            </a>
+          </div>
         </div>
+
+        <!-- Discord -->
+        <div style="background: rgba(88,101,242,0.07); border: 1px solid rgba(88,101,242,0.25); border-radius: var(--radius-lg); padding: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; overflow: hidden;">
+          <div style="position: absolute; top: -40%; left: 50%; transform: translateX(-50%); width: 220px; height: 220px; background: rgba(88,101,242,0.18); filter: blur(60px); border-radius: 50%; z-index: 0;"></div>
+          <div style="position: relative; z-index: 1;">
+            <span class="material-symbols-rounded" style="font-size: 44px; color: #7289da; margin-bottom: 12px;">forum</span>
+            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;">Discord Webhook</h2>
+            <p style="color: var(--text-secondary); margin: 0 auto 20px auto; font-size: 0.95rem; line-height: 1.6;">
+              Notifikasi ke <strong>4 channel Discord</strong> berbeda: <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#alerts</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#relay</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#monitoring</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#logs</code>. Dikonfigurasi via admin settings, tanpa Firebase Billing.
+            </p>
+            <a href="/settings" class="btn" style="background: linear-gradient(135deg,#5865F2,#7289da); color: white; border: none; padding: 10px 24px; font-size: 15px; border-radius: 999px; box-shadow: 0 4px 14px rgba(88,101,242,0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+              <span class="material-symbols-rounded" style="font-size: 18px;">settings</span>
+              Konfigurasi Webhook
+            </a>
+            <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn" style="background: transparent; color: #7289da; border: 1px solid rgba(114,137,218,0.4); padding: 10px 24px; font-size: 15px; border-radius: 999px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; margin-top: 10px;">
+              <span class="material-symbols-rounded" style="font-size: 18px;">group</span>
+              Join Server Discord
+            </a>
+          </div>
+        </div>
+
       </section>
-      
+
       <!-- CTA -->
-      <section style="margin-top: 80px; text-align: center;">
-        <h2 style="font-size: 1.8rem; margin-bottom: 24px;">Siap memantau sistem Anda?</h2>
-        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-            <a href="/login" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Buka Dashboard</a>
-            <a href="/downloads" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px;">Download App</a>
+      <section class="feat-cta-section">
+        <h2>Siap memantau sistem Anda?</h2>
+        <div class="feat-cta-actions">
+          <a href="/login" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Buka Dashboard</a>
+          <a href="/downloads" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px;">Download App</a>
+          <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn" style="padding: 14px 28px; font-size: 16px; background: linear-gradient(135deg,#5865F2,#7289da); color:white; border:none; border-radius: 999px; box-shadow: 0 4px 14px rgba(88,101,242,0.35); text-decoration:none; display:inline-flex; align-items:center; gap:8px; font-weight:600;">
+            <span class="material-symbols-rounded" style="font-size:18px;">forum</span> Join Discord
+          </a>
         </div>
       </section>
 
@@ -122,3 +147,4 @@
     <script src="/js/components/footer.js"></script>
   </body>
 </html>
+

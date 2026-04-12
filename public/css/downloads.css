@@ -65,7 +65,7 @@
 }
 
 /* Actions */
-.dl-card-actions { display: flex; }
+.dl-card-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .dl-card-actions .btn { padding: 12px 24px; }
 
 .dl-windows-actions {
@@ -176,6 +176,7 @@
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.85rem;
   word-break: break-all;
+  overflow-wrap: break-word;
   line-height: 1.5;
 }
 
@@ -195,4 +196,46 @@
 .cmd-copy-btn:hover {
   background: rgba(255,255,255,0.1);
   color: var(--text-primary);
+}
+
+/* ── Inline Windows buttons (pill style) responsive fix ──────── */
+.dl-windows-btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.dl-windows-btn-row .btn {
+  flex: 1;
+  min-width: 160px;
+  justify-content: center;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .dl-page-main {
+    padding: 100px var(--page-gutter) 60px;
+  }
+  .dl-hero {
+    margin-bottom: 40px;
+  }
+  .dl-clean-card {
+    padding: 24px 18px;
+  }
+  .dl-terminal-wrap {
+    padding: 24px 16px;
+  }
+  .dl-windows-btn-row .btn,
+  .dl-card-actions .btn {
+    width: 100%;
+    flex: unset;
+    min-width: 0;
+    justify-content: center;
+  }
+  .dl-term-box {
+    padding: 14px;
+  }
+  .dl-code-row code {
+    font-size: 0.78rem;
+  }
 }

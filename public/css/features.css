@@ -29,7 +29,7 @@
 
 .feat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 24px;
 }
 
@@ -100,9 +100,78 @@
 .icon-platform { background: rgba(236, 72, 153, 0.15); color: #F9A8D4; }
 .icon-bot { background: rgba(14, 165, 233, 0.15); color: #7DD3FC; }
 
+/* ── Notification Integrations Grid ────────────────────────── */
+.feat-notif-grid {
+  margin-top: 60px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+/* ── CTA Section ────────────────────────────────────────────── */
+.feat-cta-section {
+  margin-top: 80px;
+  text-align: center;
+}
+
+.feat-cta-section h2 {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  margin-bottom: 24px;
+}
+
+.feat-cta-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 /* Desktop arrangement */
-@media(min-width: 1024px){
-  .feat-grid { 
-    grid-template-columns: repeat(3, 1fr); 
+@media (min-width: 1024px) {
+  .feat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .feat-clean-card {
+    padding: 28px 22px;
+  }
+}
+
+@media (max-width: 700px) {
+  .feat-notif-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .feat-cta-section {
+    margin-top: 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .feat-page-main {
+    padding: 100px var(--page-gutter) 60px;
+  }
+  .feat-hero {
+    margin-bottom: 40px;
+  }
+  .feat-hero p {
+    font-size: 1rem;
+  }
+  .feat-clean-card {
+    padding: 22px 18px;
+  }
+  .feat-icon-wrap {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 16px;
+  }
+  .feat-clean-card h3 {
+    font-size: 1.2rem;
+  }
+  .feat-cta-actions .btn {
+    width: 100%;
+    justify-content: center;
   }
 }

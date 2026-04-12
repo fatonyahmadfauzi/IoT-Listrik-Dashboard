@@ -92,6 +92,8 @@
         color: var(--text-muted);
         margin-top: 5px;
         line-height: 1.5;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
       .save-bar {
         position: static;
@@ -489,6 +491,101 @@
                   <input type="checkbox" id="inpTelegramNotify" checked />
                   <span class="toggle-slider"></span>
                 </label>
+              </div>
+            </div>
+
+            <!-- Card 4: Discord Webhook ──────────────────────────── -->
+            <div class="settings-section" style="grid-column: 1 / -1">
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded" style="color:#5865F2">forum</span>
+                Integrasi Discord Webhook
+              </div>
+              <div style="background: rgba(88,101,242,0.08); border: 1px solid rgba(88,101,242,0.25); border-radius: var(--radius-md); padding: 12px; margin-bottom: 18px; font-size: 12px; color: #b5bfff;">
+                <strong>Cara mendapatkan Webhook URL:</strong> Buka Discord → klik kanan channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL.<br/>
+                URL disimpan di Firebase RTDB <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">/settings/discord/</code> dan dibaca oleh notifier server (lokal atau publik via ngrok).<br/>
+                Belum punya server Discord? <a href="https://discord.gg/WszeM4FVH6" target="_blank" style="color:#7289da;font-weight:700;text-decoration:underline;">Join server IoT Listrik Dashboard</a> untuk mendapatkan channel monitoring siap pakai.
+              </div>
+
+              <div class="input-row" style="margin-bottom: 14px;">
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDiscordAlerts">
+                    <span style="color:#ED4245;">⚡</span> Webhook #alerts (Status Bahaya)
+                  </label>
+                  <div class="input-reveal-wrap">
+                    <input id="inpDiscordAlerts" class="form-input" type="password"
+                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
+                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordAlerts',this)" title="Tampilkan/sembunyikan">
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                  <div class="form-hint">Notifikasi status BAHAYA, WARNING, dan recovery NORMAL.</div>
+                </div>
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDiscordRelay">
+                    <span style="color:#57F287;">🔌</span> Webhook #relay (Kontrol Relay)
+                  </label>
+                  <div class="input-reveal-wrap">
+                    <input id="inpDiscordRelay" class="form-input" type="password"
+                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
+                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordRelay',this)" title="Tampilkan/sembunyikan">
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                  <div class="form-hint">Notifikasi setiap kali relay ON/OFF berubah.</div>
+                </div>
+              </div>
+
+              <div class="input-row" style="margin-bottom: 20px;">
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDiscordMonitoring">
+                    <span style="color:#5865F2;">📊</span> Webhook #monitoring (Data Berkala)
+                  </label>
+                  <div class="input-reveal-wrap">
+                    <input id="inpDiscordMonitoring" class="form-input" type="password"
+                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
+                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordMonitoring',this)" title="Tampilkan/sembunyikan">
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                  <div class="form-hint">Snapshot data listrik (rate-limit 1x / 5 menit).</div>
+                </div>
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDiscordLogs">
+                    <span style="color:#99AAB5;">📋</span> Webhook #logs (Aktivitas Log)
+                  </label>
+                  <div class="input-reveal-wrap">
+                    <input id="inpDiscordLogs" class="form-input" type="password"
+                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
+                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordLogs',this)" title="Tampilkan/sembunyikan">
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                  <div class="form-hint">Setiap log aktivitas baru dari /logs RTDB.</div>
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <h4>Aktifkan Discord Notifications</h4>
+                  <p>Master switch untuk seluruh notifikasi Discord (dibaca notifier server)</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpDiscordEnabled" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div id="discordSaveStatus" style="font-size:12px; color: var(--green-light); margin-top: 12px; min-height: 16px;"></div>
+              <div style="margin-top: 16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                <button id="saveDiscordBtn" class="btn btn-primary" style="min-width: 220px;">
+                  <span class="material-symbols-rounded">save</span> Simpan Konfigurasi Discord
+                </button>
+                <button id="testDiscordBtn" class="btn btn-ghost">
+                  <span class="material-symbols-rounded">send</span> Test Kirim Pesan
+                </button>
+                <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn btn-ghost" style="color:#7289da; border-color:rgba(114,137,218,0.35);">
+                  <span class="material-symbols-rounded">group</span> Join Server Discord
+                </a>
               </div>
             </div>
 

@@ -1,26 +1,50 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
-- [x] Verify that the copilot-instructions.md file in the .github directory is created.
+# Panduan AI Coding Assistant
 
-- [x] Clarify Project Requirements
-	<!-- Project type: Electron desktop app for Windows, with React, TypeScript, Vite, TailwindCSS, shadcn/ui, electron-builder, Zustand, electron-store, ESLint, Prettier, EditorConfig. Features: modern UI with sidebar, tray/background, Windows notifications, startup settings, multi-architecture packaging, GitHub Actions CI/CD. -->
+## Konteks Proyek
 
-- [ ] Scaffold the Project
-	<!-- Create project structure manually using file creation tools. -->
+Proyek ini adalah **sistem deteksi kebocoran arus listrik berbasis IoT** (Skripsi S1 Teknik Informatika).
 
-- [ ] Customize the Project
-	<!-- Implement Electron main, preload, renderer UI, tray, notifications, etc. -->
+**Multi-platform:** Web PWA · Android (Kotlin) · Windows (Electron) · Terminal CLI · ESP32 Firmware
 
-- [ ] Install Required Extensions
-	<!-- No extensions specified. -->
+---
 
-- [ ] Compile the Project
-	<!-- Install dependencies, build renderer and electron. -->
+## Arsitektur
 
-- [ ] Create and Run Task
-	<!-- Create tasks for build and run. -->
+```
+ESP32 → Firebase RTDB → Web/Android/Electron/CLI clients
+                      → Cloud Functions (opsional)
+                      → Discord Notifier (backend-local)
+```
 
-- [ ] Launch the Project
-	<!-- Provide commands to run locally. -->
+## Struktur Folder Penting
 
-- [ ] Ensure Documentation is Complete
-	<!-- Update README.md and clean copilot-instructions.md. -->
+| Folder | Isi |
+|--------|-----|
+| `public/` | Landing page & halaman publik (Vercel) |
+| `public/app/` | PWA shell (auth-required pages) |
+| `public/js/` | Vanilla JS modules |
+| `public/css/` | Stylesheet (CSS variables di `style.css`) |
+| `platforms/android/` | Android native (Kotlin/Gradle) |
+| `platforms/electron/` | Windows desktop (Electron+React+TS) |
+| `platforms/cli-node/` | Terminal UI Node.js |
+| `platforms/cli-python/` | Terminal UI Python |
+| `hardware/` | ESP32 firmware (C++ Arduino) |
+| `backend-local/` | Local Discord notifier server |
+| `functions/` | Firebase Cloud Functions |
+| `scripts/` | Automation build/deploy scripts |
+| `docs/` | Dokumentasi teknis |
+
+## Konvensi Kode
+
+- **Web**: Vanilla JS, tidak ada framework baru. CSS via variabel existing di `style.css`.
+- **Import JS**: gunakan relative path (`./module.js`), bukan absolute.
+- **Secrets**: TIDAK boleh di-hardcode. Gunakan Firebase `/settings` atau NVS ESP32.
+- **Icons**: Gunakan Iconify (`iconify-icon` element) — bukan emoji.
+- **PWA pages** masuk `public/app/`, halaman publik di `public/` root.
+- **Version**: Update `app-version.json` root, lalu jalankan `scripts/sync-app-version.ps1`.
+
+## File yang Tidak Boleh Dimodifikasi Tanpa Koordinasi
+
+- `database.rules.json` — security rules RTDB
+- `vercel.json` — routing & cache headers production
+- `public/js/firebase-config.js` — konfigurasi Firebase client

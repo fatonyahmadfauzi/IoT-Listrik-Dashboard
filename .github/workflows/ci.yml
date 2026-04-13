@@ -1,0 +1,77 @@
+name: CI — Validate Web Assets
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'public/**'
+      - 'functions/**'
+      - 'vercel.json'
+      - 'database.rules.json'
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate-html:
+    name: Validate HTML Structure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check for broken script src references
+        run: |
+          echo "Checking for broken JS references in public/..."
+          # Ensure no absolute /js/ paths that could break on subdirectories
+          grep -rn 'src="/js/' public/app/ && echo "WARNING: Absolute /js/ path found in public/app/ — may break PWA scope" || echo "OK: No absolute /js/ paths in PWA pages"
+
+      - name: Check for console.log left in production JS
+        run: |
+          echo "Checking for debug console.log in JS modules..."
+          grep -rn 'console\.log' public/js/ \
+            --include="*.js" \
+            --exclude="simulator.js" \
+            --exclude="version-manager.js" \
+            | head -20 || true
+          echo "Done"
+
+  validate-functions:
+    name: Validate Cloud Functions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Check Functions syntax
+        working-directory: functions
+        run: node --check index.js && echo "Functions syntax OK"
+
+  validate-vercel-config:
+    name: Validate vercel.json
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating vercel.json..."
+          node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8')); console.log('vercel.json OK')"
+          echo "Validating database.rules.json..."
+          node -e "JSON.parse(require('fs').readFileSync('database.rules.json','utf8')); console.log('database.rules.json OK')"
+          echo "Validating app-version.json..."
+          node -e "JSON.parse(require('fs').readFileSync('app-version.json','utf8')); console.log('app-version.json OK')"

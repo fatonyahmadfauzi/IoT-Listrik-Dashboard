@@ -23,10 +23,11 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 
 - Monitoring realtime arus, tegangan, daya semu, status, dan relay.
 - Role-based access: aksi kritikal (relay/settings) hanya untuk admin.
-- Histori kejadian dan notifikasi cepat (web + Telegram).
+- Histori kejadian dan notifikasi multi-channel (Web push + Telegram + **Discord Webhook**).
 - Auto-cutoff relay saat kondisi berbahaya.
 - Terminal UI (Hacker Mode) portabel untuk eksekusi tanpa GUI (Mendukung CLI Node.js & Python).
 - Build pipeline untuk Android APK dan Windows installer.
+- **Discord Webhook**: notifikasi real-time ke 4 channel Discord berbeda (alerts, relay, monitoring, logs) — dikonfigurasi via admin UI tanpa Firebase Billing.
 
 ## Arsitektur Singkat
 
@@ -44,11 +45,20 @@ ESP32 + Sensor Arus & Relay
 
 ```text
 .
+├── .github/
+│   ├── workflows/
+│   │   └── ci.yml                 # GitHub Actions CI (validate assets)
+│   └── copilot-instructions.md    # Panduan AI coding assistant
+│
 ├── docs/                          # Dokumentasi teknis
+│   ├── DISCORD_SETUP.md           # Panduan setup Discord Webhook
 │   ├── SIGNING.md                 # Detail signing Android & Windows
 │   └── VERSION_MANAGEMENT.md     # Manajemen versi & release flow
 │
-├── hardware/                      # Firmware ESP32
+├── hardware/                      # Firmware ESP32 (C++ Arduino)
+│   ├── config.example.h           # Template konfigurasi (commit-safe)
+│   ├── config.h                   # Konfigurasi aktif (di-ignore git)
+│   └── main/                      # Sketch utama
 │
 ├── platforms/                     # Aplikasi per-platform
 │   ├── android/                   # Android native (Kotlin/Gradle)
@@ -56,16 +66,22 @@ ESP32 + Sensor Arus & Relay
 │   ├── cli-node/                  # Terminal UI & download utility (Node.js)
 │   └── cli-python/                # Terminal UI varian (Python)
 │
-├── public/                        # Web app (Vercel deploy)
-│   ├── assets/icons/              # App icons (PWA)
-│   ├── css/                       # Stylesheets
-│   │   ├── style.css
-│   │   └── downloads.css
-│   ├── downloads/                 # Binary installer cache (di-ignore Vercel)
-│   │   ├── android/
-│   │   ├── cli/
-│   │   └── windows/
-│   ├── js/                        # JavaScript modules
+├── public/                        # Web — Landing page & halaman publik (Vercel)
+│   ├── app/                       # PWA shell — halaman auth-required
+│   │   │                          # (scope terpisah agar tidak bentrok dengan web publik)
+│   │   ├── login.html
+│   │   ├── dashboard.html
+│   │   ├── history.html
+│   │   ├── settings.html
+│   │   ├── manifest.json          # PWA manifest untuk /app/ scope
+│   │   └── sw.js                  # Service worker scope /app/
+│   ├── assets/icons/              # App icons (PWA & favicon)
+│   ├── css/
+│   │   ├── style.css              # Design system & semua halaman
+│   │   ├── downloads.css          # Halaman download
+│   │   └── features.css           # Halaman features
+│   ├── js/                        # JavaScript modules (shared)
+│   │   ├── components/            # Web components (navbar, footer)
 │   │   ├── firebase-config.js
 │   │   ├── app.js
 │   │   ├── auth.js
@@ -76,31 +92,27 @@ ESP32 + Sensor Arus & Relay
 │   │   ├── settings.js
 │   │   ├── simulator.js
 │   │   ├── client-config.js
+│   │   ├── pwa-guard.js
 │   │   └── version-manager.js
+│   ├── downloads/                 # Binary installer cache (di-ignore Vercel & git)
 │   ├── app-version.json           # Salinan versi untuk browser (sync via script)
 │   ├── index.html                 # Landing page
-│   ├── dashboard.html
-│   ├── history.html
-│   ├── login.html
-│   ├── settings.html
+│   ├── features.html
 │   ├── downloads.html
 │   ├── pwa-simulator.html
-│   ├── manifest.json              # PWA manifest
-│   └── service-worker.js          # PWA service worker
+│   ├── manifest.json              # PWA manifest untuk scope /
+│   └── service-worker.js          # Service worker scope /
 │
-├── backend-local/                 # Local REST API (opsional/offline)
-├── firebase-redirect/             # Firebase Hosting fallback
+├── backend-local/                 # Local Discord notifier & REST API (opsional)
+├── firebase-redirect/             # Firebase Hosting fallback → redirect ke Vercel
 ├── functions/                     # Firebase Cloud Functions (Node.js)
-├── scripts/                       # Automation scripts (build/release/deploy)
-│   ├── sync-app-version.ps1       # Sinkronisasi app-version.json ke public/
-│   ├── build-all-release.ps1
-│   ├── build-android-release.ps1
-│   ├── build-release-for-web.ps1
-│   └── upload-release.ps1
+├── scripts/                       # Automation scripts (lihat scripts/README.md)
 │
+├── CHANGELOG.md                   # Riwayat perubahan per-versi
+├── CONTRIBUTING.md                # Panduan kontribusi
 ├── app-version.json               # Source of truth versi & URL download
 ├── database.rules.json            # RTDB security rules
-├── firebase.json                  # Firebase config
+├── firebase.json                  # Firebase CLI config
 ├── vercel.json                    # Vercel routing/headers config
 └── .vercelignore
 ```
@@ -116,6 +128,7 @@ ESP32 + Sensor Arus & Relay
 | Desktop | Electron + React / TypeScript + electron-builder |
 | Terminal | Node.js (Inquirer+Chalk) / Python (Questionary+Rich) |
 | Deploy Web | Vercel |
+| Notifikasi | Telegram Bot API + **Discord Webhook** (4 channel) |
 
 ## Auto-Update System
 
@@ -218,7 +231,14 @@ npx -y firebase-tools@latest deploy --only database
     "teganganCalibration": 1.0,
     "sendIntervalMs": 2000,
     "telegramBotToken": "",
-    "telegramChatId": ""
+    "telegramChatId": "",
+    "discord": {
+      "enabled": false,
+      "webhookAlerts": "",
+      "webhookRelay": "",
+      "webhookMonitoring": "",
+      "webhookLogs": ""
+    }
   }
 }
 ```
@@ -282,6 +302,38 @@ Output Windows:
 ```powershell
 powershell -ExecutionPolicy Bypass -File "scripts\build-release-for-web.ps1" -Secret "<SECRET>"
 ```
+
+## Integrasi Discord Webhook
+
+Notifikasi real-time dikirim ke 4 channel Discord terpisah. **Tidak memerlukan Firebase Billing.**
+
+> 🔗 **Discord Server**: [discord.gg/WszeM4FVH6](https://discord.gg/WszeM4FVH6) — Join untuk mendapatkan channel monitoring siap pakai.
+
+| Channel | Trigger |
+|---------|---------|
+| `#alerts` | Status BAHAYA / WARNING / pulih NORMAL |
+| `#relay` | Relay ON↔OFF berubah |
+| `#monitoring` | Snapshot data listrik (max 1x / 5 menit) |
+| `#logs` | Entry log aktivitas baru `/logs` |
+
+### Cara Setup
+
+**1. Set webhook via Admin UI** (disimpan ke `/settings/discord/` di RTDB):
+```
+https://iot-listrik-dashboard.vercel.app/settings
+→ Scroll ke "Integrasi Discord Webhook"
+→ Isi URL webhook per channel → Simpan
+```
+
+**2. Jalankan local notifier:**
+```bash
+cd backend-local
+node discord-notifier.js
+```
+
+Notifier membaca webhook URL dari RTDB secara real-time — ganti URL kapanpun dari admin UI tanpa restart.
+
+Panduan lengkap: [`docs/DISCORD_SETUP.md`](docs/DISCORD_SETUP.md)
 
 ## Deploy Web (Vercel)
 

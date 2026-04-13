@@ -257,8 +257,18 @@ initPage({
       const header = document.querySelector('.page-header');
       if (header) {
         const demoBanner = document.createElement('div');
-        demoBanner.style = "background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--warning); padding: 10px 16px; border-radius: 12px; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500;";
-        demoBanner.innerHTML = `<span class="material-symbols-rounded" style="font-size: 1.2rem;">science</span> Mode Simulator (Demo 5 Menit). Data tidak akan disimpan ke sistem fisik.`;
+        demoBanner.style = "background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--warning); padding: 12px 16px; border-radius: 12px; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; font-weight: 500;";
+        demoBanner.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="material-symbols-rounded" style="font-size: 1.2rem;">science</span> 
+            <span>Kredensial Demo Simulator. Monitor menunggu data dari Hardware Simulator.</span>
+          </div>
+          <div>
+            <a href="/simulator/app.html" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:var(--primary); color:white; padding:6px 14px; border-radius:6px; text-decoration:none; font-weight:600; font-size:0.8rem; box-shadow:0 2px 10px rgba(59,130,246,0.3);">
+              <span class="material-symbols-rounded" style="font-size:1rem;">tune</span> Buka Control Panel Hardware
+            </a>
+          </div>
+        `;
         header.parentNode.insertBefore(demoBanner, header.nextSibling);
       }
     }

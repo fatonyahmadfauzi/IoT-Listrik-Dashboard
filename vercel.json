@@ -43,7 +43,8 @@
     { "source": "/history",       "destination": "/app/history.html" },
     { "source": "/settings",      "destination": "/app/settings.html" },
 
-    { "source": "/simulator",     "destination": "/simulator/index.html" },
-    { "source": "/downloads",     "destination": "/downloads.html" }
+    { "source": "/simulator/app",  "destination": "/simulator/app.html" },
+    { "source": "/simulator",      "destination": "/simulator/index.html" },
+    { "source": "/downloads",      "destination": "/downloads.html" }
   ]
 }

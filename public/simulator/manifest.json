@@ -1,0 +1,22 @@
+{
+  "name": "Simulator IoT Listrik",
+  "short_name": "Sim IoT",
+  "start_url": "/simulator/app?install=1",
+  "display": "standalone",
+  "background_color": "#070c18",
+  "theme_color": "#070c18",
+  "description": "Control Panel Dummy Hardware untuk Inject Data Simulator PWA",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/img/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

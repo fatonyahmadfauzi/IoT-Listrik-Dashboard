@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Simulator IoT Listrik</title>
+  <meta name="description" content="Login ke PWA Simulator Control Panel IoT Listrik" />
+  <link rel="stylesheet"  href="/css/style.css" />
+  <link rel="manifest"    href="/simulator/manifest.json" />
+  <meta name="theme-color" content="#070c18" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Simulator IoT" />
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
+
+  <!-- Override brand accent colour for simulator (green-emerald) -->
+  <style>
+    :root {
+      --sim-accent:      #10b981;
+      --sim-accent-dim:  rgba(16, 185, 129, 0.15);
+      --sim-accent-glow: rgba(16, 185, 129, 0.4);
+    }
+    /* Icon badge — emerald instead of blue */
+    .auth-logo-icon,
+    .pwa-install-brand-icon {
+      background: linear-gradient(135deg, #059669, #10b981) !important;
+      box-shadow: 0 8px 24px rgba(16,185,129,0.4) !important;
+    }
+
+    /* Primary button — green */
+    .btn-sim-primary {
+      background: linear-gradient(135deg, #059669, #10b981);
+      box-shadow: 0 4px 15px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .btn-sim-primary:hover {
+      box-shadow: 0 8px 25px rgba(16,185,129,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+
+    /* Active tab indicator */
+    .auth-tab.active {
+      background: var(--sim-accent-dim);
+      color: var(--sim-accent);
+    }
+
+    /* "Daftar" nav link — chip/badge style */
+    .register-nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 1.25rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      color: var(--sim-accent);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .register-nav-link:hover {
+      background: var(--sim-accent-dim);
+      border-color: rgba(16,185,129,0.25);
+      transform: translateY(-1px);
+    }
+
+    /* Simulator badge below title */
+    .sim-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(16,185,129,0.1);
+      color: var(--sim-accent);
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body class="page-bg">
+
+<div class="auth-page-wrap" id="authPageWrap">
+
+  <!-- ══ PWA Install Card ══════════════════════════════════════ -->
+  <div id="pwaInstallCard" class="pwa-install-card" aria-live="polite" hidden>
+
+    <!-- Branded header — Simulator branding -->
+    <div class="pwa-install-brand">
+      <div class="pwa-install-brand-icon">
+        <span class="material-symbols-rounded">memory</span>
+      </div>
+      <div>
+        <div class="pwa-install-brand-name">Simulator IoT Listrik</div>
+        <div class="pwa-install-brand-sub">Control Panel Hardware Virtual</div>
+      </div>
+    </div>
+
+    <!-- ── A. LOADING ── -->
+    <div id="pwaStateLoading" class="pwa-install-state" data-state="loading">
+      <div class="pwa-install-icon">
+        <span class="pwa-spinner pwa-spinner--lg"></span>
+      </div>
+      <h2 class="pwa-install-heading">Install Simulator</h2>
+      <p class="pwa-install-sub">Memeriksa dukungan instalasi di perangkat Anda...</p>
+    </div>
+
+    <!-- ── B. PROMPT_READY ── -->
+    <div id="pwaStatePrompt" class="pwa-install-state" data-state="prompt-ready" hidden>
+      <div class="pwa-install-icon pwa-install-icon--blue">
+        <span class="material-symbols-rounded">install_mobile</span>
+      </div>
+      <h2 class="pwa-install-heading">Install Simulator PWA</h2>
+      <p class="pwa-install-sub">Tambahkan ke perangkat Anda — gunakan sebagai pengganti Hardware fisik ESP32.</p>
+      <button id="pwaInstallBtn" class="btn btn-primary w-full pwa-install-cta btn-sim-primary">
+        <span class="material-symbols-rounded">download</span>
+        Install Sekarang
+      </button>
+      <p id="pwaInstallNote" class="pwa-install-note" hidden></p>
+    </div>
+
+    <!-- ── C. IOS_GUIDE ── -->
+    <div id="pwaStateIOS" class="pwa-install-state" data-state="ios-guide" hidden>
+      <div class="pwa-install-icon pwa-install-icon--ios">
+        <span class="material-symbols-rounded">phone_iphone</span>
+      </div>
+      <h2 class="pwa-install-heading">Install di iPhone / iPad</h2>
+      <p class="pwa-install-sub">Ikuti langkah berikut di Safari:</p>
+      <ol class="pwa-ios-steps">
+        <li>
+          <span class="pwa-ios-step-num">1</span>
+          <span class="pwa-ios-step-text">
+            Tap ikon <strong>Share</strong>
+            <span class="pwa-ios-share-icon" aria-label="Share">&#x2B06;</span>
+            di toolbar bawah Safari
+          </span>
+        </li>
+        <li>
+          <span class="pwa-ios-step-num">2</span>
+          <span class="pwa-ios-step-text">Pilih <strong>"Add to Home Screen"</strong></span>
+        </li>
+        <li>
+          <span class="pwa-ios-step-num">3</span>
+          <span class="pwa-ios-step-text">Tap <strong>"Add"</strong> di pojok kanan atas</span>
+        </li>
+      </ol>
+      <p class="pwa-ios-note">
+        <span class="material-symbols-rounded" aria-hidden="true">info</span>
+        Hanya tersedia di Safari. Browser lain di iOS belum mendukung install PWA.
+      </p>
+    </div>
+
+    <!-- ── D. FALLBACK ── -->
+    <div id="pwaStateFallback" class="pwa-install-state" data-state="fallback" hidden>
+      <div class="pwa-install-icon pwa-install-icon--muted">
+        <span class="material-symbols-rounded">browser_updated</span>
+      </div>
+      <h2 class="pwa-install-heading">Install Simulator</h2>
+      <p class="pwa-install-sub">Gunakan menu browser untuk menginstall aplikasi ini ke layar utama.</p>
+      <div class="pwa-fallback-steps">
+        <div class="pwa-fallback-step">
+          <span class="material-symbols-rounded" aria-hidden="true">more_vert</span>
+          <span>Buka menu browser <strong>(&#x22EE;)</strong></span>
+        </div>
+        <div class="pwa-fallback-step">
+          <span class="material-symbols-rounded" aria-hidden="true">add_to_home_screen</span>
+          <span>Pilih <strong>"Install App"</strong> atau <strong>"Add to Home Screen"</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── E. INSTALLED ── -->
+    <div id="pwaStateInstalled" class="pwa-install-state" data-state="installed" hidden>
+      <div class="pwa-install-icon pwa-install-icon--success">
+        <span class="material-symbols-rounded">check_circle</span>
+      </div>
+      <h2 class="pwa-install-heading">Simulator Terinstal!</h2>
+      <p class="pwa-install-sub">Buka simulator dari layar utama, atau masuk ke akun simulasi Anda.</p>
+      <a href="/simulator/app" class="btn btn-primary w-full pwa-install-cta btn-sim-primary">
+        <span class="material-symbols-rounded">login</span>
+        Masuk ke Simulator
+      </a>
+    </div>
+
+    <!-- ── Skip / secondary action ── -->
+    <div class="pwa-skip-row" id="pwaSkipRow">
+      <a href="/simulator/app" class="pwa-skip-link" tabindex="0">
+        Masuk tanpa install
+        <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+      </a>
+    </div>
+
+  </div>
+  <!-- /pwaInstallCard -->
+
+  <!-- ══ Auth Card ═══════════════════════════════════════════ -->
+  <div class="auth-card glass" id="authCard">
+
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><span class="material-symbols-rounded">memory</span></div>
+      <h1>Simulator IoT Listrik</h1>
+      <p>Control Panel Hardware Virtual</p>
+      <span class="sim-tag">
+        <span class="material-symbols-rounded" style="font-size:12px;">science</span>
+        Mode Simulasi
+      </span>
+    </div>
+
+    <!-- Tab: Login / Daftar -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tabLogin"    role="tab">Masuk</button>
+      <button class="auth-tab"        id="tabDaftar"   role="tab">Daftar Akun</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="loginEmail">Email Demo</label>
+        <input id="loginEmail" class="form-input" type="email"
+               placeholder="sim_xxxxx@iotlistrik.demo" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="loginPassword">Password</label>
+        <input id="loginPassword" class="form-input" type="password"
+               placeholder="Masukkan password demo" autocomplete="current-password" required />
+      </div>
+      <div id="loginError" class="text-sm"
+           style="color:var(--red-light);min-height:18px;margin-bottom:12px;"></div>
+      <button type="submit" id="loginBtn" class="btn btn-primary w-full btn-sim-primary">Masuk ke Simulator</button>
+
+      <p style="margin-top:1.25rem; font-size:0.82rem; color:var(--text-muted); text-align:center; line-height:1.5;">
+        Gunakan kredensial yang dikirim ke email Anda.<br>
+        Belum punya akun demo?
+      </p>
+    </form>
+
+    <!-- Register redirect (bukan form register baru) -->
+    <form id="registerForm" class="hidden" novalidate>
+      <div style="text-align:center; padding: 1.5rem 0 1rem;">
+        <div style="width:60px;height:60px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:28px;color:var(--sim-accent);">
+          <span class="material-symbols-rounded">add_circle</span>
+        </div>
+        <h3 style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.5rem;">Butuh Akun Simulasi?</h3>
+        <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem;">
+          Akun simulasi bersifat <strong style="color:white;">sementara (5 menit)</strong> dan dibuat otomatis.<br>
+          Klik tombol di bawah untuk mendapatkan kredensial demo via email.
+        </p>
+        <a href="/simulator" class="btn btn-primary w-full btn-sim-primary" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span class="material-symbols-rounded">science</span>
+          Generate Akun Demo
+        </a>
+        <p style="margin-top:1rem;font-size:0.78rem;color:var(--text-muted);">
+          Anda akan diarahkan ke halaman generator akun simulasi.
+        </p>
+      </div>
+    </form>
+
+  </div>
+  <!-- /auth-card -->
+
+</div>
+<!-- /auth-page-wrap -->
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script type="module">
+import { auth }      from '/js/firebase-config.js';
+import { showToast } from '/js/notifications.js';
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ────────────────────────────────────────────────────────────
+// INSTALL MODE DETECTION
+// ────────────────────────────────────────────────────────────
+const _params      = new URLSearchParams(window.location.search);
+const _installMode = _params.get('install') === '1';
+
+const _wrap        = document.getElementById('authPageWrap');
+const _installCard = document.getElementById('pwaInstallCard');
+const _authCard    = document.getElementById('authCard');
+const _skipRow     = document.getElementById('pwaSkipRow');
+
+if (_installMode) {
+  _wrap.classList.add('install-mode');
+  _installCard.hidden = false;
+} else {
+  _installCard.hidden = true;
+}
+
+// ────────────────────────────────────────────────────────────
+// TAB SWITCHING — "Daftar" shows info + redirect, not a form
+// ────────────────────────────────────────────────────────────
+const loginForm    = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const tabLogin     = document.getElementById('tabLogin');
+const tabDaftar    = document.getElementById('tabDaftar');
+
+function showTab(tab) {
+  const isLogin = tab === 'login';
+  loginForm.classList.toggle('hidden', !isLogin);
+  registerForm.classList.toggle('hidden', isLogin);
+  tabLogin.classList.toggle('active', isLogin);
+  tabDaftar.classList.toggle('active', !isLogin);
+}
+tabLogin.addEventListener('click',  () => showTab('login'));
+tabDaftar.addEventListener('click', () => showTab('register'));
+
+// ────────────────────────────────────────────────────────────
+// AUTH STATE — hanya temp account yang boleh masuk
+// ────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (user && !_installMode) {
+    try {
+      const token = await user.getIdTokenResult();
+      if (!token.claims?.isTempAccount) {
+        // ❌ Bukan temp account (admin/user biasa) — TOLAK dan logout paksa
+        await signOut(auth);
+        const errEl = document.getElementById('loginError');
+        if (errEl) errEl.textContent = '⛔ Akses ditolak. Halaman ini hanya untuk akun simulasi demo.';
+        showToast('Akses ditolak. Gunakan akun demo dari /simulator.', 'error');
+        return;
+      }
+
+      // Cek expiresAt — jika sudah lewat, tolak
+      const expiresAt = token.claims?.expiresAt;
+      if (expiresAt && Date.now() >= expiresAt) {
+        await signOut(auth);
+        const errEl = document.getElementById('loginError');
+        if (errEl) errEl.textContent = '⏰ Sesi demo Anda telah kadaluarsa. Silakan generate akun baru.';
+        showToast('Akun demo kadaluarsa. Generate akun baru di /simulator.', 'warning');
+        return;
+      }
+
+      // ✅ Temp account valid — arahkan ke control panel simulator
+      window.location.replace('/simulator/app');
+
+    } catch {
+      await signOut(auth);
+    }
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// LOGIN
+// ────────────────────────────────────────────────────────────
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Isi email dan password demo.'; return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Memverifikasi...';
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+
+    // ── Lapis 1: Harus isTempAccount ──
+    const token = await cred.user.getIdTokenResult();
+    if (!token.claims?.isTempAccount) {
+      await signOut(auth);
+      errEl.textContent = '⛔ Akses ditolak. Halaman ini hanya untuk akun simulasi demo.';
+      return;
+    }
+
+    // ── Lapis 2: Cek expiresAt ──
+    const expiresAt = token.claims?.expiresAt;
+    if (expiresAt && Date.now() >= expiresAt) {
+      await signOut(auth);
+      errEl.textContent = '⏰ Akun demo ini sudah kadaluarsa (lebih dari 5 menit). Silakan generate akun baru.';
+      return;
+    }
+
+    // ✅ Valid — onAuthStateChanged akan handle redirect
+
+  } catch (err) {
+    const msgs = {
+      'auth/user-not-found':     '⏰ Akun tidak ditemukan. Mungkin sudah kadaluarsa, silakan generate akun baru.',
+      'auth/wrong-password':     'Password salah.',
+      'auth/too-many-requests':  'Terlalu banyak percobaan. Coba lagi nanti.',
+      'auth/invalid-email':      'Format email tidak valid.',
+      'auth/invalid-credential': '⏰ Akun tidak valid atau sudah kadaluarsa. Silakan generate akun baru.',
+    };
+    errEl.textContent = msgs[err.code] || err.message;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Masuk ke Simulator';
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// SERVICE WORKER (Simulator SW scope)
+// ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/simulator/sw.js', { scope: '/simulator/' })
+    .catch(err => console.warn('[Sim SW] Registration failed:', err));
+}
+
+// ────────────────────────────────────────────────────────────
+// PWA INSTALL STATE MACHINE
+// ────────────────────────────────────────────────────────────
+if (_installMode) runInstallFlow();
+
+function runInstallFlow() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  const ALL_STATES = [
+    'pwaStateLoading','pwaStatePrompt','pwaStateIOS','pwaStateFallback','pwaStateInstalled',
+  ];
+  function showState(stateId) {
+    ALL_STATES.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = (id !== stateId);
+    });
+    if (_skipRow) _skipRow.hidden = (stateId === 'pwaStateInstalled');
+  }
+
+  showState('pwaStateLoading');
+
+  if (isStandalone) { showState('pwaStateInstalled'); return; }
+  if (isIOS)        { showState('pwaStateIOS');       return; }
+
+  let deferredPrompt = null;
+  let resolved       = false;
+  const installBtn   = document.getElementById('pwaInstallBtn');
+  const installNote  = document.getElementById('pwaInstallNote');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    resolved = true;
+    showState('pwaStatePrompt');
+  });
+  window.addEventListener('appinstalled', () => {
+    resolved = true;
+    clearTimeout(fallbackTimer);
+    showState('pwaStateInstalled');
+  });
+
+  const fallbackTimer = setTimeout(() => {
+    if (!resolved) { resolved = true; showState('pwaStateFallback'); }
+  }, 4000);
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) { showState('pwaStateFallback'); return; }
+      clearTimeout(fallbackTimer);
+      installBtn.disabled = true;
+      installBtn.innerHTML = '<span class="pwa-spinner pwa-spinner--btn"></span> Menginstall...';
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        if (outcome === 'accepted') {
+          showState('pwaStateInstalled');
+        } else {
+          installBtn.disabled = false;
+          installBtn.innerHTML = '<span class="material-symbols-rounded">download</span> Install Sekarang';
+          if (installNote) {
+            installNote.textContent = 'Install dibatalkan. Tap untuk mencoba lagi.';
+            installNote.hidden = false;
+          }
+        }
+      } catch { showState('pwaStateFallback'); }
+    });
+  }
+}
+</script>
+</body>
+</html>

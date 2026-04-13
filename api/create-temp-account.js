@@ -1,9 +1,13 @@
 const admin = require("firebase-admin");
 const { Resend } = require("resend");
 
+let initErrorMsg = "";
 // Initialize Firebase Admin lazily to avoid multiple init errors in Serverless
 if (!admin.apps.length) {
   try {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+       throw new Error("FIREBASE_SERVICE_ACCOUNT Env Var is empty or undefined");
+    }
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
@@ -11,6 +15,7 @@ if (!admin.apps.length) {
     });
   } catch (error) {
     console.error("Firebase admin init error:", error);
+    initErrorMsg = error.message;
   }
 }
 
@@ -23,71 +28,206 @@ function randomStr(len, chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz
 }
 
 function buildEmailHTML({ tempEmail, password, expiresAt }) {
-  const expiresStr = new Date(expiresAt).toLocaleString("id-ID", {
-    timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit"
+  const d = new Date(expiresAt);
+  const timeStr = d.toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit", minute: "2-digit",
   });
+  const dateStr = d.toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    day: "numeric", month: "long", year: "numeric",
+  });
+
   return `<!DOCTYPE html>
-<html lang="id">
+<html lang="id" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Akun Demo IoT Listrik</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<title>Akun Simulator IoT Siap</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; }
+  @media only screen and (max-width:600px) {
+    .container { width: 100% !important; padding: 0 12px !important; }
+    .card-pad { padding: 28px 20px !important; }
+    .cred-value { font-size: 16px !important; }
+    .pw-value { font-size: 22px !important; letter-spacing: 4px !important; }
+    .cta-btn { padding: 16px 20px !important; font-size: 16px !important; }
+    .sec-cta-wrap { display: block !important; width: 100% !important; }
+    .sec-cta-cell { display: block !important; width: 100% !important; padding: 0 0 8px 0 !important; }
+  }
+</style>
 </head>
-<body style="margin:0;padding:0;background:#070c18;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#070c18;padding:40px 16px;">
-  <tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-      <tr><td align="center" style="padding-bottom:32px;">
-        <div style="display:inline-block;background:linear-gradient(135deg,#1e3a5f,#0f2040);border:1px solid rgba(59,130,246,0.3);border-radius:16px;padding:20px 32px;">
-          <span style="font-size:40px;">⚡</span>
-          <h1 style="color:#e2e8f0;font-size:22px;margin:8px 0 4px 0;font-weight:700;">IoT Listrik Dashboard</h1>
-          <p style="color:#94a3b8;font-size:13px;margin:0;">Simulator Akun Demo</p>
-        </div>
-      </td></tr>
-      <tr><td align="center" style="padding-bottom:24px;">
-        <h2 style="color:#e2e8f0;font-size:20px;margin:0;font-weight:700;">🧪 Akun Demo Anda Siap!</h2>
-        <p style="color:#94a3b8;font-size:14px;margin:8px 0 0;">Gunakan kredensial berikut untuk mengakses simulator IoT</p>
-      </td></tr>
-      <tr><td style="padding-bottom:24px;">
-        <table width="100%" cellpadding="0" cellspacing="0"
-          style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:12px;padding:24px;">
-          <tr>
-            <td style="padding-bottom:16px;">
-              <p style="color:#94a3b8;font-size:12px;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;">📧 Email Demo</p>
-              <p style="color:#e2e8f0;font-size:16px;font-weight:700;font-family:monospace;margin:0;
-                background:rgba(255,255,255,0.05);border-radius:8px;padding:10px 14px;">${tempEmail}</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding-bottom:16px;">
-              <p style="color:#94a3b8;font-size:12px;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;">🔑 Password</p>
-              <p style="color:#60a5fa;font-size:18px;font-weight:700;font-family:monospace;margin:0;
-                background:rgba(59,130,246,0.1);border-radius:8px;padding:10px 14px;letter-spacing:2px;">${password}</p>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              <p style="color:#94a3b8;font-size:12px;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;">⏱ Berlaku Hingga</p>
-              <p style="color:#f59e0b;font-size:15px;font-weight:600;font-family:monospace;margin:0;
-                background:rgba(245,158,11,0.08);border-radius:8px;padding:10px 14px;">${expiresStr} WIB (5 menit)</p>
-            </td>
-          </tr>
-        </table>
-      </td></tr>
-      <tr><td align="center" style="padding-bottom:24px;">
-        <a href="https://iot-listrik-dashboard.vercel.app/app/login?install=1"
-          style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;
-            text-decoration:none;font-size:16px;font-weight:700;padding:14px 36px;
-            border-radius:999px;box-shadow:0 4px 20px rgba(59,130,246,0.4);">
-          ⚡ Buka Simulator →
-        </a>
-      </td></tr>
-      <tr><td style="padding-bottom:24px;">
-        <p style="color:#6b7280;font-size:12px;margin:8px 0 0;text-align:center;">Gunakan email dan password di atas untuk login di platform manapun (Web, PWA, Android, Windows).</p>
-      </td></tr>
-    </table>
-  </td></tr>
+<body style="margin:0;padding:0;background-color:#060c18;word-spacing:normal;">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Akun simulator IoT Listrik Anda siap. Email &amp; password tersedia di dalam &mdash; berlaku hanya 5 menit.&#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;</div>
+
+<!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+
+<!-- OUTER WRAPPER -->
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#060c18;">
+<tr><td align="center" style="padding:48px 16px 40px;">
+
+  <!-- CONTAINER -->
+  <table class="container" role="presentation" border="0" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;width:100%;">
+
+    <!-- ━━━ A. WORDMARK HEADER ━━━ -->
+    <tr><td align="center" style="padding-bottom:32px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="background-color:#1d4ed8;width:44px;height:44px;border-radius:12px;text-align:center;vertical-align:middle;font-size:22px;line-height:44px;">
+            &#9889;
+          </td>
+          <td style="padding-left:12px;vertical-align:middle;">
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:17px;font-weight:700;color:#f1f5f9;line-height:1;">IoT Listrik Dashboard</p>
+            <p style="margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#4b5563;line-height:1;">Simulator Akun Demo</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- ━━━ B. MAIN CARD ━━━ -->
+    <tr><td class="card-pad" style="background-color:#0f1729;border:1px solid #1e2d45;border-radius:20px;padding:36px 32px;">
+
+      <!-- B1. STATUS CHIP -->
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+        <tr>
+          <td style="background-color:#052e16;border:1px solid #16a34a;border-radius:100px;padding:5px 16px 5px 12px;">
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:700;color:#4ade80;letter-spacing:0.3px;">&#10003;&nbsp; Akun Berhasil Dibuat</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- B2. HEADING -->
+      <h1 style="margin:0 0 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;line-height:1.15;">Kredensial Demo Siap</h1>
+      <p style="margin:0 0 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;color:#6b7280;line-height:1.65;">
+        Gunakan data berikut untuk masuk ke Simulator IoT Listrik.<br>
+        <strong style="color:#ef4444;">Segera gunakan — berlaku hanya 5 menit.</strong>
+      </p>
+
+      <!-- ─── CREDENTIAL MODULE ─── -->
+
+      <!-- Email row -->
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
+        <tr>
+          <td style="background-color:#080f1f;border:1px solid #1e2d45;border-radius:14px;padding:18px 20px;">
+            <p style="margin:0 0 7px;font-family:'Courier New',Courier,monospace;font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1px;">EMAIL DEMO</p>
+            <p class="cred-value" style="margin:0;font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:600;color:#cbd5e1;word-break:break-all;line-height:1.4;">${tempEmail}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Password row — hero credential -->
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
+        <tr>
+          <td style="background-color:#030d1f;border:1px solid #1e3a5f;border-left:3px solid #3b82f6;border-radius:14px;padding:18px 20px;">
+            <p style="margin:0 0 7px;font-family:'Courier New',Courier,monospace;font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:1px;">PASSWORD</p>
+            <p class="pw-value" style="margin:0;font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:800;color:#93c5fd;letter-spacing:6px;line-height:1.2;">${password}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Expiry row -->
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td style="background-color:#1c0f00;border:1px solid #78350f;border-radius:14px;padding:14px 20px;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td style="vertical-align:middle;">
+                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;">&#9201;&nbsp; Kadaluarsa</p>
+                  <p style="margin:4px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;color:#fbbf24;line-height:1.3;">${timeStr} WIB &mdash; ${dateStr}</p>
+                </td>
+                <td align="right" style="vertical-align:middle;white-space:nowrap;padding-left:12px;">
+                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:800;color:#f59e0b;background-color:#292001;border-radius:8px;padding:6px 12px;">5 MENIT</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+    </td></tr>
+
+    <!-- SPACER -->
+    <tr><td style="height:12px;"></td></tr>
+
+    <!-- ━━━ C. PRIMARY CTA ━━━ -->
+    <tr><td>
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td align="center" style="background-color:#065f46;background:linear-gradient(160deg,#047857,#10b981);border-radius:16px;">
+            <a href="https://iot-listrik-dashboard.vercel.app/simulator/app?install=1" target="_blank" style="display:block;text-decoration:none;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td class="cta-btn" align="center" style="padding:20px 28px;">
+                    <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:17px;font-weight:800;color:#ffffff;line-height:1;">&#9654;&nbsp; Buka Simulator Sekarang</p>
+                    <p style="margin:6px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:400;color:rgba(255,255,255,0.65);line-height:1;">iot-listrik-dashboard.vercel.app/simulator/app</p>
+                  </td>
+                </tr>
+              </table>
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- SPACER -->
+    <tr><td style="height:8px;"></td></tr>
+
+    <!-- ━━━ D. SECONDARY CTAs — text link style, no heavy panels ━━━ -->
+    <tr><td style="border-top:1px solid #1a2540;padding-top:16px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td align="center">
+            <p style="margin:0 0 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">Akses Lainnya</p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:0 6px;">
+                  <a href="https://iot-listrik-dashboard.vercel.app/app/login?install=1" target="_blank" style="display:inline-block;text-decoration:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:600;color:#93c5fd;background-color:#0c1a2e;border:1px solid #1e3a5f;border-radius:10px;padding:10px 18px;">&#x1F5A5;&#xFE0F;&nbsp; Dashboard Monitor</a>
+                </td>
+                <td style="padding:0 6px;">
+                  <a href="https://iot-listrik-dashboard.vercel.app/downloads" target="_blank" style="display:inline-block;text-decoration:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:600;color:#9ca3af;background-color:#0d1117;border:1px solid #1f2937;border-radius:10px;padding:10px 18px;">&#x1F4F1;&nbsp; Download App</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <!-- SPACER -->
+    <tr><td style="height:32px;"></td></tr>
+
+    <!-- ━━━ E. FOOTER ━━━ -->
+    <tr><td align="center">
+      <p style="margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#374151;line-height:1.7;">
+        Email ini dikirim otomatis. Jangan balas email ini.<br>
+        Data akun dan sesi akan dihapus otomatis setelah <strong style="color:#4b5563;">5 menit</strong>.
+      </p>
+      <p style="margin:8px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#6b7280;line-height:1.7;">
+        &copy; 2025 <strong style="color:#9ca3af;font-weight:600;">IoT Listrik Dashboard</strong><br>
+        <span style="color:#4b5563;font-size:11px;">Sistem Deteksi Kebocoran Arus &nbsp;&middot;&nbsp; Built by Fatony Ahmad Fauzi</span>
+      </p>
+    </td></tr>
+
+  </table>
+  <!-- /CONTAINER -->
+
+</td></tr>
 </table>
+<!-- /OUTER WRAPPER -->
+
+<!--[if mso | IE]></td></tr></table><![endif]-->
+
 </body>
 </html>`;
 }
@@ -117,7 +257,9 @@ export default async function handler(req, res) {
   }
 
   if (!admin.apps.length) {
-    return res.status(500).json({ error: "Server Configuration Error: Firebase Admin not initialized (Missing Environment Variables)." });
+    return res.status(500).json({ 
+       error: "Server Config Error: Firebase Admin tidak valid. Detail: " + initErrorMsg 
+    });
   }
 
   const randomId = randomStr(8);
@@ -195,6 +337,28 @@ export default async function handler(req, res) {
       }
     } catch (err) {
       console.error("Gagal kirim email via Resend:", err);
+    }
+
+    // 5. Autoclean Pasif Jaringan 
+    // (Karena Vercel Free tidak support Cron hitungan menit, kita numpang bersih-bersih disini)
+    try {
+      const snapSessions = await db.ref('/temp_sessions').once('value');
+      const sessions = snapSessions.val() || {};
+      const now = Date.now();
+      const promises = [];
+
+      for (const uid in sessions) {
+        if (sessions[uid].expiresAt && now >= sessions[uid].expiresAt) {
+          promises.push(
+            admin.auth().deleteUser(uid).catch(() => {}),
+            db.ref(`/sim/${uid}`).remove(),
+            db.ref(`/temp_sessions/${uid}`).remove()
+          );
+        }
+      }
+      if (promises.length > 0) await Promise.allSettled(promises);
+    } catch(err) {
+      console.error("Gagal Auto-cleanup pasif", err);
     }
 
     return res.status(200).json({ 

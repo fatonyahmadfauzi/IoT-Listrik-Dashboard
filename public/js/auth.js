@@ -12,10 +12,10 @@ import { ref, get, set, serverTimestamp }
                                from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { stopWebSiren } from './notifications.js';
 
-// ─── Internal state ──────────────────────────────────────────
 let _currentUser = null;
 let _currentRole = null;
 let _isTempAccount = false;
+let _tempExpiryTimer = null;
 
 /** Expose current user/role (read-only snapshot) */
 function getCurrentUser() { return _currentUser; }
@@ -82,6 +82,22 @@ function initPage(callbacks = {}) {
       const token = await user.getIdTokenResult();
       _isTempAccount = !!token.claims?.isTempAccount;
 
+      // Fitur Auto Kick-Out Client Side (Client Timeout)
+      if (_isTempAccount && token.claims?.expiresAt) {
+          const timeLeft = token.claims.expiresAt - Date.now();
+          if (timeLeft <= 0) {
+              // Sudah basi
+              forceKickOutDemo();
+              return;
+          } else {
+              // Set bom waktu JS
+              if (_tempExpiryTimer) clearTimeout(_tempExpiryTimer);
+              _tempExpiryTimer = setTimeout(() => {
+                  forceKickOutDemo();
+              }, timeLeft);
+          }
+      }
+
       _currentRole = await fetchRole(user.uid);
       // Aktifkan kembali alarm saat user login
       try { localStorage.removeItem('iot_alarm_disable'); } catch (_) {}
@@ -98,6 +114,7 @@ function initPage(callbacks = {}) {
     } else {
       _currentUser = null;
       _currentRole = null;
+      if (_tempExpiryTimer) clearTimeout(_tempExpiryTimer);
 
       if (typeof onGuest === 'function') {
         onGuest();
@@ -170,15 +187,31 @@ function initSidebarToggle() {
 }
 
 // ─── Logout ──────────────────────────────────────────────────
+async function forceKickOutDemo() {
+  try { stopWebSiren(); } catch (_) {}
+  try { localStorage.setItem('iot_alarm_disable', '1'); } catch (_) {}
+  await signOut(auth);
+
+  Swal.fire({
+    title: 'Sesi Demo Berakhir!',
+    text: 'Waktu 5 menit simulator Anda telah habis. Seluruh data Anda di server simulasi akan dibersihkan dalam waktu dekat.',
+    icon: 'info',
+    confirmButtonText: 'Kembali',
+    confirmButtonColor: '#3b82f6',
+    background: '#1e293b', color: '#fff',
+    allowOutsideClick: false
+  }).then(() => {
+    window.location.href = '/simulator';
+  });
+}
+
 async function logout() {
-  // Matikan alarm siren web agar tidak masih bunyi setelah logout/redirect
   try {
     stopWebSiren();
     localStorage.setItem('iot_alarm_disable', '1');
   } catch (_) {}
   await signOut(auth);
   
-  // Redirect ke /login jika di dalam PWA, ke / (Homepage) jika di browser biasa
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   if (isStandalone) {
     window.location.href = '/app/login';

@@ -219,10 +219,10 @@
               Buat akun demo, generate data sensor secara acak, dan pantau sistem tanpa hardware nyata. Sesi demo Anda dilindungi dan akan direset otomatis dalam 5 menit.
             </p>
             <div class="demo-clean-actions">
-              <button id="simulatorInstallBtn" class="btn btn-primary demo-dl-btn" type="button">
-                <span class="material-symbols-rounded demo-dl-icon">download</span>
-                <span class="demo-dl-label">Download Simulator PWA</span>
-              </button>
+              <a href="/simulator" id="simulatorInstallBtn" class="btn btn-primary demo-dl-btn" style="text-decoration:none;">
+                <span class="material-symbols-rounded demo-dl-icon">rocket_launch</span>
+                <span class="demo-dl-label">Mulai PWA Simulator</span>
+              </a>
             </div>
             <p class="text-xs text-muted demo-note-text">
               Browser Anda harus mendukung fitur instalasi PWA (Chrome, Edge, dsb). Jika di mobile gunakan "Add to Home Screen".
@@ -329,7 +329,6 @@
         e.preventDefault();
         deferredPrompt = e;
         if (pwaHint) pwaHint.textContent = "";
-        if (simulatorInstallBtn) simulatorInstallBtn.style.display = "flex";
       });
 
       if (pwaInstallBtn) {

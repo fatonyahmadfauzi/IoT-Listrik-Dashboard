@@ -9,7 +9,6 @@
       content="Platform monitoring listrik berbasis IoT untuk memantau arus, tegangan, status bahaya, dan kontrol relay secara realtime."
     />
     <link rel="stylesheet" href="/css/style.css" />
-    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#070c18" />
     <link
       rel="stylesheet"
@@ -22,9 +21,15 @@
     <main class="landing-main">
       <section id="monitoring" class="landing-hero clean-hero">
         <div class="clean-hero-content">
-          <span class="landing-badge glass"
-            >Smart Monitoring • Realtime • Multi Platform •&nbsp;<a href="https://discord.gg/WszeM4FVH6" target="_blank" style="color:#7289da; text-decoration:none; font-weight:700; letter-spacing:inherit; text-transform:inherit;">Discord</a></span
-          >
+          <span class="landing-badge glass">
+            <span class="badge-row">Smart Monitoring</span>
+            <span class="badge-dot">•</span>
+            <span class="badge-row">Realtime</span>
+            <span class="badge-sep">•</span>
+            <span class="badge-row">Multi Platform</span>
+            <span class="badge-dot">•</span>
+            <span class="badge-row"><a href="https://discord.gg/WszeM4FVH6" target="_blank" class="badge-discord-link">Discord</a></span>
+          </span>
           <h1>
             Monitor sistem listrik secara realtime, aman, dan mudah dipantau dari mana saja
           </h1>
@@ -84,7 +89,7 @@
               </div>
 
               <!-- Branching -->
-              <div class="arch-branch">
+              <div class="arch-branch arch-branch-desktop">
                 <!-- Trunk -->
                 <svg width="6" height="20" style="overflow: visible;">
                   <line x1="3" y1="0" x2="3" y2="20" class="anim-line anim-line-v"/>
@@ -108,11 +113,25 @@
                   <circle cx="87.5%" cy="2" r="4" fill="var(--purple)" style="filter: drop-shadow(0 0 4px var(--purple));"/>
                 </svg>
               </div>
+              <!-- Mobile connector: 2 branches (for 2×2 grid) -->
+              <div class="arch-branch arch-branch-mobile">
+                <svg width="6" height="20" style="overflow: visible;">
+                  <line x1="3" y1="0" x2="3" y2="20" class="anim-line anim-line-v"/>
+                </svg>
+                <svg width="100%" height="20" style="overflow: visible;">
+                  <line x1="50%" y1="2" x2="25%" y2="2" class="anim-line anim-line-h-left"/>
+                  <line x1="50%" y1="2" x2="75%" y2="2" class="anim-line anim-line-h-right"/>
+                  <line x1="25%" y1="0" x2="25%" y2="20" class="anim-line anim-line-v"/>
+                  <line x1="75%" y1="0" x2="75%" y2="20" class="anim-line anim-line-v"/>
+                  <circle cx="25%" cy="2" r="4" fill="var(--purple)" style="filter: drop-shadow(0 0 4px var(--purple));"/>
+                  <circle cx="75%" cy="2" r="4" fill="var(--purple)" style="filter: drop-shadow(0 0 4px var(--purple));"/>
+                </svg>
+              </div>
 
               <!-- Leaves (4 client platforms) -->
               <div class="arch-leaves">
                 <!-- 1: Notifikasi (Telegram + Discord) -->
-                <div style="padding: 0 6px;">
+                <div class="arch-leaf-cell">
                   <div class="arch-box glass">
                     <div class="arch-box-icon" style="background: rgba(88,101,242,0.1); color: #7289da;"><span class="material-symbols-rounded">forum</span></div>
                     <div class="arch-box-content">
@@ -123,7 +142,7 @@
                 </div>
 
                 <!-- 2: Web Dashboard -->
-                <div style="padding: 0 6px;">
+                <div class="arch-leaf-cell">
                   <div class="arch-box glass">
                     <div class="arch-box-icon" style="background: rgba(124, 58, 237, 0.1); color: #c084fc;"><span class="material-symbols-rounded">language</span></div>
                     <div class="arch-box-content">
@@ -134,7 +153,7 @@
                 </div>
 
                 <!-- 3: Android App -->
-                <div style="padding: 0 6px;">
+                <div class="arch-leaf-cell">
                   <div class="arch-box glass">
                     <div class="arch-box-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--green-light);"><span class="material-symbols-rounded">phone_iphone</span></div>
                     <div class="arch-box-content">
@@ -145,7 +164,7 @@
                 </div>
 
                 <!-- 4: Windows Desktop -->
-                <div style="padding: 0 6px;">
+                <div class="arch-leaf-cell">
                   <div class="arch-box glass">
                     <div class="arch-box-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--yellow-light);"><span class="material-symbols-rounded">desktop_windows</span></div>
                     <div class="arch-box-content">
@@ -201,8 +220,8 @@
             </p>
             <div class="demo-clean-actions">
               <button id="simulatorInstallBtn" class="btn btn-primary demo-dl-btn" type="button">
-                <span class="material-symbols-rounded">download</span>
-                Download Simulator PWA
+                <span class="material-symbols-rounded demo-dl-icon">download</span>
+                <span class="demo-dl-label">Download Simulator PWA</span>
               </button>
             </div>
             <p class="text-xs text-muted demo-note-text">
@@ -286,8 +305,16 @@
     <app-footer></app-footer>
 
     <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      // Unregister old full-site service workers — public site no longer uses PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          registrations.forEach((reg) => {
+            // Only unregister if controlling the full site (not /app/ scoped)
+            if (reg.scope && !reg.scope.endsWith('/app/')) {
+              reg.unregister();
+            }
+          });
+        });
       }
 
       // PWA install button for landing page
@@ -319,26 +346,6 @@
           const choice = await deferredPrompt.userChoice;
           if (pwaHint && choice && choice.outcome === "dismissed") {
             pwaHint.textContent = "Install dibatalkan. Kamu bisa coba lagi kapan saja.";
-          }
-          deferredPrompt = null;
-        });
-      }
-
-      // PWA Simulator install button
-      if (simulatorInstallBtn) {
-        simulatorInstallBtn.addEventListener("click", async () => {
-          if (!deferredPrompt) {
-            alert(
-              isIOS
-                ? "Di iPhone/iPad: buka Share > Add to Home Screen untuk install PWA Simulator."
-                : "Install otomatis belum tersedia. Buka menu browser > Install App / Add to Home Screen."
-            );
-            return;
-          }
-          deferredPrompt.prompt();
-          const choice = await deferredPrompt.userChoice;
-          if (choice && choice.outcome === "accepted") {
-            alert("PWA Simulator berhasil diinstall! Buka aplikasi untuk membuat akun demo.");
           }
           deferredPrompt = null;
         });

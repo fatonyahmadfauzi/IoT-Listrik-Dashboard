@@ -4,22 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard — IoT Monitoring Listrik</title>
-    <meta
-      name="description"
-      content="Monitoring realtime arus, tegangan, dan status sistem listrik berbasis IoT"
-    />
+    <meta name="description" content="Monitoring realtime arus, tegangan, dan status sistem listrik berbasis IoT" />
     <link rel="stylesheet" href="/css/style.css" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/app/manifest.json" />
     <meta name="theme-color" content="#070c18" />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
-    />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
     <!-- Chart.js + zoom plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
@@ -43,20 +36,16 @@
         </div>
 
         <div class="sidebar-nav">
-          <a href="/dashboard" class="nav-item active">
+          <a href="/app/dashboard" class="nav-item active">
             <span class="material-symbols-rounded nav-icon">dashboard</span>
             Dashboard
           </a>
-          <a href="/history" class="nav-item">
+          <a href="/app/history" class="nav-item">
             <span class="material-symbols-rounded nav-icon">history</span>
             Riwayat Log
           </a>
-          <a href="/downloads" class="nav-item">
-            <span class="material-symbols-rounded nav-icon">download</span>
-            Download App
-          </a>
           <div class="nav-divider"></div>
-          <a href="/settings" class="nav-item" data-admin-only>
+          <a href="/app/settings" class="nav-item" data-admin-only>
             <span class="material-symbols-rounded nav-icon">settings</span>
             Pengaturan
           </a>
@@ -85,26 +74,13 @@
             </button>
             <h1 class="topbar-title">Dashboard Monitoring</h1>
           </div>
-          <div
-            class="topbar-actions"
-            style="flex-wrap: wrap; justify-content: flex-end; gap: 10px"
-          >
-            <div
-              id="connStrip"
-              class="conn-strip glass"
-              title="Sumber data &amp; koneksi"
-            >
+          <div class="topbar-actions" style="flex-wrap: wrap; justify-content: flex-end; gap: 10px">
+            <div id="connStrip" class="conn-strip glass" title="Sumber data & koneksi">
               <span id="endpointBadge" class="ep-badge ep-cloud">CLOUD</span>
-              <span id="connStateText" class="text-sm text-muted"
-                >Connected</span
-              >
-              <span
-                id="alertPulse"
-                class="alert-pulse hidden"
-                aria-hidden="true"
-              ></span>
+              <span id="connStateText" class="text-sm text-muted">Connected</span>
+              <span id="alertPulse" class="alert-pulse hidden" aria-hidden="true"></span>
             </div>
-            <!-- Install PWA button (hidden until browser fires event) -->
+            <!-- Install PWA button (hidden until browser fires beforeinstallprompt) -->
             <button id="installBtn" class="btn btn-ghost btn-sm hidden">
               <span class="material-symbols-rounded">download</span>Install App
             </button>
@@ -115,34 +91,25 @@
         <main class="page-content">
           <!-- ── Metric Cards ────────────────────────────────────── -->
           <div class="metric-grid">
-            <!-- Arus -->
             <div class="metric-card glass green">
               <div class="metric-label">Arus</div>
               <div class="metric-value" id="valArus">— A</div>
               <div class="metric-sub">SCT-013 Sensor</div>
             </div>
-
-            <!-- Tegangan -->
             <div class="metric-card glass blue">
               <div class="metric-label">Tegangan</div>
               <div class="metric-value" id="valTegangan">— V</div>
               <div class="metric-sub">ZMPT101B Sensor</div>
             </div>
-
-            <!-- Daya (W) -->
             <div class="metric-card glass yellow">
               <div class="metric-label">Daya (est. W)</div>
               <div class="metric-value" id="valDayaW">— W</div>
               <div class="metric-sub">V×I×PF (dari perangkat)</div>
             </div>
-
-            <!-- Status -->
             <div class="metric-card glass cyan">
               <div class="metric-label">Status Sistem</div>
               <div style="margin-top: 8px">
-                <div id="statusBadge" class="status-badge status-NORMAL">
-                  NORMAL
-                </div>
+                <div id="statusBadge" class="status-badge status-NORMAL">NORMAL</div>
               </div>
               <div class="metric-sub mt-8">Deteksi otomatis</div>
             </div>
@@ -177,28 +144,20 @@
               <div class="section-title">Kontrol Relay</div>
               <div style="display: flex; align-items: center; gap: 12px">
                 <div id="relayDot" class="relay-indicator on"></div>
-                <span
-                  id="valRelay"
-                  class="font-mono"
-                  style="font-size: 16px; font-weight: 700"
-                  >—</span
-                >
+                <span id="valRelay" class="font-mono" style="font-size: 16px; font-weight: 700">—</span>
               </div>
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 12px;">
               <button id="relayOnBtn" class="btn btn-success" style="flex:1;min-width:140px;">
-                <span class="material-symbols-rounded">toggle_on</span>Nyalakan
-                Relay
+                <span class="material-symbols-rounded">toggle_on</span>Nyalakan Relay
               </button>
               <button id="relayOffBtn" class="btn btn-danger" style="flex:1;min-width:140px;">
-                <span class="material-symbols-rounded">toggle_off</span>Matikan
-                Relay
+                <span class="material-symbols-rounded">toggle_off</span>Matikan Relay
               </button>
             </div>
             <p class="text-sm text-muted mt-8">
-              Auto-cutoff aktif: relay dimatikan otomatis saat terdeteksi
-              kebocoran atau bahaya. Perintah ON ditolak jika kondisi masih
-              berbahaya.
+              Auto-cutoff aktif: relay dimatikan otomatis saat terdeteksi kebocoran atau bahaya.
+              Perintah ON ditolak jika kondisi masih berbahaya.
             </p>
           </div>
 
@@ -208,8 +167,7 @@
               <div class="section-title">Grafik Realtime</div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap">
                 <button id="resetZoomBtn" class="btn btn-ghost btn-sm">
-                  <span class="material-symbols-rounded">zoom_out_map</span
-                  >Reset Zoom
+                  <span class="material-symbols-rounded">zoom_out_map</span>Reset Zoom
                 </button>
               </div>
             </div>
@@ -217,8 +175,7 @@
               <canvas id="monitorChart"></canvas>
             </div>
             <p class="text-xs text-muted mt-8">
-              Scroll untuk zoom • Drag untuk pan • Arus, tegangan, daya (W) • 30
-              titik terakhir
+              Scroll untuk zoom • Drag untuk pan • Arus, tegangan, daya (W) • 30 titik terakhir
             </p>
           </div>
 
@@ -238,13 +195,7 @@
                 </thead>
                 <tbody id="miniLogsBody">
                   <tr>
-                    <td
-                      colspan="3"
-                      class="text-muted text-sm"
-                      style="padding: 16px"
-                    >
-                      Memuat…
-                    </td>
+                    <td colspan="3" class="text-muted text-sm" style="padding: 16px">Memuat…</td>
                   </tr>
                 </tbody>
               </table>

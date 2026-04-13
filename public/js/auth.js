@@ -65,7 +65,7 @@ function initPage(callbacks = {}) {
   const {
     onAuthed,
     onGuest,
-    redirectIfGuest = '/login',
+    redirectIfGuest = '/app/login',
     requireAdmin    = false,
   } = callbacks;
 
@@ -78,7 +78,7 @@ function initPage(callbacks = {}) {
 
       // Admin-only page guard
       if (requireAdmin && _currentRole !== 'admin') {
-        window.location.href = '/dashboard';
+        window.location.href = '/app/dashboard';
         return;
       }
 
@@ -171,7 +171,7 @@ async function logout() {
   // Redirect ke /login jika di dalam PWA, ke / (Homepage) jika di browser biasa
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   if (isStandalone) {
-    window.location.href = '/login';
+    window.location.href = '/app/login';
   } else {
     window.location.href = '/';
   }

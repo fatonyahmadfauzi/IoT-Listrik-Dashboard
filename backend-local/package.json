@@ -5,6 +5,8 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "discord": "node discord-notifier.js",
     "seed-demo": "node seed-demo.js",
     "seed-demo:live": "node seed-demo.js --live",
     "seed-logs": "node seed-demo.js --logs=80 --clear-logs"
@@ -15,6 +17,7 @@
   "dependencies": {
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
-    "firebase-admin": "^13.7.0"
+    "firebase-admin": "^13.7.0",
+    "node-fetch": "^2.7.0"
   }
 }

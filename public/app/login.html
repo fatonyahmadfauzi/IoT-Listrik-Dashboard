@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — IoT Monitoring Listrik</title>
+  <meta name="description" content="Login ke sistem monitoring arus listrik berbasis IoT" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="manifest"   href="/app/manifest.json" />
+  <meta name="theme-color" content="#070c18" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IoT Listrik" />
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
+</head>
+<body class="page-bg">
+
+<!--
+  MODE LOGIC (applied by JS before first paint via class on wrapper):
+
+  Normal mode  → .auth-page-wrap            (default)
+    - install card hidden
+    - auth card visible, centered
+
+  Install mode → .auth-page-wrap.install-mode
+    - auth card hidden (CSS: display:none)
+    - install card dominant, centered
+    - "Masuk tanpa install" ghost link at bottom of install card
+    - clicking that link → navigate to /app/login (strips ?install=1)
+      so normal auth UX is clean with no install overlay
+
+  Installed state → install card shows success + "Lanjut ke Login" button
+    - clicking → navigate to /app/login
+-->
+<div class="auth-page-wrap" id="authPageWrap">
+
+  <!-- ══ PWA Install Card ══════════════════════════════════════
+       Visible only in install mode. JS switches inner states:
+       loading → prompt-ready | ios-guide | fallback | installed
+       ════════════════════════════════════════════════════════ -->
+  <div id="pwaInstallCard" class="pwa-install-card" aria-live="polite" hidden>
+
+    <!-- Branded header inside install card -->
+    <div class="pwa-install-brand">
+      <div class="pwa-install-brand-icon">
+        <span class="material-symbols-rounded">bolt</span>
+      </div>
+      <div>
+        <div class="pwa-install-brand-name">IoT Listrik Monitor</div>
+        <div class="pwa-install-brand-sub">Alat Deteksi Kebocoran Arus Berbasis IoT</div>
+      </div>
+    </div>
+
+    <!-- ── A. LOADING ── -->
+    <div id="pwaStateLoading" class="pwa-install-state" data-state="loading">
+      <div class="pwa-install-icon">
+        <span class="pwa-spinner pwa-spinner--lg"></span>
+      </div>
+      <h2 class="pwa-install-heading">Install Aplikasi</h2>
+      <p class="pwa-install-sub">Memeriksa dukungan instalasi di perangkat Anda...</p>
+    </div>
+
+    <!-- ── B. PROMPT_READY ── -->
+    <div id="pwaStatePrompt" class="pwa-install-state" data-state="prompt-ready" hidden>
+      <div class="pwa-install-icon pwa-install-icon--blue">
+        <span class="material-symbols-rounded">install_mobile</span>
+      </div>
+      <h2 class="pwa-install-heading">Install Aplikasi IoT Listrik</h2>
+      <p class="pwa-install-sub">Tambahkan ke perangkat Anda untuk akses cepat tanpa membuka browser.</p>
+      <button id="pwaInstallBtn" class="btn btn-primary w-full pwa-install-cta">
+        <span class="material-symbols-rounded">download</span>
+        Install Sekarang
+      </button>
+      <p id="pwaInstallNote" class="pwa-install-note" hidden></p>
+    </div>
+
+    <!-- ── C. IOS_GUIDE ── -->
+    <div id="pwaStateIOS" class="pwa-install-state" data-state="ios-guide" hidden>
+      <div class="pwa-install-icon pwa-install-icon--ios">
+        <span class="material-symbols-rounded">phone_iphone</span>
+      </div>
+      <h2 class="pwa-install-heading">Install di iPhone / iPad</h2>
+      <p class="pwa-install-sub">Ikuti langkah berikut di Safari:</p>
+      <ol class="pwa-ios-steps">
+        <li>
+          <span class="pwa-ios-step-num">1</span>
+          <span class="pwa-ios-step-text">
+            Tap ikon <strong>Share</strong>
+            <span class="pwa-ios-share-icon" aria-label="Share">&#x2B06;</span>
+            di toolbar bawah Safari
+          </span>
+        </li>
+        <li>
+          <span class="pwa-ios-step-num">2</span>
+          <span class="pwa-ios-step-text">Pilih <strong>"Add to Home Screen"</strong></span>
+        </li>
+        <li>
+          <span class="pwa-ios-step-num">3</span>
+          <span class="pwa-ios-step-text">Tap <strong>"Add"</strong> di pojok kanan atas</span>
+        </li>
+      </ol>
+      <p class="pwa-ios-note">
+        <span class="material-symbols-rounded" aria-hidden="true">info</span>
+        Hanya tersedia di Safari. Browser lain di iOS belum mendukung install PWA.
+      </p>
+    </div>
+
+    <!-- ── D. FALLBACK ── -->
+    <div id="pwaStateFallback" class="pwa-install-state" data-state="fallback" hidden>
+      <div class="pwa-install-icon pwa-install-icon--muted">
+        <span class="material-symbols-rounded">browser_updated</span>
+      </div>
+      <h2 class="pwa-install-heading">Install Aplikasi</h2>
+      <p class="pwa-install-sub">Gunakan menu browser untuk menginstall aplikasi ini ke layar utama.</p>
+      <div class="pwa-fallback-steps">
+        <div class="pwa-fallback-step">
+          <span class="material-symbols-rounded" aria-hidden="true">more_vert</span>
+          <span>Buka menu browser <strong>(&#x22EE;)</strong></span>
+        </div>
+        <div class="pwa-fallback-step">
+          <span class="material-symbols-rounded" aria-hidden="true">add_to_home_screen</span>
+          <span>Pilih <strong>"Install App"</strong> atau <strong>"Add to Home Screen"</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── E. INSTALLED ── -->
+    <div id="pwaStateInstalled" class="pwa-install-state" data-state="installed" hidden>
+      <div class="pwa-install-icon pwa-install-icon--success">
+        <span class="material-symbols-rounded">check_circle</span>
+      </div>
+      <h2 class="pwa-install-heading">Aplikasi Sudah Terinstal</h2>
+      <p class="pwa-install-sub">Buka aplikasi dari layar utama, atau masuk ke akun Anda sekarang.</p>
+      <a href="/app/login" class="btn btn-primary w-full pwa-install-cta">
+        <span class="material-symbols-rounded">login</span>
+        Masuk ke Akun
+      </a>
+    </div>
+
+    <!-- ── Skip / secondary action (all non-installed states) ── -->
+    <div class="pwa-skip-row" id="pwaSkipRow">
+      <a href="/app/login" class="pwa-skip-link" tabindex="0">
+        Masuk tanpa install
+        <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+      </a>
+    </div>
+
+  </div>
+  <!-- /pwaInstallCard -->
+
+  <!-- ══ Auth Card ════════════════════════════════════════════ -->
+  <div class="auth-card glass" id="authCard">
+
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><span class="material-symbols-rounded">bolt</span></div>
+      <h1>IoT Listrik Monitor</h1>
+      <p>Alat Deteksi Kebocoran Arus Berbasis IoT</p>
+    </div>
+
+    <!-- Tab: Login / Register -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tabLogin"    role="tab">Masuk</button>
+      <button class="auth-tab"        id="tabRegister" role="tab">Daftar</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="loginEmail">Email</label>
+        <input id="loginEmail" class="form-input" type="email"
+               placeholder="email@contoh.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="loginPassword">Password</label>
+        <input id="loginPassword" class="form-input" type="password"
+               placeholder="Masukkan password" autocomplete="current-password" required />
+      </div>
+      <div id="loginError" class="text-sm"
+           style="color:var(--red-light);min-height:18px;margin-bottom:12px;"></div>
+      <button type="submit" id="loginBtn" class="btn btn-primary w-full">Masuk</button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" class="hidden" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="regName">Nama Lengkap</label>
+        <input id="regName" class="form-input" type="text"
+               placeholder="Nama Anda" autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="regEmail">Email</label>
+        <input id="regEmail" class="form-input" type="email"
+               placeholder="email@contoh.com" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="regPassword">Password</label>
+        <input id="regPassword" class="form-input" type="password"
+               placeholder="Minimal 8 karakter" autocomplete="new-password" required />
+      </div>
+      <div id="regError" class="text-sm"
+           style="color:var(--red-light);min-height:18px;margin-bottom:12px;"></div>
+      <button type="submit" id="registerBtn" class="btn btn-success w-full">Daftar Akun Baru</button>
+      <p class="auth-register-helper">
+        Akun baru akan memiliki role <strong>User</strong>.<br/>
+        Hubungi admin untuk upgrade ke Admin.
+      </p>
+    </form>
+
+  </div>
+  <!-- /auth-card -->
+
+</div>
+<!-- /auth-page-wrap -->
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script type="module">
+import { auth }      from '/js/firebase-config.js';
+import { ensureUserProfile } from '/js/auth.js';
+import { showToast } from '/js/notifications.js';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  updateProfile,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ─────────────────────────────────────────────────────────────
+// INSTALL MODE DETECTION — read before any rendering/auth
+// ─────────────────────────────────────────────────────────────
+const _params      = new URLSearchParams(window.location.search);
+const _installMode = _params.get('install') === '1';
+
+const _wrap        = document.getElementById('authPageWrap');
+const _installCard = document.getElementById('pwaInstallCard');
+const _authCard    = document.getElementById('authCard');
+const _skipRow     = document.getElementById('pwaSkipRow');
+
+if (_installMode) {
+  // Enter install-focused mode:
+  // - install card becomes the main content (show it)
+  // - auth card hidden via CSS class
+  _wrap.classList.add('install-mode');
+  _installCard.hidden = false;
+  // Auth card hidden by CSS .install-mode .auth-card { display: none }
+} else {
+  // Normal login mode — install card stays hidden
+  _installCard.hidden = true;
+}
+
+// ─────────────────────────────────────────────────────────────
+// TAB SWITCHING
+// ─────────────────────────────────────────────────────────────
+const loginForm    = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const tabLogin     = document.getElementById('tabLogin');
+const tabRegister  = document.getElementById('tabRegister');
+
+function showTab(tab) {
+  const isLogin = tab === 'login';
+  loginForm.classList.toggle('hidden', !isLogin);
+  registerForm.classList.toggle('hidden', isLogin);
+  tabLogin.classList.toggle('active', isLogin);
+  tabRegister.classList.toggle('active', !isLogin);
+}
+tabLogin.addEventListener('click',    () => showTab('login'));
+tabRegister.addEventListener('click', () => showTab('register'));
+
+// ─────────────────────────────────────────────────────────────
+// AUTH STATE — redirect only in normal mode
+// ─────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (user && !_installMode) {
+    window.location.replace('/app/dashboard');
+  }
+  // Install mode: do NOT auto-redirect — user should see install flow first.
+  // They navigate to /app/login (no param) after install, then log in normally.
+});
+
+// ─────────────────────────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────────────────────────
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Isi email dan password.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Masuk...';
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.replace('/app/dashboard');
+  } catch (err) {
+    const msgs = {
+      'auth/user-not-found':     'Akun tidak ditemukan.',
+      'auth/wrong-password':     'Password salah.',
+      'auth/too-many-requests':  'Terlalu banyak percobaan. Coba lagi nanti.',
+      'auth/invalid-email':      'Format email tidak valid.',
+      'auth/invalid-credential': 'Email atau password salah.',
+    };
+    errEl.textContent = msgs[err.code] || err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// REGISTER
+// ─────────────────────────────────────────────────────────────
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name     = document.getElementById('regName').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const errEl    = document.getElementById('regError');
+  const btn      = document.getElementById('registerBtn');
+
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Isi email dan password.'; return; }
+  if (password.length < 8) { errEl.textContent = 'Password minimal 8 karakter.'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Mendaftar...';
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    if (name) await updateProfile(cred.user, { displayName: name });
+    await ensureUserProfile(cred.user, 'user');
+    window.location.replace('/app/dashboard');
+  } catch (err) {
+    const msgs = {
+      'auth/email-already-in-use': 'Email sudah terdaftar.',
+      'auth/weak-password':        'Password terlalu lemah.',
+      'auth/invalid-email':        'Format email tidak valid.',
+    };
+    errEl.textContent = msgs[err.code] || err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Daftar Akun Baru';
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// SERVICE WORKER
+// ─────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/app/sw.js', { scope: '/app/' })
+    .catch(err => console.warn('[SW] Registration failed:', err));
+}
+
+// ─────────────────────────────────────────────────────────────
+// PWA INSTALL STATE MACHINE — only runs in install mode
+// ─────────────────────────────────────────────────────────────
+if (_installMode) {
+  runInstallFlow();
+}
+
+function runInstallFlow() {
+  // ── Platform detection ─────────────────────────────────────
+  const ua = navigator.userAgent || '';
+
+  const isIOS = (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+
+  const isStandalone = (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+
+  // ── State switcher ─────────────────────────────────────────
+  const ALL_STATES = [
+    'pwaStateLoading', 'pwaStatePrompt', 'pwaStateIOS',
+    'pwaStateFallback', 'pwaStateInstalled',
+  ];
+
+  function showState(stateId) {
+    ALL_STATES.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = (id !== stateId);
+    });
+    // Hide skip row only when installed (installed state has its own CTA)
+    if (_skipRow) _skipRow.hidden = (stateId === 'pwaStateInstalled');
+  }
+
+  // ── Immediate: LOADING ─────────────────────────────────────
+  showState('pwaStateLoading');
+
+  // ── Standalone / already installed ─────────────────────────
+  if (isStandalone) {
+    showState('pwaStateInstalled');
+    return;
+  }
+
+  // ── iOS: show guide immediately ────────────────────────────
+  if (isIOS) {
+    showState('pwaStateIOS');
+    return;
+  }
+
+  // ── Android / Desktop: defer to beforeinstallprompt ────────
+  let deferredPrompt = null;
+  let resolved       = false;
+
+  const installBtn  = document.getElementById('pwaInstallBtn');
+  const installNote = document.getElementById('pwaInstallNote');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    resolved = true;
+    showState('pwaStatePrompt');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    resolved = true;
+    clearTimeout(fallbackTimer);
+    showState('pwaStateInstalled');
+  });
+
+  // 4s timeout → fallback
+  const fallbackTimer = setTimeout(() => {
+    if (!resolved) {
+      resolved = true;
+      showState('pwaStateFallback');
+    }
+  }, 4000);
+
+  // ── Install button ─────────────────────────────────────────
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) { showState('pwaStateFallback'); return; }
+
+      clearTimeout(fallbackTimer);
+      installBtn.disabled = true;
+      installBtn.innerHTML = '<span class="pwa-spinner pwa-spinner--btn"></span> Menginstall...';
+
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+
+        if (outcome === 'accepted') {
+          showState('pwaStateInstalled');
+        } else {
+          installBtn.disabled = false;
+          installBtn.innerHTML = '<span class="material-symbols-rounded">download</span> Install Sekarang';
+          if (installNote) {
+            installNote.textContent = 'Install dibatalkan. Tap untuk mencoba lagi.';
+            installNote.hidden = false;
+          }
+        }
+      } catch {
+        showState('pwaStateFallback');
+      }
+    });
+  }
+}
+</script>
+</body>
+</html>

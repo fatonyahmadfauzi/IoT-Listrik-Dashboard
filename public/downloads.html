@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
@@ -10,7 +10,6 @@
     />
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/downloads.css" />
-    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#070c18" />
     <link
       rel="stylesheet"
@@ -20,7 +19,8 @@
   <body class="page-bg downloads-page">
     <app-navbar></app-navbar>
 
-                <main class="dl-page-main">
+    <main class="dl-page-main">
+
       <!-- HERO -->
       <section class="dl-hero text-center">
         <h1 class="landing-title">Unduhan Aplikasi</h1>
@@ -31,8 +31,8 @@
 
       <!-- DOWNLOAD GRID -->
       <section class="dl-grid">
-        
-        <!-- Android -->
+
+        <!-- Android APK -->
         <div class="dl-clean-card">
           <span class="material-symbols-rounded dl-icon-android">android</span>
           <h3>Android APK</h3>
@@ -49,13 +49,26 @@
         <div class="dl-clean-card">
           <span class="material-symbols-rounded dl-icon-pwa">public</span>
           <h3>Web (PWA)</h3>
-          <p>Akses dashboard dari browser tanpa instalasi. Mendukung ditambahkan ke layar Utama (Progressive Web App).</p>
-          <div class="dl-card-actions" style="gap: 12px; flex-wrap: wrap;">
-            <a href="/login" class="btn btn-secondary">Buka Dashboard</a>
-            <button id="pwaInstallBtnDl" class="btn" style="display: none; background: #FFCA28; color: #000; font-weight: 600; box-shadow: 0 4px 14px rgba(255, 202, 40, 0.4); border:none; padding: 12px 24px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;">Install PWA</button>
+          <p>Akses dashboard dari mana saja. Bisa diinstall langsung dari browser ke layar utama (<i>Progressive Web App</i>) tanpa perlu App Store.</p>
+          <div class="dl-pwa-actions">
+            <a href="/app/login" class="btn btn-secondary dl-pwa-btn">
+              <span class="material-symbols-rounded">open_in_browser</span>
+              Buka Dashboard
+            </a>
+            <!--
+              Install PWA: always link to /app/login?install=1
+              This works on ALL platforms and ALL browsers — no JS dependency.
+              The login page handles the platform-adaptive install UX.
+            -->
+            <a href="/app/login?install=1" id="pwaInstallLinkDl" class="btn btn-pwa-install dl-pwa-btn">
+              <span class="material-symbols-rounded">install_mobile</span>
+              <span class="pwa-install-label">Install PWA</span>
+            </a>
           </div>
-          <p id="pwaHintDl" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; margin-bottom: 0;"></p>
-          <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
+          <p class="pwa-hint-text" style="font-size:11.5px;color:#64748b;margin-top:6px;">
+            Bekerja di Chrome, Edge, dan Safari (iPhone/iPad).
+          </p>
+          <div class="dl-card-req">
             <strong>Min. Requirements:</strong> Chrome / Edge / Safari (Versi terbaru).
           </div>
         </div>
@@ -78,29 +91,27 @@
           </div>
         </div>
 
-        </div>
-
         <!-- CLI Portable -->
         <div class="dl-clean-card dl-cli-card">
           <span class="material-symbols-rounded dl-icon-cli">terminal</span>
           <h3>CLI Portable <span style="font-size: 0.7rem; background:#38bdf8; color:#09090b; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left:8px; font-weight:700;">HACKER MODE</span></h3>
-          <p>Dashboard versi teks baris perintah lintas platform. Berjalan ringan tanpa butuh UI instalasi (Berkas executable `.exe` khusus untuk Windows).</p>
-          
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px;">
+          <p>Dashboard versi teks baris perintah lintas platform. Berjalan ringan tanpa butuh UI instalasi (Berkas executable <code style="color:#38bdf8;background:transparent;">.exe</code> khusus untuk Windows).</p>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 24px; margin-bottom: 16px;">
             <a href="/downloads/cli/iot-listrik-cli-node.exe" download class="btn" style="background: #38bdf8; color: #0f172a; border-radius: 999px; padding: 12px 24px; font-weight: 600; font-size: 0.95rem; text-decoration: none; transition: 0.2s;"> Node.js Ver (Win x64) </a>
             <a href="/downloads/cli/iot-listrik-cli-python.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); padding: 12px 24px; font-weight: 500; font-size: 0.95rem; text-decoration: none; transition: 0.2s;"> Python Ver (Win x64) </a>
           </div>
 
-          <div style="font-size: 0.9rem; margin-top: auto;">
+          <div style="font-size: 0.9rem;">
             <span style="color: var(--text-muted); margin-bottom: 8px; display: inline-block;">Perintah eksekusi Windows (Buka CMD / PowerShell):</span>
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                <code style="background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 6px; color: #38bdf8; font-size: 0.9em; box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.2);">.\iot-listrik-cli-node.exe</code>
                <code style="background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 6px; color: #e2e8f0; font-size: 0.9em; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);">.\iot-listrik-cli-python.exe</code>
             </div>
           </div>
-          
+
           <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7); border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; margin-top: 24px;">
-            <strong style="color:#fff;">Linux, MacOS & Termux Android:</strong> Jangan unduh executabel manual. Jalankan perintah instalasi online ini di terminal Anda:
+            <strong style="color:#fff;">Linux, MacOS &amp; Termux Android:</strong> Jangan unduh executabel manual. Jalankan perintah instalasi online ini di terminal Anda:
             <div style="margin-top: 12px; display: flex; gap: 8px;">
              <code style="background: rgba(0,0,0,0.5); padding: 10px 16px; border-radius: 6px; color: #10b981; font-size: 0.9em; box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.2); flex-grow: 1; word-break: break-all; overflow-wrap: break-word;">curl -sL "https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh" | bash</code>
                <button class="cmd-copy-btn" data-copy='curl -sL "https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh" | bash' style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text-muted); width: 42px; cursor: pointer; display: grid; place-items: center; transition: 0.2s;"><span class="material-symbols-rounded" style="font-size: 20px;">content_copy</span></button>
@@ -155,7 +166,7 @@
 
     <script src="/js/version-manager.js"></script>
     <script>
-      // Hydrate terminal commands & download links directly from app-version.json
+      // Hydrate terminal commands & download links from app-version.json
       async function hydrateDownloads() {
         let d;
         try {
@@ -163,28 +174,25 @@
           d = await res.json();
         } catch(e) { console.warn('Could not load app-version.json', e); return; }
 
-        // -- version badge --
         const badge = document.getElementById('terminalVersionBadge');
         if (badge) badge.textContent = 'v' + d.version;
 
-        // -- download button hrefs --
         document.querySelectorAll('a[download]').forEach(a => {
           const href = a.getAttribute('href');
-          if (href.includes('Setup-'))       a.href = d.downloads.windows?.setup?.url    || a.href;
-          else if (href.includes('Portable-'))a.href = d.downloads.windows?.portable?.url || a.href;
-          else if (href.includes('.apk'))     a.href = d.downloads.android?.url           || a.href;
-          else if (href.includes('cli-node')) a.href = d.downloads.cli?.node?.url         || a.href;
-          else if (href.includes('cli-python'))a.href= d.downloads.cli?.python?.url       || a.href;
-          else if (href.includes('.msi'))     a.href = d.downloads.windows?.msi?.url      || a.href;
+          if (href.includes('Setup-'))        a.href = d.downloads.windows?.setup?.url    || a.href;
+          else if (href.includes('Portable-')) a.href = d.downloads.windows?.portable?.url || a.href;
+          else if (href.includes('.apk'))      a.href = d.downloads.android?.url           || a.href;
+          else if (href.includes('cli-node'))  a.href = d.downloads.cli?.node?.url         || a.href;
+          else if (href.includes('cli-python'))a.href = d.downloads.cli?.python?.url       || a.href;
+          else if (href.includes('.msi'))      a.href = d.downloads.windows?.msi?.url      || a.href;
         });
 
-        // -- terminal commands --
-        const winUrl  = d.downloads.windows?.setup?.url    || '';
-        const winFile = d.downloads.windows?.setup?.filename|| 'IoT-Listrik-Dashboard-Setup.exe';
-        const apkUrl  = d.downloads.android?.url            || '';
-        const apkFile = d.downloads.android?.filename       || 'IoT-Listrik-Dashboard.apk';
-        const cliUrl  = d.downloads.cli?.node?.url          || '';
-        const cliFile = d.downloads.cli?.node?.filename     || 'iot-listrik-cli-node.exe';
+        const winUrl  = d.downloads.windows?.setup?.url     || '';
+        const winFile = d.downloads.windows?.setup?.filename || 'IoT-Listrik-Dashboard-Setup.exe';
+        const apkUrl  = d.downloads.android?.url             || '';
+        const apkFile = d.downloads.android?.filename        || 'IoT-Listrik-Dashboard.apk';
+        const cliUrl  = d.downloads.cli?.node?.url           || '';
+        const cliFile = d.downloads.cli?.node?.filename      || 'iot-listrik-cli-node.exe';
 
         const cmds = {
           termCmdPS:   `Invoke-WebRequest -Uri "${winUrl}" -OutFile "${winFile}"`,
@@ -199,14 +207,10 @@
           const btn = document.getElementById(id.replace('Cmd', 'Copy'));
           if (btn) btn.setAttribute('data-copy', cmd);
         });
-
-        console.log('[Downloads] Hydrated for v' + d.version);
       }
-
-      // Run immediately — script is at bottom of body so DOM is ready
       hydrateDownloads();
 
-      // Copy button handler — event delegation (supports dynamically filled buttons)
+      // Copy button handler
       document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.cmd-copy-btn');
         if (!btn) return;
@@ -217,42 +221,11 @@
           const icon = btn.querySelector('.material-symbols-rounded');
           if (icon) { icon.textContent = 'check'; setTimeout(() => icon.textContent = 'content_copy', 2000); }
         } catch (err) { console.error('Failed to copy', err); }
-      });</script>
-    <script>
-      // PWA Install Logic for Downloads Page
-      let deferredPromptDl = null;
-      const pwaBtnDl = document.getElementById("pwaInstallBtnDl");
-      const pwaHintDl = document.getElementById("pwaHintDl");
-
-      window.addEventListener("beforeinstallprompt", (e) => {
-        e.preventDefault();
-        deferredPromptDl = e;
-        if (pwaHintDl) pwaHintDl.textContent = "";
-        if (pwaBtnDl) pwaBtnDl.style.display = "inline-flex";
       });
-
-      if (pwaBtnDl) {
-        pwaBtnDl.addEventListener("click", async () => {
-          if (!deferredPromptDl) {
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || "");
-            if (pwaHintDl) {
-              pwaHintDl.textContent = isIOS
-                ? "Di iPhone/iPad: buka Share > Add to Home Screen."
-                : "Install otomatis tidak tersedia.";
-            }
-            return;
-          }
-          deferredPromptDl.prompt();
-          const choice = await deferredPromptDl.userChoice;
-          if (pwaHintDl && choice && choice.outcome === "dismissed") {
-            pwaHintDl.textContent = "Install dibatalkan.";
-          }
-          deferredPromptDl = null;
-          pwaBtnDl.style.display = "none";
-        });
-      }
     </script>
     <script src="/js/components/navbar.js"></script>
     <script src="/js/components/footer.js"></script>
-    </body>
+  </body>
 </html>
+
+

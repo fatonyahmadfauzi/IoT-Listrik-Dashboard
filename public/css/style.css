@@ -1,4 +1,4 @@
-/* =============================================================
+﻿/* =============================================================
    IoT Listrik Dashboard — Global Design System
    Dark Glassmorphism Premium UI
    ============================================================= */
@@ -8,13 +8,16 @@
 /* ── CSS Variables ─────────────────────────────────────────── */
 :root {
   --bg-base: #000000;
-  --bg-surface: #0a0a0a;
-  --bg-elevated: #111111;
+  --bg-surface: #0c0c0c;
+  --bg-elevated: #131313;
 
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-bg-hover: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.07);
-  --glass-border-hi: rgba(255, 255, 255, 0.14);
+  /* glass surfaces — slightly more visible cards on pure-black bg */
+  --glass-bg: rgba(255, 255, 255, 0.045);
+  --glass-bg-hover: rgba(255, 255, 255, 0.085);
+  --glass-border: rgba(255, 255, 255, 0.085);
+  --glass-border-hi: rgba(255, 255, 255, 0.16);
+  /* inset highlight line at top of card */
+  --card-shine: rgba(255, 255, 255, 0.055);
 
   --brand: #3b82f6;
   --brand-light: #60a5fa;
@@ -121,6 +124,34 @@ select {
   background: #000000;
   min-height: 100vh;
 }
+/* Dual radial depth — top blue haze + bottom micro-glow.
+   Fixed so it doesn't scroll with the card on mobile. */
+body.page-bg {
+  background-image:
+    radial-gradient(
+      ellipse 90% 50% at 50% -5%,
+      rgba(29, 78, 216, 0.12) 0%,
+      transparent 68%
+    ),
+    radial-gradient(
+      ellipse 60% 30% at 50% 108%,
+      rgba(8, 120, 210, 0.07) 0%,
+      transparent 70%
+    );
+  background-attachment: fixed;
+}
+
+/* Card entry animation — subtle lift-in on page load */
+@keyframes authCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 
 /* ── Glass ─────────────────────────────────────────────────── */
 .glass {
@@ -129,13 +160,19 @@ select {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  /* layered depth: card shadow + subtle inset top-edge shine */
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 var(--card-shine);
   transition:
     border-color var(--transition),
     box-shadow var(--transition);
 }
 .glass:hover {
   border-color: var(--glass-border-hi);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.65),
+    inset 0 1px 0 rgba(255,255,255,0.07);
 }
 
 /* ── Layout ────────────────────────────────────────────────── */
@@ -154,137 +191,199 @@ select {
   z-index: 100;
   display: flex;
   flex-direction: column;
-  padding: 20px 14px;
-  background: rgba(0, 0, 0, 0.97);
-  border-right: 1px solid var(--glass-border);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  /* refined padding: tighter top, generous horizontal */
+  padding: 18px 12px 16px;
+  /* layered surface: deep base + barely-there warm tint */
+  background:
+    linear-gradient(180deg,
+      rgba(10, 10, 12, 0.99) 0%,
+      rgba(6, 6, 9, 0.99) 60%,
+      rgba(4, 4, 8, 0.99) 100%);
+  /* premium right border: brighter at top, fades out */
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  /* soft inward shadow on the right edge for depth */
+  box-shadow: inset -1px 0 0 rgba(255,255,255,0.025);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   overflow: hidden;
   transition: none;
 }
+/* A. Brand / Header Block ─────────────────────────────────── */
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
-  margin-bottom: 28px;
+  gap: 11px;
+  /* tighter, more deliberate composition */
+  padding: 6px 10px 18px;
+  margin-bottom: 6px;
+  /* clean separator — gradient fade instead of hard rule */
+  border-bottom: 1px solid rgba(255,255,255,0.055);
 }
 .sidebar-logo-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--primary), var(--cyan));
-  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  /* brighter gradient for icon legibility */
+  background: linear-gradient(135deg, #1d6fe8, #0ea5e9);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 6px 18px var(--primary-glow);
+  font-size: 18px;
+  /* focused tight glow, not diffuse */
+  box-shadow:
+    0 3px 12px rgba(29,111,232,0.38),
+    inset 0 1px 0 rgba(255,255,255,0.18);
   flex-shrink: 0;
 }
 .sidebar-logo-text h2 {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
+  letter-spacing: -0.02em;
   line-height: 1.2;
+  color: var(--text-primary);
 }
 .sidebar-logo-text span {
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #4d6280;
+  letter-spacing: 0.02em;
 }
 
+/* C. Nav area + D. Active state ──────────────────────────── */
 .sidebar-nav {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  padding-top: 14px;
 }
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 11px 13px;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  gap: 10px;
+  /* deliberate height: 40px optical — not over-tall */
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: #64748b;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
-  transition: all var(--transition);
+  transition: all 0.2s ease;
   border: 1px solid transparent;
   cursor: pointer;
+  letter-spacing: -0.008em;
+  position: relative;
 }
 .nav-item:hover {
-  background: var(--glass-bg);
-  color: var(--text-primary);
-  border-color: var(--glass-border);
+  /* lifted surface on hover — distinct from sidebar bg */
+  background: rgba(255,255,255,0.055);
+  color: #cbd5e1;
+  border-color: rgba(255,255,255,0.07);
 }
 .nav-item.active {
+  /* clean blue surface — not over-glowed */
   background: linear-gradient(
     135deg,
-    rgba(59, 130, 246, 0.22),
-    rgba(6, 182, 212, 0.1)
+    rgba(29, 111, 232, 0.18) 0%,
+    rgba(14, 165, 233, 0.09) 100%
   );
-  color: var(--primary-light);
-  border-color: rgba(59, 130, 246, 0.35);
-  box-shadow: 0 0 14px rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.28);
+  /* refined: inset border highlight + contained glow */
+  box-shadow:
+    0 1px 8px rgba(59,130,246,0.12),
+    inset 0 0 0 1px rgba(59,130,246,0.16),
+    inset 1px 0 0 rgba(96,165,250,0.15);
+  font-weight: 600;
+}
+.nav-item.active .nav-icon {
+  color: #60a5fa;
 }
 .nav-icon {
   font-size: 17px;
-  width: 20px;
+  width: 18px;
   text-align: center;
   flex-shrink: 0;
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
 }
+.nav-item:hover .nav-icon {
+  opacity: 0.95;
+}
+.nav-item.active .nav-icon {
+  opacity: 1;
+}
+/* E. Divider / Grouping ───────────────────────────────────── */
 .nav-divider {
   height: 1px;
-  background: var(--glass-border);
-  margin: 10px 0;
+  /* gradient fade for elegance, not a harsh line */
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.07) 20%,
+    rgba(255,255,255,0.07) 80%,
+    transparent 100%
+  );
+  margin: 8px 4px;
 }
 
+/* F. Bottom user area ─────────────────────────────────────── */
 .sidebar-footer {
   margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid var(--glass-border);
+  /* tighter breathing room; separator flush with nav */
+  padding-top: 12px;
+  /* gradient-fade top border — echoes nav-divider treatment */
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 .user-badge {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 11px;
-  border-radius: var(--radius-md);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  margin-bottom: 10px;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  /* subtly lifted from sidebar bg */
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  /* inner top-edge highlight for card depth */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
+  margin-bottom: 8px;
 }
 .user-avatar {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--purple));
+  background: linear-gradient(135deg, #1d6fe8, #7c3aed);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
+  /* ring around avatar for premium feel */
+  box-shadow: 0 0 0 2px rgba(29,111,232,0.25);
+  color: #fff;
 }
 .user-info {
   flex: 1;
   min-width: 0;
 }
 .user-email {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
-  color: var(--text-primary);
+  color: #94a3b8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 .role-pill {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: var(--radius-full);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   margin-top: 3px;
 }
@@ -314,18 +413,22 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
-  background: rgba(0, 0, 0, 0.88);
+  padding: 0 32px;
+  /* slightly higher contrast backdrop vs pure-black bg */
+  background: rgba(5, 5, 5, 0.94);
   border-bottom: 1px solid var(--glass-border);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 2px 16px rgba(0,0,0,0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   position: sticky;
   top: 0;
   z-index: 90;
 }
 .topbar-title {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 .topbar-actions {
   display: flex;
@@ -336,7 +439,7 @@ select {
   overflow: hidden;
 }
 .page-content {
-  padding: 26px;
+  padding: 28px 32px;
   flex: 1;
   min-width: 0;
   width: 100%;
@@ -346,13 +449,17 @@ select {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 22px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 .metric-card {
-  padding: 22px;
+  padding: 20px 22px 18px;
   position: relative;
   overflow: hidden;
+  /* card-to-card visual separation */
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 var(--card-shine);
 }
 .metric-card::before {
   content: "";
@@ -379,35 +486,41 @@ select {
   background: linear-gradient(90deg, var(--red), transparent);
 }
 .metric-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
+  letter-spacing: 0.6px;
+  margin-bottom: 9px;
 }
 .metric-value {
-  font-size: clamp(26px, 3.5vw, 40px);
+  font-size: clamp(24px, 3.2vw, 38px);
   font-weight: 800;
   font-family: "JetBrains Mono", monospace;
   line-height: 1;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
+  letter-spacing: -0.01em;
 }
 .metric-card.green .metric-value {
   color: var(--green);
+  text-shadow: 0 0 22px rgba(34,197,94,0.25);
 }
 .metric-card.blue .metric-value {
   color: var(--primary-light);
+  text-shadow: 0 0 22px rgba(96,165,250,0.22);
 }
 .metric-card.yellow .metric-value {
   color: var(--yellow-light);
+  text-shadow: 0 0 22px rgba(252,211,77,0.18);
 }
 .metric-card.cyan .metric-value {
   color: var(--cyan);
+  text-shadow: 0 0 22px rgba(56,189,248,0.22);
 }
 .metric-sub {
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
 }
 
 /* ── Status Badge ──────────────────────────────────────────── */
@@ -504,12 +617,14 @@ select {
   pointer-events: none;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #0782e0, #0e3f82);
+  background: linear-gradient(135deg, #0e8af0, #0c40a0);
   color: #fff;
-  box-shadow: 0 14px 32px rgba(7, 130, 224, 0.24);
+  /* stronger glow presence on dark bg */
+  box-shadow: 0 4px 18px rgba(7,130,224,0.28), 0 1px 3px rgba(0,0,0,0.4);
 }
 .btn-primary:hover {
-  box-shadow: 0 18px 42px rgba(7, 130, 224, 0.3);
+  background: linear-gradient(135deg, #1a95f8, #0e50bf);
+  box-shadow: 0 8px 28px rgba(7,130,224,0.38), 0 2px 6px rgba(0,0,0,0.3);
   transform: translateY(-1px);
 }
 .btn-secondary {
@@ -550,14 +665,14 @@ select {
   transform: translateY(-1px);
 }
 .btn-ghost {
-  background: var(--glass-bg);
+  background: rgba(255,255,255,0.04);
   color: var(--text-secondary);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255,255,255,0.09);
 }
 .btn-ghost:hover {
-  background: var(--glass-bg-hover);
+  background: rgba(255,255,255,0.08);
   color: var(--text-primary);
-  border-color: var(--glass-border-hi);
+  border-color: rgba(255,255,255,0.15);
 }
 .btn.is-disabled,
 .btn.is-disabled:hover {
@@ -699,29 +814,36 @@ select {
   overflow-x: auto;
   border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border);
+  /* card-level shadow for floating table feel */
+  box-shadow: 0 2px 16px rgba(0,0,0,0.35);
 }
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 thead tr {
-  background: rgba(255, 255, 255, 0.04);
+  /* stronger thead background — clear surface separation from tbody */
+  background: rgba(255, 255, 255, 0.055);
 }
 th {
-  padding: 13px 16px;
+  padding: 11px 16px;
   text-align: left;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  color: var(--text-secondary);
+  /* slightly brighter than text-muted for scannability */
+  color: rgba(203,213,225,0.7);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.65px;
   border-bottom: 1px solid var(--glass-border);
   white-space: nowrap;
+  /* top-border accent line on thead */
+  box-shadow: inset 0 1px 0 var(--card-shine);
 }
 td {
-  padding: 13px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.042);
+  line-height: 1.5;
 }
 tr:last-child td {
   border-bottom: none;
@@ -730,32 +852,38 @@ tbody tr {
   transition: background var(--transition);
 }
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.035);
 }
 .td-mono {
   font-family: "JetBrains Mono", monospace;
-  font-size: 13px;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
 }
 
 /* ── Section Card ──────────────────────────────────────────── */
 .section-card {
-  padding: 22px;
-  margin-bottom: 22px;
+  padding: 24px;
+  margin-bottom: 20px;
 }
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 12px;
+  /* subtle separator below header area */
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 .section-title {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  color: var(--text-primary);
 }
 
 /* ── Toast Notifications ───────────────────────────────────── */
@@ -932,69 +1060,320 @@ tbody tr:hover {
 }
 
 /* ── Auth Page ─────────────────────────────────────────────── */
-.auth-page {
+/* ── Auth page layout — base ─────────────────────────────── */
+.auth-page-wrap {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 24px 16px 40px;
 }
+
+/* Legacy alias for pages still using .auth-page */
+.auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+/* ── Install mode — install card is the hero, auth card hidden ── */
+/* Activated by JS: _wrap.classList.add('install-mode')           */
+.install-mode .auth-card {
+  display: none;   /* auth card hidden while install onboarding is active */
+}
+.install-mode .pwa-install-card {
+  margin-bottom: 0;    /* no gap when auth card is gone */
+  width: min(440px, calc(100vw - 32px));  /* slightly wider in focused mode */
+}
+
+/* ── Auth Card: more presence without adding weight ── */
 .auth-card {
   width: 100%;
-  max-width: 430px;
-  padding: 34px;
+  max-width: 420px;
+  padding: 36px 36px 32px;
+  /* stronger glass surface for the card itself */
+  background: rgba(255, 255, 255, 0.05);
+  /* crisper, slightly brighter border */
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  /* layered shadow: ambient depth + top-edge sparkle */
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.72),
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  /* entry animation: lifts in from below on page load */
+  animation: authCardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Override the generic .glass hover on the auth card so it
+   doesn't jump on mouse-over */
+.auth-card.glass:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.72),
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.085);
+}
+
+/* ── Auth Logo ── */
 .auth-logo {
   text-align: center;
   margin-bottom: 28px;
 }
 .auth-logo-icon {
-  width: 62px;
-  height: 62px;
-  background: linear-gradient(135deg, var(--primary), var(--cyan));
-  border-radius: var(--radius-lg);
+  width: 60px;
+  height: 60px;
+  /* richer gradient with a slight angle shift for depth */
+  background: linear-gradient(140deg, #1a80ef 0%, #0c3faa 55%, #0891b2 100%);
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  margin: 0 auto 14px;
-  box-shadow: 0 8px 26px rgba(7, 130, 224, 0.35);
+  color: #ffffff;
+  margin: 0 auto 16px;
+  /* dual glow: core blue + subtle cyan rim */
+  box-shadow:
+    0 8px 28px rgba(7, 130, 224, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.10),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 .auth-logo h1 {
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 800;
-  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+  margin-bottom: 5px;
 }
 .auth-logo p {
+  /* secondary — product subtitle, one clear step below h1 */
   font-size: 13px;
-  color: var(--text-secondary);
+  font-weight: 400;
+  line-height: 1.5;
+  color: #94a3b8;       /* secondary-muted: visible, subordinate, intentional */
+  letter-spacing: 0.015em;
+  margin-top: 2px;
 }
+
+/* ── Segmented Tab Switch ── */
 .auth-tabs {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 3px;
+  padding: 3px;
+  /* deeper, darker pill track */
+  background: rgba(0, 0, 0, 0.35);
   border-radius: var(--radius-md);
-  margin-bottom: 22px;
-  border: 1px solid var(--glass-border);
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* inset shadow to make the track feel recessed */
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 .auth-tab {
   flex: 1;
-  padding: 9px;
+  padding: 9px 12px;
   background: none;
   border: none;
-  color: var(--text-secondary);
+  /* dimmer inactive label */
+  color: #6b7a91;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  border-radius: var(--radius-sm);
+  letter-spacing: 0.01em;
+  border-radius: 11px;
   cursor: pointer;
-  transition: all var(--transition);
+  /* suppress browser focus ring on click — keep it for keyboard */
+  outline: none;
+  transition:
+    background var(--transition),
+    color var(--transition),
+    box-shadow var(--transition);
 }
+/* keyboard-only focus ring — accessibility preserved */
+.auth-tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.auth-tab:hover:not(.active) {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+}
+/* Active pill: raised, bright, clearly selected */
 .auth-tab.active {
-  background: var(--glass-bg-hover);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.105);
+  color: #f1f5f9;
+  /* lifted shadow gives the thumb a physical feel */
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* ── Auth Card — Input Refinements ───────────────────────── */
+/* Scoped overrides so global form-input styles are untouched   */
+.auth-card .form-group {
+  margin-bottom: 16px;
+}
+/* Tighten last field → error gap so error+CTA rhythm is snug */
+.auth-card .form-group:last-of-type {
+  margin-bottom: 0;
+}
+.auth-card .form-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+}
+.auth-card .form-input {
+  /* slightly more opaque surface, better legibility on dark card */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.095);
+  padding: 11px 15px;
+  font-size: 14px;
+  border-radius: 12px;
+  line-height: 1.4;
+  /* smooth hover + focus transitions */
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.auth-card .form-input::placeholder {
+  /* visible enough to guide, dim enough to not compete with typed text */
+  color: rgba(100, 116, 139, 0.60);
+  font-weight: 400;
+  font-size: 14px;
+  /* normalize so all placeholders render identically across fields */
+  letter-spacing: 0;
+}
+/* Password field: placeholder must look identical to email field.
+   Without this, browser password-type fonts can differ. */
+.auth-card input[type="password"]::placeholder {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: rgba(100, 116, 139, 0.60);
+}
+.auth-card .form-input:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.065);
+}
+.auth-card .form-input:focus {
+  border-color: rgba(59, 130, 246, 0.70);
+  background: rgba(20, 62, 180, 0.08);
+  /* contained ring: sharp at the border, fades quickly */
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.14),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  outline: none;
+}
+
+/* ── Auth Card — CTA Button Integration ──────────────────── */
+/* Error message + CTA spacing — replaces the bare inline style */
+.auth-card form [id$='Error'] {
+  min-height: 16px;
+  margin-top: 10px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.auth-card .btn.w-full {
+  min-height: 46px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  border-radius: 12px;
+  /* gradient refined: brighter mid-range, deeper end */
+  background: linear-gradient(160deg, #1e90f0 0%, #1254cc 60%, #0c40b0 100%);
+  box-shadow:
+    0 4px 22px rgba(18, 84, 204, 0.30),
+    0 1px 3px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  transition:
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.15s ease;
+}
+.auth-card .btn.w-full:hover {
+  background: linear-gradient(160deg, #2c9bfc 0%, #1a62e0 60%, #1048c0 100%);
+  box-shadow:
+    0 6px 30px rgba(18, 84, 204, 0.40),
+    0 2px 6px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+.auth-card .btn.w-full:active {
+  transform: translateY(0) scale(0.985);
+  box-shadow:
+    0 2px 10px rgba(18, 84, 204, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+/* Daftar (success) button — matched visual weight */
+.auth-card .btn-success.w-full {
+  background: linear-gradient(160deg, #22c55e 0%, #16a34a 60%, #148a40 100%);
+  box-shadow:
+    0 4px 20px rgba(34, 197, 94, 0.28),
+    0 1px 3px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13);
+  transition:
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.15s ease;
+}
+.auth-card .btn-success.w-full:hover {
+  box-shadow:
+    0 6px 26px rgba(34, 197, 94, 0.40),
+    0 2px 6px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+.auth-card .btn-success.w-full:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* ── Auth Register Helper Text — tertiary role ─────────────── */
+.auth-register-helper {
+  /* tertiary — one step below subtitle; quieter but still in the same family */
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.65;   /* slightly more open than subtitle for multi-line comfort */
+  color: var(--text-muted);  /* #64748b — visibly quieter than subtitle's #94a3b8 */
+  text-align: center;
+  margin-top: 12px;    /* consistent breath after CTA button */
+  letter-spacing: 0.01em;
+}
+.auth-register-helper strong {
+  font-weight: 600;
+  color: #94a3b8;  /* bump emphasis tokens up to subtitle level so it reads */
+}
+
+/* ── Auth Mobile — spacing compression ───────────────────── */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 24px 24px;
+    border-radius: var(--radius-lg);
+  }
+  .auth-logo {
+    margin-bottom: 22px;
+  }
+  .auth-logo-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 24px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+  }
+  .auth-logo h1 {
+    font-size: 18px;
+  }
+  .auth-logo p {
+    font-size: 12.5px; /* compress on mobile, still readable */
+  }
+  .auth-tabs {
+    margin-bottom: 20px;
+  }
+  .auth-card .form-group {
+    margin-bottom: 14px;
+  }
 }
 
 /* ── Hamburger ─────────────────────────────────────────────── */
@@ -1060,13 +1439,16 @@ tbody tr:hover {
   width: 100%;
 }
 .text-muted {
-  color: var(--text-secondary);
+  /* lifted from text-secondary (#cbd5e1) for better readability — slightly quieter */
+  color: #94a3b8;
 }
 .text-sm {
   font-size: 13px;
+  line-height: 1.5;
 }
 .text-xs {
   font-size: 12px;
+  line-height: 1.5;
 }
 .font-mono {
   font-family: "JetBrains Mono", monospace;
@@ -1261,21 +1643,24 @@ tbody tr:hover {
     padding-top: 32px;
   }
   .auth-card {
-    padding: 22px;
+    /* asymmetric: less top, less bottom on short landscape viewports */
+    padding: 20px 28px 18px;
   }
   .auth-logo {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .auth-logo-icon {
-    width: 44px;
-    height: 44px;
-    font-size: 20px;
+    width: 42px;
+    height: 42px;
+    font-size: 19px;
+    border-radius: 12px;
     margin-bottom: 8px;
   }
 }
 @media (max-width: 380px) {
   .auth-card {
-    padding: 22px 18px;
+    /* match the 480px rhythm, just narrower horizontal gutter */
+    padding: 26px 18px 22px;
   }
   .modal {
     padding: 16px;
@@ -2142,7 +2527,7 @@ body > header > nav {
     position: absolute;
     left: var(--mobile-gutter);
     right: var(--mobile-gutter);
-    top: 62px;
+    top: 56px;
     background: rgba(0, 0, 0, 0.95);
     border: 1px solid var(--glass-border);
     border-radius: 12px;
@@ -2440,3 +2825,2838 @@ body > header > nav {
     font-size: 0.8rem;
   }
 }
+
+/* =============================================================
+   MOBILE-FIRST PREMIUM POLISH — Homepage only
+   Targets 320px – 430px. Surgical refinements only.
+   ============================================================= */
+
+/* ── A. HEADER / NAVBAR ─────────────────────────────────────── */
+@media (max-width: 760px) {
+  /* Tighten the navbar height from 72px to a crisp 56px */
+  .landing-nav {
+    min-height: 56px;
+    padding: 0 16px;
+    gap: 0;
+  }
+
+  /* Brand: tighter font, correct proportion on small screens */
+  .landing-brand {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Hamburger: keep 44px tap target but no extra visual bulk */
+  .landing-menu-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+
+  /* Dropdown menu opens flush below the 56px bar */
+  .landing-links {
+    top: 56px;
+    left: 12px;
+    right: 12px;
+    padding: 8px;
+    gap: 2px;
+    border-radius: 14px;
+  }
+
+  /* Nav links inside dropdown */
+  .landing-links > a:not(.btn) {
+    font-size: 15px;
+    padding: 10px 14px;
+    border-radius: 10px;
+  }
+
+  /* CTA button inside nav dropdown — full width */
+  .landing-links .btn.btn-primary {
+    margin-top: 4px;
+    width: 100%;
+    justify-content: center;
+    font-size: 14px;
+    padding: 10px 14px;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  /* Reduce dead space between header and hero */
+  .landing-main {
+    padding-top: 0;
+  }
+}
+
+/* ── B. HERO SECTION ────────────────────────────────────────── */
+@media (max-width: 760px) {
+  /* Reduce hero min-height so it doesn't feel too tall */
+  .clean-hero {
+    min-height: 0;
+    padding: 40px 0 28px;
+  }
+
+  /* Hero content wrapper: full-width, tighter stack */
+  .clean-hero-content {
+    padding: 0 16px;
+    width: 100%;
+  }
+}
+
+/* Badge / pill — tighten font for mobile */
+@media (max-width: 600px) {
+  .landing-badge {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    /* padding and max-width are controlled by the precise fix block below */
+    margin-bottom: 18px;
+  }
+}
+
+/* Hero heading — controlled typography for 320–430px */
+@media (max-width: 600px) {
+  .clean-hero-content h1 {
+    font-size: clamp(26px, 7.5vw, 36px);
+    line-height: 1.18;
+    letter-spacing: -0.025em;
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 390px) {
+  .clean-hero-content h1 {
+    font-size: clamp(24px, 7vw, 30px);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Hero description — reduce verbosity feel */
+@media (max-width: 600px) {
+  .clean-hero-content .hero-desc {
+    font-size: 14px;
+    line-height: 1.65;
+    margin: 0 auto 22px;
+    color: rgba(148, 163, 184, 0.85);
+    max-width: 100%;
+  }
+}
+
+/* Hero CTA buttons */
+@media (max-width: 600px) {
+  .clean-cta {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    padding: 0;
+  }
+  .clean-cta .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 20px;
+    font-size: 15px;
+    min-height: 48px;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* PWA hint text */
+@media (max-width: 600px) {
+  .landing-pwa-hint {
+    font-size: 12px;
+    margin-top: 12px;
+    line-height: 1.55;
+    text-align: center;
+  }
+}
+
+/* ── C. MOBILE TYPOGRAPHY SCALE ─────────────────────────────── */
+@media (max-width: 600px) {
+  /* Section-level headings (h2) */
+  .demo-clean-title {
+    font-size: 24px;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    margin-bottom: 14px;
+  }
+
+  /* Section description paragraphs */
+  .demo-clean-desc {
+    font-size: 14px;
+    line-height: 1.65;
+    margin-bottom: 22px;
+  }
+
+  /* Feature item headings (h3) */
+  .clean-feature-item h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  /* Feature item body text */
+  .clean-feature-item p {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: rgba(100, 116, 139, 0.95);
+  }
+
+  /* Step headings */
+  .clean-step h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  /* Step body text */
+  .clean-step p {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  /* Architecture box headings */
+  .arch-box-content h4 {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .arch-box-content p {
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  /* Tech stack label */
+  .tech-stack-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    margin-bottom: 14px;
+  }
+}
+
+/* ── D. SPACING CONSISTENCY ─────────────────────────────────── */
+@media (max-width: 760px) {
+  /* Consistent section vertical rhythm */
+  .landing-section {
+    padding: 28px 0;
+  }
+
+  /* Architecture section */
+  .architecture-section {
+    padding: 28px 0 40px;
+  }
+
+  /* Feature section wrap */
+  .clean-features-wrap {
+    padding-top: 16px;
+    padding-bottom: 40px;
+  }
+
+  /* Feature grid: single column, tighter gap */
+  .clean-features-grid {
+    gap: 0;
+  }
+
+  .clean-feature-item {
+    padding: 18px 0;
+  }
+
+  /* Feature CTA row at bottom */
+  .clean-features-wrap > div[style] {
+    margin-top: 24px !important;
+    gap: 10px !important;
+  }
+
+  /* Demo section outer padding */
+  .demo-section-clean {
+    padding: 40px 16px;
+  }
+
+  /* Demo hero block above steps */
+  .demo-clean-hero {
+    margin-bottom: 32px;
+  }
+
+  /* Demo icon */
+  .demo-clean-icon {
+    font-size: 36px;
+    margin-bottom: 14px;
+  }
+
+  /* Tech stack section */
+  .tech-stack-section {
+    padding: 28px 16px 36px;
+  }
+
+  /* Arch tree container */
+  .arch-tree-container {
+    padding: 12px 0;
+  }
+}
+
+/* ── D2. SMALL SCREEN HEIGHT SPACING ────────────────────────── */
+@media (max-width: 430px) {
+  .clean-hero {
+    padding: 32px 0 24px;
+  }
+
+  .demo-section-clean {
+    padding: 32px 14px;
+  }
+
+  .architecture-section {
+    padding: 20px 0 32px;
+  }
+
+  .clean-features-wrap {
+    padding-top: 12px;
+    padding-bottom: 32px;
+  }
+
+  .tech-stack-section {
+    padding: 24px 14px 28px;
+  }
+}
+
+/* ── E. FOOTER ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Grid: 2 columns, not 1 — better grouping on phones */
+  .landing-footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px 20px;
+  }
+
+  /* First col (about) spans full width for better readability */
+  .landing-footer-grid > .footer-col:first-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Footer main padding — tighter */
+  .landing-footer-main {
+    padding: 32px 16px 20px;
+  }
+
+  /* Col titles — tighter, smaller */
+  .footer-col-title {
+    font-size: 9px;
+    letter-spacing: 0.13em;
+    margin-bottom: 10px;
+  }
+
+  /* Col description text */
+  .footer-col-desc {
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  /* Col link items */
+  .footer-col-links {
+    gap: 8px;
+  }
+
+  .footer-col-links li,
+  .footer-col-links a {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  /* Footer bottom bar */
+  .landing-footer-bottom {
+    padding: 16px 16px 20px;
+  }
+
+  .footer-note {
+    font-size: 11px;
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+
+  .footer-copy {
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 380px) {
+  /* Collapse to single column on very narrow screens */
+  .landing-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .landing-footer-grid > .footer-col:first-child {
+    grid-column: 1;
+  }
+}
+
+/* ── F. SECONDARY POLISH ────────────────────────────────────── */
+
+/* F1. Tech chips — better wrapping rhythm */
+@media (max-width: 600px) {
+  .tech-stack-row {
+    gap: 7px;
+    padding: 0 4px;
+    justify-content: center;
+  }
+
+  .tech-chip {
+    font-size: 11px;
+    padding: 6px 11px;
+    gap: 5px;
+  }
+
+  .tech-chip .material-symbols-rounded {
+    font-size: 14px;
+  }
+}
+
+/* F2. Architecture cards — compact on mobile */
+@media (max-width: 600px) {
+  .arch-box {
+    padding: 10px 12px;
+    gap: 8px;
+    min-width: 0;
+    border-radius: var(--radius-sm);
+  }
+
+  .arch-box-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .arch-box-icon .material-symbols-rounded {
+    font-size: 16px;
+  }
+
+  /* 2×2 grid on small screens */
+  .arch-leaves {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+}
+
+/* F3. PWA Demo section — download button */
+@media (max-width: 600px) {
+  .demo-dl-btn {
+    padding: 13px 24px;
+    font-size: 15px;
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .demo-note-text {
+    font-size: 11.5px;
+    line-height: 1.55;
+    padding: 0 4px;
+  }
+}
+
+/* F4. Workflow steps — tighter, more intentional grouping */
+@media (max-width: 600px) {
+  .demo-clean-steps {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    text-align: left;
+  }
+
+  .clean-step {
+    padding: 16px 0;
+  }
+
+  .clean-step .step-icon {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .demo-clean-steps {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* F5. Feature / service CTA buttons below grid */
+@media (max-width: 600px) {
+  .clean-features-wrap a.btn {
+    font-size: 13.5px;
+    padding: 11px 18px;
+    min-height: 44px;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* F6. Architecture section heading */
+@media (max-width: 600px) {
+  .architecture-section .section-header {
+    margin-bottom: 20px !important;
+  }
+
+  .architecture-section .demo-clean-title {
+    font-size: 22px;
+  }
+
+  .architecture-section .demo-clean-title .material-symbols-rounded {
+    font-size: 22px;
+  }
+}
+
+/* ── G. VERY SMALL SCREENS (320px) ─────────────────────────── */
+@media (max-width: 360px) {
+  .landing-brand {
+    font-size: 1rem;
+  }
+
+  .landing-nav {
+    padding: 0 12px;
+  }
+
+  .clean-hero {
+    padding: 28px 0 20px;
+  }
+
+  .clean-hero-content {
+    padding: 0 12px;
+  }
+
+  .landing-badge {
+    font-size: 9px;
+    letter-spacing: 0.09em;
+    /* padding/gap/max-width controlled in precise fix block below */
+  }
+
+  .clean-hero-content h1 {
+    font-size: clamp(22px, 6.5vw, 27px);
+    line-height: 1.22;
+  }
+
+  .clean-hero-content .hero-desc {
+    font-size: 13.5px;
+  }
+
+  .demo-section-clean {
+    padding: 28px 12px;
+  }
+
+  .tech-stack-section {
+    padding: 20px 12px 24px;
+  }
+
+  .landing-footer-main {
+    padding: 28px 12px 16px;
+  }
+
+  .landing-footer-bottom {
+    padding: 14px 12px 18px;
+  }
+}
+
+/* =============================================================
+   PRECISE MOBILE FIX PASS — 3 targeted issues
+   ============================================================= */
+
+/* ── FIX 1: Badge / pill — balanced two-row layout ──────────── */
+
+/* Base badge: flex centering, allow row wrapping */
+.landing-badge {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  /* gap: uniform spacing between every child (rows + dots) */
+  gap: 0 8px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Each semantic row within the badge */
+.badge-row {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+/* Separator bullets — .badge-sep (between groups) and .badge-dot (within group)
+   are now IDENTICAL so all 3 dots render with same size, color, and spacing */
+.badge-sep,
+.badge-dot {
+  display: inline-flex;
+  align-items: center;
+  /* match the badge uppercase text opacity — not full blue, not white */
+  color: rgba(96, 165, 250, 0.55);
+  font-size: inherit;
+  line-height: 1;
+  /* no padding — spacing controlled entirely by parent gap */
+  padding: 0;
+  flex-shrink: 0;
+  /* prevent the bullet from wrapping to a new line alone */
+  white-space: nowrap;
+  /* small scale so bullet reads as a separator, not a heavy mark */
+  font-size: 8px;
+  letter-spacing: 0;
+}
+
+/* Discord link inside badge */
+.badge-discord-link {
+  color: #7289da;
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  transition: opacity 0.2s;
+}
+.badge-discord-link:hover {
+  opacity: 0.85;
+}
+
+/* Mobile (≤600px): 2-row layout using flex line-break trick.
+   Row 1: Smart Monitoring • Realtime
+   Row 2: Multi Platform   • Discord
+   .badge-sep forces the line break; .badge-dot stays visible within each row */
+@media (max-width: 600px) {
+  .landing-badge {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0 7px;
+    /* jarak vertikal antar baris dikurangi */
+    row-gap: 3px;
+    padding: 11px 20px;
+    /* lebih sempit agar tidak terlalu lebar */
+    max-width: min(260px, 80vw);
+    line-height: 1.3;
+    /* kembali ke full pill */
+    border-radius: 999px;
+  }
+
+  .badge-dot {
+    display: inline-flex;
+  }
+
+  .badge-sep {
+    display: block;
+    flex-basis: 100%;
+    height: 0;
+    width: 0;
+    overflow: hidden;
+    font-size: 0;
+    padding: 0;
+    margin: 0;
+  }
+
+  .badge-row {
+    font-size: 9.5px;
+    letter-spacing: 0.10em;
+  }
+}
+
+@media (max-width: 360px) {
+  .badge-row {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+  .landing-badge {
+    gap: 0 5px;
+    row-gap: 2px;
+    padding: 10px 14px;
+    max-width: min(240px, 82vw);
+    border-radius: 999px;
+  }
+}
+
+/* ── FIX 2: Architecture 4 leaf boxes — uniform on mobile ───── */
+
+/* Leaf cell wrapper replaces the old inline-style padding div */
+.arch-leaf-cell {
+  padding: 0 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Box stretches to fill cell height — ensures uniform visual height */
+.arch-leaf-cell .arch-box {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+  align-items: flex-start;
+}
+
+/* Connector visibility switching */
+.arch-branch-desktop { display: flex; }
+.arch-branch-mobile  { display: none; }
+
+@media (max-width: 980px) {
+  /* Swap to 2-branch connector to match the 2×2 leaf grid */
+  .arch-branch-desktop { display: none; }
+  .arch-branch-mobile  { display: flex; }
+
+  .arch-leaf-cell {
+    padding: 0 4px;
+  }
+
+  /* Ensure grid rows have equal heights */
+  .arch-leaves {
+    align-items: stretch;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .arch-leaf-cell {
+    padding: 0 3px;
+  }
+
+  .arch-leaf-cell .arch-box {
+    padding: 10px 10px;
+    gap: 8px;
+    border-radius: var(--radius-sm);
+  }
+
+  .arch-leaf-cell .arch-box-icon {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .arch-leaf-cell .arch-box-icon .material-symbols-rounded {
+    font-size: 15px;
+  }
+
+  .arch-leaf-cell .arch-box-content {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .arch-leaf-cell .arch-box-content h4 {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+
+  .arch-leaf-cell .arch-box-content p {
+    font-size: 10.5px;
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+}
+
+/* ── FIX 3: PWA Download button — perfect centering ─────────── */
+
+.demo-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1;
+  text-align: center;
+}
+
+.demo-dl-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.demo-dl-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  white-space: nowrap;
+  font-size: inherit;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+@media (max-width: 600px) {
+  .demo-dl-btn {
+    gap: 7px;
+    padding: 13px 24px;
+    font-size: 15px;
+    min-height: 48px;
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .demo-dl-icon {
+    font-size: 18px;
+  }
+
+  .demo-dl-label {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 360px) {
+  .demo-dl-btn {
+    font-size: 14px;
+    padding: 12px 18px;
+    gap: 6px;
+  }
+
+  .demo-dl-icon {
+    font-size: 17px;
+  }
+
+  .demo-dl-label {
+    font-size: 14px;
+  }
+}
+
+/* =============================================================
+   DASHBOARD MOBILE PREMIUM POLISH
+   Targets: 320px, 360px, 390px, 412px, 430px
+   All 6 priority areas: topbar, metric cards, relay,
+   chart, log cards, vertical rhythm
+   ============================================================= */
+
+/* ── A. TOPBAR BALANCE ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Shrink topbar height from 72px to 52px on mobile */
+  .topbar {
+    height: 52px;
+    min-height: 52px;
+    padding: 0 12px;
+    gap: 0;
+  }
+
+  /* Left group: hamburger + title */
+  .topbar > div:first-child {
+    gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* Hamburger: tighten */
+  .hamburger {
+    padding: 6px;
+    flex-shrink: 0;
+  }
+
+  .hamburger .material-symbols-rounded {
+    font-size: 20px;
+  }
+
+  /* Title: tighter, truncated */
+  .topbar-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100vw - 180px);
+    line-height: 1;
+  }
+
+  /* Right actions: push everything right, no wrap */
+  .topbar-actions {
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  /* Last updated text: compact, right-anchored */
+  #lastUpdated {
+    font-size: 10.5px !important;
+    color: rgba(100, 116, 139, 0.75) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 96px !important;
+    letter-spacing: 0;
+    flex-shrink: 1;
+    line-height: 1;
+  }
+}
+
+@media (max-width: 430px) {
+  .topbar {
+    height: 50px;
+    min-height: 50px;
+    padding: 0 10px;
+  }
+
+  .topbar-title {
+    font-size: 13.5px;
+    max-width: calc(100vw - 160px);
+  }
+
+  #lastUpdated {
+    max-width: 80px !important;
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .topbar {
+    height: 48px;
+    min-height: 48px;
+    padding: 0 8px;
+  }
+
+  .topbar-title {
+    font-size: 13px;
+    max-width: calc(100vw - 130px);
+  }
+
+  #lastUpdated {
+    max-width: 64px !important;
+    font-size: 9.5px !important;
+  }
+}
+
+/* ── A2. Page content top offset follows new topbar height ──── */
+@media (max-width: 768px) {
+  .page-content {
+    padding: 12px 12px 20px;
+  }
+}
+
+@media (max-width: 430px) {
+  .page-content {
+    padding: 10px 10px 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .page-content {
+    padding: 8px 8px 16px;
+  }
+}
+
+/* ── B. METRIC CARD DENSITY ─────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Both metric grids: 2x2 throughout, tighter gap */
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  /* Second metric grid: tighter top margin */
+  .metric-grid + .metric-grid,
+  .metric-grid[style*="margin-top"] {
+    margin-top: 10px !important;
+  }
+
+  /* Cards: compact padding */
+  .metric-card {
+    padding: 14px 14px 12px;
+  }
+
+  /* Label: tighter bottom gap */
+  .metric-label {
+    font-size: 10px;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+  }
+
+  /* Main value: premium scale */
+  .metric-value {
+    font-size: 20px !important;
+    line-height: 1;
+    margin-bottom: 5px;
+    letter-spacing: -0.02em;
+  }
+
+  /* Sub text: minimal */
+  .metric-sub {
+    font-size: 10.5px;
+    color: rgba(100, 116, 139, 0.85);
+    line-height: 1.3;
+  }
+
+  /* Status badge inside metric card: compact */
+  .status-badge {
+    padding: 5px 10px;
+    font-size: 11px;
+    gap: 5px;
+    border-radius: var(--radius-full);
+  }
+
+  .metric-card > div[style*="margin-top: 8px"] {
+    margin-top: 4px !important;
+  }
+
+  .metric-sub.mt-8 {
+    margin-top: 5px;
+  }
+}
+
+@media (max-width: 430px) {
+  .metric-card {
+    padding: 12px 12px 10px;
+  }
+
+  .metric-label {
+    font-size: 9.5px;
+    margin-bottom: 5px;
+  }
+
+  .metric-value {
+    font-size: 19px !important;
+    margin-bottom: 4px;
+  }
+
+  .metric-sub {
+    font-size: 10px;
+  }
+
+  .metric-grid {
+    gap: 9px;
+    margin-bottom: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .metric-card {
+    padding: 10px 10px 9px;
+  }
+
+  .metric-label {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .metric-value {
+    font-size: 18px !important;
+    margin-bottom: 4px;
+  }
+
+  .metric-sub {
+    font-size: 9.5px;
+  }
+
+  .metric-grid {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+/* ── C. RELAY SECTION HIERARCHY ─────────────────────────────── */
+@media (max-width: 768px) {
+  /* Section card containing relay: tighter */
+  #relaySection.section-card {
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  /* Header row: title + indicator */
+  #relaySection .section-header {
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  /* Section title: clear but not oversized */
+  #relaySection .section-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Relay status indicator */
+  .relay-indicator {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* Relay state text */
+  #valRelay {
+    font-size: 13px !important;
+    font-weight: 700;
+  }
+
+  /* Button container: full-width column stack */
+  #relaySection > div[style*="display: flex"] {
+    flex-direction: column !important;
+    gap: 9px !important;
+  }
+
+  /* Relay action buttons — normalized full-width */
+  #relayOnBtn,
+  #relayOffBtn {
+    flex: unset !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    padding: 11px 16px !important;
+    font-size: 14px !important;
+    min-height: 44px !important;
+    border-radius: var(--radius-md) !important;
+    gap: 8px !important;
+  }
+
+  #relayOnBtn .material-symbols-rounded,
+  #relayOffBtn .material-symbols-rounded {
+    font-size: 18px !important;
+  }
+
+  /* Helper/safety text: clearly secondary */
+  #relaySection .text-sm.text-muted {
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+    margin-top: 10px !important;
+    color: rgba(100, 116, 139, 0.75) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  #relaySection.section-card {
+    padding: 12px;
+  }
+
+  #relayOnBtn,
+  #relayOffBtn {
+    padding: 10px 14px !important;
+    font-size: 13.5px !important;
+    min-height: 42px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  #relayOnBtn,
+  #relayOffBtn {
+    padding: 9px 12px !important;
+    font-size: 13px !important;
+    min-height: 40px !important;
+  }
+
+  #relaySection .text-sm.text-muted {
+    font-size: 10.5px !important;
+  }
+}
+
+/* ── D. CHART COMPACTNESS & SCANNING RHYTHM ─────────────────── */
+@media (max-width: 768px) {
+  /* Chart section card */
+  .section-card:has(.chart-container) {
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  /* Section header: chart title + reset zoom */
+  .section-card:has(.chart-container) .section-header {
+    margin-bottom: 10px;
+    gap: 8px;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .section-card:has(.chart-container) .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Reset zoom button: compact but tappable */
+  #resetZoomBtn {
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: 32px !important;
+  }
+
+  #resetZoomBtn .material-symbols-rounded {
+    font-size: 14px !important;
+  }
+
+  /* Chart area: shorter for mobile scanning */
+  .chart-container {
+    height: 190px;
+  }
+
+  /* Helper text below chart: compact */
+  .section-card:has(.chart-container) .text-xs.text-muted {
+    font-size: 10.5px !important;
+    margin-top: 8px !important;
+    line-height: 1.5 !important;
+    color: rgba(100, 116, 139, 0.7) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .chart-container {
+    height: 175px;
+  }
+
+  .section-card:has(.chart-container) {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .chart-container {
+    height: 160px;
+  }
+
+  .section-card:has(.chart-container) {
+    padding: 10px;
+  }
+
+  #resetZoomBtn {
+    padding: 4px 8px !important;
+    font-size: 10.5px !important;
+  }
+}
+
+/* ── E. LOG CARD EFFICIENCY ─────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Log section card */
+  .section-card:has(.table-wrap) {
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .section-card:has(.table-wrap) .section-header {
+    margin-bottom: 10px;
+  }
+
+  .section-card:has(.table-wrap) .section-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Log entries count label */
+  .section-card:has(.table-wrap) .text-xs.text-muted {
+    font-size: 10.5px;
+  }
+
+  /* Card-style log rows: tighter */
+  .table-wrap tbody {
+    gap: 8px;
+  }
+
+  .table-wrap tr {
+    padding: 12px 12px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Each field inside a log card row */
+  .table-wrap tr td {
+    padding: 5px 0 !important;
+  }
+
+  /* Data field label (::before) */
+  .table-wrap tr td::before {
+    font-size: 9.5px !important;
+    margin-bottom: 3px !important;
+    letter-spacing: 0.35px !important;
+  }
+
+  /* mini-logs specific: more compact cells */
+  .mini-logs th,
+  .mini-logs td {
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+
+  /* Loading placeholder */
+  #miniLogsBody td[colspan] {
+    padding: 12px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .table-wrap tr {
+    padding: 10px 10px !important;
+    gap: 6px;
+  }
+
+  .table-wrap tr td {
+    padding: 4px 0 !important;
+  }
+
+  .table-wrap tr td::before {
+    font-size: 9px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .table-wrap tbody {
+    gap: 7px;
+  }
+
+  .mini-logs th,
+  .mini-logs td {
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .table-wrap tr {
+    padding: 9px 9px !important;
+  }
+
+  .table-wrap tbody {
+    gap: 6px;
+  }
+
+  .mini-logs th,
+  .mini-logs td {
+    padding: 6px 7px;
+    font-size: 10.5px;
+  }
+}
+
+/* ── F. OVERALL DASHBOARD VERTICAL RHYTHM ───────────────────── */
+@media (max-width: 768px) {
+  /* All section cards: uniform bottom gap */
+  .section-card {
+    margin-bottom: 10px;
+    padding: 14px;
+  }
+
+  /* Section header: consistent spacing */
+  .section-header {
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Btn-sm in dashboard (reset zoom etc.) */
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 11px;
+    min-height: 30px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 430px) {
+  .section-card {
+    margin-bottom: 9px;
+    padding: 12px;
+  }
+
+  .section-header {
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .section-card {
+    margin-bottom: 8px;
+    padding: 10px;
+  }
+
+  .section-header {
+    margin-bottom: 8px;
+  }
+}
+
+/* =============================================================
+   LOG CARD REDESIGN — compact 2-row monitoring record
+   Resets all old table-wrap card rules and replaces with
+   a CSS Grid layout for the new log-row / log-time /
+   log-values / log-status semantic markup from app.js
+   ============================================================= */
+
+/* ── Base: reset old card transformation for log rows ───────── */
+@media (max-width: 768px) {
+  /* Section card header: log module feel */
+  .section-card:has(.table-wrap) .section-header {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .section-card:has(.table-wrap) .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .section-card:has(.table-wrap) .section-header .text-xs {
+    font-size: 10px;
+    color: rgba(100, 116, 139, 0.65);
+    letter-spacing: 0.03em;
+  }
+
+  /* Container: list feed feel */
+  .table-wrap {
+    overflow: visible;
+    border: none;
+    border-radius: 0;
+  }
+
+  .table-wrap table {
+    display: block;
+    width: 100%;
+    border: none;
+  }
+
+  .table-wrap thead {
+    display: none;
+  }
+
+  /* Feed container */
+  .table-wrap tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* ── Log row: 2-row CSS Grid card ───────────────────────────── */
+  .log-row {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "time  status"
+      "vals  vals";
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 10px 12px !important;
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid rgba(100, 116, 139, 0.3);
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: none !important;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+    /* prevent old ::before pseudo-content on cells from showing */
+  }
+
+  /* Status-driven left accent color */
+  .log-row.log-status-NORMAL {
+    border-left-color: rgba(34, 197, 94, 0.35);
+  }
+  .log-row.log-status-WARNING {
+    border-left-color: rgba(245, 158, 11, 0.55);
+    background: rgba(245, 158, 11, 0.03);
+  }
+  .log-row.log-status-DANGER,
+  .log-row.log-status-LEAKAGE {
+    border-left-color: rgba(239, 68, 68, 0.65);
+    background: rgba(239, 68, 68, 0.04);
+  }
+
+  /* ── Cell 1: Timestamp — top-left anchor ───────────────────── */
+  .log-time {
+    grid-area: time;
+    display: block !important;
+    padding: 0 !important;
+    border: none !important;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    align-self: center;
+  }
+
+  /* Suppress old ::before pseudo-label on log-time */
+  .log-time::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* ── Cell 2: Measurements — bottom row spanning full width ──── */
+  .log-values {
+    grid-area: vals;
+    display: flex !important;
+    align-items: center;
+    gap: 0;
+    padding: 0 !important;
+    border: none !important;
+    flex-wrap: nowrap;
+  }
+
+  .log-values::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .log-val-arus {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: -0.01em;
+  }
+
+  .log-val-sep {
+    font-size: 10px;
+    color: rgba(100, 116, 139, 0.5);
+    margin: 0 7px;
+    line-height: 1;
+    flex-shrink: 0;
+    font-weight: 400;
+  }
+
+  .log-val-teg {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--primary-light);
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Cell 3: Status — top-right badge ──────────────────────── */
+  .log-status {
+    grid-area: status;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 !important;
+    border: none !important;
+    align-self: center;
+  }
+
+  .log-status::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* Status badge: compact pill */
+  .log-status .status-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 7px;
+    letter-spacing: 0.06em;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  /* Suppress old td::before on all log cells */
+  .log-row td::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* Suppress all old td padding on log rows */
+  .log-row td {
+    border: none !important;
+  }
+}
+
+/* ── Breakpoint: 430px ──────────────────────────────────────── */
+@media (max-width: 430px) {
+  .table-wrap tbody {
+    gap: 5px;
+  }
+
+  .log-row {
+    padding: 9px 10px !important;
+    row-gap: 3px;
+    border-radius: 9px !important;
+  }
+
+  .log-time {
+    font-size: 11px;
+  }
+
+  .log-val-arus,
+  .log-val-teg {
+    font-size: 12px;
+  }
+
+  .log-val-sep {
+    margin: 0 6px;
+  }
+
+  .log-status .status-badge {
+    font-size: 8.5px;
+    padding: 3px 6px;
+  }
+}
+
+/* ── Breakpoint: 360px ──────────────────────────────────────── */
+@media (max-width: 360px) {
+  .table-wrap tbody {
+    gap: 5px;
+  }
+
+  .log-row {
+    padding: 8px 9px !important;
+    column-gap: 8px;
+  }
+
+  .log-time {
+    font-size: 10.5px;
+  }
+
+  .log-val-arus,
+  .log-val-teg {
+    font-size: 11.5px;
+  }
+
+  .log-val-sep {
+    margin: 0 5px;
+  }
+
+  .log-status .status-badge {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+}
+
+/* ── Desktop / large screens: fallback to normal table ───────── */
+/* (log-row at wide viewports just behaves as a normal tr) */
+@media (min-width: 769px) {
+  .log-row {
+    /* no special grid on desktop — natural table row */
+    display: table-row;
+    border: none;
+    border-left: none;
+  }
+
+  .log-time,
+  .log-values,
+  .log-status {
+    display: table-cell;
+  }
+
+  /* Show all values in normal cells on desktop */
+  .log-val-sep {
+    margin: 0 6px;
+    color: rgba(100, 116, 139, 0.4);
+  }
+}
+
+/* =============================================================
+   HISTORY PAGE — LOG TOOLBAR DESKTOP POLISH
+   Unifies "Semua Status" (#filterStatus) and "Export CSV"
+   (#exportBtn) into one visually identical toolbar system.
+   Desktop-only (min-width: 769px).
+   ============================================================= */
+
+/* ── Shared toolbar control token ────────────────────────────── */
+:root {
+  --toolbar-ctrl-h: 36px;
+  --toolbar-ctrl-radius: 10px;
+  --toolbar-ctrl-fs: 13px;
+  --toolbar-ctrl-px: 12px;
+}
+
+/* ── Toolbar wrapper: both controls in one aligned row ───────── */
+#filterStatus,
+#exportBtn {
+  /* Shared geometry */
+  height: var(--toolbar-ctrl-h);
+  min-height: var(--toolbar-ctrl-h);
+  max-height: var(--toolbar-ctrl-h);
+  border-radius: var(--toolbar-ctrl-radius) !important;
+  font-size: var(--toolbar-ctrl-fs) !important;
+  font-weight: 600;
+  line-height: 1;
+  box-sizing: border-box;
+  vertical-align: middle;
+  white-space: nowrap;
+  transition: all var(--transition);
+}
+
+/* ── #filterStatus — Semua Status select ─────────────────────── */
+#filterStatus {
+  padding: 0 36px 0 var(--toolbar-ctrl-px) !important;
+  /* Shared glass look aligned with btn-ghost */
+  background-color: var(--glass-bg) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 11px center !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-secondary) !important;
+  /* Override the wide form-select width */
+  min-width: 148px !important;
+  max-width: 180px !important;
+  flex: 0 0 auto !important;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+#filterStatus:hover {
+  border-color: var(--glass-border-hi) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--glass-bg-hover) !important;
+}
+
+#filterStatus:focus {
+  border-color: var(--primary) !important;
+  background-color: rgba(59, 130, 246, 0.06) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+  outline: none;
+}
+
+/* ── #exportBtn — Export CSV button ─────────────────────────── */
+#exportBtn {
+  padding: 0 var(--toolbar-ctrl-px) !important;
+  gap: 6px !important;
+  /* Glass ghost style — identical to the select treatment */
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-secondary) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  /* Cancel btn-sm overrides */
+  min-height: var(--toolbar-ctrl-h) !important;
+}
+
+#exportBtn:hover {
+  background: var(--glass-bg-hover) !important;
+  border-color: var(--glass-border-hi) !important;
+  color: var(--text-primary) !important;
+}
+
+#exportBtn .material-symbols-rounded {
+  font-size: 15px !important;
+  line-height: 1 !important;
+  flex-shrink: 0;
+}
+
+/* ── Toolbar wrapper container: tighter gap, baseline-aligned ── */
+.section-header > div:has(#filterStatus),
+.section-header > div:has(#exportBtn) {
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
+
+/* ── Section header balance ──────────────────────────────────── */
+/* The "Tabel Log Event" section header needs clear breathing */
+.section-card:has(#filterStatus) .section-header {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+/* ── Desktop QA: topbar logCount text (history page) ────────── */
+#logCount {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Desktop QA: section-title left context on history page ──── */
+.section-card:has(#filterStatus) .section-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+/* ── Desktop QA: history table — tighter, cleaner rows ──────── */
+.section-card:has(#filterStatus) thead th {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 11px 14px;
+  color: var(--text-muted);
+}
+
+.section-card:has(#filterStatus) tbody td {
+  padding: 11px 14px;
+  font-size: 13.5px;
+}
+
+/* ── Desktop QA: helper note below table ────────────────────── */
+.section-card:has(#filterStatus) .text-xs.text-muted {
+  font-size: 11.5px;
+  color: rgba(100, 116, 139, 0.7);
+  margin-top: 10px;
+}
+
+/* ── Mobile override: revert toolbar controls to full-width ──── */
+@media (max-width: 768px) {
+  #filterStatus,
+  #exportBtn {
+    height: auto !important;
+    min-height: 42px !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    flex: 1 1 auto !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 13.5px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  #filterStatus {
+    padding: 10px 36px 10px 12px !important;
+  }
+
+  #exportBtn {
+    padding: 10px 14px !important;
+  }
+
+  .section-header > div:has(#filterStatus),
+  .section-header > div:has(#exportBtn) {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+}
+
+/* =============================================================
+   HISTORY PAGE — BUG FIX + LAYOUT FIX
+   1. Excludes .history-table from dashboard table-wrap card rules
+   2. Defines .log-toolbar as a proper class
+   3. Writes .history-table mobile card layout (6 fields, 2-col grid)
+   ============================================================= */
+
+/* ── 1. Exclude history-table from the generic table-wrap card transform ── */
+/* The dashboard polish rules at lines 1196–1240 and 3648–3720 fire on ALL
+   .table-wrap tr elements. We reset them for .history-table rows so they
+   don't inherit the dashboard compact-card transform. */
+
+@media (max-width: 768px) {
+  /* Override the generic table-wrap tbody flex for history */
+  .table-wrap:has(.history-table) {
+    overflow-x: auto;
+  }
+
+  .table-wrap .history-table {
+    display: table;
+    width: 100%;
+    border: none;
+  }
+
+  /* History thead: re-show it for mobile — but as sticky labels */
+  .table-wrap .history-table thead {
+    display: none; /* use data-label cards instead */
+  }
+
+  .table-wrap .history-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  /* History row: 2-column CSS Grid (6-field monitoring card) */
+  .table-wrap .history-table tr {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "waktu   status"
+      "arus    tegangan"
+      "relay   sumber";
+    column-gap: 10px;
+    row-gap: 3px;
+    padding: 11px 12px !important;
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid rgba(100, 116, 139, 0.25);
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: none !important;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+  }
+
+  /* Status-driven left border color from data-label */
+  /* These class names are not on history rows, so we rely on CSS only */
+  .table-wrap .history-table tr:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  /* Reset all td inside history-table — use grid areas */
+  .table-wrap .history-table tr td {
+    display: block !important;
+    padding: 0 !important;
+    border: none !important;
+    line-height: 1.4;
+  }
+
+  /* Each td gets a compact label via ::before */
+  .table-wrap .history-table tr td::before {
+    content: attr(data-label);
+    display: block !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: rgba(100, 116, 139, 0.6) !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* Assign grid areas by data-label */
+  .table-wrap .history-table tr td[data-label="Waktu"]    { grid-area: waktu; }
+  .table-wrap .history-table tr td[data-label="Arus"]     { grid-area: arus; }
+  .table-wrap .history-table tr td[data-label="Tegangan"] { grid-area: tegangan; }
+  .table-wrap .history-table tr td[data-label="Status"]   { grid-area: status; }
+  .table-wrap .history-table tr td[data-label="Relay"]    { grid-area: relay; }
+  .table-wrap .history-table tr td[data-label="Sumber"]   { grid-area: sumber; }
+
+  /* Waktu: timestamp anchor — monospace, clear */
+  .table-wrap .history-table tr td[data-label="Waktu"] {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Arus + Tegangan: measurement values — colored monospace */
+  .table-wrap .history-table tr td[data-label="Arus"] {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  .table-wrap .history-table tr td[data-label="Tegangan"] {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary-light);
+  }
+
+  /* Status: badge is inline-styled by JS, just ensure it fits */
+  .table-wrap .history-table tr td[data-label="Status"] {
+    display: flex !important;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  .table-wrap .history-table tr td[data-label="Status"] span {
+    font-size: 9.5px !important;
+    padding: 2px 7px !important;
+    border-radius: 999px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em !important;
+    line-height: 1.4 !important;
+    display: inline-block;
+  }
+
+  /* Relay: ON/OFF */
+  .table-wrap .history-table tr td[data-label="Relay"] {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  /* Sumber: source label — muted */
+  .table-wrap .history-table tr td[data-label="Sumber"] {
+    font-size: 10.5px;
+    color: rgba(100, 116, 139, 0.7);
+  }
+
+  /* Empty / loading state */
+  .table-wrap .history-table tr td[colspan] {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 20px !important;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+}
+
+@media (max-width: 430px) {
+  .table-wrap .history-table tr {
+    padding: 10px 10px !important;
+    column-gap: 8px;
+    row-gap: 3px;
+  }
+
+  .table-wrap .history-table tr td[data-label="Waktu"] {
+    font-size: 10.5px;
+  }
+
+  .table-wrap .history-table tr td[data-label="Arus"],
+  .table-wrap .history-table tr td[data-label="Tegangan"] {
+    font-size: 11.5px;
+  }
+}
+
+@media (max-width: 360px) {
+  .table-wrap .history-table tr {
+    padding: 9px 9px !important;
+    column-gap: 6px;
+  }
+
+  .table-wrap .history-table tr td[data-label="Waktu"] {
+    font-size: 10px;
+  }
+
+  .table-wrap .history-table tr td[data-label="Arus"],
+  .table-wrap .history-table tr td[data-label="Tegangan"] {
+    font-size: 11px;
+  }
+
+  .table-wrap .history-table tbody {
+    gap: 6px;
+  }
+}
+
+/* ── 2. .log-toolbar — unified class replacing inline styles ──── */
+
+/* Desktop: horizontal row, controls aligned */
+.log-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Semua Status select */
+.log-toolbar #filterStatus {
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  padding: 0 34px 0 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--glass-border) !important;
+  background-color: var(--glass-bg) !important;
+  color: var(--text-secondary) !important;
+  min-width: 148px;
+  max-width: 180px;
+  flex: 0 0 auto;
+  cursor: pointer;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.log-toolbar #filterStatus:hover {
+  border-color: var(--glass-border-hi) !important;
+  color: var(--text-primary) !important;
+  background-color: var(--glass-bg-hover) !important;
+}
+
+.log-toolbar #filterStatus:focus {
+  border-color: var(--primary) !important;
+  background-color: rgba(59, 130, 246, 0.06) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+  outline: none;
+}
+
+/* Export CSV button */
+.log-toolbar #exportBtn {
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  padding: 0 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--glass-border) !important;
+  background: var(--glass-bg) !important;
+  color: var(--text-secondary) !important;
+  gap: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap;
+  line-height: 1;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.log-toolbar #exportBtn:hover {
+  background: var(--glass-bg-hover) !important;
+  border-color: var(--glass-border-hi) !important;
+  color: var(--text-primary) !important;
+}
+
+.log-toolbar #exportBtn .material-symbols-rounded {
+  font-size: 15px !important;
+  line-height: 1 !important;
+}
+
+/* Section header: prevent title truncation while keeping toolbar */
+.section-card:has(.log-toolbar) .section-header {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Title: allow shrink but not clip */
+.section-card:has(.log-toolbar) .section-title {
+  flex-shrink: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 3. Mobile: log-toolbar stacks cleanly ───────────────────── */
+@media (max-width: 768px) {
+  .log-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* Section header wraps on mobile */
+  .section-card:has(.log-toolbar) .section-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* Title: restore full width on mobile */
+  .section-card:has(.log-toolbar) .section-title {
+    width: 100%;
+    flex: 0 0 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Both controls: same height on mobile, full-width */
+  .log-toolbar #filterStatus,
+  .log-toolbar #exportBtn {
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 13px !important;
+  }
+
+  .log-toolbar #filterStatus {
+    padding: 0 34px 0 12px !important;
+  }
+
+  .log-toolbar #exportBtn {
+    padding: 0 14px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .log-toolbar #filterStatus,
+  .log-toolbar #exportBtn {
+    height: 38px !important;
+    min-height: 38px !important;
+    font-size: 12.5px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .log-toolbar #filterStatus,
+  .log-toolbar #exportBtn {
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* ── 4. Chart section spacing on history page ────────────────── */
+@media (max-width: 768px) {
+  /* Gap between history chart and log table section */
+  .section-card.glass.mb-16 {
+    margin-bottom: 12px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .section-card.glass.mb-16 {
+    margin-bottom: 10px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Settings / Admin — style.css additions
+   Tighten user management table cards, btn-group, and rhythm
+   ══════════════════════════════════════════════════════════════ */
+
+/* Compact user-management table cards on mobile */
+@media (max-width: 768px) {
+  .settings-section .table-wrap tr {
+    padding: 13px 14px;
+    gap: 0;
+  }
+  .settings-section .table-wrap tbody {
+    gap: 10px;
+  }
+  .settings-section .table-wrap tr td {
+    padding: 5px 0;
+  }
+  .settings-section .table-wrap tr td::before {
+    font-size: 10px;
+    margin-bottom: 3px;
+  }
+}
+
+/* btn-group inside user-module-header */
+.btn-group {
+  display: flex;
+  gap: 7px;
+}
+
+/* Settings section spacing rhythms */
+.settings-section + .settings-section {
+  /* handled by grid gap */
+}
+
+/* Tighter input-row on narrow viewports */
+@media (max-width: 560px) {
+  .settings-section .input-row .form-group {
+    margin-bottom: 10px;
+  }
+  .settings-section .input-row .form-group:last-child {
+    margin-bottom: 4px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DESKTOP POLISH PASS — Dashboard / Log History / Settings
+   min-width: 769px  (does not affect mobile behaviour)
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (min-width: 769px) {
+
+  /* ── A. Sidebar depth ─────────────────────────────────────── */
+  .sidebar {
+    border-right-color: rgba(255,255,255,0.07);
+    /* subtle gradient wash */
+    background: linear-gradient(180deg,
+      rgba(6,6,6,0.99) 0%,
+      rgba(3,3,3,0.99) 100%);
+  }
+  .sidebar-logo {
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
+  .nav-item {
+    /* tighter letter spacing for desktop nav readability */
+    letter-spacing: -0.01em;
+  }
+  .nav-item.active {
+    /* sharper active glow */
+    box-shadow:
+      0 0 18px rgba(59,130,246,0.14),
+      inset 0 0 0 1px rgba(59,130,246,0.22);
+  }
+
+  /* ── B. Topbar polish ─────────────────────────────────────── */
+  .topbar {
+    /* consistent horizontal rhythm with page-content */
+    padding: 0 32px;
+  }
+  /* role pill in topbar — tighter visual weight */
+  .topbar-actions .role-pill {
+    font-size: 10px;
+    padding: 2px 9px;
+  }
+
+  /* ── C. Page content horizontal gutter ───────────────────── */
+  .page-content {
+    padding: 28px 32px;
+  }
+
+  /* ── D. Metric card accent bar thicker on desktop ────────── */
+  .metric-card::before {
+    height: 2.5px;
+  }
+  /* second metric row — slightly muted labels */
+  .metric-grid + .metric-grid .metric-label {
+    color: var(--text-muted);
+    opacity: 0.85;
+  }
+
+  /* ── E. Section card section-header separator ─────────────── */
+  /* remove double separator if table is directly below header */
+  .section-card:has(.table-wrap) .section-header {
+    border-bottom: none;
+    padding-bottom: 14px;
+    margin-bottom: 0;
+  }
+
+  /* ── F. Table — desktop-specific refinements ──────────────── */
+  /* slightly wider left padding for breathing room */
+  th:first-child,
+  td:first-child {
+    padding-left: 20px;
+  }
+  th:last-child,
+  td:last-child {
+    padding-right: 20px;
+  }
+  /* mini-logs table in dashboard — compact, not cropped */
+  .mini-logs th,
+  .mini-logs td {
+    padding: 9px 14px;
+    font-size: 12.5px;
+  }
+  .mini-logs th:first-child,
+  .mini-logs td:first-child {
+    padding-left: 18px;
+  }
+  /* history table row — no zebra stripe, use hover only */
+  .history-table tbody tr:nth-child(even) {
+    background: transparent;
+  }
+  /* history table status badge — tighter on desktop */
+  .history-table .status-badge {
+    padding: 4px 10px;
+    font-size: 11.5px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── G. Log page toolbar refinements ─────────────────────── */
+  .log-toolbar {
+    gap: 8px;
+  }
+  /* filter select — shorter on desktop, matches exportBtn height */
+  .log-toolbar .form-select {
+    padding: 7px 34px 7px 12px;
+    font-size: 12.5px;
+    min-height: 36px;
+    height: 36px;
+    width: auto;
+    min-width: 160px;
+    border-radius: var(--radius-md);
+  }
+  /* exportBtn desktop align */
+  #exportBtn {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 12.5px;
+  }
+  #exportBtn .material-symbols-rounded {
+    font-size: 15px;
+  }
+
+  /* ── H. section helper-text hierarchy ────────────────────── */
+  /* "15 entri terakhir" style secondary labels in section headers */
+  .section-header .text-xs.text-muted,
+  .section-header > span.text-muted {
+    font-size: 12px;
+    color: #64748b;
+    letter-spacing: 0.01em;
+  }
+  /* Chart hint text */
+  .section-card > .text-xs.text-muted,
+  .section-card > p.text-xs.text-muted {
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: #64748b;
+    line-height: 1.55;
+  }
+  /* relay section helper text */
+  .section-card > p.text-sm.text-muted {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #75869e;
+    margin-top: 10px;
+  }
+
+  /* ── I. Relay control desktop ────────────────────────────── */
+  #relayOnBtn,
+  #relayOffBtn {
+    height: 46px;
+    min-height: 46px;
+    font-size: 14px;
+    /* ensure glow is not washed out */
+    box-shadow: 0 4px 18px rgba(0,0,0,0.3);
+  }
+  #relayOnBtn:hover {
+    box-shadow: 0 6px 24px rgba(34,197,94,0.42);
+  }
+  #relayOffBtn:hover {
+    box-shadow: 0 6px 24px rgba(239,68,68,0.42);
+  }
+
+  /* ── J. Dashboard section-card bottom spacing ────────────── */
+  .section-card {
+    margin-bottom: 20px;
+  }
+
+  /* ── K. Settings page desktop spacing ────────────────────── */
+  /* Restore comfortable desktop-only padding for settings sections */
+  .settings-section {
+    padding: 20px 22px;
+  }
+  .settings-section-title {
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+    font-size: 11.5px;
+  }
+  .settings-section .form-group {
+    margin-bottom: 16px;
+  }
+  .settings-section .form-input,
+  .settings-section .form-select {
+    padding: 10px 13px;
+    font-size: 13.5px;
+  }
+  /* Settings btn-cluster: wider primary on desktop */
+  .settings-btn-cluster .btn-primary {
+    min-width: 210px;
+    flex: 0 1 auto;
+  }
+  .settings-btn-cluster .btn-ghost {
+    flex: 0 0 auto;
+  }
+
+  /* ── L. Save bar desktop ─────────────────────────────────── */
+  .save-bar {
+    flex-direction: row;
+    justify-content: flex-end;
+    padding: 16px 24px;
+  }
+  .save-bar .btn-primary {
+    width: auto;
+    min-width: 210px;
+  }
+
+  /* ── M. Modal desktop refinements ───────────────────────── */
+  .modal {
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow-lg), inset 0 1px 0 var(--card-shine);
+  }
+  .modal-header {
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 20px;
+  }
+}
+
+/* ── Desktop topbar gutter guard (restore mobile override) ──── */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 0 14px;
+  }
+  .page-content {
+    padding: 14px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR DESKTOP POLISH — Final layer
+   All base sidebar rules are set above. This block adds:
+   G. Logout button integration + micro-polish consistency
+   ═══════════════════════════════════════════════════════════════ */
+
+/* G. Logout button — integrated into sidebar, not generic ghost */
+.sidebar-footer .btn-ghost.w-full {
+  /* slim integrated logout — shorter than standard btn */
+  padding: 7px 12px;
+  min-height: 34px;
+  height: 34px;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  /* surface matches user-badge: slightly lifted from sidebar bg */
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  color: #4d6280;
+  gap: 7px;
+  /* smooth hover */
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
+}
+.sidebar-footer .btn-ghost.w-full:hover {
+  background: rgba(239,68,68,0.07);
+  border-color: rgba(239,68,68,0.2);
+  color: #fca5a5;
+}
+.sidebar-footer .btn-ghost.w-full .material-symbols-rounded {
+  font-size: 16px;
+  opacity: 0.8;
+}
+.sidebar-footer .btn-ghost.w-full:hover .material-symbols-rounded {
+  opacity: 1;
+}
+
+/* Normalize sidebar icon sizing (precise to 18px, no variation) */
+@media (min-width: 769px) {
+  .sidebar .material-symbols-rounded.nav-icon {
+    font-size: 17px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+  }
+  .sidebar-logo-icon .material-symbols-rounded {
+    font-size: 17px;
+    font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 20;
+  }
+  /* Sidebar self — ensure base gradient wins over the stale desktop A block */
+  .sidebar {
+    background:
+      linear-gradient(180deg,
+        rgba(10, 10, 12, 0.99) 0%,
+        rgba(6, 6, 9, 0.99) 60%,
+        rgba(4, 4, 8, 0.99) 100%) !important;
+    border-right-color: rgba(255,255,255,0.07) !important;
+  }
+}
+
+/* ─── PWA Install Banner (/app/login?install=1) ────────────── */
+/* ═══════════════════════════════════════════════════════════
+   PWA Install Card — /app/login?install=1
+   Full product-onboarding UI, platform-adaptive
+   ═══════════════════════════════════════════════════════════ */
+
+/* Card container — appears above auth-card in the DOM */
+
+/* ═══════════════════════════════════════════════════════════════════
+   PWA Install State Machine — /app/login?install=1
+   Deterministic cross-platform install UI
+   States: loading | prompt-ready | ios-guide | fallback | installed
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Wrapper card ─────────────────────────────────────────── */
+.pwa-install-card {
+  width: min(420px, calc(100vw - 32px));
+  margin-bottom: 16px;             /* gap between install card and auth card */
+  border-radius: 20px;
+  background: rgba(8, 14, 28, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  animation: pwa-card-in 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pwa-install-card[hidden] { display: none !important; }
+
+@keyframes pwa-card-in {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── State panels ─────────────────────────────────────────── */
+.pwa-install-state {
+  padding: 24px 22px 0;
+  text-align: center;
+  animation: pwa-state-in 0.25s ease;
+}
+.pwa-install-state[hidden] { display: none !important; }
+
+@keyframes pwa-state-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Icon badge ───────────────────────────────────────────── */
+.pwa-install-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  color: #818cf8;
+}
+.pwa-install-icon .material-symbols-rounded { font-size: 24px; }
+.pwa-install-icon--blue   { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: #60a5fa; }
+.pwa-install-icon--ios    { background: rgba(0, 122, 255, 0.12);  border-color: rgba(0, 122, 255, 0.25);  color: #4da6ff; }
+.pwa-install-icon--success{ background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.28); color: #34d399; }
+.pwa-install-icon--muted  { background: rgba(100, 116, 139, 0.1); border-color: rgba(100, 116, 139, 0.2); color: #64748b; }
+
+/* ── Typography ───────────────────────────────────────────── */
+.pwa-install-heading {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin: 0 0 5px;
+  line-height: 1.3;
+}
+.pwa-install-sub {
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin: 0 0 16px;
+}
+
+/* ── Install CTA button ───────────────────────────────────── */
+.pwa-install-cta {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.pwa-install-cta .material-symbols-rounded { font-size: 18px; }
+
+/* ── Retry note ───────────────────────────────────────────── */
+.pwa-install-note {
+  font-size: 12px;
+  color: #f59e0b;
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+.pwa-install-note[hidden] { display: none !important; }
+
+/* ── Spinner ──────────────────────────────────────────────── */
+.pwa-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: pwa-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.pwa-spinner--lg {
+  width: 26px;
+  height: 26px;
+  border-width: 3px;
+}
+.pwa-spinner--btn {
+  vertical-align: -4px;
+  width: 14px;
+  height: 14px;
+}
+@keyframes pwa-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── iOS steps ────────────────────────────────────────────── */
+.pwa-ios-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+}
+.pwa-ios-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 9px 12px;
+}
+.pwa-ios-step-num {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 122, 255, 0.15);
+  border: 1px solid rgba(0, 122, 255, 0.28);
+  color: #4da6ff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.pwa-ios-step-text {
+  font-size: 12.5px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+.pwa-ios-step-text strong { color: #e2e8f0; font-weight: 600; }
+.pwa-ios-share-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: rgba(0,122,255,0.15);
+  border-radius: 4px;
+  font-size: 11px;
+  color: #4da6ff;
+  vertical-align: -2px;
+}
+.pwa-ios-note {
+  font-size: 11.5px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  text-align: left;
+}
+.pwa-ios-note .material-symbols-rounded {
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Fallback steps ───────────────────────────────────────── */
+.pwa-fallback-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 12px;
+  text-align: left;
+}
+.pwa-fallback-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+.pwa-fallback-step .material-symbols-rounded { font-size: 16px; color: #475569; flex-shrink: 0; }
+.pwa-fallback-step strong { color: #cbd5e1; font-weight: 600; }
+
+/* ── Divider between install card and auth card ───────────── */
+.pwa-install-divider {
+  display: flex;
+  align-items: center;
+  padding: 14px 22px 18px;
+  gap: 10px;
+  color: #334155;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.pwa-install-divider::before,
+.pwa-install-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+}
+.pwa-install-divider span { white-space: nowrap; }
+
+/* ── Responsive tweaks ────────────────────────────────────── */
+
+/* ── Install card: branded product header ─────────────────── */
+.pwa-install-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 22px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 18px;
+}
+.pwa-install-brand-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(140deg, #1a80ef 0%, #0c3faa 55%, #0891b2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(7, 130, 224, 0.35);
+}
+.pwa-install-brand-icon .material-symbols-rounded { font-size: 20px; }
+.pwa-install-brand-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.pwa-install-brand-sub {
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.4;
+  margin-top: 1px;
+}
+
+/* ── Skip / secondary action row ─────────────────────────── */
+.pwa-skip-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px 20px;
+}
+.pwa-skip-row[hidden] { display: none !important; }
+.pwa-skip-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #475569;
+  text-decoration: none;
+  transition: color 0.18s;
+  letter-spacing: 0.01em;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+.pwa-skip-link:hover {
+  color: #94a3b8;
+}
+.pwa-skip-link:focus-visible {
+  outline: 2px solid rgba(99, 102, 241, 0.5);
+  outline-offset: 2px;
+}
+.pwa-skip-link .material-symbols-rounded {
+  font-size: 14px;
+  transition: transform 0.18s;
+}
+.pwa-skip-link:hover .material-symbols-rounded {
+  transform: translateX(3px);
+}
+@media (max-width: 420px) {
+  .pwa-install-state  { padding: 20px 16px 0; }
+  .pwa-install-divider{ padding: 12px 16px 14px; }
+  .pwa-install-heading{ font-size: 14px; }
+  .pwa-install-card   { border-radius: 16px; }
+}
+
+  .pwa-install-heading { font-size: 14px; }
+}
+}
+
+
+
+
+

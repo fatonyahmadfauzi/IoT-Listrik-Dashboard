@@ -67,8 +67,7 @@ function statusChip(status) {
     DANGER:  ['#ff8080', 'rgba(255,128,128,.20)'],
   };
   const [color, bg] = map[status] || ['#94a3b8', 'rgba(148,163,184,.15)'];
-  const label = getStatusLabel(status);
-  return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;">${label}</span>`;
+  return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">${status}</span>`;
 }
 
 // ─── Render table ─────────────────────────────────────────────

@@ -175,3 +175,398 @@
     justify-content: center;
   }
 }
+
+/* =============================================================
+   MOBILE PREMIUM POLISH — Features page
+   Targets: 320px, 360px, 390px, 412px, 430px
+   ============================================================= */
+
+/* ── Page container: reduce excessive top space on phones ────── */
+@media (max-width: 760px) {
+  .feat-page-main {
+    padding-top: 80px;
+    padding-bottom: 48px;
+  }
+}
+
+@media (max-width: 430px) {
+  .feat-page-main {
+    padding-top: 72px;
+    padding-bottom: 40px;
+  }
+}
+
+@media (max-width: 360px) {
+  .feat-page-main {
+    padding-top: 68px;
+    padding-bottom: 36px;
+  }
+}
+
+/* ── Hero section ──────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .feat-hero {
+    margin-bottom: 36px;
+  }
+
+  .feat-hero h1 {
+    font-size: clamp(1.75rem, 8vw, 2.4rem);
+    letter-spacing: -0.03em;
+    line-height: 1.18;
+    margin-bottom: 12px;
+  }
+
+  .feat-hero p {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    max-width: 100%;
+    padding: 0 4px;
+    color: rgba(148, 163, 184, 0.9);
+  }
+}
+
+@media (max-width: 430px) {
+  .feat-hero {
+    margin-bottom: 28px;
+  }
+
+  .feat-hero h1 {
+    font-size: clamp(1.55rem, 7.5vw, 2rem);
+    line-height: 1.2;
+  }
+
+  .feat-hero p {
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+}
+
+@media (max-width: 360px) {
+  .feat-hero {
+    margin-bottom: 24px;
+  }
+
+  .feat-hero h1 {
+    font-size: clamp(1.4rem, 7vw, 1.75rem);
+  }
+
+  .feat-hero p {
+    font-size: 0.875rem;
+  }
+}
+
+/* ── Feature cards — tighter, more intentional on mobile ────── */
+@media (max-width: 760px) {
+  .feat-grid {
+    gap: 14px;
+    grid-template-columns: 1fr;
+  }
+
+  .feat-clean-card {
+    padding: 22px 20px;
+    border-radius: 16px;
+    /* Prevent hover lift on touch devices acting awkward */
+    transform: none;
+  }
+
+  .feat-clean-card:hover {
+    transform: none;
+  }
+
+  /* Icon: balanced smaller size */
+  .feat-icon-wrap {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+  }
+
+  .feat-icon-wrap .material-symbols-rounded {
+    font-size: 22px;
+  }
+
+  /* Title: compact but readable */
+  .feat-clean-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+
+  /* Body: tuned line-height and smaller text for density */
+  .feat-clean-card p {
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: rgba(148, 163, 184, 0.85);
+  }
+}
+
+@media (max-width: 430px) {
+  .feat-grid {
+    gap: 12px;
+  }
+
+  .feat-clean-card {
+    padding: 18px 16px;
+  }
+
+  .feat-icon-wrap {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+
+  .feat-icon-wrap .material-symbols-rounded {
+    font-size: 20px;
+  }
+
+  .feat-clean-card h3 {
+    font-size: 1rem;
+    margin-bottom: 7px;
+  }
+
+  .feat-clean-card p {
+    font-size: 0.845rem;
+    line-height: 1.6;
+  }
+}
+
+@media (max-width: 360px) {
+  .feat-grid {
+    gap: 10px;
+  }
+
+  .feat-clean-card {
+    padding: 16px 14px;
+  }
+
+  .feat-icon-wrap {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 9px;
+    margin-bottom: 10px;
+  }
+
+  .feat-icon-wrap .material-symbols-rounded {
+    font-size: 18px;
+  }
+
+  .feat-clean-card h3 {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .feat-clean-card p {
+    font-size: 0.825rem;
+    line-height: 1.58;
+  }
+}
+
+/* ── Notification integration cards (inline-styled) ─────────── */
+/* Override the heavy inline padding from the HTML */
+@media (max-width: 760px) {
+  .feat-notif-grid {
+    margin-top: 36px;
+    gap: 14px;
+  }
+
+  /* Target the two notification card containers */
+  .feat-notif-grid > div {
+    padding: 28px 20px !important;
+    border-radius: 16px !important;
+  }
+
+  /* Glow orb can be smaller on mobile */
+  .feat-notif-grid > div > div:first-child {
+    width: 140px !important;
+    height: 140px !important;
+  }
+
+  /* Icon */
+  .feat-notif-grid > div .material-symbols-rounded[style*="44px"] {
+    font-size: 36px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Heading */
+  .feat-notif-grid > div h2 {
+    font-size: 1.2rem !important;
+    margin-bottom: 8px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Body paragraph */
+  .feat-notif-grid > div p {
+    font-size: 0.875rem !important;
+    line-height: 1.6 !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Buttons inside notif cards */
+  .feat-notif-grid > div a.btn {
+    padding: 10px 20px !important;
+    font-size: 14px !important;
+    border-radius: 999px !important;
+    min-height: 44px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .feat-notif-grid {
+    margin-top: 28px;
+    gap: 12px;
+  }
+
+  .feat-notif-grid > div {
+    padding: 22px 16px !important;
+  }
+
+  .feat-notif-grid > div h2 {
+    font-size: 1.1rem !important;
+  }
+
+  .feat-notif-grid > div p {
+    font-size: 0.845rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .feat-notif-grid {
+    margin-top: 24px;
+    gap: 10px;
+  }
+
+  .feat-notif-grid > div {
+    padding: 18px 14px !important;
+  }
+
+  .feat-notif-grid > div h2 {
+    font-size: 1.05rem !important;
+  }
+
+  .feat-notif-grid > div p {
+    font-size: 0.825rem !important;
+  }
+}
+
+/* ── CTA Section — strong visual hierarchy on mobile ─────────── */
+@media (max-width: 760px) {
+  .feat-cta-section {
+    margin-top: 40px;
+    padding: 0 4px;
+  }
+
+  .feat-cta-section h2 {
+    font-size: clamp(1.25rem, 6vw, 1.55rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 20px;
+    /* Subtle gradient echo from hero h1 */
+    background: linear-gradient(135deg, #fff 0%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .feat-cta-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  /* All buttons: full width, 48px min-height, centered content */
+  .feat-cta-actions .btn,
+  .feat-cta-actions a.btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 13px 20px !important;
+    font-size: 15px !important;
+    min-height: 48px !important;
+    border-radius: var(--radius-md) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Primary CTA: most prominent */
+  .feat-cta-actions .btn-primary {
+    order: 1;
+  }
+
+  /* Secondary CTA: second */
+  .feat-cta-actions .btn-secondary {
+    order: 2;
+  }
+
+  /* Discord button: visually lightest, clearly tertiary */
+  .feat-cta-actions a[href*="discord"] {
+    order: 3;
+    /* Slightly more transparent to signal tertiary weight */
+    opacity: 0.88;
+    font-size: 14px !important;
+    padding: 11px 20px !important;
+    min-height: 44px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .feat-cta-section {
+    margin-top: 32px;
+  }
+
+  .feat-cta-section h2 {
+    font-size: clamp(1.15rem, 5.5vw, 1.4rem);
+    margin-bottom: 16px;
+  }
+
+  .feat-cta-actions {
+    gap: 9px;
+  }
+
+  .feat-cta-actions .btn,
+  .feat-cta-actions a.btn {
+    font-size: 14.5px !important;
+    padding: 12px 18px !important;
+    min-height: 46px !important;
+    border-radius: 12px !important;
+  }
+
+  .feat-cta-actions a[href*="discord"] {
+    font-size: 13.5px !important;
+    min-height: 42px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .feat-cta-section {
+    margin-top: 28px;
+  }
+
+  .feat-cta-section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 14px;
+  }
+
+  .feat-cta-actions {
+    gap: 8px;
+  }
+
+  .feat-cta-actions .btn,
+  .feat-cta-actions a.btn {
+    font-size: 14px !important;
+    padding: 11px 16px !important;
+    min-height: 44px !important;
+  }
+
+  .feat-cta-actions a[href*="discord"] {
+    font-size: 13px !important;
+    min-height: 40px !important;
+  }
+}
+

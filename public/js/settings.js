@@ -64,6 +64,26 @@ const inpTeganganCal  = document.getElementById('inpTeganganCal');
 const inpBotToken     = document.getElementById('inpBotToken');
 const inpChatId       = document.getElementById('inpChatId');
 
+// ── DOM: Discord ──────────────────────────────────────────────
+const inpDiscordAlerts     = document.getElementById('inpDiscordAlerts');
+const inpDiscordRelay      = document.getElementById('inpDiscordRelay');
+const inpDiscordMonitoring = document.getElementById('inpDiscordMonitoring');
+const inpDiscordLogs       = document.getElementById('inpDiscordLogs');
+const inpDiscordEnabled    = document.getElementById('inpDiscordEnabled');
+const discordSaveStatus    = document.getElementById('discordSaveStatus');
+const saveDiscordBtn       = document.getElementById('saveDiscordBtn');
+const testDiscordBtn       = document.getElementById('testDiscordBtn');
+
+// ── reveal webhook fields ──────────────────────────────────────
+window.toggleReveal = (inputId, btn) => {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  const icon = btn.querySelector('.material-symbols-rounded');
+  if (icon) icon.textContent = isHidden ? 'visibility_off' : 'visibility';
+};
+
 // ── DOM: Controls ─────────────────────────────────────────────
 const saveBtn         = document.getElementById('saveSettingsBtn');
 const saveStatus      = document.getElementById('saveStatus');
@@ -227,6 +247,89 @@ async function saveSettings() {
   } finally {
     saveBtn.disabled    = false;
     saveBtn.textContent = 'Simpan Semua Settings';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DISCORD WEBHOOK — LOAD, SAVE & TEST
+// ═══════════════════════════════════════════════════════════════
+
+function loadDiscordSettings() {
+  onValue(ref(db, '/settings/discord'), (snap) => {
+    const d = snap.val() || {};
+    if (inpDiscordAlerts)     inpDiscordAlerts.value     = d.webhookAlerts     || '';
+    if (inpDiscordRelay)      inpDiscordRelay.value      = d.webhookRelay      || '';
+    if (inpDiscordMonitoring) inpDiscordMonitoring.value = d.webhookMonitoring || '';
+    if (inpDiscordLogs)       inpDiscordLogs.value       = d.webhookLogs       || '';
+    if (inpDiscordEnabled)    inpDiscordEnabled.checked  = d.enabled !== false;
+    // Placeholder hint untuk yang sudah tersimpan
+    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordLogs]
+      .forEach(el => { if (el && el.value) el.placeholder = '••• (tersimpan)'; });
+  });
+}
+
+async function saveDiscordSettings() {
+  const payload = {
+    webhookAlerts:     inpDiscordAlerts?.value.trim()     || '',
+    webhookRelay:      inpDiscordRelay?.value.trim()      || '',
+    webhookMonitoring: inpDiscordMonitoring?.value.trim() || '',
+    webhookLogs:       inpDiscordLogs?.value.trim()       || '',
+    enabled:           inpDiscordEnabled?.checked ?? true,
+  };
+
+  // Validasi minimal satu webhook terisi
+  const hasAny = Object.values(payload).some(v => typeof v === 'string' && v.startsWith('https://discord.com/api/webhooks/'));
+  if (!hasAny && payload.enabled) {
+    showToast('Masukkan minimal satu Webhook URL Discord yang valid', 'error');
+    return;
+  }
+
+  if (saveDiscordBtn) { saveDiscordBtn.disabled = true; saveDiscordBtn.textContent = 'Menyimpan...'; }
+  try {
+    await set(ref(db, '/settings/discord'), payload);
+    showToast('Konfigurasi Discord tersimpan ke Firebase RTDB', 'success');
+    if (discordSaveStatus) discordSaveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
+  } catch (err) {
+    showToast('Gagal simpan Discord: ' + err.message, 'error');
+  } finally {
+    if (saveDiscordBtn) { saveDiscordBtn.disabled = false; saveDiscordBtn.innerHTML = '<span class="material-symbols-rounded">save</span> Simpan Konfigurasi Discord'; }
+  }
+}
+
+async function testDiscordWebhook() {
+  // Kirim test embed langsung dari browser ke webhook #alerts
+  const url = inpDiscordAlerts?.value.trim();
+  if (!url || !url.startsWith('https://discord.com/api/webhooks/')) {
+    showToast('Isi Webhook #alerts terlebih dahulu untuk test', 'error');
+    return;
+  }
+  if (testDiscordBtn) { testDiscordBtn.disabled = true; testDiscordBtn.textContent = 'Mengirim...'; }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embeds: [{
+          title: '🔔 Test Notifikasi — IoT Listrik Dashboard',
+          description: 'Koneksi Discord Webhook berhasil! Sistem notifikasi real-time siap digunakan.',
+          color: 0x5865F2,
+          fields: [
+            { name: 'Status', value: '✅ Webhook terhubung', inline: true },
+            { name: 'Waktu',  value: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }), inline: true },
+          ],
+          footer: { text: 'IoT Listrik Dashboard — Discord Integration Test' },
+        }],
+      }),
+    });
+    if (res.ok || res.status === 204) {
+      showToast('✅ Test embed berhasil dikirim ke #alerts!', 'success');
+    } else {
+      showToast(`Discord menolak: HTTP ${res.status}`, 'error');
+    }
+  } catch (err) {
+    showToast('Gagal kirim test: ' + err.message, 'error');
+  } finally {
+    if (testDiscordBtn) { testDiscordBtn.disabled = false; testDiscordBtn.innerHTML = '<span class="material-symbols-rounded">send</span> Test Kirim Pesan'; }
   }
 }
 
@@ -458,8 +561,11 @@ initPage({
     initSidebarToggle();
     loadSettings();
     loadClientConfigUi();
+    loadDiscordSettings();
     loadUsers();
     saveBtn?.addEventListener('click', saveSettings);
+    saveDiscordBtn?.addEventListener('click', saveDiscordSettings);
+    testDiscordBtn?.addEventListener('click', testDiscordWebhook);
     saveClientBtn?.addEventListener('click', saveClientConfigFromForm);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
     document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);

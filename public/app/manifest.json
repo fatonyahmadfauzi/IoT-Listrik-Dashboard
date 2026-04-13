@@ -2,13 +2,13 @@
   "name": "IoT Monitoring Listrik",
   "short_name": "Listrik IoT",
   "description": "Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time",
-  "start_url": "/app.html",
+  "start_url": "/app/login",
+  "scope": "/app/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#070c18",
   "background_color": "#070c18",
   "lang": "id",
-  "scope": "/",
   "categories": ["utilities", "productivity"],
   "icons": [
     {
@@ -50,24 +50,17 @@
   ],
   "shortcuts": [
     {
-      "name": "Login",
-      "short_name": "Login",
-      "description": "Masuk ke akun Anda",
-      "url": "/app.html",
-      "icons": [{ "src": "/assets/icons/icon-96.png", "sizes": "96x96" }]
-    },
-    {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Lihat monitoring realtime",
-      "url": "/dashboard",
+      "url": "/app/dashboard",
       "icons": [{ "src": "/assets/icons/icon-96.png", "sizes": "96x96" }]
     },
     {
-      "name": "Riwayat",
+      "name": "Riwayat Log",
       "short_name": "Riwayat",
       "description": "Lihat riwayat event",
-      "url": "/history",
+      "url": "/app/history",
       "icons": [{ "src": "/assets/icons/icon-96.png", "sizes": "96x96" }]
     }
   ]

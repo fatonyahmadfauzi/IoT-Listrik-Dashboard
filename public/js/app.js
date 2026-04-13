@@ -158,7 +158,7 @@ function startMiniLogsListener() {
     const v = snap.val();
     if (!v) {
       elMiniLogs.innerHTML =
-        '<tr><td colspan="4" class="text-muted text-sm" style="padding:16px;">Belum ada log</td></tr>';
+        '<tr class="log-row"><td colspan="4" class="text-muted text-sm" style="padding:12px;">Belum ada log</td></tr>';
       return;
     }
     const rows = Object.entries(v)
@@ -167,15 +167,15 @@ function startMiniLogsListener() {
       .slice(0, 15);
     elMiniLogs.innerHTML = rows
       .map(
-        (r) => `<tr>
-      <td data-label="Waktu">${formatLogTime(r.waktu ?? r.timestamp)}</td>
-      <td data-label="Arus">${Number(r.arus || 0).toFixed(2)} A</td>
-      <td data-label="Teg.">${Number(r.tegangan || 0).toFixed(0)} V</td>
-      <td data-label="Status"><span class="status-badge status-${r.status || "NORMAL"}">${r.status || "NORMAL"}</span></td>
+        (r) => `<tr class="log-row log-status-${(r.status || 'NORMAL').toUpperCase()}">
+      <td class="log-time" data-label="Waktu">${formatLogTime(r.waktu ?? r.timestamp)}</td>
+      <td class="log-values" data-label="Arus / Teg."><span class="log-val-arus">${Number(r.arus || 0).toFixed(2)} A</span><span class="log-val-sep">·</span><span class="log-val-teg">${Number(r.tegangan || 0).toFixed(0)} V</span></td>
+      <td class="log-status" data-label="Status"><span class="status-badge status-${r.status || 'NORMAL'}">${r.status || 'NORMAL'}</span></td>
     </tr>`,
       )
       .join("");
   });
+
 }
 
 function startRealtimeListener() {

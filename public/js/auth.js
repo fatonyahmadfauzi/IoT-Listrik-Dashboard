@@ -15,10 +15,16 @@ import { stopWebSiren } from './notifications.js';
 // ─── Internal state ──────────────────────────────────────────
 let _currentUser = null;
 let _currentRole = null;
+let _isTempAccount = false;
 
 /** Expose current user/role (read-only snapshot) */
 function getCurrentUser() { return _currentUser; }
 function getCurrentRole()  { return _currentRole; }
+function isTempAccount()   { return _isTempAccount; }
+
+function getDbPrefix() {
+  return _isTempAccount && _currentUser ? `/sim/${_currentUser.uid}` : '';
+}
 
 // ─── Role detection ──────────────────────────────────────────
 /**
@@ -72,12 +78,16 @@ function initPage(callbacks = {}) {
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       _currentUser = user;
+      
+      const token = await user.getIdTokenResult();
+      _isTempAccount = !!token.claims?.isTempAccount;
+
       _currentRole = await fetchRole(user.uid);
       // Aktifkan kembali alarm saat user login
       try { localStorage.removeItem('iot_alarm_disable'); } catch (_) {}
 
-      // Admin-only page guard
-      if (requireAdmin && _currentRole !== 'admin') {
+      // Admin-only page guard (Temp account also blocked from settings)
+      if (requireAdmin && (_currentRole !== 'admin' || _isTempAccount)) {
         window.location.href = '/app/dashboard';
         return;
       }
@@ -117,8 +127,8 @@ function populateSidebar(user, role) {
     rolePill.className    = `role-pill ${role}`;
   }
 
-  // Hide admin-only nav items for regular users
-  if (role !== 'admin') {
+  // Hide admin-only nav items for regular users or Temp Accounts
+  if (role !== 'admin' || _isTempAccount) {
     document.querySelectorAll('[data-admin-only]').forEach(el => {
       el.classList.add('hidden');
     });
@@ -185,4 +195,6 @@ export {
   ensureUserProfile,
   getCurrentUser,
   getCurrentRole,
+  isTempAccount,
+  getDbPrefix
 };

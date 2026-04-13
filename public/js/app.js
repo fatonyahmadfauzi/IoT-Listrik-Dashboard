@@ -7,6 +7,8 @@ import {
   populateSidebar,
   initSidebarToggle,
   logout,
+  getDbPrefix,
+  isTempAccount,
 } from "./auth.js";
 import {
   createRealtimeChart,
@@ -130,7 +132,7 @@ async function sendRelayCommand(val) {
 
     elRelayOn.disabled = true;
     elRelayOff.disabled = true;
-    await set(ref(db, "/listrik/relay"), val);
+    await set(ref(db, getDbPrefix() + "/listrik/relay"), val);
     showToast(`Perintah relay ${val === 1 ? "ON" : "OFF"} dikirim`, "success");
   } catch (err) {
     showToast("Gagal mengirim perintah relay: " + err.message, "error");
@@ -152,7 +154,7 @@ function formatLogTime(raw) {
 
 function startMiniLogsListener() {
   if (stopLogs) stopLogs();
-  const logsRef = query(ref(db, "/logs"), orderByKey(), limitToLast(15));
+  const logsRef = query(ref(db, getDbPrefix() + "/logs"), orderByKey(), limitToLast(15));
   stopLogs = onValue(logsRef, (snap) => {
     if (!elMiniLogs) return;
     const v = snap.val();
@@ -249,6 +251,16 @@ initPage({
       elRelaySection?.classList.remove("hidden");
     } else {
       elRelaySection?.classList.add("hidden");
+    }
+
+    if (isTempAccount()) {
+      const header = document.querySelector('.page-header');
+      if (header) {
+        const demoBanner = document.createElement('div');
+        demoBanner.style = "background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); color: var(--warning); padding: 10px 16px; border-radius: 12px; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 500;";
+        demoBanner.innerHTML = `<span class="material-symbols-rounded" style="font-size: 1.2rem;">science</span> Mode Simulator (Demo 5 Menit). Data tidak akan disimpan ke sistem fisik.`;
+        header.parentNode.insertBefore(demoBanner, header.nextSibling);
+      }
     }
 
     if (canvas) chart = createRealtimeChart(canvas);

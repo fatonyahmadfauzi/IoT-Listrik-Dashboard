@@ -3,6 +3,7 @@
  * Web cannot spawn processes — autoStartLocal is ignored here (Electron only).
  */
 import { loadClientConfig } from './client-config.js';
+import { getDbPrefix } from './auth.js';
 import { ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 function trimBase(u) {
@@ -140,7 +141,7 @@ export function startHybridListrik(db, handlers) {
       return;
     }
 
-    const listrikRef = ref(db, '/listrik');
+    const listrikRef = ref(db, getDbPrefix() + '/listrik');
     fbUnsub = onValue(
       listrikRef,
       (snap) => {

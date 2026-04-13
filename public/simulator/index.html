@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>PWA Simulator - IoT Listrik Dashboard</title>
+
+  <!-- PWA & SEO -->
+  <meta name="description" content="Generate akun demo sementara untuk masuk ke PWA Simulator IoT Listrik Dashboard.">
+  <meta name="theme-color" content="#070c18">
+  <link rel="manifest" href="/app/manifest.json">
+
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Iconify -->
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+
+  <!-- Global Styles -->
+  <link rel="stylesheet" href="/css/index.css">
+  <style>
+    /* Specific styling for simulator landing */
+    .simulator-hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .sim-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .sim-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: white;
+      margin: 0 auto 1.5rem;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+    }
+    .sim-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      margin-bottom: 1rem;
+    }
+    .sim-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .sim-desc {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+    .email-input-group {
+      text-align: left;
+      margin-bottom: 1.5rem;
+    }
+    .email-input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+    .email-input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      color: var(--text-primary);
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    .email-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .btn-generate {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-generate:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    }
+    .btn-generate:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .btn-generate .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s linear infinite;
+    }
+    .btn-generate.loading .btn-text, .btn-generate.loading iconify-icon {
+      display: none;
+    }
+    .btn-generate.loading .spinner {
+      display: block;
+    }
+
+    /* Success State */
+    .success-state {
+      display: none;
+      text-align: center;
+    }
+    .success-state.active {
+      display: block;
+      animation: fadeUp 0.4s ease-out;
+    }
+    .input-state.hidden {
+      display: none;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 1.5rem;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .btn-login {
+      margin-top: 2rem;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes bounceIn {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Ambient background */
+    .bg-glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(15,23,42,0) 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  
+  <main class="simulator-hero">
+    <div class="bg-glow"></div>
+
+    <div class="sim-card">
+      
+      <!-- DEFAULT STATE -->
+      <div id="inputState" class="input-state">
+        <div class="sim-badge">
+          <iconify-icon icon="solar:stopwatch-bold"></iconify-icon> Akses 5 Menit
+        </div>
+        <div class="sim-icon">
+          <iconify-icon icon="solar:test-tube-bold-duotone"></iconify-icon>
+        </div>
+        
+        <h1 class="sim-title">PWA Simulator</h1>
+        <p class="sim-desc">Masukkan email Anda untuk mendapatkan kredensial demo sementara. Data simulasi akan dihapus otomatis setelah 5 menit.</p>
+
+        <form id="simForm">
+          <div class="email-input-group">
+            <label for="email">Alamat Email</label>
+            <input type="email" id="email" class="email-input" placeholder="contoh: dosen@kampus.ac.id" required autocomplete="email">
+          </div>
+
+          <button type="submit" class="btn-generate" id="generateBtn">
+            <span class="btn-text">Generate Akun Demo</span>
+            <iconify-icon icon="solar:magic-stick-3-bold"></iconify-icon>
+            <div class="spinner"></div>
+          </button>
+        </form>
+
+        <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-muted);">
+          Simulator ini berfungsi penuh seperti alat aslinya.<br>
+          <a href="/" style="color: var(--primary); text-decoration: none;">Kembali ke Beranda</a>
+        </p>
+      </div>
+
+      <!-- SUCCESS STATE -->
+      <div id="successState" class="success-state">
+        <div class="success-icon">
+          <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
+        </div>
+        <h2 class="sim-title" style="font-size: 1.5rem;">Cek Email Anda!</h2>
+        <p class="sim-desc" style="margin-bottom: 1rem;">
+          Kami telah mengirimkan kredensial PWA Simulator ke:
+          <strong id="sentEmailAddress" style="color: white; display: block; margin-top: 0.5rem;"></strong>
+        </p>
+        
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem;">
+          <p style="color: var(--warning); font-size: 0.85rem; margin: 0; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
+            <iconify-icon icon="solar:info-circle-bold"></iconify-icon>
+            Hanya berlaku selama 5 menit.
+          </p>
+        </div>
+
+        <button onclick="window.location.href='/app/login?install=1'" class="btn-generate btn-login">
+          <span class="btn-text">Ke Halaman Login</span>
+          <iconify-icon icon="solar:login-2-bold"></iconify-icon>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <script type="module" src="/js/simulator-landing.js"></script>
+</body>
+</html>

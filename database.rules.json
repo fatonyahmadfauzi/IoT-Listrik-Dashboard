@@ -1,41 +1,55 @@
 {
   "rules": {
+
     "listrik": {
-      ".read": "auth != null",
-      "arus":          { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "tegangan":      { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "daya":          { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "energi_kwh":    { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "frekuensi":     { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "power_factor":  { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "status":        { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
-      "updated_at":    { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      ".read": "auth != null && auth.token.isTempAccount !== true",
+      "arus":         { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "tegangan":     { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "daya":         { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "energi_kwh":   { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "frekuensi":    { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "power_factor": { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "status":       { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
+      "updated_at":   { ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'" },
       "relay": {
         ".write": "auth != null && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
       }
     },
 
     "logs": {
-      ".read":  "auth != null",
-      ".write": "auth != null && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      ".read":  "auth != null && auth.token.isTempAccount !== true",
+      ".write": "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
     },
 
     "settings": {
-      ".read":  "auth != null && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      ".read":  "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+      ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'"
     },
 
     "users": {
-      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".read": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",
       "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-
-        ".write": "auth != null && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-
+        ".read":  "auth != null && auth.uid === $uid && auth.token.isTempAccount !== true",
+        ".write": "auth != null && auth.token.isTempAccount !== true && (auth.uid === $uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         "role": {
-          ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (!data.exists() && auth.uid === $uid && newData.val() === 'user'))"
+          ".write": "auth != null && auth.token.isTempAccount !== true && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (!data.exists() && auth.uid === $uid && newData.val() === 'user'))"
         }
       }
+    },
+
+    "sim": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid && auth.token.isTempAccount === true",
+        ".write": "auth != null && auth.uid === $uid && auth.token.isTempAccount === true"
+      }
+    },
+
+    "temp_sessions": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": false
+      }
     }
+
   }
 }

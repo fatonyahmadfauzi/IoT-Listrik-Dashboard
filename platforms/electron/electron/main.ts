@@ -279,11 +279,19 @@ process.on('uncaughtException', (error) => {
   );
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason: any, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  dialog.showErrorBox(
+    'Unhandled Rejection',
+    `An unexpected promise rejection occurred: ${reason?.message || String(reason)}`
+  );
 });
 
-// Auto-updater (optional)
-if (!isDev) {
-  autoUpdater.checkForUpdatesAndNotify();
+// Auto-updater (optional). Disable in portable mode because it fails.
+if (!isDev && !process.env.PORTABLE_EXECUTABLE_DIR) {
+  try {
+    autoUpdater.checkForUpdatesAndNotify().catch(e => console.error('Updater error:', e));
+  } catch (e) {
+    console.error('Updater init error:', e);
+  }
 }

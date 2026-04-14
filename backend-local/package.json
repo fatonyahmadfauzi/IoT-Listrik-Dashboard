@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "discord": "node discord-notifier.js",
+    "sim-notify": "node sim-notifier.js",
     "seed-demo": "node seed-demo.js",
     "seed-demo:live": "node seed-demo.js --live",
     "seed-logs": "node seed-demo.js --logs=80 --clear-logs"

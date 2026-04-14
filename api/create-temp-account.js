@@ -65,7 +65,7 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#060c18;word-spacing:normal;">
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Akun simulator IoT Listrik Anda siap. Email &amp; password tersedia di dalam &mdash; berlaku hanya 5 menit.&#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Akun simulator IoT Listrik Anda siap. Email &amp; password tersedia di dalam &mdash; berlaku hanya 15 menit.&#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;</div>
 
 <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
 
@@ -107,7 +107,7 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
       <h1 style="margin:0 0 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;line-height:1.15;">Kredensial Demo Siap</h1>
       <p style="margin:0 0 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;color:#6b7280;line-height:1.65;">
         Gunakan data berikut untuk masuk ke Simulator IoT Listrik.<br>
-        <strong style="color:#ef4444;">Segera gunakan — berlaku hanya 5 menit.</strong>
+        <strong style="color:#ef4444;">Segera gunakan — berlaku hanya 15 menit.</strong>
       </p>
 
       <!-- ─── CREDENTIAL MODULE ─── -->
@@ -143,7 +143,7 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
                   <p style="margin:4px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;color:#fbbf24;line-height:1.3;">${timeStr} WIB &mdash; ${dateStr}</p>
                 </td>
                 <td align="right" style="vertical-align:middle;white-space:nowrap;padding-left:12px;">
-                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:800;color:#f59e0b;background-color:#292001;border-radius:8px;padding:6px 12px;">5 MENIT</p>
+                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:800;color:#f59e0b;background-color:#292001;border-radius:8px;padding:6px 12px;">15 MENIT</p>
                 </td>
               </tr>
             </table>
@@ -161,12 +161,12 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
       <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
         <tr>
           <td align="center" style="background-color:#065f46;background:linear-gradient(160deg,#047857,#10b981);border-radius:16px;">
-            <a href="https://iot-listrik-dashboard.vercel.app/simulator/app?install=1" target="_blank" style="display:block;text-decoration:none;">
+            <a href="https://iot-listrik-dashboard.vercel.app/simulator/login?install=1" target="_blank" style="display:block;text-decoration:none;">
               <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
                 <tr>
                   <td class="cta-btn" align="center" style="padding:20px 28px;">
                     <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:17px;font-weight:800;color:#ffffff;line-height:1;">&#9654;&nbsp; Buka Simulator Sekarang</p>
-                    <p style="margin:6px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:400;color:rgba(255,255,255,0.65);line-height:1;">iot-listrik-dashboard.vercel.app/simulator/app</p>
+                    <p style="margin:6px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:400;color:rgba(255,255,255,0.65);line-height:1;">iot-listrik-dashboard.vercel.app/simulator/login</p>
                   </td>
                 </tr>
               </table>
@@ -211,7 +211,7 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
     <tr><td align="center">
       <p style="margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#374151;line-height:1.7;">
         Email ini dikirim otomatis. Jangan balas email ini.<br>
-        Data akun dan sesi akan dihapus otomatis setelah <strong style="color:#4b5563;">5 menit</strong>.
+        Data akun dan sesi akan dihapus otomatis setelah <strong style="color:#4b5563;">15 menit</strong>.
       </p>
       <p style="margin:8px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#6b7280;line-height:1.7;">
         &copy; 2025 <strong style="color:#9ca3af;font-weight:600;">IoT Listrik Dashboard</strong><br>
@@ -267,7 +267,7 @@ export default async function handler(req, res) {
   const password  = randomStr(4, "ABCDEFGHJKLMNPQRSTUVWXYZ") 
                   + randomStr(4, "23456789") 
                   + randomStr(4, "abcdefghjkmnpqrstuvwxyz");
-  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+  const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
   try {
     // 1. Create Firebase Auth user

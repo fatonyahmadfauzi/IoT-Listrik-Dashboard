@@ -1,7 +1,7 @@
 {
-  "name": "IoT Listrik Demo Simulator",
-  "short_name": "Listrik Demo",
-  "description": "PWA Simulator untuk mengontrol data demo IoT Listrik Dashboard.",
+  "name": "IoT Simulator Control Console",
+  "short_name": "Simulator",
+  "description": "Virtual Hardware Test Console for Synthetic Data Injection & System Validation",
   "start_url": "/pwa-simulator.html",
   "display": "standalone",
   "orientation": "portrait-primary",

@@ -7,7 +7,7 @@ const { default: pngToIco } = await import('png-to-ico');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const source = path.join(__dirname, '..', '..', 'public', 'icons', 'icon-512.png');
+const source = path.join(__dirname, '..', '..', '..', 'public', 'assets', 'icons', 'icon-512.png');
 const buildDir = path.join(__dirname, '..', 'build');
 const outputIco = path.join(buildDir, 'icon.ico');
 

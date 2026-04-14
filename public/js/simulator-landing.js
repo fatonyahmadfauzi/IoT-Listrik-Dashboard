@@ -1,3 +1,9 @@
+// Redirect PWA standalone mode directly to login
+const isStandaloneMode = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+if (isStandaloneMode) {
+  window.location.replace('/simulator/login');
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("simForm");
   const emailInput = document.getElementById("email");

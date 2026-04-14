@@ -10,7 +10,7 @@
  */
 
 import { db }           from './firebase-config.js';
-import { initPage, populateSidebar, initSidebarToggle, logout } from './auth.js';
+import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix } from './auth.js';
 import { createRealtimeChart, loadHistoryIntoChart } from './charts.js';
 import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, query, orderByKey, limitToLast, onValue }
@@ -30,7 +30,7 @@ let unsubListrik = null; // RTDB status listener untuk alarm
 
 function startAlarmMonitor() {
   if (unsubListrik) return; // already started
-  const listrikRef = ref(db, '/listrik');
+  const listrikRef = ref(db, getDbPrefix() + '/listrik');
   unsubListrik = onValue(listrikRef, (snap) => {
     const d = snap.val();
     if (!d) return;
@@ -107,7 +107,7 @@ function applyFilter() {
 
 // ─── Load logs from RTDB ──────────────────────────────────────
 function loadLogs() {
-  const logsQuery = query(ref(db, '/logs'), orderByKey(), limitToLast(100));
+  const logsQuery = query(ref(db, getDbPrefix() + '/logs'), orderByKey(), limitToLast(100));
 
   tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-secondary);">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">

@@ -53,6 +53,9 @@ class MainActivity : AppCompatActivity() {
     private var listenersAttached = false
 
     private var isAdmin = false
+    private var isTempAccount = false
+    private var pathPrefix = ""
+    private var sessionTimer: android.os.CountDownTimer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,14 +109,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (!listenersAttached) {
-            startConnectionListener()
-            startDashboardListener()
-            startHistoryListener()
-            listenersAttached = true
-        }
-
-        refreshRoleAndApplyUi()
+        initializeSession()
     }
 
     override fun onStop() {
@@ -122,6 +118,7 @@ class MainActivity : AppCompatActivity() {
             detachListeners()
             listenersAttached = false
         }
+        sessionTimer?.cancel()
     }
 
     private fun detachListeners() {
@@ -139,8 +136,74 @@ class MainActivity : AppCompatActivity() {
         historyByKey.clear()
     }
 
-    private fun refreshRoleAndApplyUi() {
-        val uid = auth.currentUser?.uid ?: run {
+    private fun handleSessionExpired() {
+        Toast.makeText(this, "Sesi demo berakhir (15 menit).", Toast.LENGTH_LONG).show()
+        // Stop alarm supaya tidak lanjut bunyi setelah logout
+        AlarmForegroundService.stop(this)
+        auth.signOut()
+        startActivity(Intent(this, LoginActivity::class.java))
+        finish()
+    }
+
+    private fun startSessionTimer(timeRemaining: Long) {
+        sessionTimer?.cancel()
+        sessionTimer = object : android.os.CountDownTimer(timeRemaining, 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                val seconds = (millisUntilFinished / 1000) % 60
+                val minutes = (millisUntilFinished / (1000 * 60)) % 60
+                binding.tvTempTimer.text = String.format("%02d:%02d", minutes, seconds)
+            }
+            override fun onFinish() {
+                binding.tvTempTimer.text = "00:00"
+                handleSessionExpired()
+            }
+        }.start()
+    }
+
+    private fun initializeSession() {
+        val user = auth.currentUser
+        if (user == null) {
+            handleSessionExpired()
+            return
+        }
+
+        user.getIdToken(false).addOnSuccessListener { result ->
+            val isTemp = result.claims["isTempAccount"] as? Boolean ?: false
+            val expiresAt = (result.claims["expiresAt"] as? Number)?.toLong()
+
+            isTempAccount = isTemp
+            pathPrefix = if (isTemp) "sim/${user.uid}/" else ""
+
+            if (isTemp && expiresAt != null) {
+                val timeRemaining = expiresAt - System.currentTimeMillis()
+                if (timeRemaining <= 0) {
+                    handleSessionExpired()
+                    return@addOnSuccessListener
+                } else {
+                    startSessionTimer(timeRemaining)
+                }
+            }
+
+            fetchRoleAndApplyUi(user.uid)
+            attachListeners()
+        }.addOnFailureListener {
+            pathPrefix = ""
+            fetchRoleAndApplyUi(user.uid)
+            attachListeners()
+        }
+    }
+
+    private fun attachListeners() {
+        if (!listenersAttached) {
+            startConnectionListener()
+            startDashboardListener()
+            startHistoryListener()
+            listenersAttached = true
+        }
+    }
+
+    private fun fetchRoleAndApplyUi(uid: String) {
+        if (isTempAccount) {
             isAdmin = false
             applyRoleUi()
             return
@@ -162,6 +225,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyRoleUi() {
+        if (isTempAccount) {
+            binding.tempBadgeContainer.visibility = View.VISIBLE
+        } else {
+            binding.tempBadgeContainer.visibility = View.GONE
+        }
+
         if (isAdmin) {
             binding.relaySection.visibility = View.VISIBLE
             binding.demoSection.visibility = View.VISIBLE
@@ -231,7 +300,7 @@ class MainActivity : AppCompatActivity() {
     private fun startDashboardListener() {
         if (dashboardListener != null) return
 
-        dashboardRef = db.getReference("listrik")
+        dashboardRef = db.getReference("${pathPrefix}listrik")
         dashboardListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if(!snapshot.exists()) return
@@ -273,7 +342,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvHistoryEmpty.visibility = View.VISIBLE
         binding.rvHistory.visibility = View.GONE
 
-        val logsQuery = db.getReference("logs").orderByKey().limitToLast(15)
+        val logsQuery = db.getReference("${pathPrefix}logs").orderByKey().limitToLast(15)
         historyQuery = logsQuery
         historyChildListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
@@ -495,12 +564,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setRelay(value: Int) {
-        if (!isAdmin) {
+        if (!isAdmin || isTempAccount) {
             showToast("Akses ditolak: hanya admin yang bisa mengontrol relay.")
             return
         }
 
-        db.getReference("listrik/relay")
+        db.getReference("${pathPrefix}listrik/relay")
             .setValue(value)
             .addOnFailureListener { e ->
                 val msg = e.message ?: "Gagal mengirim perintah relay."
@@ -509,24 +578,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun triggerDemoMode(state: String) {
-        if (!isAdmin) {
+        if (!isAdmin || isTempAccount) {
             showToast("Demo mode hanya tersedia untuk admin.")
             return
         }
 
         // Force fully overriding the RTDB so FCM Web and Cloud Functions will catch it instantly
         // Wait, Cloud Functions requires it to hit /listrik/status!
-        db.getReference("listrik/status").setValue(state)
+        db.getReference("${pathPrefix}listrik/status").setValue(state)
         
         // Let's also enforce dummy data to look more realistic if needed,
         // although real ESP will overwrite it. Temporary override is enough for demo.
         if (state == "DANGER") {
-            db.getReference("listrik/arus").setValue(3.45)
-            db.getReference("listrik/tegangan").setValue(180.0)
+            db.getReference("${pathPrefix}listrik/arus").setValue(3.45)
+            db.getReference("${pathPrefix}listrik/tegangan").setValue(180.0)
         } else if (state == "WARNING") {
-            db.getReference("listrik/arus").setValue(1.15)
+            db.getReference("${pathPrefix}listrik/arus").setValue(1.15)
         } else {
-            db.getReference("listrik/arus").setValue(0.45)
+            db.getReference("${pathPrefix}listrik/arus").setValue(0.45)
         }
     }
 

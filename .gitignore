@@ -101,3 +101,6 @@ public/downloads/
 
 # Junk binary files
 test-msi-download.msi
+
+# CLI Node Build Artifacts
+platforms/cli-node/build/

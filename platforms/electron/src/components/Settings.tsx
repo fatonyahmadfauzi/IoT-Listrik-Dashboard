@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
 import { db } from '../lib/firebase';
-import { ref, update, remove } from 'firebase/database';
+import { ref, update, remove, set } from 'firebase/database';
 import {
   loadClientConfig,
   saveClientConfig,
@@ -17,7 +17,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const { settings, users } = useDataStore();
   const { role, user } = useAuthStore();
   const [tab, setTab] = useState<
-    'system' | 'calibration' | 'telegram' | 'users' | 'backend'
+    'system' | 'calibration' | 'telegram' | 'discord' | 'backend' | 'users'
   >('system');
   const [loading, setLoading] = useState(false);
   const [clientCfg, setClientCfg] = useState<ClientBackendConfig>(() =>
@@ -29,18 +29,40 @@ export function Settings({ onLogout }: SettingsProps) {
     if (tab === 'backend') setClientCfg(loadClientConfig());
   }, [tab]);
 
-  const [threshold, setThreshold] = useState(settings?.threshold || 5);
-  const [sendInterval, setSendInterval] = useState(settings?.send_interval || 60);
-  const [buzzer, setBuzzer] = useState(settings?.buzzer_enabled || true);
-  const [autoCutoff, setAutoCutoff] = useState(settings?.auto_cutoff || false);
+  // System
+  const [thresholdArus, setThresholdArus] = useState(settings?.thresholdArus ?? settings?.threshold ?? 10);
+  const [warningPercent, setWarningPercent] = useState(settings?.warningPercent ?? 80);
+  const [sendIntervalMs, setSendIntervalMs] = useState(settings?.sendIntervalMs ?? settings?.send_interval ?? 2000);
+  const [buzzerEnabled, setBuzzerEnabled] = useState(settings?.buzzerEnabled ?? settings?.buzzer_enabled ?? true);
+  const [autoCutoffEnabled, setAutoCutoffEnabled] = useState(settings?.autoCutoffEnabled ?? settings?.auto_cutoff ?? true);
+  const [powerFactorEstimate, setPowerFactorEstimate] = useState(settings?.powerFactorEstimate ?? 0.85);
+  const [frequencyHz, setFrequencyHz] = useState(settings?.frequencyHz ?? 50);
 
-  const [currentCalib, setCurrentCalib] = useState(settings?.calibration?.arus || 1);
-  const [voltageCalib, setVoltageCalib] = useState(settings?.calibration?.tegangan || 1);
+  // Calibration
+  const [arusCalibration, setArusCalibration] = useState(settings?.arusCalibration ?? settings?.calibration?.arus ?? 1);
+  const [teganganCalibration, setTeganganCalibration] = useState(settings?.teganganCalibration ?? settings?.calibration?.tegangan ?? 1);
 
-  const [telegramToken, setTelegramToken] = useState(settings?.telegram?.bot_token || '');
-  const [telegramChat, setTelegramChat] = useState(settings?.telegram?.chat_id || '');
+  // Telegram
+  const [telegramNotifyEnabled, setTelegramNotifyEnabled] = useState(settings?.telegramNotifyEnabled ?? true);
+  const [telegramBotToken, setTelegramBotToken] = useState(settings?.telegramBotToken ?? settings?.telegram?.bot_token ?? '');
+  const [telegramChatId, setTelegramChatId] = useState(settings?.telegramChatId ?? settings?.telegram?.chat_id ?? '');
+
+  // Discord
+  const dSettings = settings?.discord || {};
+  const [discordAlerts, setDiscordAlerts] = useState(dSettings.webhookAlerts || '');
+  const [discordRelay, setDiscordRelay] = useState(dSettings.webhookRelay || '');
+  const [discordMonitoring, setDiscordMonitoring] = useState(dSettings.webhookMonitoring || '');
+  const [discordLogs, setDiscordLogs] = useState(dSettings.webhookLogs || '');
+  const [discordEnabled, setDiscordEnabled] = useState(dSettings.enabled ?? true);
 
   const [newUserEmail, setNewUserEmail] = useState('');
+  
+  // Visibility toggles
+  const [showTgToken, setShowTgToken] = useState(false);
+  const [showDiscordAlerts, setShowDiscordAlerts] = useState(false);
+  const [showDiscordRelay, setShowDiscordRelay] = useState(false);
+  const [showDiscordMonitoring, setShowDiscordMonitoring] = useState(false);
+  const [showDiscordLogs, setShowDiscordLogs] = useState(false);
 
   const isAdmin = role === 'admin';
 
@@ -49,13 +71,18 @@ export function Settings({ onLogout }: SettingsProps) {
     setLoading(true);
     try {
       await update(ref(db, 'settings'), {
-        threshold,
-        send_interval: sendInterval,
-        buzzer_enabled: buzzer,
-        auto_cutoff: autoCutoff,
+        thresholdArus,
+        warningPercent,
+        sendIntervalMs,
+        buzzerEnabled,
+        autoCutoffEnabled,
+        powerFactorEstimate,
+        frequencyHz,
       });
+      alert('System configuration saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
+      alert('Failed to save settings');
     } finally {
       setLoading(false);
     }
@@ -65,12 +92,14 @@ export function Settings({ onLogout }: SettingsProps) {
     if (!isAdmin) return;
     setLoading(true);
     try {
-      await update(ref(db, 'settings/calibration'), {
-        arus: currentCalib,
-        tegangan: voltageCalib,
+      await update(ref(db, 'settings'), {
+        arusCalibration,
+        teganganCalibration,
       });
+      alert('Calibration saved successfully');
     } catch (error) {
       console.error('Error saving calibration:', error);
+      alert('Failed to save calibration');
     } finally {
       setLoading(false);
     }
@@ -80,12 +109,70 @@ export function Settings({ onLogout }: SettingsProps) {
     if (!isAdmin) return;
     setLoading(true);
     try {
-      await update(ref(db, 'settings/telegram'), {
-        bot_token: telegramToken,
-        chat_id: telegramChat,
+      await update(ref(db, 'settings'), {
+        telegramBotToken,
+        telegramChatId,
+        telegramNotifyEnabled,
       });
+      alert('Telegram integration saved successfully');
     } catch (error) {
       console.error('Error saving Telegram settings:', error);
+      alert('Failed to save telegram integration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveDiscord = async () => {
+    if (!isAdmin) return;
+    setLoading(true);
+    try {
+      await set(ref(db, 'settings/discord'), {
+        webhookAlerts: discordAlerts,
+        webhookRelay: discordRelay,
+        webhookMonitoring: discordMonitoring,
+        webhookLogs: discordLogs,
+        enabled: discordEnabled,
+      });
+      alert('Discord configuration saved successfully');
+    } catch (error) {
+      console.error('Error saving Discord settings:', error);
+      alert('Failed to save discord integration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testDiscordWebhook = async () => {
+    if (!discordAlerts.startsWith('https://discord.com/api/webhooks/')) {
+      alert('Isi Webhook #alerts terlebih dahulu untuk test');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(discordAlerts, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          embeds: [{
+            title: '🔔 Test Notifikasi — IoT Listrik Dashboard',
+            description: 'Koneksi Discord Webhook berhasil! Sistem notifikasi Desktop siap digunakan.',
+            color: 0x5865F2,
+            fields: [
+              { name: 'Status', value: '✅ Webhook terhubung', inline: true },
+              { name: 'Waktu', value: new Date().toLocaleString('id-ID'), inline: true },
+            ],
+            footer: { text: 'IoT Listrik Dashboard Desktop — Discord Integration Test' },
+          }],
+        }),
+      });
+      if (res.ok || res.status === 204) {
+        alert('Test embed berhasil dikirim ke #alerts!');
+      } else {
+        alert(`Discord menolak: HTTP ${res.status}`);
+      }
+    } catch (error: any) {
+      alert('Gagal kirim test: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -147,9 +234,9 @@ export function Settings({ onLogout }: SettingsProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-lg">
+      <div className="flex space-x-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-x-auto">
         {(
-          ['system', 'calibration', 'telegram', 'backend', 'users'] as const
+          ['system', 'calibration', 'telegram', 'discord', 'backend', 'users'] as const
         ).map((t) => (
           <button
             key={t}
@@ -172,62 +259,98 @@ export function Settings({ onLogout }: SettingsProps) {
             System Configuration
           </h3>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Current Threshold (A)
-            </label>
-            <input
-              type="number"
-              value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value))}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Batas Arus Maksimal (A)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={thresholdArus}
+                onChange={(e) => setThresholdArus(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Ambang Peringatan (%)
+              </label>
+              <input
+                type="number"
+                value={warningPercent}
+                onChange={(e) => setWarningPercent(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Interval Pengiriman Sensor (ms)
+              </label>
+              <input
+                type="number"
+                value={sendIntervalMs}
+                onChange={(e) => setSendIntervalMs(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Estimasi Power Factor
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={powerFactorEstimate}
+                onChange={(e) => setPowerFactorEstimate(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Frekuensi Jaringan (Hz)
+              </label>
+              <input
+                type="number"
+                value={frequencyHz}
+                onChange={(e) => setFrequencyHz(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Send Interval (seconds)
-            </label>
-            <input
-              type="number"
-              value={sendInterval}
-              onChange={(e) => setSendInterval(Number(e.target.value))}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-            />
-          </div>
-
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 mt-4">
             <input
               type="checkbox"
               id="buzzer"
-              checked={buzzer}
-              onChange={(e) => setBuzzer(e.target.checked)}
+              checked={buzzerEnabled}
+              onChange={(e) => setBuzzerEnabled(e.target.checked)}
               className="rounded"
             />
             <label htmlFor="buzzer" className="text-gray-700 dark:text-gray-300">
-              Enable Buzzer
+              Enable Buzzer on Controller
             </label>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 mt-2">
             <input
               type="checkbox"
               id="autoCutoff"
-              checked={autoCutoff}
-              onChange={(e) => setAutoCutoff(e.target.checked)}
+              checked={autoCutoffEnabled}
+              onChange={(e) => setAutoCutoffEnabled(e.target.checked)}
               className="rounded"
             />
             <label htmlFor="autoCutoff" className="text-gray-700 dark:text-gray-300">
-              Auto Cutoff on Danger
+              Auto Cutoff on Danger Overload
             </label>
           </div>
 
           <button
             onClick={handleSaveSystem}
             disabled={loading}
-            className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+            className="w-full mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
           >
-            {loading ? 'Saving...' : 'Save'}
+            {loading ? 'Saving...' : 'Save Configuration'}
           </button>
         </div>
       )}
@@ -239,30 +362,32 @@ export function Settings({ onLogout }: SettingsProps) {
             Sensor Calibration
           </h3>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Current Calibration Factor
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={currentCalib}
-              onChange={(e) => setCurrentCalib(Number(e.target.value))}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Current Calibration Factor (PZEM Arus)
+              </label>
+              <input
+                type="number"
+                step="0.001"
+                value={arusCalibration}
+                onChange={(e) => setArusCalibration(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Voltage Calibration Factor
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={voltageCalib}
-              onChange={(e) => setVoltageCalib(Number(e.target.value))}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Voltage Calibration Factor (PZEM Tegangan)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                value={teganganCalibration}
+                onChange={(e) => setTeganganCalibration(Number(e.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
           </div>
 
           <button
@@ -270,7 +395,7 @@ export function Settings({ onLogout }: SettingsProps) {
             disabled={loading}
             className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
           >
-            {loading ? 'Saving...' : 'Save'}
+            {loading ? 'Saving...' : 'Save Calibration'}
           </button>
         </div>
       )}
@@ -286,13 +411,21 @@ export function Settings({ onLogout }: SettingsProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Bot Token
             </label>
-            <input
-              type="password"
-              value={telegramToken}
-              onChange={(e) => setTelegramToken(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-              placeholder="Enter bot token"
-            />
+            <div className="relative">
+              <input
+                type={showTgToken ? "text" : "password"}
+                value={telegramBotToken}
+                onChange={(e) => setTelegramBotToken(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                placeholder="1234567890:ABCDEF..."
+              />
+              <button 
+                className="absolute right-3 top-3 text-gray-500"
+                onClick={() => setShowTgToken(!showTgToken)}
+              >
+                {showTgToken ? <EyeOff size={20}/> : <Eye size={20}/>}
+              </button>
+            </div>
           </div>
 
           <div>
@@ -301,11 +434,24 @@ export function Settings({ onLogout }: SettingsProps) {
             </label>
             <input
               type="text"
-              value={telegramChat}
-              onChange={(e) => setTelegramChat(e.target.value)}
+              value={telegramChatId}
+              onChange={(e) => setTelegramChatId(e.target.value)}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-              placeholder="Enter chat ID"
+              placeholder="-100123456789"
             />
+          </div>
+
+          <div className="flex items-center space-x-3 mt-4">
+            <input
+              type="checkbox"
+              id="tgNotify"
+              checked={telegramNotifyEnabled}
+              onChange={(e) => setTelegramNotifyEnabled(e.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="tgNotify" className="text-gray-700 dark:text-gray-300">
+              Aktifkan Telegram Notifications
+            </label>
           </div>
 
           <button
@@ -313,12 +459,128 @@ export function Settings({ onLogout }: SettingsProps) {
             disabled={loading}
             className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
           >
-            {loading ? 'Saving...' : 'Save'}
+            {loading ? 'Saving...' : 'Save Telegram Config'}
           </button>
         </div>
       )}
 
-      {/* Backend / failover (localStorage + optional local process) */}
+      {/* Discord Tab */}
+      {tab === 'discord' && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Discord Integration
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Konfigurasi koneksi webhook untuk log dan peringatan ke Discord.
+          </p>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Webhook #alerts (Peringatan Bahaya)
+              </label>
+              <div className="relative">
+                <input
+                  type={showDiscordAlerts ? "text" : "password"}
+                  value={discordAlerts}
+                  onChange={(e) => setDiscordAlerts(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                  placeholder="https://discord.com/api/webhooks/..."
+                />
+                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordAlerts(!showDiscordAlerts)}>
+                  {showDiscordAlerts ? <EyeOff size={20}/> : <Eye size={20}/>}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Webhook #relay (Status Relay Aktif/Mati)
+              </label>
+              <div className="relative">
+                <input
+                  type={showDiscordRelay ? "text" : "password"}
+                  value={discordRelay}
+                  onChange={(e) => setDiscordRelay(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                  placeholder="https://discord.com/api/webhooks/..."
+                />
+                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordRelay(!showDiscordRelay)}>
+                  {showDiscordRelay ? <EyeOff size={20}/> : <Eye size={20}/>}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Webhook #monitoring (Data Realtime)
+              </label>
+              <div className="relative">
+                <input
+                  type={showDiscordMonitoring ? "text" : "password"}
+                  value={discordMonitoring}
+                  onChange={(e) => setDiscordMonitoring(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                  placeholder="https://discord.com/api/webhooks/..."
+                />
+                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordMonitoring(!showDiscordMonitoring)}>
+                  {showDiscordMonitoring ? <EyeOff size={20}/> : <Eye size={20}/>}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Webhook #logs (Aktivitas Sistem)
+              </label>
+              <div className="relative">
+                <input
+                  type={showDiscordLogs ? "text" : "password"}
+                  value={discordLogs}
+                  onChange={(e) => setDiscordLogs(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                  placeholder="https://discord.com/api/webhooks/..."
+                />
+                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordLogs(!showDiscordLogs)}>
+                  {showDiscordLogs ? <EyeOff size={20}/> : <Eye size={20}/>}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 mt-4">
+            <input
+              type="checkbox"
+              id="discordEnabled"
+              checked={discordEnabled}
+              onChange={(e) => setDiscordEnabled(e.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="discordEnabled" className="text-gray-700 dark:text-gray-300">
+              Aktifkan Integrasi Discord
+            </label>
+          </div>
+
+          <div className="flex space-x-4 mt-6">
+            <button
+              onClick={handleSaveDiscord}
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-[#5865F2] hover:bg-[#4752C4] disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+            >
+              {loading ? 'Saving...' : 'Simpan Konfigurasi'}
+            </button>
+            <button
+              onClick={testDiscordWebhook}
+              disabled={loading || !discordAlerts.startsWith('https://discord.com/api/webhooks/')}
+              className="px-4 py-2 bg-transparent border border-[#5865F2] text-[#5865F2] hover:bg-[#5865F2] hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
+            >
+              Test Kirim Ke #alerts
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Backend & Failover Tab */}
       {tab === 'backend' && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
@@ -331,11 +593,11 @@ export function Settings({ onLogout }: SettingsProps) {
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Public API base (opsional)
               </label>
               <input
-                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2"
                 value={clientCfg.publicApiBase}
                 onChange={(e) =>
                   setClientCfg({ ...clientCfg, publicApiBase: e.target.value })
@@ -344,11 +606,11 @@ export function Settings({ onLogout }: SettingsProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Local API base
               </label>
               <input
-                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2"
                 value={clientCfg.localApiBase}
                 onChange={(e) =>
                   setClientCfg({ ...clientCfg, localApiBase: e.target.value })
@@ -356,11 +618,11 @@ export function Settings({ onLogout }: SettingsProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Mode
               </label>
               <select
-                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2"
                 value={clientCfg.mode}
                 onChange={(e) =>
                   setClientCfg({
@@ -375,11 +637,11 @@ export function Settings({ onLogout }: SettingsProps) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Health path
               </label>
               <input
-                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2"
                 value={clientCfg.healthPath}
                 onChange={(e) =>
                   setClientCfg({ ...clientCfg, healthPath: e.target.value })
@@ -394,7 +656,7 @@ export function Settings({ onLogout }: SettingsProps) {
                   setClientCfg({ ...clientCfg, autoFailover: e.target.checked })
                 }
               />
-              <span className="text-sm text-gray-300">Auto failover</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Auto failover</span>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -404,29 +666,29 @@ export function Settings({ onLogout }: SettingsProps) {
                   setClientCfg({ ...clientCfg, autoStartLocal: e.target.checked })
                 }
               />
-              <span className="text-sm text-gray-300">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 Auto-start local server (Windows)
               </span>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Working directory (local server)
               </label>
               <input
-                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2"
                 value={clientCfg.localServerPath}
                 onChange={(e) =>
                   setClientCfg({ ...clientCfg, localServerPath: e.target.value })
                 }
-                placeholder="E:\\...\\backend-local"
+                placeholder="E:\...\backend-local"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Start command
               </label>
               <input
-                className="w-full rounded-lg border border-gray-700 bg-gray-900 text-white p-2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2"
                 value={clientCfg.localStartCmd}
                 onChange={(e) =>
                   setClientCfg({ ...clientCfg, localStartCmd: e.target.value })
@@ -436,7 +698,7 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-4">
             <button
               type="button"
               onClick={() => {
@@ -476,7 +738,7 @@ export function Settings({ onLogout }: SettingsProps) {
             )}
           </div>
           {localSrvMsg && (
-            <p className="text-sm text-gray-400">{localSrvMsg}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{localSrvMsg}</p>
           )}
         </div>
       )}
@@ -513,16 +775,16 @@ export function Settings({ onLogout }: SettingsProps) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                  <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
                     Email
                   </th>
-                  <th className="text-left py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                  <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
                     Role
                   </th>
-                  <th className="text-left py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                  <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
                     Created
                   </th>
                   <th className="text-right py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
@@ -570,4 +832,3 @@ export function Settings({ onLogout }: SettingsProps) {
     </div>
   );
 }
-

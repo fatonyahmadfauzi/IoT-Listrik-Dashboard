@@ -27,6 +27,21 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+let pathPrefix = "";
+let sessionTimeoutTimer = null;
+
+function handleSessionExpired() {
+  console.clear();
+  console.log(chalk.red.bold("\n[!] PERINGATAN SISTEM [!]"));
+  console.log(chalk.yellow("Durasi sesi akun sementara (Demo) Anda telah habis (15 menit)."));
+  console.log(chalk.gray("Anda akan di-logout secara otomatis.\n"));
+  
+  if (fs.existsSync(SESSION_FILE)) {
+    fs.unlinkSync(SESSION_FILE);
+  }
+  process.exit(0);
+}
+
 function printHeader() {
   console.clear();
   console.log(chalk.cyan.bold("\nIoT Listrik Dashboard CLI"));
@@ -44,7 +59,7 @@ async function runLiveMonitoring() {
     console.log(chalk.yellow("Memulai Live Stream Data Firebase..."));
     console.log(chalk.gray("Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n"));
 
-    const listrikRef = ref(db, "/listrik");
+    const listrikRef = ref(db, `${pathPrefix}/listrik`);
     let initialDraw = true;
 
     const onKeypress = (str, key) => {
@@ -104,7 +119,7 @@ async function toggleRelay() {
 
   if (confirmToggle !== null) {
     try {
-      await set(ref(db, "/listrik/relay"), confirmToggle);
+      await set(ref(db, `${pathPrefix}/listrik/relay`), confirmToggle);
       console.log(chalk.green(`\nBerhasil mengirim perintah [${confirmToggle ? 'ON' : 'OFF'}] ke alat!`));
     } catch (e) {
       console.log(chalk.red(`\nGagal mengirim perintah:`), e.message);
@@ -118,7 +133,7 @@ async function viewLogs() {
   printHeader();
   console.log(chalk.cyan("Memuat 5 log riwayat terakhir...\n"));
   try {
-    const logQuery = query(ref(db, "/logs"), orderByKey(), limitToLast(5));
+    const logQuery = query(ref(db, `${pathPrefix}/logs`), orderByKey(), limitToLast(5));
     const snap = await get(logQuery);
     
     if (snap.exists()) {
@@ -156,10 +171,11 @@ async function enforceLogin() {
     try {
       const session = JSON.parse(fs.readFileSync(SESSION_FILE, "utf-8"));
       await signInWithEmailAndPassword(auth, session.email, session.password);
+      await processUserClaims();
       console.log(chalk.green(`Meresume sesi login untuk: ${session.email}...\n`));
       return true;
     } catch (e) {
-      console.log(chalk.red("Sesi login otomatis tidak valid. Silakan login manual.\n"));
+      console.log(chalk.red("Sesi login otomatis tidak valid atau kedaluwarsa. Silakan login manual.\n"));
       fs.unlinkSync(SESSION_FILE);
     }
   }
@@ -174,12 +190,39 @@ async function enforceLogin() {
     
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      await processUserClaims();
       console.log(chalk.green("\nLogin berhasil!\n"));
       // Save session credentials permanently until manual Logout
       fs.writeFileSync(SESSION_FILE, JSON.stringify({ email, password }));
       loggedIn = true;
     } catch (e) {
       console.log(chalk.red("\nLogin gagal:"), e.message, "\n");
+    }
+  }
+}
+
+/** Memproses Custom Claims untuk Session Isolation */
+async function processUserClaims() {
+  const result = await auth.currentUser.getIdTokenResult(true);
+  const isTemp = result.claims.isTempAccount === true;
+  const expiresAt = result.claims.expiresAt;
+  
+  if (isTemp) {
+    pathPrefix = `sim/${auth.currentUser.uid}`;
+    if (expiresAt) {
+      const timeRemaining = expiresAt - Date.now();
+      if (timeRemaining <= 0) {
+        handleSessionExpired();
+      } else {
+        if (sessionTimeoutTimer) clearTimeout(sessionTimeoutTimer);
+        sessionTimeoutTimer = setTimeout(handleSessionExpired, timeRemaining);
+      }
+    }
+  } else {
+    pathPrefix = "";
+    if (sessionTimeoutTimer) {
+      clearTimeout(sessionTimeoutTimer);
+      sessionTimeoutTimer = null;
     }
   }
 }

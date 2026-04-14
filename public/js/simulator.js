@@ -233,7 +233,7 @@ async function createDemoSession(email) {
     email,
     password,
     createdAt: Date.now(),
-    expiresAt: Date.now() + 5 * 60 * 1000,
+    expiresAt: Date.now() + 15 * 60 * 1000,
     active: true,
     key: getEmailKey(email),
   };

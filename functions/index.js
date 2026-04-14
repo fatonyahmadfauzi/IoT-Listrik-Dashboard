@@ -10,7 +10,7 @@
  *      - #📋-logs        → Entry log aktivitas baru
  *
  * PWA Simulator Functions:
- *   - createTempAccount  → buat akun temp 5 menit + kirim email via Resend
+ *   - createTempAccount  → buat akun temp 15 menit + kirim email via Resend
  *   - cleanupTempAccount → hapus akun + data sim setelah expired
  *   - testSimNotification → kirim test notif ke Telegram/Discord
  */
@@ -140,7 +140,7 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
             <td>
               <p style="color:#94a3b8;font-size:12px;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;">⏱ Berlaku Hingga</p>
               <p style="color:#f59e0b;font-size:15px;font-weight:600;font-family:monospace;margin:0;
-                background:rgba(245,158,11,0.08);border-radius:8px;padding:10px 14px;">${expiresStr} WIB (5 menit)</p>
+                background:rgba(245,158,11,0.08);border-radius:8px;padding:10px 14px;">${expiresStr} WIB (15 menit)</p>
             </td>
           </tr>
         </table>
@@ -183,7 +183,7 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
           style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:16px 20px;">
           <tr><td>
             <p style="color:#f87171;font-size:13px;margin:0;">
-              ⚠️ <strong>Perhatian:</strong> Akun ini hanya untuk simulasi. Data akan otomatis dihapus setelah 5 menit.
+              ⚠️ <strong>Perhatian:</strong> Akun ini hanya untuk simulasi. Data akan otomatis dihapus setelah 15 menit.
               Jangan gunakan akun nyata Anda untuk login ke simulator.
             </p>
           </td></tr>
@@ -362,7 +362,7 @@ exports.createTempAccount = onCall(
     const password  = randomStr(4, "ABCDEFGHJKLMNPQRSTUVWXYZ")
                     + randomStr(4, "23456789")
                     + randomStr(4, "abcdefghjkmnpqrstuvwxyz");
-    const expiresAt = Date.now() + 5 * 60 * 1000;
+    const expiresAt = Date.now() + 15 * 60 * 1000;
 
     // Buat Firebase Auth user
     let userRecord;

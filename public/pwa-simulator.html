@@ -54,12 +54,12 @@
                 style="font-size: 1.75rem; color: #3b82f6"
                 >smart_toy</span
               >
-              <span>PWA Simulator Demo</span>
+              <span>Control Console</span>
             </div>
           </div>
           <p class="text-sm text-muted" style="margin-bottom: 16px">
-            Aplikasi PWA khusus untuk mengontrol data demo. Buat akun demo,
-            generate data random, hapus data demo, dan gunakan notifikasi.
+            Premium simulator environment for injecting synthetic data and
+            validating system responses.
           </p>
 
           <div class="landing-demo-grid" style="display: grid; gap: 1rem">
@@ -77,15 +77,15 @@
                   style="font-size: 1.75rem; color: #3b82f6"
                   >account_circle</span
                 >
-                <h3 style="margin: 0">Akun Demo</h3>
+                <h3 style="margin: 0">Demo Session</h3>
               </div>
               <p class="text-sm text-muted">
-                Login demo hanya berisi email dan password. Data demo disimpan
-                terpisah, tanpa manajemen pengguna.
+                Ephemeral credentials. Data is isolated and auto-purged after
+                session expiration.
               </p>
               <div style="display: grid; gap: 0.85rem; margin-bottom: 1rem">
                 <label class="form-label" for="demoEmailInput"
-                  >Email demo</label
+                  >Session Email</label
                 >
                 <input
                   id="demoEmailInput"
@@ -120,7 +120,7 @@
                       Password:
                     </div>
                     <div style="font-weight: 600; font-family: monospace">
-                      <span id="demoPassword">-</span>
+                      <span id="demoPassword">—</span>
                     </div>
                   </div>
                 </div>
@@ -150,7 +150,7 @@
                       Status:
                     </div>
                     <div style="font-weight: 600">
-                      <span id="demoStatus">Belum aktif</span>
+                      <span id="demoStatus">Inactive</span>
                     </div>
                   </div>
                 </div>
@@ -177,7 +177,7 @@
                         margin-bottom: 0.25rem;
                       "
                     >
-                      Sisa waktu:
+                      Expiring in:
                     </div>
                     <div style="font-weight: 600; font-family: monospace">
                       <span id="demoTimer">00:00</span>
@@ -199,11 +199,11 @@
                   type="button"
                 >
                   <span class="material-symbols-rounded">person_add</span>
-                  Buat Akun Demo
+                  Generate Credentials
                 </button>
                 <button id="demoResetBtn" class="btn btn-ghost" type="button">
                   <span class="material-symbols-rounded">delete</span>
-                  Hapus Data
+                  Purge Session
                 </button>
                 <button
                   id="installBtn"
@@ -219,8 +219,8 @@
                 class="text-sm text-muted"
                 style="margin-top: 12px"
               >
-                Install aplikasi ini setelah halaman dimuat untuk pengalaman PWA
-                penuh.
+                For optimal experience, install this app to your device after
+                loading.
               </p>
             </div>
 
@@ -238,10 +238,11 @@
                   style="font-size: 1.75rem; color: #10b981"
                   >dataset</span
                 >
-                <h3 style="margin: 0">Kontrol Simulator</h3>
+                <h3 style="margin: 0">Command Center</h3>
               </div>
               <p class="text-sm text-muted">
-                Gunakan tombol berikut untuk mensimulasikan perangkat IoT demo.
+                Execute synthetic telemetry injection and alert validation
+                commands.
               </p>
               <div
                 style="
@@ -257,13 +258,13 @@
                   type="button"
                 >
                   <span class="material-symbols-rounded">autorenew</span>
-                  Generate Data
+                  Inject Telemetry
                 </button>
                 <button id="demoNotifyBtn" class="btn btn-ghost" type="button">
                   <span class="material-symbols-rounded"
                     >notifications_active</span
                   >
-                  Test Notifikasi
+                  Test Alert
                 </button>
               </div>
               <div
@@ -287,7 +288,7 @@
                     style="font-size: 1.25rem; color: #10b981"
                     >data_object</span
                   >
-                  <strong>Data terakhir:</strong>
+                  <strong>Recent Data:</strong>
                 </div>
                 <pre
                   id="demoDataOutput"
@@ -298,7 +299,8 @@
                     font-size: 0.85rem;
                   "
                 >
-Tidak ada data.</pre
+No data.
+</pre
                 >
                 <small
                   class="text-sm text-muted"
@@ -315,8 +317,8 @@ Tidak ada data.</pre
                     >info</span
                   >
                   <span
-                    >Data demo hanya untuk simulasi. Akun ini dapat login di
-                    Web, Windows, dan Android.</span
+                    >Test data is scoped to your temp session. Available across
+                    Web, Windows, and Android platforms.</span
                   >
                 </small>
               </div>
@@ -336,11 +338,11 @@ Tidak ada data.</pre
                   style="font-size: 1.75rem; color: #a855f7"
                   >settings</span
                 >
-                <h3 style="margin: 0">Pengaturan Sistem</h3>
+                <h3 style="margin: 0">Runtime Config</h3>
               </div>
               <p class="text-sm text-muted">
-                Admin-only runtime configuration khusus demo. Semua perubahan
-                tersimpan lokal di PWA ini.
+                Adjust system parameters for this test session. Changes persist
+                locally in the PWA.
               </p>
               <div
                 class="settings-grid"
@@ -348,7 +350,7 @@ Tidak ada data.</pre
               >
                 <div class="settings-section">
                   <label class="form-label" for="inpThreshold"
-                    >Threshold Arus Maksimal (A)</label
+                    >Current Threshold (A)</label
                   >
                   <input
                     id="inpThreshold"
@@ -360,14 +362,14 @@ Tidak ada data.</pre
                     value="10"
                   />
                   <div class="form-hint">
-                    NORMAL &lt; threshold × peringatan%. WARNING antara
-                    peringatan% dan 100%. DANGER jika arus ≥ threshold. Range
-                    rekomendasi: 1 – 100 A.
+                    NORMAL &lt; threshold × warning%. WARNING between warning%
+                    and 100%. DANGER if current ≥ threshold. Recommended: 1–100
+                    A.
                   </div>
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpWarningPercent"
-                    >Peringatan mulai (% threshold)</label
+                    >Warning Threshold (%)</label
                   >
                   <input
                     id="inpWarningPercent"
@@ -379,12 +381,12 @@ Tidak ada data.</pre
                     value="80"
                   />
                   <div class="form-hint">
-                    Contoh 80 → WARNING dari 80% threshold sampai &lt; 100%.
+                    Example: 80 → WARNING from 80% threshold up to &lt; 100%.
                   </div>
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpSendInterval"
-                    >Interval Kirim Data (ms)</label
+                    >Transmission Interval (ms)</label
                   >
                   <input
                     id="inpSendInterval"
@@ -396,8 +398,8 @@ Tidak ada data.</pre
                     value="2000"
                   />
                   <div class="form-hint">
-                    Seberapa sering ESP32 menulis data ke Firebase. Min: 500 ms
-                    | Rekomendasi: 2000 ms.
+                    How often ESP32 writes to Firebase. Minimum: 500 ms |
+                    Recommended: 2000 ms.
                   </div>
                 </div>
                 <div
@@ -417,7 +419,7 @@ Tidak ada data.</pre
                       Buzzer
                     </div>
                     <p class="text-sm text-muted">
-                      Bunyi saat kondisi abnormal terdeteksi.
+                      Audio alert on abnormal conditions detected.
                     </p>
                   </div>
                   <label class="toggle-switch"
@@ -440,10 +442,11 @@ Tidak ada data.</pre
                       class="settings-section-title"
                       style="font-size: 1rem; margin-bottom: 0.5rem"
                     >
-                      Auto-Cutoff Relay
+                      Relay Auto-Shutoff
                     </div>
                     <p class="text-sm text-muted">
-                      Relay dimatikan otomatis saat DANGER (arus ≥ threshold).
+                      Relay cuts off automatically on DANGER (current ≥
+                      threshold).
                     </p>
                   </div>
                   <label class="toggle-switch"
@@ -454,7 +457,7 @@ Tidak ada data.</pre
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpArusCal"
-                    >Faktor Kalibrasi Arus</label
+                    >Current Calibration Factor</label
                   >
                   <input
                     id="inpArusCal"
@@ -466,13 +469,13 @@ Tidak ada data.</pre
                     value="1.000"
                   />
                   <div class="form-hint">
-                    Nilai default: 1.000 (tidak ada koreksi). Contoh: clamp
-                    meter baca 5 A, ESP32 baca 4.8 A → faktor = 1.042
+                    Default: 1.000 (no correction). Example: clamp meter reads 5
+                    A, ESP32 reads 4.8 A → factor = 1.042
                   </div>
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpTeganganCal"
-                    >Faktor Kalibrasi Tegangan</label
+                    >Voltage Calibration Factor</label
                   >
                   <input
                     id="inpTeganganCal"
@@ -483,11 +486,11 @@ Tidak ada data.</pre
                     step="0.1"
                     value="1.0"
                   />
-                  <div class="form-hint">Faktor konversi ADC → Volt AC.</div>
+                  <div class="form-hint">ADC→Volt AC conversion factor.</div>
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpPowerFactor"
-                    >Power factor (estimasi)</label
+                    >Power Factor (estimated)</label
                   >
                   <input
                     id="inpPowerFactor"
@@ -499,13 +502,13 @@ Tidak ada data.</pre
                     value="0.85"
                   />
                   <div class="form-hint">
-                    Untuk hitung daya (W) dan kWh di firmware — bukan pengukuran
-                    PF sejati.
+                    For power (W) and kWh calculations in firmware — not true PF
+                    measurement.
                   </div>
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpFrequency"
-                    >Frekuensi nominal (Hz)</label
+                    >Nominal Frequency (Hz)</label
                   >
                   <input
                     id="inpFrequency"
@@ -527,7 +530,7 @@ Tidak ada data.</pre
                     autocomplete="off"
                   />
                   <div class="form-hint">
-                    Dapat dari @BotFather → /newbot → copy token.
+                    Get from @BotFather → /newbot → copy token.
                   </div>
                 </div>
                 <div class="settings-section">
@@ -542,8 +545,8 @@ Tidak ada data.</pre
                     autocomplete="off"
                   />
                   <div class="form-hint">
-                    Untuk grup: awali dengan -100. Untuk pribadi: ID numerik
-                    positif.
+                    For groups: prefix with -100. For private: positive numeric
+                    ID.
                   </div>
                 </div>
                 <div class="settings-section" style="grid-column: 1 / -1">
@@ -558,7 +561,7 @@ Tidak ada data.</pre
                     "
                   >
                     <span class="text-sm text-muted"
-                      >Kirim alert saat perubahan status (master switch).</span
+                      >Transmit alerts on status change (master switch).</span
                     ><label class="toggle-switch"
                       ><input
                         type="checkbox"
@@ -569,7 +572,7 @@ Tidak ada data.</pre
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpPublicApiBase"
-                    >Public API base (opsional)</label
+                    >Public API Base (optional)</label
                   >
                   <input
                     id="inpPublicApiBase"
@@ -580,7 +583,7 @@ Tidak ada data.</pre
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpLocalApiBase"
-                    >Local API base</label
+                    >Local API Base</label
                   >
                   <input
                     id="inpLocalApiBase"
@@ -590,15 +593,15 @@ Tidak ada data.</pre
                   />
                 </div>
                 <div class="settings-section">
-                  <label class="form-label" for="inpDataMode">Mode data</label>
+                  <label class="form-label" for="inpDataMode">Data Mode</label>
                   <select id="inpDataMode" class="form-select">
                     <option value="AUTO">
-                      AUTO (Firebase → fallback REST lokal)
+                      AUTO (Firebase → fallback local REST)
                     </option>
                     <option value="PUBLIC">
-                      PUBLIC (hanya Firebase / API publik)
+                      PUBLIC (Firebase or public API only)
                     </option>
-                    <option value="LOCAL">LOCAL (hanya REST lokal)</option>
+                    <option value="LOCAL">LOCAL (local REST only)</option>
                   </select>
                 </div>
                 <div
@@ -615,10 +618,11 @@ Tidak ada data.</pre
                       class="settings-section-title"
                       style="font-size: 1rem; margin-bottom: 0.5rem"
                     >
-                      Auto failover
+                      Intelligent Failover
                     </div>
                     <p class="text-sm text-muted">
-                      Saat Firebase putus (AUTO), coba REST lokal.
+                      Fall back to local REST when Firebase is unavailable (AUTO
+                      mode).
                     </p>
                   </div>
                   <label class="toggle-switch">
@@ -628,7 +632,7 @@ Tidak ada data.</pre
                 </div>
                 <div class="settings-section">
                   <label class="form-label" for="inpHealthPath"
-                    >Health check path</label
+                    >Health Check Path</label
                   >
                   <input
                     id="inpHealthPath"
@@ -647,7 +651,7 @@ Tidak ada data.</pre
                 >
                   <div>
                     <label class="form-label" for="inpRetryMs"
-                      >Retry interval (ms)</label
+                      >Retry Interval (ms)</label
                     >
                     <input
                       id="inpRetryMs"
@@ -661,7 +665,7 @@ Tidak ada data.</pre
                   </div>
                   <div>
                     <label class="form-label" for="inpTimeoutMs"
-                      >Timeout request (ms)</label
+                      >Request Timeout (ms)</label
                     >
                     <input
                       id="inpTimeoutMs"
@@ -687,7 +691,7 @@ Tidak ada data.</pre
                     class="btn btn-primary btn-sm"
                     type="button"
                   >
-                    Simpan Pengaturan Demo
+                    Save Configuration
                   </button>
                   <span id="settingsStatus" class="text-sm text-muted"></span>
                 </div>
@@ -715,7 +719,7 @@ Tidak ada data.</pre
             style="font-size: 1.5rem; color: #3b82f6"
             >copyright</span
           >
-          <div>© 2026 IoT Listrik Dashboard Simulator</div>
+          <div>© 2026 IoT Listrik Dashboard</div>
         </div>
         <div
           class="text-muted"
@@ -726,9 +730,7 @@ Tidak ada data.</pre
             style="font-size: 1.25rem; color: #10b981"
             >verified</span
           >
-          <span
-            >Demo app terpisah untuk simulasi data IoT dan pengaturan demo</span
-          >
+          <span>Enterprise Simulation Environment</span>
         </div>
       </div>
     </footer>

@@ -20,8 +20,19 @@ class LoginActivity : AppCompatActivity() {
         
         // Auto login check - harus setelah setContentView
         if (auth.currentUser != null) {
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
+            auth.currentUser!!.getIdToken(false).addOnSuccessListener { result ->
+                val expiresAt = (result.claims["expiresAt"] as? Number)?.toLong()
+                if (expiresAt != null && expiresAt - System.currentTimeMillis() <= 0) {
+                    auth.signOut()
+                    Toast.makeText(this, "Sesi demo telah kedaluwarsa.", Toast.LENGTH_LONG).show()
+                } else {
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                }
+            }.addOnFailureListener {
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
+            }
             return
         }
 

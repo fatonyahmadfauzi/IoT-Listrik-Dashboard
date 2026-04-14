@@ -55,6 +55,7 @@ export function normalizeListrikPayload(d: Record<string, unknown> | null): Norm
 export function startHybridListrik(
   db: Database,
   handlers: {
+    prefix?: string;
     onData: (d: NormalizedListrik) => void;
     onMeta?: (m: Record<string, unknown>) => void;
   }
@@ -153,7 +154,8 @@ export function startHybridListrik(
       return;
     }
 
-    const listrikRef = ref(db, '/listrik');
+    const basePath = handlers.prefix ? `/${handlers.prefix}/listrik` : '/listrik';
+    const listrikRef = ref(db, basePath);
     fbUnsub = onValue(
       listrikRef,
       (snap) => {

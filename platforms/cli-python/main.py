@@ -2,6 +2,8 @@ import os
 import sys
 import json
 import time
+import base64
+from threading import Timer
 
 try:
     import msvcrt
@@ -40,6 +42,56 @@ auth = firebase.auth()
 db = firebase.database()
 
 current_user = None
+path_prefix = ""
+session_timeout_timer = None
+
+def decode_jwt(token):
+    try:
+        parts = token.split('.')
+        if len(parts) >= 2:
+            payload = parts[1]
+            padded = payload + '=' * (-len(payload) % 4)
+            return json.loads(base64.urlsafe_b64decode(padded).decode('utf-8'))
+    except Exception:
+        pass
+    return {}
+
+def handle_session_expired():
+    clear_screen()
+    console.print("\n[bold red][!] PERINGATAN SISTEM [!][/bold red]")
+    console.print("[yellow]Durasi sesi akun sementara (Demo) Anda telah habis (15 menit).[/yellow]")
+    console.print("[dim]Anda akan di-logout secara otomatis.\n[/dim]")
+    if os.path.exists(SESSION_FILE):
+        try: os.remove(SESSION_FILE)
+        except Exception: pass
+    os._exit(0)
+
+def process_user_claims(user_data):
+    global path_prefix, session_timeout_timer
+    
+    token = user_data.get('idToken', '')
+    local_id = user_data.get('localId', '')
+    claims = decode_jwt(token)
+    
+    is_temp = claims.get('isTempAccount', False)
+    expires_at = claims.get('expiresAt')
+
+    if is_temp and local_id:
+        path_prefix = f"sim/{local_id}/"
+        if expires_at:
+            time_remaining = (expires_at - (time.time() * 1000)) / 1000.0
+            if time_remaining <= 0:
+                handle_session_expired()
+            else:
+                if session_timeout_timer: session_timeout_timer.cancel()
+                session_timeout_timer = Timer(time_remaining, handle_session_expired)
+                session_timeout_timer.daemon = True
+                session_timeout_timer.start()
+    else:
+        path_prefix = ""
+        if session_timeout_timer:
+            session_timeout_timer.cancel()
+            session_timeout_timer = None
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -66,6 +118,7 @@ def enforce_login():
                 session = json.load(f)
             # Verifikasi auto-login via API
             user = auth.sign_in_with_email_and_password(session["email"], session["password"])
+            process_user_claims(user)
             current_user = {"email": session["email"], "token": user['idToken']}
             console.print(f"[bold green]Meresume sesi login untuk: {session['email']}...\n[/bold green]")
             time.sleep(1)
@@ -82,6 +135,7 @@ def enforce_login():
             if password is None: sys.exit(0)
 
             user = auth.sign_in_with_email_and_password(email, password)
+            process_user_claims(user)
             console.print("\n[bold green]Login berhasil![/bold green]\n")
             
             with open(SESSION_FILE, "w") as f:
@@ -107,7 +161,7 @@ def view_logs():
     console.print("[cyan]Memuat 5 log riwayat terakhir...\n[/cyan]")
     try:
         # Get logs limited to last 5
-        logs_data = db.child("logs").order_by_key().limit_to_last(5).get(current_user['token'])
+        logs_data = db.child(f"{path_prefix}logs").order_by_key().limit_to_last(5).get(current_user['token'])
         
         if logs_data.val():
             logs = logs_data.val()
@@ -144,7 +198,7 @@ def toggle_relay():
 
     if answer is not None:
         try:
-            db.child("listrik").child("relay").set(answer, current_user['token'])
+            db.child(f"{path_prefix}listrik").child("relay").set(answer, current_user['token'])
             state_str = "ON" if answer else "OFF"
             console.print(f"\n[bold green]Berhasil mengirim perintah \\[{state_str}] ke alat![/bold green]")
         except Exception as e:
@@ -159,7 +213,7 @@ def stream_handler(message):
         # Di Pyrebase, kalau path `/listrik` dipantau, message["data"] adalah state utuh awalnya, 
         # perubahan berikutnya ("put" event) memberikan dictionary kecil atau bahkan state penuh.
         # Kita fetch manual saja untuk memastikan render penuh. 
-        full_data = db.child("listrik").get(current_user['token']).val()
+        full_data = db.child(f"{path_prefix}listrik").get(current_user['token']).val()
         if not full_data: return
 
         # Gunakan ansi escape logic kaya di node JS (clear part of screen)
@@ -201,7 +255,7 @@ def run_live_monitoring():
 
     try:
         # Start the stream in background
-        my_stream = db.child("listrik").stream(stream_handler, token=current_user['token'])
+        my_stream = db.child(f"{path_prefix}listrik").stream(stream_handler, token=current_user['token'])
         
         # Windows Keyboard listener wait
         if msvcrt:

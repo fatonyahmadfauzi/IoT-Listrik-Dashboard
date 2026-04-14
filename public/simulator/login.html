@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Simulator IoT Listrik</title>
+  <meta name="description" content="Login ke PWA Simulator Control Panel IoT Listrik" />
+  <link rel="stylesheet"  href="/css/style.css" />
+  <link rel="manifest"    href="/simulator/manifest.json" />
+  <meta name="theme-color" content="#070c18" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Simulator IoT" />
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
+
+  <!-- Override brand accent colour for simulator (green-emerald) -->
+  <style>
+    :root {
+      --sim-accent:      #10b981;
+      --sim-accent-dim:  rgba(16, 185, 129, 0.15);
+      --sim-accent-glow: rgba(16, 185, 129, 0.4);
+    }
+    /* Icon badge — emerald instead of blue */
+    .auth-logo-icon,
+    .pwa-install-brand-icon {
+      background: linear-gradient(135deg, #059669, #10b981) !important;
+      box-shadow: 0 8px 24px rgba(16,185,129,0.4) !important;
+    }
+
+    /* Primary button — green */
+    .btn-sim-primary {
+      background: linear-gradient(135deg, #059669, #10b981) !important;
+      box-shadow: 0 4px 15px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    }
+    .btn-sim-primary:hover {
+      background: linear-gradient(135deg, #047857, #059669) !important;
+      box-shadow: 0 8px 25px rgba(16,185,129,0.5), inset 0 1px 0 rgba(255,255,255,0.15) !important;
+    }
+
+    /* Active tab indicator */
+    .auth-tab.active {
+      background: var(--sim-accent-dim);
+      color: var(--sim-accent);
+    }
+
+    /* "Daftar" nav link — chip/badge style */
+    .register-nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 1.25rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      color: var(--sim-accent);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .register-nav-link:hover {
+      background: var(--sim-accent-dim);
+      border-color: rgba(16,185,129,0.25);
+      transform: translateY(-1px);
+    }
+
+    /* Simulator badge below title */
+    .sim-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(16,185,129,0.1);
+      color: var(--sim-accent);
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-top: 0.5rem;
+    }
+    
+    /* Show auth-card in normal login mode */
+    #authCard {
+      display: block;
+      visibility: visible;
+      opacity: 1;
+    }
+    /* Hide auth-card completely during install flow */
+    .install-mode #authCard {
+      display: none !important;
+      visibility: hidden !important;
+    }
+  </style>
+</head>
+<body class="page-bg">
+
+<div class="auth-page-wrap" id="authPageWrap">
+
+  <!-- ══ PWA Install Card ══════════════════════════════════════ -->
+  <div id="pwaInstallCard" class="pwa-install-card" aria-live="polite" hidden>
+
+    <!-- Branded header — Simulator branding -->
+    <div class="pwa-install-brand">
+      <div class="pwa-install-brand-icon">
+        <span class="material-symbols-rounded">memory</span>
+      </div>
+      <div>
+        <div class="pwa-install-brand-name">Simulator</div>
+        <div class="pwa-install-brand-sub">Hardware Virtual Test Console</div>
+      </div>
+    </div>
+
+    <!-- ── A. LOADING ── -->
+    <div id="pwaStateLoading" class="pwa-install-state" data-state="loading">
+      <div class="pwa-install-icon">
+        <span class="pwa-spinner pwa-spinner--lg"></span>
+      </div>
+      <h2 class="pwa-install-heading">Install App</h2>
+      <p class="pwa-install-sub">Device installation check...</p>
+    </div>
+
+    <!-- ── B. PROMPT_READY ── -->
+    <div id="pwaStatePrompt" class="pwa-install-state" data-state="prompt-ready" hidden>
+      <div class="pwa-install-icon pwa-install-icon--blue">
+        <span class="material-symbols-rounded">install_mobile</span>
+      </div>
+      <h2 class="pwa-install-heading">Install Test Console</h2>
+      <p class="pwa-install-sub">Add to device — replaces physical ESP32 hardware for synthetic testing.</p>
+      <button id="pwaInstallBtn" class="btn btn-primary w-full pwa-install-cta btn-sim-primary">
+        <span class="material-symbols-rounded">download</span>
+        Install Now
+      </button>
+      <p id="pwaInstallNote" class="pwa-install-note" hidden></p>
+    </div>
+
+    <!-- ── C. IOS_GUIDE ── -->
+    <div id="pwaStateIOS" class="pwa-install-state" data-state="ios-guide" hidden>
+      <div class="pwa-install-icon pwa-install-icon--ios">
+        <span class="material-symbols-rounded">phone_iphone</span>
+      </div>
+      <h2 class="pwa-install-heading">Install on iPhone / iPad</h2>
+      <p class="pwa-install-sub">Follow these steps in Safari:</p>
+      <ol class="pwa-ios-steps">
+        <li>
+          <span class="pwa-ios-step-num">1</span>
+          <span class="pwa-ios-step-text">
+            Tap the <strong>Share</strong> button
+            <span class="pwa-ios-share-icon" aria-label="Share">&#x2B06;</span>
+            at the bottom of Safari
+          </span>
+        </li>
+        <li>
+          <span class="pwa-ios-step-num">2</span>
+          <span class="pwa-ios-step-text">Select <strong>"Add to Home Screen"</strong></span>
+        </li>
+        <li>
+          <span class="pwa-ios-step-num">3</span>
+          <span class="pwa-ios-step-text">Tap <strong>"Add"</strong> in the top right corner</span>
+        </li>
+      </ol>
+      <p class="pwa-ios-note">
+        <span class="material-symbols-rounded" aria-hidden="true">info</span>
+        Available in Safari only. Other iOS browsers don't support PWA install yet.
+      </p>
+    </div>
+
+    <!-- ── D. FALLBACK ── -->
+    <div id="pwaStateFallback" class="pwa-install-state" data-state="fallback" hidden>
+      <div class="pwa-install-icon pwa-install-icon--muted">
+        <span class="material-symbols-rounded">browser_updated</span>
+      </div>
+      <h2 class="pwa-install-heading">Install App</h2>
+      <p class="pwa-install-sub">Use your browser menu to install this app.</p>
+      <div class="pwa-fallback-steps">
+        <div class="pwa-fallback-step">
+          <span class="material-symbols-rounded" aria-hidden="true">more_vert</span>
+          <span>Open browser menu <strong>(&#x22EE;)</strong></span>
+        </div>
+        <div class="pwa-fallback-step">
+          <span class="material-symbols-rounded" aria-hidden="true">add_to_home_screen</span>
+          <span>Select <strong>"Install App"</strong> or <strong>"Add to Home Screen"</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── E. INSTALLED ── -->
+    <div id="pwaStateInstalled" class="pwa-install-state" data-state="installed" hidden>
+      <div class="pwa-install-icon pwa-install-icon--success">
+        <span class="material-symbols-rounded">check_circle</span>
+      </div>
+      <h2 class="pwa-install-heading">App Installed</h2>
+      <p class="pwa-install-sub">Launch from your home screen, or sign in to your test account.</p>
+      <a href="/simulator/dashboard" class="btn btn-primary w-full pwa-install-cta btn-sim-primary">
+        <span class="material-symbols-rounded">login</span>
+        Open Console
+      </a>
+    </div>
+
+    <!-- ── Skip / secondary action ── -->
+    <div class="pwa-skip-row" id="pwaSkipRow">
+      <a href="/simulator/login" class="pwa-skip-link" tabindex="0">
+        Sign in without installing
+        <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+      </a>
+    </div>
+
+  </div>
+  <!-- /pwaInstallCard -->
+
+  <!-- ══ Auth Card ═══════════════════════════════════════════ -->
+  <div class="auth-card glass" id="authCard">
+
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><span class="material-symbols-rounded">memory</span></div>
+      <h1>Simulator</h1>
+      <p>Hardware Virtual Test Console</p>
+      <span class="sim-tag">
+        <span class="material-symbols-rounded" style="font-size:12px;">settings_input_antenna</span>
+        Test Environment
+      </span>
+    </div>
+
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tabLogin"    role="tab">Sign In</button>
+      <button class="auth-tab"        id="tabDaftar"   role="tab">Generate</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="loginEmail">Session Email</label>
+        <input id="loginEmail" class="form-input" type="email"
+               placeholder="sim_xxxxx@iotlistrik.demo" autocomplete="email" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="loginPassword">Password</label>
+        <input id="loginPassword" class="form-input" type="password"
+               placeholder="Enter test password" autocomplete="current-password" required />
+      </div>
+      <div id="loginError" class="text-sm"
+           style="color:var(--red-light);min-height:18px;margin-bottom:12px;"></div>
+      <button type="submit" id="loginBtn" class="btn btn-primary w-full btn-sim-primary">Sign In</button>
+
+      <p style="margin-top:1.25rem; font-size:0.82rem; color:var(--text-muted); text-align:center; line-height:1.5;">
+        Use credentials sent to your email.<br>
+        Don't have a test account?
+      </p>
+    </form>
+
+    <!-- Register redirect (bukan form register baru) -->
+    <form id="registerForm" class="hidden" novalidate>
+      <div style="text-align:center; padding: 1.5rem 0 1rem;">
+        <div style="width:60px;height:60px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:28px;color:var(--sim-accent);">
+          <span class="material-symbols-rounded">add_circle</span>
+        </div>
+        <h3 style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.5rem;">Need a Test Account?</h3>
+        <p style="font-size:0.875rem;color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem;">
+          Test sessions are <strong style="color:white;">ephemeral (15 minutes)</strong> and auto-provisioned.<br>
+          Click below to generate test credentials via email.
+        </p>
+        <a href="/simulator" target="_blank" rel="noopener noreferrer" class="btn btn-primary w-full btn-sim-primary" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span class="material-symbols-rounded">person_add</span>
+          Generate Test Session
+        </a>
+        <p style="margin-top:1rem;font-size:0.78rem;color:var(--text-muted);">
+          You'll be redirected to the credential generator.
+        </p>
+      </div>
+    </form>
+
+  </div>
+  <!-- /auth-card -->
+
+</div>
+<!-- /auth-page-wrap -->
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script type="module">
+import { auth }      from '/js/firebase-config.js';
+import { showToast } from '/js/notifications.js';
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+// ────────────────────────────────────────────────────────────
+// INSTALL MODE DETECTION
+// ────────────────────────────────────────────────────────────
+const _params      = new URLSearchParams(window.location.search);
+const _installMode = _params.get('install') === '1';
+
+const _wrap        = document.getElementById('authPageWrap');
+const _installCard = document.getElementById('pwaInstallCard');
+const _authCard    = document.getElementById('authCard');
+const _skipRow     = document.getElementById('pwaSkipRow');
+
+// PWA: hanya tampilkan install card jika ?install=1
+// Default: tampilkan auth card (login form)
+if (_installMode) {
+  _wrap.classList.add('install-mode');
+  if (_installCard) _installCard.hidden = false;
+  if (_authCard) _authCard.style.display = 'none';  // Hide auth card during install flow
+  // Auto-start install flow
+  setTimeout(() => {
+    if (window.runInstallFlow) runInstallFlow();
+  }, 100);
+} else {
+  // Normal mode: show login form
+  if (_installCard) _installCard.hidden = true;
+  if (_authCard) _authCard.style.display = '';  // Ensure auth card is visible
+}
+
+// ────────────────────────────────────────────────────────────
+// TAB SWITCHING & PWA Mode restrictions
+// ────────────────────────────────────────────────────────────
+const isStandaloneMode = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+
+if (isStandaloneMode) {
+  const tabsContainer = document.querySelector('.auth-tabs');
+  if (tabsContainer) tabsContainer.style.display = 'none';
+}
+
+const loginForm    = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const tabLogin     = document.getElementById('tabLogin');
+const tabDaftar    = document.getElementById('tabDaftar');
+
+function showTab(tab) {
+  const isLogin = tab === 'login';
+  loginForm.classList.toggle('hidden', !isLogin);
+  registerForm.classList.toggle('hidden', isLogin);
+  tabLogin.classList.toggle('active', isLogin);
+  tabDaftar.classList.toggle('active', !isLogin);
+}
+tabLogin.addEventListener('click',  () => showTab('login'));
+tabDaftar.addEventListener('click', () => showTab('register'));
+
+// ────────────────────────────────────────────────────────────
+// AUTH STATE — hanya temp account yang boleh masuk
+// ────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (user && !_installMode) {
+    try {
+      const token = await user.getIdTokenResult();
+      if (!token.claims?.isTempAccount) {
+        // ❌ Bukan temp account (admin/user biasa) — TOLAK dan logout paksa
+        await signOut(auth);
+        const errEl = document.getElementById('loginError');
+        if (errEl) errEl.textContent = '⛔ Akses ditolak. Halaman ini hanya untuk akun simulasi demo.';
+        showToast('Akses ditolak. Gunakan akun demo dari /simulator.', 'error');
+        // Keep auth card visible for user to try again
+        return;
+      }
+
+      // Cek expiresAt — jika sudah lewat, tolak
+      const expiresAt = token.claims?.expiresAt;
+      if (expiresAt && Date.now() >= expiresAt) {
+        await signOut(auth);
+        const errEl = document.getElementById('loginError');
+        if (errEl) errEl.textContent = '⏰ Sesi demo Anda telah kadaluarsa. Silakan login ulang atau generate akun baru.';
+        showToast('Akun demo kadaluarsa. Logout berhasil.', 'warning');
+        // Keep auth card visible for user to try again
+        return;
+      }
+
+      // ✅ Temp account valid — arahkan ke control panel simulator
+      if (_authCard) _authCard.style.display = 'none';  // Hide auth card before redirect
+      window.location.replace('/simulator/dashboard');
+
+    } catch {
+      await signOut(auth);
+      // Keep auth card visible on error
+    }
+  } else if (!user && !_installMode) {
+    // No user - ensure auth card is visible for user to log in
+    if (_authCard) _authCard.style.display = '';
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// LOGIN
+// ────────────────────────────────────────────────────────────
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('loginBtn');
+
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Isi email dan password demo.'; return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Memverifikasi...';
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+
+    // ── Lapis 1: Harus isTempAccount ──
+    const token = await cred.user.getIdTokenResult();
+    if (!token.claims?.isTempAccount) {
+      await signOut(auth);
+      errEl.textContent = '⛔ Akses ditolak. Halaman ini hanya untuk akun simulasi demo.';
+      return;
+    }
+
+    // ── Lapis 2: Cek expiresAt ──
+    const expiresAt = token.claims?.expiresAt;
+    if (expiresAt && Date.now() >= expiresAt) {
+      await signOut(auth);
+      errEl.textContent = '⏰ Akun demo ini sudah kadaluarsa (lebih dari 15 menit). Silakan generate akun baru.';
+      return;
+    }
+
+    // ✅ Valid — onAuthStateChanged akan handle redirect
+
+  } catch (err) {
+    const msgs = {
+      'auth/user-not-found':     '⏰ Akun tidak ditemukan. Mungkin sudah kadaluarsa, silakan generate akun baru.',
+      'auth/wrong-password':     'Password salah.',
+      'auth/too-many-requests':  'Terlalu banyak percobaan. Coba lagi nanti.',
+      'auth/invalid-email':      'Format email tidak valid.',
+      'auth/invalid-credential': '⏰ Akun tidak valid atau sudah kadaluarsa. Silakan generate akun baru.',
+    };
+    errEl.textContent = msgs[err.code] || err.message;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Sign In';
+  }
+});
+
+// ────────────────────────────────────────────────────────────
+// SERVICE WORKER (Simulator SW scope)
+// ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/simulator/sw.js', { scope: '/simulator/' })
+    .catch(err => console.warn('[Sim SW] Registration failed:', err));
+}
+
+// ────────────────────────────────────────────────────────────
+// PWA INSTALL STATE MACHINE
+// ────────────────────────────────────────────────────────────
+// Install flow hanya jika ada install mode
+
+window.runInstallFlow = function runInstallFlow() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  const ALL_STATES = [
+    'pwaStateLoading','pwaStatePrompt','pwaStateIOS','pwaStateFallback','pwaStateInstalled',
+  ];
+  function showState(stateId) {
+    ALL_STATES.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.hidden = (id !== stateId);
+    });
+    if (_skipRow) _skipRow.hidden = (stateId === 'pwaStateInstalled');
+  }
+
+  showState('pwaStateLoading');
+
+  if (isStandalone) { showState('pwaStateInstalled'); return; }
+  if (isIOS)        { showState('pwaStateIOS');       return; }
+
+  let deferredPrompt = null;
+  let resolved       = false;
+  const installBtn   = document.getElementById('pwaInstallBtn');
+  const installNote  = document.getElementById('pwaInstallNote');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    resolved = true;
+    showState('pwaStatePrompt');
+  });
+  window.addEventListener('appinstalled', () => {
+    resolved = true;
+    clearTimeout(fallbackTimer);
+    showState('pwaStateInstalled');
+  });
+
+  const fallbackTimer = setTimeout(() => {
+    if (!resolved) { resolved = true; showState('pwaStateFallback'); }
+  }, 4000);
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) { showState('pwaStateFallback'); return; }
+      clearTimeout(fallbackTimer);
+      installBtn.disabled = true;
+      installBtn.innerHTML = '<span class="pwa-spinner pwa-spinner--btn"></span> Menginstall...';
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        if (outcome === 'accepted') {
+          showState('pwaStateInstalled');
+        } else {
+          installBtn.disabled = false;
+          installBtn.innerHTML = '<span class="material-symbols-rounded">download</span> Install Sekarang';
+          if (installNote) {
+            installNote.textContent = 'Install dibatalkan. Tap untuk mencoba lagi.';
+            installNote.hidden = false;
+          }
+        }
+      } catch { showState('pwaStateFallback'); }
+    });
+  }
+}
+</script>
+</body>
+</html>

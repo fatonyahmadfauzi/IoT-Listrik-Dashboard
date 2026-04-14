@@ -21,9 +21,9 @@
 
 import { db, auth, firebaseConfig }  from './firebase-config.js';
 import { loadClientConfig, saveClientConfig } from './client-config.js';
-import { initPage, populateSidebar, initSidebarToggle, logout } from './auth.js';
+import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix } from './auth.js';
 import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
-import { ref, onValue, set, remove, get }
+import { ref, onValue, set, update, remove, get }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   sendPasswordResetEmail,
@@ -87,6 +87,28 @@ window.toggleReveal = (inputId, btn) => {
 // ── DOM: Controls ─────────────────────────────────────────────
 const saveBtn         = document.getElementById('saveSettingsBtn');
 const saveStatus      = document.getElementById('saveStatus');
+
+// ── Helper: Reload config di sim-notifier setelah settings disimpan ────────
+async function reloadSimNotifierConfig() {
+  // Hanya berlaku untuk simulator (temp accounts)
+  // Panggil endpoint reload-config agar backend langsung sinkron
+  try {
+    const { getCurrentUser, isTempAccount, getDbPrefix } = await import('./auth.js');
+    const user = getCurrentUser();
+    const isTemp = isTempAccount();
+    if (!user?.uid || !isTemp) return;
+    await fetch('http://localhost:3002/api/sim/reload-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: user.uid }),
+      signal: AbortSignal.timeout(3000),
+    });
+    console.log('[Settings] Config di-reload di sim-notifier ✅');
+  } catch {
+    // sim-notifier mungkin tidak jalan — itu OK, RTDB listener akan menangkap
+    console.log('[Settings] sim-notifier tidak tersedia (akan sinkron via RTDB listener)');
+  }
+}
 
 // ── DOM: Users ────────────────────────────────────────────────
 const usersTbody      = document.getElementById('usersTbody');
@@ -187,7 +209,7 @@ function validateAll() {
 // ═══════════════════════════════════════════════════════════════
 
 function loadSettings() {
-  onValue(ref(db, '/settings'), (snap) => {
+  onValue(ref(db, getDbPrefix() + '/settings'), (snap) => {
     const d = snap.val() || {};
     if (inpThreshold)    inpThreshold.value     = d.thresholdArus        ?? 10;
     if (inpWarningPct)   inpWarningPct.value    = d.warningPercent       ?? 80;
@@ -238,9 +260,12 @@ async function saveSettings() {
   try {
     saveBtn.disabled    = true;
     saveBtn.textContent = 'Menyimpan...';
-    await set(ref(db, '/settings'), payload);
+    // Gunakan update() bukan set() agar /settings/discord subpath TIDAK TERHAPUS
+    await update(ref(db, getDbPrefix() + '/settings'), payload);
     showToast('Settings tersimpan — ESP32 sinkron dalam ~10 detik', 'success');
     if (saveStatus) saveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
+    // Reload config di sim-notifier agar notifikasi langsung sinkron
+    reloadSimNotifierConfig().catch(() => {});
   } catch (err) {
     showToast('Gagal simpan: ' + err.message, 'error');
     if (saveStatus) saveStatus.textContent = 'Gagal';
@@ -255,7 +280,7 @@ async function saveSettings() {
 // ═══════════════════════════════════════════════════════════════
 
 function loadDiscordSettings() {
-  onValue(ref(db, '/settings/discord'), (snap) => {
+  onValue(ref(db, getDbPrefix() + '/settings/discord'), (snap) => {
     const d = snap.val() || {};
     if (inpDiscordAlerts)     inpDiscordAlerts.value     = d.webhookAlerts     || '';
     if (inpDiscordRelay)      inpDiscordRelay.value      = d.webhookRelay      || '';
@@ -269,26 +294,37 @@ function loadDiscordSettings() {
 }
 
 async function saveDiscordSettings() {
+  const hasAlerts     = inpDiscordAlerts?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const hasRelay      = inpDiscordRelay?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const hasMonitoring = inpDiscordMonitoring?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const hasLogs       = inpDiscordLogs?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const hasAnyWebhook = hasAlerts || hasRelay || hasMonitoring || hasLogs;
+
+  // Jika ada webhook valid → otomatis enabled=true (jangan biarkan user lupa toggle)
+  const enabledValue = hasAnyWebhook ? true : (inpDiscordEnabled?.checked ?? false);
+
   const payload = {
     webhookAlerts:     inpDiscordAlerts?.value.trim()     || '',
     webhookRelay:      inpDiscordRelay?.value.trim()      || '',
     webhookMonitoring: inpDiscordMonitoring?.value.trim() || '',
     webhookLogs:       inpDiscordLogs?.value.trim()       || '',
-    enabled:           inpDiscordEnabled?.checked ?? true,
+    enabled:           enabledValue,
   };
 
   // Validasi minimal satu webhook terisi
-  const hasAny = Object.values(payload).some(v => typeof v === 'string' && v.startsWith('https://discord.com/api/webhooks/'));
-  if (!hasAny && payload.enabled) {
+  if (!hasAnyWebhook && enabledValue) {
     showToast('Masukkan minimal satu Webhook URL Discord yang valid', 'error');
     return;
   }
 
+
   if (saveDiscordBtn) { saveDiscordBtn.disabled = true; saveDiscordBtn.textContent = 'Menyimpan...'; }
   try {
-    await set(ref(db, '/settings/discord'), payload);
+    await set(ref(db, getDbPrefix() + '/settings/discord'), payload);
     showToast('Konfigurasi Discord tersimpan ke Firebase RTDB', 'success');
     if (discordSaveStatus) discordSaveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
+    // Reload config di sim-notifier agar notifikasi Discord langsung aktif
+    reloadSimNotifierConfig().catch(() => {});
   } catch (err) {
     showToast('Gagal simpan Discord: ' + err.message, 'error');
   } finally {
@@ -375,7 +411,7 @@ let unsubListrik = null;
 
 function startAlarmMonitor() {
   if (unsubListrik) return; // already started
-  unsubListrik = onValue(ref(db, '/listrik'), (snap) => {
+  unsubListrik = onValue(ref(db, getDbPrefix() + '/listrik'), (snap) => {
     const d = snap.val();
     if (!d) return;
     const status = d.status || 'NORMAL';
@@ -386,6 +422,7 @@ function startAlarmMonitor() {
 }
 
 function loadUsers() {
+  if (!usersTbody) return;
   usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <div class="spinner"></div>Memuat pengguna...

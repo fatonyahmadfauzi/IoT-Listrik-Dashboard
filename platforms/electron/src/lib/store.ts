@@ -16,17 +16,20 @@ interface UserStore {
   role: 'admin' | 'user' | null;
   loading: boolean;
   error: string | null;
+  isTempAccount: boolean;
   initAuth: () => void;
   logout: () => void;
 }
 
-export const useAuthStore = create<UserStore>((set) => {
+export const useAuthStore = create<UserStore>((set, get) => {
   let unsubscribeAuth: (() => void) | null = null;
   let unsubscribeRole: (() => void) | null = null;
+  let authTimer: ReturnType<typeof setTimeout> | null = null;
 
   return {
     user: null,
     role: null,
+    isTempAccount: false,
     loading: true,
     error: null,
 
@@ -35,9 +38,28 @@ export const useAuthStore = create<UserStore>((set) => {
       if (unsubscribeRole) unsubscribeRole();
 
       unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-        set({ user, error: null });
+        if (authTimer) clearTimeout(authTimer);
 
         if (user) {
+          const tokenResult = await user.getIdTokenResult();
+          const isTempAccount = !!tokenResult.claims.isTempAccount;
+          const expiresAt = tokenResult.claims.expiresAt as number | undefined;
+
+          if (isTempAccount && expiresAt) {
+            const timeRemaining = expiresAt - Date.now();
+            if (timeRemaining <= 0) {
+              get().logout();
+              return;
+            } else {
+              authTimer = setTimeout(() => {
+                alert("Sesi demo telah berakhir (15 menit). Anda akan dilogout secara otomatis.");
+                get().logout();
+              }, timeRemaining);
+            }
+          }
+
+          set({ user, isTempAccount, error: null });
+
           // Get user role from RTDB
           const roleRef = ref(db, `users/${user.uid}/role`);
           unsubscribeRole = onValue(
@@ -52,15 +74,16 @@ export const useAuthStore = create<UserStore>((set) => {
             }
           );
         } else {
-          set({ role: null, loading: false });
+          set({ user: null, role: null, isTempAccount: false, loading: false });
         }
       });
     },
 
     logout: async () => {
       try {
+        if (authTimer) clearTimeout(authTimer);
         await signOut(auth);
-        set({ user: null, role: null, error: null });
+        set({ user: null, role: null, isTempAccount: false, error: null });
         if (unsubscribeRole) {
           unsubscribeRole();
           unsubscribeRole = null;
@@ -118,7 +141,10 @@ export const useDataStore = create<DataStore>((set) => {
     },
 
     subscribeToData: () => {
+      const { user, isTempAccount } = useAuthStore.getState();
+      const prefix = isTempAccount && user ? `sim/${user.uid}` : '';
       const unsub = startHybridListrik(db, {
+        prefix,
         onData: (d) => {
           set({
             currentData: {
@@ -142,7 +168,9 @@ export const useDataStore = create<DataStore>((set) => {
     },
 
     subscribeLogs: (limit = 100) => {
-      const logsRef = ref(db, `logs`);
+      const { user, isTempAccount } = useAuthStore.getState();
+      const prefix = isTempAccount && user ? `sim/${user.uid}/` : '';
+      const logsRef = ref(db, `${prefix}logs`);
       const logsQuery: Query = query(logsRef, orderByKey(), limitToLast(limit));
       const unsub = onValue(
         logsQuery,

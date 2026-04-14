@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Simulator — IoT Listrik</title>
+    <meta
+      name="description"
+      content="PWA Simulator ESP32 Testing Environment"
+    />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="manifest" href="/simulator/manifest.json" />
+    <meta name="theme-color" content="#070c18" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
+    />
+    <style>
+      .btn-simulator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-weight: 600;
+        border-radius: 12px;
+        padding: 12px 20px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+        color: white;
+      }
+      .btn-green {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+      .btn-green:hover {
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+      }
+      .btn-red {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+      .btn-red:hover {
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+      }
+      .btn-blue {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+      }
+      .btn-blue:hover {
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+      }
+      .btn-gray {
+        background: linear-gradient(135deg, #64748b, #475569);
+      }
+      .btn-gray:hover {
+        box-shadow: 0 4px 15px rgba(100, 116, 139, 0.3);
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .status-off {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+      }
+      .status-on {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+      }
+    </style>
+  </head>
+  <body class="page-bg">
+    <div class="app-layout">
+      <!-- ── Sidebar overlay (mobile) ──────────────────────────── -->
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <!-- ── Sidebar ────────────────────────────────────────────── -->
+      <nav id="sidebar" class="sidebar">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">
+            <span class="material-symbols-rounded">memory</span>
+          </div>
+          <div class="sidebar-logo-text">
+            <h2>Simulator</h2>
+            <span>Hardware Virtual</span>
+          </div>
+        </div>
+
+        <div class="sidebar-nav">
+          <a href="/simulator/dashboard" class="nav-item active">
+            <span class="material-symbols-rounded nav-icon">dashboard</span>
+            Control Console
+          </a>
+          <div class="nav-divider"></div>
+          <a href="/simulator/settings" class="nav-item">
+            <span class="material-symbols-rounded nav-icon">settings</span>
+            System Config
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="user-badge">
+            <div class="user-avatar" id="sidebarAvatar">?</div>
+            <div class="user-info">
+              <div class="user-email" id="sidebarEmail">—</div>
+              <div id="sidebarRole" class="role-pill user">Temp Session</div>
+            </div>
+          </div>
+          <button id="logoutBtn" class="btn btn-ghost w-full">
+            <span class="material-symbols-rounded">logout</span>Logout
+          </button>
+        </div>
+      </nav>
+
+      <!-- ── Main Content ────────────────────────────────────────── -->
+      <div class="main-content">
+        <header class="topbar">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <button id="hamburgerBtn" class="hamburger">
+              <span class="material-symbols-rounded">menu</span>
+            </button>
+            <h1 class="topbar-title">Test Console</h1>
+          </div>
+          <div
+            class="topbar-actions"
+            style="flex-wrap: wrap; justify-content: flex-end; gap: 10px"
+          >
+            <button
+              id="pwaInstallSimBtn"
+              class="btn btn-ghost btn-sm hidden"
+              style="display: none"
+            >
+              <span class="material-symbols-rounded">download</span>Install App
+            </button>
+          </div>
+        </header>
+
+        <main class="page-content">
+          <div
+            style="
+              background: rgba(16, 185, 129, 0.05);
+              border: 1px solid rgba(16, 185, 129, 0.15);
+              border-radius: 16px;
+              padding: 16px;
+              margin-bottom: 24px;
+            "
+          >
+            <p
+              style="
+                color: var(--primary-light);
+                font-size: 14px;
+                margin: 0;
+                line-height: 1.5;
+              "
+            >
+              <strong style="color: white"
+                ><span
+                  class="material-symbols-rounded"
+                  style="font-size: 16px; vertical-align: middle"
+                  >science</span
+                >
+                Virtual Test Environment</strong
+              ><br />
+              This session injects synthetic data into your temp-account scope
+              (<code>/sim/{uid}/*</code>). Monitor results on the main dashboard
+              or Discord alerts.
+            </p>
+          </div>
+
+          <div
+            class="settings-grid"
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+              gap: 16px;
+            "
+          >
+            <!-- Generate Normal Data -->
+            <div class="section-card glass" style="margin-bottom: 0">
+              <div class="section-header" style="margin-bottom: 16px">
+                <div class="section-title">
+                  <span
+                    class="material-symbols-rounded"
+                    style="color: #10b981; margin-right: 6px"
+                    >settings_input_antenna</span
+                  >
+                  Data Stream
+                </div>
+                <div id="dataStatus" class="status-badge status-off">
+                  Standby
+                </div>
+              </div>
+              <p
+                style="
+                  color: var(--text-muted);
+                  font-size: 13px;
+                  margin-bottom: 16px;
+                "
+              >
+                Inject continuous telemetry (0.5–3.5 A, ~220 V) every 2.5
+                seconds to simulate live hardware.
+              </p>
+              <button id="toggleDataBtn" class="btn-simulator btn-green">
+                Start Streaming
+              </button>
+            </div>
+
+            <!-- Trigger Danger Simulation -->
+            <div class="section-card glass" style="margin-bottom: 0">
+              <div class="section-header" style="margin-bottom: 16px">
+                <div class="section-title">
+                  <span
+                    class="material-symbols-rounded"
+                    style="color: #ef4444; margin-right: 6px"
+                    >flash_on</span
+                  >
+                  Overcurrent Test
+                </div>
+              </div>
+              <p
+                style="
+                  color: var(--text-muted);
+                  font-size: 13px;
+                  margin-bottom: 16px;
+                "
+              >
+                Trigger overcurrent condition (>20 A). System detects DANGER
+                state and engages auto-cutoff.
+              </p>
+              <button id="triggerDangerBtn" class="btn-simulator btn-red">
+                Trigger Overcurrent
+              </button>
+            </div>
+
+            <!-- Test Webhooks -->
+            <div class="section-card glass" style="margin-bottom: 0">
+              <div class="section-header" style="margin-bottom: 16px">
+                <div class="section-title">
+                  <span
+                    class="material-symbols-rounded"
+                    style="color: #3b82f6; margin-right: 6px"
+                    >notifications_active</span
+                  >
+                  Alert Test
+                </div>
+              </div>
+              <p
+                style="
+                  color: var(--text-muted);
+                  font-size: 13px;
+                  margin-bottom: 16px;
+                "
+              >
+                Send test alert to Discord and Telegram. Verify webhooks are
+                configured in settings.
+              </p>
+              <button id="testNotifBtn" class="btn-simulator btn-blue">
+                Send Test Alert
+              </button>
+            </div>
+
+            <!-- Clear Data -->
+            <div class="section-card glass" style="margin-bottom: 0">
+              <div class="section-header" style="margin-bottom: 16px">
+                <div class="section-title">
+                  <span
+                    class="material-symbols-rounded"
+                    style="color: #94a3b8; margin-right: 6px"
+                    >delete_sweep</span
+                  >
+                  Cleanup Utility
+                </div>
+              </div>
+              <p
+                style="
+                  color: var(--text-muted);
+                  font-size: 13px;
+                  margin-bottom: 16px;
+                "
+              >
+                Clear all test logs and reset telemetry to baseline state.
+              </p>
+              <button id="clearDataBtn" class="btn-simulator btn-gray">
+                Reset & Clear
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+      <!-- /main-content -->
+    </div>
+    <!-- /app-layout -->
+
+    <!-- Toast -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script type="module" src="/js/simulator-control.js"></script>
+    <!-- We need the auth hamburger listener from auth.js if simulator-control is loaded directly? 
+         simulator-control.js imports auth.js and calls initPage(), which sets up hamburger. So it's fine! -->
+  </body>
+</html>

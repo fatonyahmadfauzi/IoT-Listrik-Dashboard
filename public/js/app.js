@@ -233,8 +233,11 @@ document
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
+    const isSim = window.location.pathname.startsWith('/simulator/');
+    const swPath = isSim ? "/simulator/sw.js" : "/app/sw.js";
+    const swScope = isSim ? "/simulator/" : "/app/";
     navigator.serviceWorker
-      .register("/service-worker.js")
+      .register(swPath, { scope: swScope })
       .then((reg) => console.log("[SW] Registered:", reg.scope))
       .catch((err) => console.warn("[SW] Registration failed:", err));
   });

@@ -179,11 +179,33 @@ async function viewLogs() {
     
     if (snap.exists()) {
       const logs = snap.val();
+      // Header tabel
+      const hWaktu  = chalk.cyan.bold("Waktu".padEnd(22));
+      const hArus   = chalk.cyan.bold("Arus(A)".padEnd(10));
+      const hTeg    = chalk.cyan.bold("Teg.(V)".padEnd(10));
+      const hStatus = chalk.cyan.bold("Status");
+      console.log(`${hWaktu} ${hArus} ${hTeg} ${hStatus}`);
+      console.log(chalk.gray("-".repeat(58)));
+
       Object.keys(logs).forEach(key => {
         const item = logs[key];
-        const time = new Date(item.timestamp).toLocaleString();
-        const typeStr = item.type === 'alert' ? chalk.red('[ALERT]') : chalk.green('[INFO]');
-        console.log(`${chalk.gray(time)} ${typeStr} ${item.message}`);
+
+        // Gunakan field 'waktu' (ISO string atau timestamp ms)
+        let time = "-";
+        if (item.waktu) {
+          const d = new Date(item.waktu);
+          time = isNaN(d) ? String(item.waktu) : d.toLocaleString("id-ID");
+        }
+
+        const arus    = String(item.arus    ?? "-").padEnd(10);
+        const teg     = String(item.tegangan ?? "-").padEnd(10);
+
+        let statusStr;
+        if (item.status === "DANGER")  statusStr = chalk.red.bold(item.status);
+        else if (item.status === "WARNING") statusStr = chalk.yellow(item.status);
+        else statusStr = chalk.green(item.status || "-");
+
+        console.log(`${chalk.white(time.padEnd(22))} ${chalk.yellow(arus)} ${chalk.blue(teg)} ${statusStr}`);
       });
     } else {
       console.log(chalk.gray("Belum ada catatan aktivitas."));

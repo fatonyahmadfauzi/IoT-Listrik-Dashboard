@@ -161,26 +161,49 @@ def handle_logout():
 
 def view_logs():
     print_header()
-    console.print("[cyan]Memuat 5 log riwayat terakhir...\n[/cyan]")
+    console.print("[cyan]Memuat 5 log riwayat terakhir...\\n[/cyan]")
     try:
-        # Get logs limited to last 5
         logs_data = db.child(f"{path_prefix}logs").order_by_key().limit_to_last(5).get(current_user['token'])
         
         if logs_data.val():
             logs = logs_data.val()
+
+            # Header tabel
+            console.print(f"[bold cyan]{'Waktu':<22} {'Arus(A)':<10} {'Teg.(V)':<10} Status[/bold cyan]")
+            console.print("[dim]" + "-" * 58 + "[/dim]")
+
+            from datetime import datetime, timezone
             for key, item in logs.items():
-                timestamp = item.get("timestamp", "-")
-                try:
-                    # Parse ISO to better readable mode like in JS?
-                    from datetime import datetime
-                    timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).strftime("%m/%d/%Y, %I:%M:%S %p")
-                except:
-                    pass
-                t_type = item.get("type", "info")
-                msg = item.get("message", "")
-                
-                type_str = "[bold red]\\[ALERT][/bold red]" if t_type == "alert" else "[bold green]\\[INFO][/bold green]"
-                console.print(f"[dim]{timestamp}[/dim] {type_str} {msg}")
+                # Gunakan field 'waktu' (ISO string atau timestamp ms)
+                raw_waktu = item.get("waktu", "-")
+                waktu_str = "-"
+                if raw_waktu and raw_waktu != "-":
+                    try:
+                        if isinstance(raw_waktu, (int, float)):
+                            # timestamp milidetik
+                            waktu_str = datetime.fromtimestamp(raw_waktu / 1000).strftime("%d/%m/%Y %H:%M:%S")
+                        else:
+                            waktu_str = datetime.fromisoformat(str(raw_waktu).replace('Z', '+00:00')).astimezone().strftime("%d/%m/%Y %H:%M:%S")
+                    except Exception:
+                        waktu_str = str(raw_waktu)
+
+                arus    = str(item.get("arus",     "-"))
+                teg     = str(item.get("tegangan", "-"))
+                status  = item.get("status", "-")
+
+                if status == "DANGER":
+                    status_str = f"[bold red]{status}[/bold red]"
+                elif status == "WARNING":
+                    status_str = f"[yellow]{status}[/yellow]"
+                else:
+                    status_str = f"[green]{status}[/green]"
+
+                console.print(
+                    f"[white]{waktu_str:<22}[/white] "
+                    f"[yellow]{arus:<10}[/yellow] "
+                    f"[blue]{teg:<10}[/blue] "
+                    f"{status_str}"
+                )
         else:
             console.print("[dim]Belum ada catatan aktivitas.[/dim]")
     except Exception as e:

@@ -85,9 +85,22 @@ else
     echo -e "\033[1;32m[✓] Node.js sudah terinstall ($(node -v))\033[0m"
 fi
 
+# Pengecekan Versi Node.js (Minimal v18)
+NODE_VER=$(node -v | grep -oE '[0-9]+\.[0-9]+' | head -1 | cut -d. -f1)
+if [ -z "$NODE_VER" ] || [ "$NODE_VER" -lt 18 ]; then
+    echo -e "\033[1;31m[✗] Versi Node.js terlalu lama ($(node -v)). CLI ini membutuhkan Minimal Node v18.\033[0m"
+    echo -e "    Jika Anda di Ubuntu/WSL, hapus versi lama dengan perintah:"
+    echo -e "    \033[1;36msudo apt remove -y nodejs libnode72\033[0m"
+    echo -e "    Lalu install versi terbaru (LTS) dengan perintah:"
+    echo -e "    \033[1;36mcurl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt install -y nodejs\033[0m"
+    echo -e "    Setelah itu, jalankan installer CLI ini lagi."
+    exit 1
+fi
+
 # Cek npm
 if ! command -v npm &> /dev/null; then
     echo -e "\033[1;31m[✗] npm tidak ditemukan. Pastikan npm ikut terinstall bersama Node.js.\033[0m"
+    echo -e "    Di lingkungan Debian/Ubuntu, kadang Anda harus menjalankan 'sudo apt install -y npm'."
     exit 1
 fi
 

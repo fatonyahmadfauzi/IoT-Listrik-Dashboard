@@ -146,8 +146,8 @@ def enforce_login():
         except EOFError:
             sys.exit(0)
         except Exception as e:
-            console.print(f"\n[bold red]Login gagal:[/bold red] Pastikan kredensial benar.\n")
-            time.sleep(1) # Prevent infinite spam loop if TTY fails differently
+            console.print(f"\n[bold red]Login gagal:[/bold red] {e}\n[dim]Pastikan kredensial & koneksi internet Anda benar.[/dim]\n")
+            time.sleep(1)
 
 def handle_logout():
     global current_user

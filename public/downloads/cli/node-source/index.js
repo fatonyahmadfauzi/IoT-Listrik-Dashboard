@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+const fetchInfo = require("node-fetch");
+global.fetch = fetchInfo;
+global.Headers = fetchInfo.Headers;
+global.Request = fetchInfo.Request;
+global.Response = fetchInfo.Response;
+
 const inquirer = require("inquirer");
 const chalk = require("chalk");
 const readline = require("readline");

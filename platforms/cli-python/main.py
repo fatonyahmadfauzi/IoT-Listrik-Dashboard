@@ -134,14 +134,14 @@ def enforce_login():
             password = questionary.password("Password:", style=custom_style).ask()
             if password is None: sys.exit(0)
 
-            user = auth.sign_in_with_email_and_password(email, password)
+            user = auth.sign_in_with_email_and_password(email.strip(), password.strip())
             process_user_claims(user)
             console.print("\n[bold green]Login berhasil![/bold green]\n")
             
             with open(SESSION_FILE, "w") as f:
-                json.dump({"email": email, "password": password}, f)
+                json.dump({"email": email.strip(), "password": password.strip()}, f)
                 
-            current_user = {"email": email, "token": user['idToken']}
+            current_user = {"email": email.strip(), "token": user['idToken']}
             time.sleep(1)
         except Exception as e:
             console.print(f"\n[bold red]Login gagal:[/bold red] Pastikan kredensial benar.\n")

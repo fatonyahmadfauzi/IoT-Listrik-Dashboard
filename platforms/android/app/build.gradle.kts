@@ -6,7 +6,7 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-val appVersionName = "1.0.0"
+val appVersionName = "1.0.2"
 
 android {
     namespace = "com.iot.listrik"

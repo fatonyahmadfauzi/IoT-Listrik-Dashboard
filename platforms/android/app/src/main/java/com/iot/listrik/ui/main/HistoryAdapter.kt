@@ -57,11 +57,25 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
 
         // Parse waktu (Handle both String and Long timestamp)
         val waktuStr = log.waktu.toString()
-        val parts = waktuStr.split(" ")
-        if (parts.size >= 2) {
-            holder.binding.tvHistDate.text = parts[0]
-            holder.binding.tvHistTime.text = parts[1]
-        } else {
+        try {
+            // First check if it's already split by space (e.g. from Python script or custom format)
+            val parts = waktuStr.split(" ")
+            if (parts.size >= 2 && !waktuStr.contains("T")) {
+                holder.binding.tvHistDate.text = parts[0]
+                holder.binding.tvHistTime.text = parts[1]
+            } else {
+                // Try format ISO-8601 or similar (e.g. 2026-04-16T13:24:00Z)
+                // First try standard ISO format
+                val dateFormatMatch = "(\\d{4}-\\d{2}-\\d{2})T(\\d{2}:\\d{2}:\\d{2})".toRegex().find(waktuStr)
+                if (dateFormatMatch != null) {
+                    holder.binding.tvHistDate.text = dateFormatMatch.groupValues[1]
+                    holder.binding.tvHistTime.text = dateFormatMatch.groupValues[2]
+                } else {
+                    holder.binding.tvHistDate.text = waktuStr
+                    holder.binding.tvHistTime.text = "-"
+                }
+            }
+        } catch (e: Exception) {
             holder.binding.tvHistDate.text = waktuStr
             holder.binding.tvHistTime.text = "-"
         }

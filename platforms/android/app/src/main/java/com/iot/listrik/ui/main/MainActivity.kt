@@ -251,7 +251,11 @@ class MainActivity : AppCompatActivity() {
         chart.setDrawBorders(false)
         chart.axisRight.isEnabled = false
         chart.legend.textColor = Color.WHITE
-
+        
+        // Add No Data text placeholder
+        chart.setNoDataText("Belum ada riwayat statistik.")
+        chart.setNoDataTextColor(Color.parseColor("#9ca3af"))
+        
         val xAxis = chart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
         xAxis.textColor = Color.LTGRAY
@@ -264,8 +268,6 @@ class MainActivity : AppCompatActivity() {
         yAxis.gridColor = Color.parseColor("#33FFFFFF")
         yAxis.axisMinimum = 0f
 
-        val data = LineData()
-        chart.data = data
         chart.invalidate()
     }
 
@@ -395,6 +397,18 @@ class MainActivity : AppCompatActivity() {
             historyAdapter.updateData(historyList)
             if (wasEmpty) binding.rvHistory.smoothScrollToPosition(0)
         }
+        
+        // Populasikan data logs ke grafik jika grafik masih kosong (baru dibuka)
+        val chart = binding.lineChart
+        if (chart.data == null && historyList.isNotEmpty()) {
+            // Ambil maksimal 20 data terakhir, di-urutkan kronologis (terlama ke terbaru)
+            val toPlot = historyList.take(maxDataPoints).reversed()
+            for (log in toPlot) {
+                val arus = (log.arus as? Number)?.toFloat() ?: 0f
+                val teg = (log.tegangan as? Number)?.toFloat() ?: 0f
+                addChartEntry(arus, teg)
+            }
+        }
     }
 
     private fun updateStatusColor(status: String) {
@@ -485,7 +499,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun addChartEntry(arus: Float, tegangan: Float) {
         val chart = binding.lineChart
-        val data = chart.data ?: return
+        var data = chart.data
+        if (data == null) {
+            data = LineData()
+            chart.data = data
+        }
         
         binding.tvChartLoading.visibility = View.GONE
 

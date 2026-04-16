@@ -224,14 +224,35 @@ async function enforceLogin() {
   // Manual Login
   let loggedIn = false;
   while (!loggedIn) {
-    const { email, password } = await inquirer.prompt([
+    const { email } = await inquirer.prompt([
       { type: "input", name: "email", message: "Email:" },
-      { type: "password", name: "password", message: "Password:" },
+    ]);
+    const cleanEmail = email.trim();
+
+    // Deteksi akun temp untuk pesan informatif
+    const isTempEmail = cleanEmail.endsWith("@iotlistrik.demo");
+    if (isTempEmail) {
+      console.log(chalk.yellow("\n[INFO] Akun demo terdeteksi. Password akan ditampilkan agar bisa diverifikasi.\n"));
+    }
+
+    const { password } = await inquirer.prompt([
+      // Tampilkan password untuk akun demo agar bisa diverifikasi (akun demo tidak sensitif)
+      // Gunakan type 'password' untuk akun non-demo
+      {
+        type: isTempEmail ? "input" : "password",
+        name: "password",
+        message: isTempEmail ? "Password (pastikan tidak ada spasi tersembunyi):" : "Password:",
+      },
     ]);
     
     try {
-      const cleanEmail = email.trim();
-      const cleanPassword = password.trim();
+      // Bersihkan semua whitespace tersembunyi di password (termasuk di tengah)
+      const cleanPassword = password.replace(/[\s\u200B\u200C\u200D\uFEFF]/g, "").trim();
+      
+      if (isTempEmail && cleanPassword !== password.trim()) {
+        console.log(chalk.yellow("[PERINGATAN] Spasi/karakter tersembunyi ditemukan di password dan sudah dibersihkan otomatis.\n"));
+      }
+
       await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
       await processUserClaims();
       console.log(chalk.green("\nLogin berhasil!\n"));
@@ -239,7 +260,17 @@ async function enforceLogin() {
       fs.writeFileSync(SESSION_FILE, JSON.stringify({ email: cleanEmail, password: cleanPassword }));
       loggedIn = true;
     } catch (e) {
-      console.log(chalk.red("\nLogin gagal:"), e.message, "\n");
+      if (e.code === "auth/invalid-credential" && isTempEmail) {
+        console.log(chalk.red("\n[!] Login gagal: Kredensial tidak valid untuk akun demo.\n"));
+        console.log(chalk.yellow("Kemungkinan penyebab:"));
+        console.log(chalk.gray("  1. Akun sudah expired (berlaku hanya 15 menit sejak dibuat)"));
+        console.log(chalk.gray("  2. Password salah — cek ulang email, tidak ada typo?"));
+        console.log(chalk.gray("  3. Akun sudah dihapus otomatis oleh sistem cleanup\n"));
+        console.log(chalk.cyan("Solusi: Buat akun demo baru di:"));
+        console.log(chalk.white("  https://iot-listrik-dashboard.vercel.app\n"));
+      } else {
+        console.log(chalk.red("\nLogin gagal:"), e.message, "\n");
+      }
     }
   }
 }

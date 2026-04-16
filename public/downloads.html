@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
@@ -122,43 +122,7 @@
 
       </section>
 
-      <!-- TERMINAL -->
-      <section class="dl-terminal-wrap">
-        <div class="dl-terminal-header">
-          <span class="material-symbols-rounded">terminal</span>
-          <h2>Install via Terminal <span id="terminalVersionBadge" style="font-size:0.75rem; background: rgba(56,189,248,0.15); color:#38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 10px; border-radius: 999px; vertical-align: middle; margin-left: 8px;"></span></h2>
-        </div>
-        <div class="dl-terminal-grid">
-          <div class="dl-term-box">
-            <div class="dl-term-label">PowerShell — Windows Setup</div>
-            <div class="dl-code-row">
-              <code id="termCmdPS"></code>
-              <button class="cmd-copy-btn" id="termCopyPS"><span class="material-symbols-rounded">content_copy</span></button>
-            </div>
-          </div>
-          <div class="dl-term-box">
-            <div class="dl-term-label">CMD / Linux / WSL — cURL (Windows Setup)</div>
-            <div class="dl-code-row">
-              <code id="termCmdCurl"></code>
-              <button class="cmd-copy-btn" id="termCopyCurl"><span class="material-symbols-rounded">content_copy</span></button>
-            </div>
-          </div>
-          <div class="dl-term-box">
-            <div class="dl-term-label">CMD / Linux — cURL (Android APK)</div>
-            <div class="dl-code-row">
-              <code id="termCmdApk"></code>
-              <button class="cmd-copy-btn" id="termCopyApk"><span class="material-symbols-rounded">content_copy</span></button>
-            </div>
-          </div>
-          <div class="dl-term-box">
-            <div class="dl-term-label">CMD / Linux — cURL (CLI Node.js Portable)</div>
-            <div class="dl-code-row">
-              <code id="termCmdCli"></code>
-              <button class="cmd-copy-btn" id="termCopyCli"><span class="material-symbols-rounded">content_copy</span></button>
-            </div>
-          </div>
-        </div>
-      </section>
+
 
     </main>
 
@@ -174,8 +138,6 @@
           d = await res.json();
         } catch(e) { console.warn('Could not load app-version.json', e); return; }
 
-        const badge = document.getElementById('terminalVersionBadge');
-        if (badge) badge.textContent = 'v' + d.version;
 
         document.querySelectorAll('a[download]').forEach(a => {
           const href = a.getAttribute('href');
@@ -187,26 +149,6 @@
           else if (href.includes('.msi'))      a.href = d.downloads.windows?.msi?.url      || a.href;
         });
 
-        const winUrl  = d.downloads.windows?.setup?.url     || '';
-        const winFile = d.downloads.windows?.setup?.filename || 'IoT-Listrik-Dashboard-Setup.exe';
-        const apkUrl  = d.downloads.android?.url             || '';
-        const apkFile = d.downloads.android?.filename        || 'IoT-Listrik-Dashboard.apk';
-        const cliUrl  = d.downloads.cli?.node?.url           || '';
-        const cliFile = d.downloads.cli?.node?.filename      || 'iot-listrik-cli-node.exe';
-
-        const cmds = {
-          termCmdPS:   `Invoke-WebRequest -Uri "${winUrl}" -OutFile "${winFile}"`,
-          termCmdCurl: `curl -L -o "${winFile}" "${winUrl}"`,
-          termCmdApk:  `curl -L -o "${apkFile}" "${apkUrl}"`,
-          termCmdCli:  `curl -L -o "${cliFile}" "${cliUrl}"`,
-        };
-
-        Object.entries(cmds).forEach(([id, cmd]) => {
-          const el = document.getElementById(id);
-          if (el) el.textContent = cmd;
-          const btn = document.getElementById(id.replace('Cmd', 'Copy'));
-          if (btn) btn.setAttribute('data-copy', cmd);
-        });
       }
       hydrateDownloads();
 

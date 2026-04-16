@@ -1,17 +1,15 @@
 #!/usr/bin/env node
-import inquirer from "inquirer";
-import chalk from "chalk";
-import readline from "readline";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { getDatabase, ref, onValue, set, get, query, limitToLast, orderByKey, off } from "firebase/database";
+const inquirer = require("inquirer");
+const chalk = require("chalk");
+const readline = require("readline");
+const fs = require("fs");
+const path = require("path");
+const { initializeApp } = require("firebase/app");
+const { getAuth, signInWithEmailAndPassword, signOut } = require("firebase/auth");
+const { getDatabase, ref, onValue, set, get, query, limitToLast, orderByKey, off } = require("firebase/database");
+const os = require("os");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SESSION_FILE = path.join(__dirname, ".session.json");
+const SESSION_FILE = path.join(os.homedir(), ".iot-listrik-session.json");
 
 const firebaseConfig = {
   apiKey: "AIzaSyD99N-FQdkTPNnNGY-fof6ijskxg0bzARc",

@@ -304,22 +304,20 @@ class MainActivity : AppCompatActivity() {
         dashboardListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if(!snapshot.exists()) return
-                
+
                 val status = snapshot.child("status").getValue(String::class.java) ?: "NORMAL"
                 val arus = snapshot.child("arus").getValue(Double::class.java) ?: 0.0
                 val tegangan = snapshot.child("tegangan").getValue(Double::class.java) ?: 0.0
                 val pf = snapshot.child("power_factor").getValue(Double::class.java) ?: 0.85
-                val apparent = snapshot.child("daya").getValue(Double::class.java) ?: (arus * tegangan)
-                val dayaW = apparent * pf
+                val apparent = snapshot.child("apparent_power").getValue(Double::class.java)
+                    ?: snapshot.child("daya").getValue(Double::class.java)
+                    ?: (arus * tegangan)
+                // Prefer daya_w written by simulator; fall back to V*I*PF
+                val dayaW = snapshot.child("daya_w").getValue(Double::class.java)
+                    ?: (apparent * pf)
                 val energi = snapshot.child("energi_kwh").getValue(Double::class.java) ?: 0.0
-                
-                val statusText = when (status) {
-                    "DANGER", "LEAKAGE" -> "Critical — arus tinggi"
-                    "WARNING" -> "Peringatan beban"
-                    else -> "Sistem stabil"
-                }
-                
-                binding.tvStatus.text = statusText
+
+                binding.tvStatus.text = status
                 binding.tvArus.text = String.format("%.2f", arus)
                 binding.tvTegangan.text = String.format("%.1f", tegangan)
                 binding.tvDayaW.text = String.format("%.0f", dayaW)

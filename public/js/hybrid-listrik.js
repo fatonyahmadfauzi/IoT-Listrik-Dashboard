@@ -1,9 +1,12 @@
 /**
  * Cloud (Firebase RTDB) + optional local REST fallback.
  * Web cannot spawn processes — autoStartLocal is ignored here (Electron only).
+ *
+ * NOTE: Simulator/temp accounts ALWAYS use direct Firebase RTDB (bypass local REST)
+ * because local server.js reads /listrik (admin path), not /sim/{uid}/listrik.
  */
 import { loadClientConfig } from './client-config.js';
-import { getDbPrefix } from './auth.js';
+import { getDbPrefix, isTempAccount } from './auth.js';
 import { ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 function trimBase(u) {
@@ -83,6 +86,14 @@ export function startHybridListrik(db, handlers) {
   const tick = async () => {
     if (disposed) return;
     const cfg = loadClientConfig();
+
+    // Simulator/temp accounts: ALWAYS use Firebase directly.
+    // Local server reads /listrik (admin path), not /sim/{uid}/listrik.
+    if (isTempAccount()) {
+      meta({ source: 'CLOUD', connection: fbConnected ? 'Connected' : 'Reconnecting', endpointBadge: 'CLOUD' });
+      return;
+    }
+
     try {
       if (cfg.mode === 'LOCAL') {
         await pollRest(cfg.localApiBase, 'LOCAL');
@@ -129,13 +140,18 @@ export function startHybridListrik(db, handlers) {
 
   const attachFirebase = () => {
     const cfg = loadClientConfig();
-    if (cfg.mode === 'LOCAL') {
+
+    // Simulator/temp accounts: bypass local mode entirely, go straight to Firebase.
+    // This ensures /sim/{uid}/listrik is subscribed, not local REST /api/listrik.
+    const forceCloud = isTempAccount();
+
+    if (!forceCloud && cfg.mode === 'LOCAL') {
       meta({ source: 'LOCAL', connection: 'Reconnecting', endpointBadge: 'LOCAL' });
       tick();
       startPolling();
       return;
     }
-    if (cfg.mode === 'PUBLIC' && cfg.publicApiBase) {
+    if (!forceCloud && cfg.mode === 'PUBLIC' && cfg.publicApiBase) {
       tick();
       startPolling();
       return;
@@ -146,7 +162,8 @@ export function startHybridListrik(db, handlers) {
       listrikRef,
       (snap) => {
         const cfg2 = loadClientConfig();
-        if (cfg2.mode === 'AUTO' && cfg2.autoFailover && !fbConnected) return;
+        // For temp accounts, NEVER skip Firebase data — just render it.
+        if (!forceCloud && cfg2.mode === 'AUTO' && cfg2.autoFailover && !fbConnected) return;
         const v = snap.val();
         if (!v) return;
         handlers.onData(normalizeListrikPayload(v));

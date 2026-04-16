@@ -66,7 +66,8 @@ function getStatusLabel(status) {
 }
 
 function renderStatus(status) {
-  elStatus.textContent = getStatusLabel(status);
+  if (!elStatus) return;
+  elStatus.textContent = status || "NORMAL";
   elStatus.className = `status-badge status-${status}`;
   if (status === "LEAKAGE") elStatus.className = "status-badge status-DANGER";
 
@@ -108,8 +109,8 @@ function renderConnectionMeta(m) {
 
 function renderRelay(relay) {
   const isOn = relay === 1;
-  elRelay.textContent = isOn ? "ON" : "OFF";
-  elRelayDot.className = `relay-indicator ${isOn ? "on" : "off"}`;
+  if (elRelay) elRelay.textContent = isOn ? "ON" : "OFF";
+  if (elRelayDot) elRelayDot.className = `relay-indicator ${isOn ? "on" : "off"}`;
 
   if (lastRelayVal !== -1 && lastRelayVal !== relay) {
     showToast(

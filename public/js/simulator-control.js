@@ -7,7 +7,7 @@ import {
   getCurrentUser,
   logout,
 } from "./auth.js";
-import { db } from "./firebase-config.js";
+import { db, functions } from "./firebase-config.js";
 import {
   ref,
   set,
@@ -16,6 +16,10 @@ import {
   remove,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  httpsCallable,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+
 
 // DOM Elements
 const toggleDataBtn   = document.getElementById("toggleDataBtn");
@@ -28,25 +32,8 @@ const pwaInstallSimBtn = document.getElementById("pwaInstallSimBtn");
 let dataInterval = null;
 let isStreaming  = false;
 
-// ── Sim Notifier API Base ─────────────────────────────────────────────────
-// sim-notifier.js berjalan di port 3002
-const SIM_API = 'http://localhost:3002';
-
-// ── Helper: Reload config di sim-notifier setelah settings disimpan ─────────
-async function reloadSimNotifierConfig(uid) {
-  if (!uid) return;
-  try {
-    await fetch(`${SIM_API}/api/sim/reload-config`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid }),
-      signal: AbortSignal.timeout(3000),
-    });
-    console.log('[SimControl] Config di-reload di sim-notifier');
-  } catch {
-    console.warn('[SimControl] Tidak bisa reload config di sim-notifier (server mungkin tidak jalan)');
-  }
-}
+// ── Accumulated energy counter (simulates kWh meter) ─────────────────────
+let _accumulatedEnergy = parseFloat(sessionStorage.getItem("sim_energy_kwh") || "0");
 
 // ── Toast Wrapper ─────────────────────────────────────────────────────────
 function showToast(msg, type = "success") {
@@ -60,7 +47,7 @@ function getRandom(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-// ── Baca settings Telegram dari sandbox akun temp ─────────────────────────
+// ── Baca settings dari sandbox akun temp ───────────────────────────────────
 async function getSimSettings(prefix) {
   try {
     const snap = await get(ref(db, prefix + '/settings'));
@@ -68,7 +55,20 @@ async function getSimSettings(prefix) {
   } catch { return {}; }
 }
 
-// ── Kirim Telegram langsung dari browser (fallback jika sim-notifier down) ─
+// ── Kirim Discord embed langsung dari browser (fallback jika CF gagal) ────
+async function sendDiscordFallback(webhookUrl, embed) {
+  if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) return false;
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+    return res.ok || res.status === 204;
+  } catch { return false; }
+}
+
+// ── Kirim Telegram langsung dari browser (fallback jika CF gagal) ─────────
 async function sendTelegramFallback(botToken, chatId, message) {
   if (!botToken || !chatId) return false;
   try {
@@ -82,50 +82,74 @@ async function sendTelegramFallback(botToken, chatId, message) {
   } catch { return false; }
 }
 
-// ── Kirim Discord embed langsung dari browser (fallback) ───────────────────
-async function sendDiscordFallback(webhookUrl, embed) {
-  if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) return false;
-  try {
-    const res = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [embed] }),
-    });
-    return res.ok || res.status === 204;
-  } catch { return false; }
-}
+// ── Build full sensor payload (identik dengan hardware SCT-013 + ZMPT101B) ─
+function buildSensorPayload(isDanger = false) {
+  // Arus: NORMAL 0.5-3.5 A, DANGER 20-50 A (overcurrent di atas threshold 10A)
+  const arus = isDanger ? getRandom(20, 50) : getRandom(0.5, 3.5);
 
-// ── Inject data ke Firebase RTDB ──────────────────────────────────────────
-async function injectData(prefix, isDanger = false) {
-  const arus     = isDanger ? getRandom(20, 50) : getRandom(0.5, 3.5);
-  const tegangan = getRandom(215, 230);
-  const daya     = arus * tegangan;
-  const pf       = getRandom(0.8, 0.99);
+  // Tegangan: NORMAL 215-230 V, DANGER sedikit drop 195-210 V
+  const tegangan = isDanger ? getRandom(195, 210) : getRandom(215, 230);
 
-  const payload = {
+  // Apparent Power (S = V × I) dalam VA — ini yang disimpan di field "daya"
+  const apparent_power = arus * tegangan;
+
+  // Power Factor: NORMAL 0.85-0.99, DANGER drop ke 0.60-0.80
+  const pf = isDanger ? getRandom(0.60, 0.80) : getRandom(0.85, 0.99);
+
+  // Active Power (P = S × PF) dalam Watt — disimpan di field "daya_w"
+  const active_power = apparent_power * pf;
+
+  // Frekuensi: NORMAL 49.8-50.2 Hz, DANGER bisa sedikit deviate
+  const frekuensi = isDanger ? getRandom(49.5, 50.5) : getRandom(49.8, 50.2);
+
+  // Energi kWh: akumulasi bertahap per interval (5 detik = 5/3600 jam)
+  const hours = 5 / 3600; // 5 detik dalam jam
+  _accumulatedEnergy += (active_power / 1000) * hours;
+  sessionStorage.setItem("sim_energy_kwh", _accumulatedEnergy.toFixed(4));
+
+  return {
     arus:         parseFloat(arus.toFixed(2)),
     tegangan:     parseFloat(tegangan.toFixed(1)),
-    daya:         parseFloat(daya.toFixed(1)),
-    daya_w:       parseFloat((daya * pf).toFixed(1)),
-    energi_kwh:   parseFloat(getRandom(10, 100).toFixed(2)),
-    frekuensi:    parseFloat(getRandom(49.8, 50.2).toFixed(1)),
+    daya:         parseFloat(apparent_power.toFixed(1)),        // Apparent Power (VA)
+    daya_w:       parseFloat(active_power.toFixed(1)),          // Active Power (W)
+    apparent_power: parseFloat(apparent_power.toFixed(1)),      // Alias VA untuk CLI
     power_factor: parseFloat(pf.toFixed(2)),
-    relay:        isDanger ? 0 : 1,
+    frekuensi:    parseFloat(frekuensi.toFixed(1)),
+    energi_kwh:   parseFloat(_accumulatedEnergy.toFixed(4)),
+    relay:        isDanger ? 0 : 1,                             // Overcurrent → relay OFF
     status:       isDanger ? "DANGER" : "NORMAL",
     updated_at:   new Date().toISOString(),
   };
+}
+
+// ── Inject data ke Firebase RTDB ──────────────────────────────────────────
+// Throttle counter: push log setiap 3 inject NORMAL (~15 detik) agar tidak flooding
+let _logThrottleCount = 0;
+
+async function injectData(prefix, isDanger = false) {
+  const payload = buildSensorPayload(isDanger);
 
   try {
     await set(ref(db, prefix + "/listrik"), payload);
 
-    if (isDanger) {
+    // Selalu log saat DANGER; throttle log NORMAL (1 dari 3 inject)
+    const shouldLog = isDanger || (++_logThrottleCount % 3 === 0);
+    if (shouldLog) {
       await push(ref(db, prefix + "/logs"), {
-        waktu:    new Date().toISOString(),
-        arus:     payload.arus,
-        tegangan: payload.tegangan,
-        status:   payload.status,
-        relay:    payload.relay,
-        source:   "SIMULATOR",
+        waktu:        new Date().toISOString(),
+        arus:         payload.arus,
+        tegangan:     payload.tegangan,
+        daya:         payload.daya,
+        daya_w:       payload.daya_w,
+        power_factor: payload.power_factor,
+        frekuensi:    payload.frekuensi,
+        energi_kwh:   payload.energi_kwh,
+        status:       payload.status,
+        relay:        payload.relay,
+        source:       "SIMULATOR",
+        message:      isDanger
+          ? "⚠️ Overcurrent terdeteksi — relay diputuskan otomatis"
+          : "📡 Telemetri normal dari simulator",
       });
     }
     return payload;
@@ -133,70 +157,6 @@ async function injectData(prefix, isDanger = false) {
     console.error("Gagal inject data:", error);
     return null;
   }
-}
-
-// ── Trigger semua notifikasi via sim-notifier atau fallback langsung ───────
-async function triggerAllNotifications(uid, status, listrikData, settings, label = 'Alert') {
-  const results = { simNotifier: false, discord: false, telegram: false };
-
-  // ── Coba via sim-notifier API dulu ─────────────────────────────────────
-  try {
-    const res = await fetch(`${SIM_API}/api/sim/alert`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid, status, data: listrikData }),
-      signal: AbortSignal.timeout(3000),
-    });
-    if (res.ok) {
-      results.simNotifier = true;
-      console.log(`[Sim Notifier] ${label} dikirim via server`);
-    }
-  } catch (e) {
-    console.warn('[Sim Notifier] Server tidak tersedia, pakai fallback langsung');
-  }
-
-  // ── Fallback: Kirim langsung dari browser jika sim-notifier tidak jalan ──
-  if (!results.simNotifier) {
-    const waktu = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-
-    // Discord fallback — cek enabled (default true jika tidak di-set)
-    const discordEnabled = settings?.discord?.enabled !== false;
-    if (discordEnabled && settings?.discord?.webhookAlerts) {
-      const emoji = status === 'DANGER' ? '🔴' : status === 'WARNING' ? '🟡' : '🟢';
-      const color = status === 'DANGER' ? 0xED4245 : status === 'WARNING' ? 0xFEE75C : 0x57F287;
-      results.discord = await sendDiscordFallback(settings.discord.webhookAlerts, {
-        title: `${emoji} [SIM] Status: ${status}`,
-        description: status === 'DANGER'
-          ? '⚠️ **OVERCURRENT TERDETEKSI!** Relay diputuskan otomatis.'
-          : status === 'WARNING'
-          ? '⚡ Arus mendekati batas threshold.'
-          : '✅ Kondisi kelistrikan simulator kembali NORMAL.',
-        color,
-        fields: [
-          { name: '⚡ Arus',     value: `${listrikData?.arus ?? '-'} A`,     inline: true },
-          { name: '🔋 Tegangan', value: `${listrikData?.tegangan ?? '-'} V`, inline: true },
-          { name: '🔌 Relay',    value: listrikData?.relay ? 'ON' : 'OFF',   inline: true },
-        ],
-        footer: { text: `IoT Listrik Simulator (Browser Fallback) • ${waktu}` },
-      });
-    }
-
-    // Telegram fallback
-    if (settings?.telegramNotifyEnabled !== false && settings?.telegramBotToken && settings?.telegramChatId) {
-      const msgMap = {
-        DANGER:  `🔴 <b>[SIM] BAHAYA!</b> Overcurrent terdeteksi!\n⚡ Arus: <b>${listrikData?.arus ?? '-'} A</b>\n🕐 ${waktu}`,
-        WARNING: `🟡 <b>[SIM] Peringatan</b> Arus Tinggi\n⚡ Arus: <b>${listrikData?.arus ?? '-'} A</b>\n🕐 ${waktu}`,
-        NORMAL:  `🟢 <b>[SIM] Status Normal</b>\n⚡ Arus: ${listrikData?.arus ?? '-'} A\n🕐 ${waktu}`,
-      };
-      results.telegram = await sendTelegramFallback(
-        settings.telegramBotToken,
-        settings.telegramChatId,
-        msgMap[status] || `Status: ${status}`
-      );
-    }
-  }
-
-  return results;
 }
 
 // ── Main Init ──────────────────────────────────────────────────────────────
@@ -221,7 +181,20 @@ function initControlPanel() {
     return injectData(prefix, isDanger);
   }
 
-  // ── Toggle Stream ─────────────────────────────────────────────────────
+  // ── Load accumulated energy dari RTDB saat pertama kali ───────────────
+  (async () => {
+    try {
+      const snap = await get(ref(db, prefix + "/listrik/energi_kwh"));
+      if (snap.exists()) {
+        _accumulatedEnergy = parseFloat(snap.val()) || 0;
+        sessionStorage.setItem("sim_energy_kwh", _accumulatedEnergy.toFixed(4));
+      }
+    } catch { /* ignore */ }
+  })();
+
+  // ══════════════════════════════════════════════════════════════════════
+  // [1] Toggle Stream — interval 5000ms (5 detik)
+  // ══════════════════════════════════════════════════════════════════════
   toggleDataBtn.addEventListener("click", () => {
     isStreaming = !isStreaming;
     if (isStreaming) {
@@ -230,9 +203,10 @@ function initControlPanel() {
       toggleDataBtn.textContent = "Stop Stream";
       toggleDataBtn.className = "btn-simulator btn-red";
 
+      // Kirim data pertama langsung, lalu setiap 5 detik
       injectDataSafe(prefix, false);
-      dataInterval = setInterval(() => injectDataSafe(prefix, false), 2500);
-      showToast("Telemetry stream active", "success");
+      dataInterval = setInterval(() => injectDataSafe(prefix, false), 5000);
+      showToast("Telemetry stream active (5s interval)", "success");
     } else {
       dataStatus.textContent  = "Standby";
       dataStatus.className    = "status-badge status-off";
@@ -245,7 +219,9 @@ function initControlPanel() {
     }
   });
 
-  // ── Trigger Danger ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // [2] Trigger Overcurrent — arus >20A, tegangan drop, relay OFF, lock 10s
+  // ══════════════════════════════════════════════════════════════════════
   triggerDangerBtn.addEventListener("click", async () => {
     const btnLabel = "Trigger Overcurrent";
     triggerDangerBtn.disabled    = true;
@@ -255,45 +231,73 @@ function initControlPanel() {
       // 1. Aktifkan danger lock agar stream NORMAL tidak override DANGER
       dangerLock = true;
 
-      // 2. Inject data DANGER ke Firebase → listener di semua platform terpicu
+      // 2. Inject data DANGER ke Firebase → onValue listener terpicu di semua platform
+      //    (arus >20A, tegangan drop, relay=0, status=DANGER)
+      //    → Ini otomatis trigger Cloud Functions: onStatusChanged, onRelayChanged, onNewLog
       const data = await injectData(prefix, true);
 
-      // 3. Baca settings untuk fallback (jika sim-notifier tidak jalan)
+      // 3. Baca settings untuk fallback notifikasi langsung
       const settings = await getSimSettings(prefix);
 
-      // 4. Reload config di sim-notifier agar selalu sinkron
-      if (uid) await reloadSimNotifierConfig(uid);
+      // 4. Kirim notifikasi fallback langsung dari browser
+      //    (Discord + Telegram) jika Cloud Function tidak bisa menjangkau user webhooks
+      const fbResults = { discord: false, telegram: false };
+      const waktu = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
-      // 5. Kirim notifikasi eksplisit melalui API
-      const results = await triggerAllNotifications(uid, 'DANGER', data, settings, 'Overcurrent');
+      const discordEnabled = settings?.discord?.enabled !== false;
+      if (discordEnabled && settings?.discord?.webhookAlerts) {
+        fbResults.discord = await sendDiscordFallback(settings.discord.webhookAlerts, {
+          title: '🔴 [SIM] OVERCURRENT — Status: DANGER',
+          description: '⚠️ **ARUS BERLEBIH TERDETEKSI!** Relay diputuskan otomatis oleh sistem proteksi.',
+          color: 0xED4245,
+          fields: [
+            { name: '⚡ Arus',         value: `${data?.arus ?? '-'} A`,              inline: true },
+            { name: '🔋 Tegangan',     value: `${data?.tegangan ?? '-'} V`,          inline: true },
+            { name: '💡 Daya Aktif',   value: `${data?.daya_w ?? '-'} W`,            inline: true },
+            { name: '🔌 Relay',        value: 'OFF (Auto Cutoff)',                   inline: true },
+            { name: '📊 Power Factor', value: `${data?.power_factor ?? '-'}`,        inline: true },
+            { name: '📡 Frekuensi',    value: `${data?.frekuensi ?? '-'} Hz`,        inline: true },
+          ],
+          footer: { text: `IoT Listrik Simulator • ${waktu}` },
+        });
+      }
 
-      // 6. Auto restore ke NORMAL setelah 10 detik dan lepas lock
+      if (settings?.telegramNotifyEnabled !== false && settings?.telegramBotToken && settings?.telegramChatId) {
+        fbResults.telegram = await sendTelegramFallback(
+          settings.telegramBotToken,
+          settings.telegramChatId,
+          `🔴 <b>[SIM] BAHAYA — OVERCURRENT!</b>\n⚡ Arus: <b>${data?.arus ?? '-'} A</b>\n🔋 Tegangan: ${data?.tegangan ?? '-'} V\n💡 Daya: ${data?.daya_w ?? '-'} W\n🔌 Relay: OFF (Auto Cutoff)\n🕐 ${waktu}`
+        );
+      }
+
+      // 5. Auto restore ke NORMAL setelah 10 detik dan lepas lock
       setTimeout(async () => {
         try {
           dangerLock = false;
           await injectData(prefix, false);
-          console.log('[SimControl] Status dikembalikan ke NORMAL');
+          console.log('[SimControl] Status dikembalikan ke NORMAL setelah 10s');
         } catch { dangerLock = false; }
       }, 10000);
 
       const parts = [];
-      if (results.simNotifier) parts.push('Server✅');
-      if (results.discord)     parts.push('Discord✅');
-      if (results.telegram)    parts.push('Telegram✅');
+      if (fbResults.discord)  parts.push('Discord✅');
+      if (fbResults.telegram) parts.push('Telegram✅');
 
       const summary = parts.length > 0 ? ` (${parts.join(', ')})` : '';
-      showToast(`Overcurrent active 10 detik${summary}`, "warning");
+      showToast(`⚡ Overcurrent aktif 10 detik${summary}`, "warning");
     } catch (err) {
       dangerLock = false;
       showToast("Gagal trigger overcurrent: " + err.message, "error");
     }
 
-
     triggerDangerBtn.textContent = btnLabel;
     triggerDangerBtn.disabled    = false;
   });
 
-  // ── Alert Test (Test semua notifikasi sekaligus) ───────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // [3] Send Test Alert — panggil Cloud Function testSimNotification
+  //     via httpsCallable (bukan fetch ke localhost:3002)
+  // ══════════════════════════════════════════════════════════════════════
   testNotifBtn.addEventListener("click", async () => {
     testNotifBtn.disabled    = true;
     testNotifBtn.textContent = "Sending...";
@@ -301,103 +305,126 @@ function initControlPanel() {
     try {
       const settings = await getSimSettings(prefix);
 
-      // 1. Reload config di sim-notifier agar sinkron terbaru
-      if (uid) await reloadSimNotifierConfig(uid);
-
-      // 2. Aktifkan danger lock agar stream NORMAL tidak override WARNING
+      // 1. Aktifkan danger lock agar stream NORMAL tidak override WARNING
       dangerLock = true;
 
-      // 3. Tulis WARNING ke /listrik DULU agar alarm terpicu di semua platform
-      //    (Web siren, Electron audio, Android AlarmActivity)
+      // 2. Tulis WARNING ke /listrik DULU agar alarm terpicu real-time
+      //    di semua platform (Web siren, Electron audio, Android AlarmActivity)
+      const arus     = parseFloat(getRandom(15, 19).toFixed(2));
+      const tegangan = parseFloat(getRandom(215, 225).toFixed(1));
+      const pf       = parseFloat(getRandom(0.82, 0.92).toFixed(2));
+      const apparent = arus * tegangan;
+      const active   = apparent * pf;
+      const frekuensi = parseFloat(getRandom(49.8, 50.2).toFixed(1));
+
+      // Akumulasi energi
+      const hours = 5 / 3600;
+      _accumulatedEnergy += (active / 1000) * hours;
+      sessionStorage.setItem("sim_energy_kwh", _accumulatedEnergy.toFixed(4));
+
       const testData = {
-        arus:         parseFloat(getRandom(15, 19).toFixed(2)),
-        tegangan:     parseFloat(getRandom(215, 230).toFixed(1)),
-        daya:         0,
-        frekuensi:    50,
-        power_factor: 0.85,
-        relay:        1,
-        status:       'WARNING',
-        updated_at:   new Date().toISOString(),
+        arus,
+        tegangan,
+        daya:           parseFloat(apparent.toFixed(1)),
+        daya_w:         parseFloat(active.toFixed(1)),
+        apparent_power: parseFloat(apparent.toFixed(1)),
+        power_factor:   pf,
+        frekuensi,
+        energi_kwh:     parseFloat(_accumulatedEnergy.toFixed(4)),
+        relay:          1,
+        status:         'WARNING',
+        updated_at:     new Date().toISOString(),
       };
-      testData.daya = parseFloat((testData.arus * testData.tegangan).toFixed(1));
 
       // Tulis ke RTDB → onValue listener di browser/Electron/Android terpicu → alarm berbunyi
       await set(ref(db, prefix + '/listrik'), testData);
 
-      // Tulis log ke RTDB
+      // Tulis log ke RTDB → trigger onNewLog Cloud Function → Discord #logs
       await push(ref(db, prefix + "/logs"), {
-        waktu:  new Date().toISOString(),
-        arus:   testData.arus,
-        tegangan: testData.tegangan,
-        status: "WARNING",
-        relay:  1,
-        source: "TEST_ALERT",
-        message: "Manual test notifikasi dari Control Panel",
+        waktu:        new Date().toISOString(),
+        arus:         testData.arus,
+        tegangan:     testData.tegangan,
+        daya:         testData.daya,
+        daya_w:       testData.daya_w,
+        power_factor: testData.power_factor,
+        frekuensi:    testData.frekuensi,
+        energi_kwh:   testData.energi_kwh,
+        status:       "WARNING",
+        relay:        1,
+        source:       "TEST_ALERT",
+        message:      "Manual test notifikasi dari Control Panel",
       });
 
-      // 4. Auto restore ke NORMAL setelah 8 detik dan lepas lock
+      // 3. Auto restore ke NORMAL setelah 8 detik dan lepas lock
       setTimeout(async () => {
         try {
           dangerLock = false;
           await injectData(prefix, false);
-          console.log('[SimControl] Status Test Alert dikembalikan ke NORMAL');
+          console.log('[SimControl] Status Test Alert dikembalikan ke NORMAL setelah 8s');
         } catch { dangerLock = false; }
       }, 8000);
 
-      // 5. Coba via sim-notifier test endpoint
-      let simOk = false;
-      let simResults = {};
+      // 4. Panggil Cloud Function testSimNotification via httpsCallable
+      //    Cloud Function akan baca settings dari /sim/{uid}/settings
+      //    dan kirim notifikasi ke Telegram/Discord sesuai konfigurasi
+      let cfOk = false;
+      let cfResults = {};
       try {
-        const res = await fetch(`${SIM_API}/api/sim/test-notify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid }),
-          signal: AbortSignal.timeout(5000),
+        const testSimNotification = httpsCallable(functions, 'testSimNotification');
+        const result = await testSimNotification({
+          scenario: 'WARNING',
+          channels: ['discord', 'telegram'],
         });
-        if (res.ok) {
-          const json = await res.json();
-          simOk = json.ok;
-          simResults = json.results || {};
-          console.log('[Test] sim-notifier results:', json);
-        }
-      } catch {
-        console.warn('[Test] sim-notifier tidak tersedia, fallback ke browser');
+        cfOk = result.data?.success ?? false;
+        cfResults = result.data?.results ?? {};
+        console.log('[Test] Cloud Function result:', result.data);
+      } catch (cfErr) {
+        console.warn('[Test] Cloud Function gagal, fallback ke browser:', cfErr.message);
       }
 
-      // 6. Fallback dari browser
+      // 5. Fallback dari browser — setiap channel dievaluasi INDEPENDEN
+      //    Bug fix: && harus || agar Telegram tetap dicoba walau Discord sudah terkirim
       const fbResults = { discord: false, telegram: false };
-      if (!simOk || (!simResults.discord && !simResults.telegram)) {
-        const waktu = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-        const discordEnabled = settings?.discord?.enabled !== false;
+      const waktu = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
+      // Fallback Discord — hanya jika CF tidak mengirim ke Discord
+      if (cfResults.discord !== 'sent') {
+        const discordEnabled = settings?.discord?.enabled !== false;
         if (discordEnabled && settings?.discord?.webhookAlerts) {
           fbResults.discord = await sendDiscordFallback(settings.discord.webhookAlerts, {
-            title: '🔔 [SIM] Test Notifikasi Aktif',
-            description: 'Koneksi Discord Webhook simulator berhasil! Notifikasi real-time siap.',
-            color: 0x5865F2,
+            title: '🔔 [SIM] Test Notifikasi — ⚡ WARNING',
+            description: 'Koneksi Discord Webhook simulator berhasil!\nNotifikasi real-time siap digunakan.',
+            color: 0xFEE75C,
             fields: [
-              { name: 'Status', value: '✅ Terhubung', inline: true },
-              { name: 'Waktu', value: waktu, inline: true },
-              { name: '🆔 Session', value: `\`${uid?.slice(0,12) ?? 'unknown'}...\``, inline: false },
+              { name: '⚡ Arus',         value: `${testData.arus} A`,     inline: true },
+              { name: '🔋 Tegangan',     value: `${testData.tegangan} V`, inline: true },
+              { name: '💡 Daya Aktif',   value: `${testData.daya_w} W`,   inline: true },
+              { name: '📊 Power Factor', value: `${testData.power_factor}`, inline: true },
+              { name: '📡 Frekuensi',    value: `${testData.frekuensi} Hz`, inline: true },
+              { name: '🔌 Relay',        value: 'ON',                     inline: true },
             ],
-            footer: { text: 'IoT Listrik Simulator — Test (Browser Fallback)' },
+            footer: { text: `IoT Simulator • Test Alert (Browser Fallback) • ${waktu}` },
           });
         }
+      }
 
+      // Fallback Telegram — hanya jika CF tidak mengirim ke Telegram
+      //    INDEPENDENT dari Discord agar tidak saling memblokir
+      if (cfResults.telegram !== 'sent') {
         if (settings?.telegramBotToken && settings?.telegramChatId) {
           fbResults.telegram = await sendTelegramFallback(
             settings.telegramBotToken,
             settings.telegramChatId,
-            `🔔 <b>[SIM] Test Notifikasi Berhasil!</b>\nSistem notifikasi aktif.\n🕐 ${waktu}\n<i>Session: ${uid?.slice(0,12) ?? 'unknown'}...</i>`
+            `🔔 <b>[SIM] Test Notifikasi — WARNING</b>\n⚡ Arus: <b>${testData.arus} A</b>\n🔋 Tegangan: ${testData.tegangan} V\n💡 Daya: ${testData.daya_w} W\n🕐 ${waktu}\n<i>Session: ${uid?.slice(0,12) ?? 'unknown'}...</i>`
           );
         }
       }
 
-      // 7. Feedback ke user
-      const discordOk  = simResults.discord  || fbResults.discord;
-      const telegramOk = simResults.telegram || fbResults.telegram;
+      // 6. Feedback ke user
+      const discordOk  = cfResults.discord === 'sent'  || fbResults.discord;
+      const telegramOk = cfResults.telegram === 'sent' || fbResults.telegram;
       const parts = [];
-      if (simOk && (simResults.discord || simResults.telegram)) parts.push('Server✅');
+      if (cfOk) parts.push('CloudFn✅');
       if (discordOk)  parts.push('Discord✅');
       if (telegramOk) parts.push('Telegram✅');
 
@@ -418,23 +445,30 @@ function initControlPanel() {
 
     testNotifBtn.textContent = "Send Test Alert";
     testNotifBtn.disabled    = false;
-
   });
 
-  // ── Clear Data ───────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // [4] Clear Data — reset semua log dan state sensor
+  // ══════════════════════════════════════════════════════════════════════
   clearDataBtn?.addEventListener("click", async () => {
     if (!confirm("Clear all test logs and reset sensor state?")) return;
 
     try {
       await remove(ref(db, prefix + "/logs"));
+      _accumulatedEnergy = 0;
+      sessionStorage.setItem("sim_energy_kwh", "0");
       await set(ref(db, prefix + "/listrik"), {
-        arus:         0,
-        tegangan:     220,
-        daya:         0,
-        frekuensi:    50,
-        power_factor: 0.85,
-        relay:        1,
-        status:       "NORMAL",
+        arus:           0,
+        tegangan:       220,
+        daya:           0,
+        daya_w:         0,
+        apparent_power: 0,
+        power_factor:   0.85,
+        frekuensi:      50,
+        energi_kwh:     0,
+        relay:          1,
+        status:         "NORMAL",
+        updated_at:     new Date().toISOString(),
       });
       showToast("System reset to baseline", "success");
     } catch (e) {
@@ -442,7 +476,9 @@ function initControlPanel() {
     }
   });
 
-  // ── PWA Install Prompt ───────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // [5] PWA Install Prompt
+  // ══════════════════════════════════════════════════════════════════════
   let deferredPrompt;
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
@@ -460,6 +496,7 @@ function initControlPanel() {
     deferredPrompt = null;
   });
 }
+
 
 // ── Ensure Authentication ─────────────────────────────────────────────────
 initPage({

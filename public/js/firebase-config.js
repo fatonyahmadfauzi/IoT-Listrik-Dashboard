@@ -11,7 +11,7 @@
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, initializeAuth, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getFunctions } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
@@ -27,8 +27,25 @@ const firebaseConfig = {
 };
 // ─────────────────────────────────────────────────────────────
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const isSim = window.location.pathname.startsWith("/simulator/");
+
+let app;
+let auth;
+
+if (isSim) {
+  // Untuk Simulator: Buat wadah/App terpisah dengan Session Storage.
+  // Ini memastikan otentikasi di simulator terpisah TOTAL dari Dashboard,
+  // dan setiap Tab PWA Simulator yang dibuka akan memiliki sesi (akun temp) sendiri-sendiri.
+  app = initializeApp(firebaseConfig, "SIMULATOR_APP");
+  auth = initializeAuth(app, {
+    persistence: browserSessionPersistence
+  });
+} else {
+  // Untuk Dashboard: Gunakan wadah utama dengan memori IndexedDB (tetap login pasca tab ditutup)
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+}
+
 const db = getDatabase(app);
 // Region disesuaikan dengan database (asia-southeast1 = Singapore)
 const functions = getFunctions(app, 'asia-southeast1');

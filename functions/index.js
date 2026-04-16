@@ -233,12 +233,14 @@ exports.onStatusChanged = onValueUpdated(
         : `Status berubah dari \`${statusLama}\` → \`${statusBaru}\``,
       color: statusColor(statusBaru),
       fields: [
-        { name: "⚡ Arus",      value: `${d.arus ?? "-"} A`,       inline: true },
-        { name: "🔋 Tegangan",  value: `${d.tegangan ?? "-"} V`,   inline: true },
-        { name: "💡 Daya",      value: `${d.daya ?? "-"} W`,       inline: true },
-        { name: "🔌 Relay",     value: d.relay ? "ON (Aktif)" : "OFF (Mati)", inline: true },
-        { name: "📡 Frekuensi", value: `${d.frekuensi ?? "-"} Hz`, inline: true },
-        { name: "📊 PF",        value: `${d.power_factor ?? "-"}`, inline: true },
+        { name: "⚡ Arus",         value: `${d.arus ?? "-"} A`,                   inline: true },
+        { name: "🔋 Tegangan",     value: `${d.tegangan ?? "-"} V`,               inline: true },
+        { name: "💡 Daya Aktif",   value: `${d.daya_w ?? d.daya ?? "-"} W`,       inline: true },
+        { name: "🔌 Relay",        value: d.relay ? "ON (Aktif)" : "OFF (Mati)",  inline: true },
+        { name: "📡 Frekuensi",    value: `${d.frekuensi ?? "-"} Hz`,             inline: true },
+        { name: "📊 Power Factor", value: `${d.power_factor ?? "-"}`,             inline: true },
+        { name: "🔆 Energi",       value: `${d.energi_kwh ?? "-"} kWh`,           inline: true },
+        { name: "⚡ Daya Semu",    value: `${d.daya ?? d.apparent_power ?? "-"} VA`, inline: true },
       ],
       footer: { text: `IoT Listrik Dashboard • ${waktuIndonesia()}` },
       thumbnail: { url: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png" },
@@ -304,14 +306,15 @@ exports.onListrikUpdated = onValueUpdated(
       title: "📊 Update Data Monitoring Listrik",
       color: statusColor(d.status),
       fields: [
-        { name: "⚡ Arus",        value: `${d.arus ?? "-"} A`,           inline: true },
-        { name: "🔋 Tegangan",    value: `${d.tegangan ?? "-"} V`,       inline: true },
-        { name: "💡 Daya Aktif",  value: `${d.daya ?? "-"} W`,           inline: true },
-        { name: "🔌 Relay",       value: d.relay ? "ON" : "OFF",         inline: true },
-        { name: "📡 Frekuensi",   value: `${d.frekuensi ?? "-"} Hz`,     inline: true },
-        { name: "📊 Power Factor", value: `${d.power_factor ?? "-"}`,    inline: true },
-        { name: "🔆 Energi",      value: `${d.energi_kwh ?? "-"} kWh`,   inline: true },
-        { name: "🔴 Status",      value: `${statusEmoji(d.status)} ${d.status ?? "-"}`, inline: true },
+        { name: "⚡ Arus",         value: `${d.arus ?? "-"} A`,                     inline: true },
+        { name: "🔋 Tegangan",     value: `${d.tegangan ?? "-"} V`,                 inline: true },
+        { name: "💡 Daya Aktif",   value: `${d.daya_w ?? d.daya ?? "-"} W`,         inline: true },
+        { name: "⚡ Daya Semu",    value: `${d.daya ?? d.apparent_power ?? "-"} VA`, inline: true },
+        { name: "🔌 Relay",        value: d.relay ? "ON" : "OFF",                   inline: true },
+        { name: "📡 Frekuensi",    value: `${d.frekuensi ?? "-"} Hz`,               inline: true },
+        { name: "📊 Power Factor", value: `${d.power_factor ?? "-"}`,               inline: true },
+        { name: "🔆 Energi",       value: `${d.energi_kwh ?? "-"} kWh`,             inline: true },
+        { name: "🔴 Status",       value: `${statusEmoji(d.status)} ${d.status ?? "-"}`, inline: true },
       ],
       footer: { text: `IoT Listrik Dashboard • ${waktuIndonesia()}` },
       thumbnail: { url: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png" },
@@ -461,6 +464,7 @@ exports.cleanupTempAccount = onCall(
 
 // ══════════════════════════════════════════════════════════════
 // [7] TEST NOTIFICATION — kirim test notif dari simulator
+//     Dipanggil via httpsCallable dari simulator-control.js
 // ══════════════════════════════════════════════════════════════
 exports.testSimNotification = onCall(
   { region: "asia-southeast1" },
@@ -477,60 +481,97 @@ exports.testSimNotification = onCall(
     const settingsSnap = await admin.database().ref(`/sim/${uid}/settings`).get();
     const s = settingsSnap.val() || {};
 
-    // Update data sim sesuai scenario
-    const scenarios = {
-      NORMAL:  { arus: 2.5,  tegangan: 220, status: "NORMAL",  relay: 1 },
-      WARNING: { arus: 8.5,  tegangan: 215, status: "WARNING", relay: 1 },
-      DANGER:  { arus: 12.3, tegangan: 208, status: "DANGER",  relay: 0 },
-    };
-    const testData = scenarios[scenario] || scenarios.DANGER;
-    await admin.database().ref(`/sim/${uid}/listrik`).update({
-      ...testData,
-      daya: parseFloat((testData.arus * testData.tegangan * 0.85).toFixed(1)),
-      power_factor: 0.85,
-      frekuensi: 50,
-      updated_at: new Date().toISOString(),
-    });
+    // Baca energi_kwh saat ini untuk akumulasi
+    const energySnap = await admin.database().ref(`/sim/${uid}/listrik/energi_kwh`).get();
+    const currentEnergy = parseFloat(energySnap.val() || 0);
 
-    // Log di sim
+    // Generate data sesuai scenario — lengkap seperti hardware SCT-013 + ZMPT101B
+    const scenarios = {
+      NORMAL:  { arus: 2.5,   tegangan: 222, pf: 0.92, status: "NORMAL",  relay: 1 },
+      WARNING: { arus: 8.5,   tegangan: 218, pf: 0.88, status: "WARNING", relay: 1 },
+      DANGER:  { arus: 25.3,  tegangan: 205, pf: 0.72, status: "DANGER",  relay: 0 },
+    };
+    const sc = scenarios[scenario] || scenarios.DANGER;
+    const apparent = parseFloat((sc.arus * sc.tegangan).toFixed(1));
+    const active   = parseFloat((apparent * sc.pf).toFixed(1));
+    const frekuensi = scenario === "DANGER" ? 49.6 : 50.0;
+
+    const fullPayload = {
+      arus:           sc.arus,
+      tegangan:       sc.tegangan,
+      daya:           apparent,           // Apparent Power (VA) = V × I
+      daya_w:         active,             // Active Power (W) = VA × PF
+      apparent_power: apparent,           // Alias untuk CLI
+      power_factor:   sc.pf,
+      frekuensi,
+      energi_kwh:     parseFloat((currentEnergy + (active / 1000) * (5 / 3600)).toFixed(4)),
+      relay:          sc.relay,
+      status:         sc.status,
+      updated_at:     new Date().toISOString(),
+    };
+
+    // Update /sim/{uid}/listrik dengan payload lengkap
+    await admin.database().ref(`/sim/${uid}/listrik`).set(fullPayload);
+
+    // Log lengkap di /sim/{uid}/logs
     await admin.database().ref(`/sim/${uid}/logs`).push({
-      message: `[TEST] Simulasi notifikasi ${scenario}`,
-      type: "test", status: scenario,
-      waktu: Date.now(),
-      arus: testData.arus, tegangan: testData.tegangan,
+      message:      `[TEST] Simulasi notifikasi ${scenario}`,
+      type:         "test",
+      status:       scenario,
+      waktu:        new Date().toISOString(),
+      arus:         sc.arus,
+      tegangan:     sc.tegangan,
+      daya:         apparent,
+      daya_w:       active,
+      power_factor: sc.pf,
+      frekuensi,
+      energi_kwh:   fullPayload.energi_kwh,
+      relay:        sc.relay,
+      source:       "TEST_ALERT",
     });
 
     const results = {};
 
-    // Telegram
+    // ── Telegram ──────────────────────────────────────────────────────
     if (channels.includes("telegram") && s.telegramBotToken && s.telegramChatId) {
       const msg = `🧪 *TEST SIMULASI — ${scenario}*\n`
-        + `⚡ Arus: ${testData.arus} A | 🔋 Tegangan: ${testData.tegangan} V\n`
-        + `🔌 Relay: ${testData.relay ? "ON" : "OFF"} | 🔴 Status: ${scenario}\n`
+        + `⚡ Arus: ${sc.arus} A | 🔋 Tegangan: ${sc.tegangan} V\n`
+        + `💡 Daya: ${active} W (${apparent} VA)\n`
+        + `📊 PF: ${sc.pf} | 📡 Freq: ${frekuensi} Hz\n`
+        + `🔌 Relay: ${sc.relay ? "ON" : "OFF"} | 🔴 Status: ${scenario}\n`
         + `_IoT Listrik Dashboard Simulator_`;
       await sendTelegramMessage(s.telegramBotToken, s.telegramChatId, msg);
       results.telegram = "sent";
     } else {
-      results.telegram = s.telegramBotToken ? "sent" : "not_configured";
+      // Fix bug: hanya "not_configured" jika keduanya tidak ada
+      results.telegram = (!s.telegramBotToken || !s.telegramChatId)
+        ? "not_configured"
+        : "channel_not_requested";
     }
 
-    // Discord
-    if (channels.includes("discord") && s.discord?.enabled && s.discord?.webhookAlerts) {
+    // ── Discord ──────────────────────────────────────────────────────
+    if (channels.includes("discord") && s.discord?.enabled !== false && s.discord?.webhookAlerts) {
       const embed = {
         title: `🧪 Test Notifikasi Simulator — ${statusEmoji(scenario)} ${scenario}`,
         description: "Ini adalah test notifikasi dari IoT Listrik Dashboard Simulator.\nData simulasi telah diperbarui sesuai skenario.",
         color: statusColor(scenario),
         fields: [
-          { name: "⚡ Arus",     value: `${testData.arus} A`,     inline: true },
-          { name: "🔋 Tegangan", value: `${testData.tegangan} V`, inline: true },
-          { name: "🔌 Relay",    value: testData.relay ? "ON" : "OFF", inline: true },
+          { name: "⚡ Arus",         value: `${sc.arus} A`,       inline: true },
+          { name: "🔋 Tegangan",     value: `${sc.tegangan} V`,   inline: true },
+          { name: "💡 Daya Aktif",   value: `${active} W`,        inline: true },
+          { name: "🔌 Relay",        value: sc.relay ? "ON" : "OFF", inline: true },
+          { name: "📊 Power Factor", value: `${sc.pf}`,           inline: true },
+          { name: "📡 Frekuensi",    value: `${frekuensi} Hz`,    inline: true },
         ],
         footer: { text: `IoT Simulator • ${waktuIndonesia()}` },
+        thumbnail: { url: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png" },
       };
       await sendDiscordEmbed(s.discord.webhookAlerts, embed);
       results.discord = "sent";
     } else {
-      results.discord = s.discord?.enabled ? "sent" : "not_configured";
+      results.discord = (!s.discord?.webhookAlerts)
+        ? "not_configured"
+        : "channel_not_requested";
     }
 
     return { success: true, scenario, results };

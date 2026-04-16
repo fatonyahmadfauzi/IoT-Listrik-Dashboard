@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_base">
 
-    <!-- Header -->
+    <!-- ══ Header ════════════════════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/appHeader"
         android:layout_width="match_parent"
@@ -16,7 +15,7 @@
         android:gravity="center_vertical"
         android:background="@color/bg_surface"
         app:layout_constraintTop_toTopOf="parent">
-        
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_weight="1"
@@ -38,8 +37,8 @@
                 android:layout_marginTop="2dp"
                 android:textColor="@color/yellow"/>
         </LinearLayout>
-        
-        <!-- New Temp Session Badge -->
+
+        <!-- Temp Session Badge -->
         <LinearLayout
             android:id="@+id/tempBadgeContainer"
             android:layout_width="wrap_content"
@@ -69,7 +68,7 @@
                 android:textColor="@color/text_primary"
                 android:textStyle="bold"/>
         </LinearLayout>
-        
+
         <ImageView
             android:id="@+id/btnLogout"
             android:layout_width="32dp"
@@ -80,20 +79,23 @@
             app:tint="@color/text_secondary"/>
     </LinearLayout>
 
+    <!-- ══ SCROLL ════════════════════════════════════════════════════════ -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:fillViewport="true"
-        android:paddingBottom="24dp"
+        android:paddingBottom="28dp"
+        android:clipToPadding="false"
         app:layout_constraintTop_toBottomOf="@id/appHeader"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="20dp">
-            
-            <!-- Animated Status Card -->
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- ── Status Banner ──────────────────────────────────────── -->
             <LinearLayout
                 android:id="@+id/cardStatusOverlay"
                 android:layout_width="match_parent"
@@ -101,8 +103,7 @@
                 android:background="@drawable/bg_status_normal"
                 android:padding="24dp"
                 android:orientation="vertical"
-                android:gravity="center_horizontal"
-                app:layout_constraintTop_toTopOf="parent">
+                android:gravity="center_horizontal">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -121,192 +122,210 @@
                     android:textColor="#FFFFFF"/>
             </LinearLayout>
 
-            <!-- Metrics Grid Flow Engine -->
-            <androidx.constraintlayout.helper.widget.Flow
-                android:id="@+id/flowMetrics"
+            <!-- ── PRIMARY METRICS: Arus + Tegangan (2 kotak sama besar) ── -->
+            <!--
+                LinearLayout horizontal + layout_weight="1" → kedua kotak
+                SELALU sama tinggi karena mereka wrap_content dalam arah yang
+                sama, dan LinearLayout stretch keduanya ke max height.
+                Untuk equal HEIGHT dari dua wrap_content child, kita set
+                android:baselineAligned="false" dan gunakan match_parent
+                pada inner layout height.
+            -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layout_constraintTop_toBottomOf="@id/cardStatusOverlay"
+                android:orientation="horizontal"
                 android:layout_marginTop="16dp"
-                app:constraint_referenced_ids="cardArus,cardTegangan"
-                app:flow_wrapMode="chain"
-                app:flow_horizontalGap="16dp"
-                app:flow_verticalGap="16dp"/>
+                android:baselineAligned="false">
 
-            <!-- Arus -->
-            <LinearLayout
-                android:id="@+id/cardArus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minWidth="140dp"
-                app:layout_constrainedWidth="true"
-                android:background="@drawable/bg_glass"
-                android:padding="24dp"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Arus (A)"
-                    app:drawableStartCompat="@drawable/ic_bolt"
-                    android:drawablePadding="6dp"
-                    android:textColor="@color/text_secondary"
-                    android:gravity="center_vertical"
-                    android:textSize="13sp"/>
-                <TextView
-                    android:id="@+id/tvArus"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0.0"
-                    android:layout_marginTop="8dp"
-                    android:textSize="36sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/cyan"/>
+                <!-- Arus Card -->
+                <LinearLayout
+                    android:id="@+id/cardArus"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_glass"
+                    android:padding="20dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Arus (A)"
+                        app:drawableStartCompat="@drawable/ic_bolt"
+                        android:drawablePadding="6dp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center_vertical"
+                        android:textSize="12sp"/>
+                    <TextView
+                        android:id="@+id/tvArus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0"
+                        android:layout_marginTop="8dp"
+                        android:textSize="36sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/cyan"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SCT-013"
+                        android:textSize="11sp"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
+
+                <!-- Tegangan Card -->
+                <LinearLayout
+                    android:id="@+id/cardTegangan"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_glass"
+                    android:padding="20dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tegangan"
+                        app:drawableStartCompat="@drawable/ic_plug"
+                        android:drawablePadding="6dp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center_vertical"
+                        android:textSize="12sp"/>
+                    <TextView
+                        android:id="@+id/tvTegangan"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0"
+                        android:layout_marginTop="8dp"
+                        android:textSize="36sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/yellow"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ZMPT101B"
+                        android:textSize="11sp"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Tegangan -->
+            <!-- ── SECONDARY METRICS: Daya / Energi / Sumber (3 sama besar) ── -->
+            <!--
+                3 kotak dalam 1 baris dengan layout_weight="1" masing-masing.
+                match_parent pada height agar semua setinggi yang tertinggi.
+            -->
             <LinearLayout
-                android:id="@+id/cardTegangan"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minWidth="140dp"
-                app:layout_constrainedWidth="true"
-                android:background="@drawable/bg_glass"
-                android:padding="24dp"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tegangan"
-                    app:drawableStartCompat="@drawable/ic_plug"
-                    android:drawablePadding="6dp"
-                    android:textColor="@color/text_secondary"
-                    android:gravity="center_vertical"
-                    android:textSize="13sp"/>
-                <TextView
-                    android:id="@+id/tvTegangan"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0.0"
-                    android:layout_marginTop="8dp"
-                    android:textSize="36sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/yellow"/>
-            </LinearLayout>
-
-            <!-- Secondary Metrics Flow Engine -->
-            <androidx.constraintlayout.helper.widget.Flow
-                android:id="@+id/flowSecondary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layout_constraintTop_toBottomOf="@id/flowMetrics"
-                android:layout_marginTop="16dp"
-                app:constraint_referenced_ids="cardDaya,cardEnergi,cardSumber"
-                app:flow_wrapMode="chain"
-                app:flow_horizontalGap="12dp"
-                app:flow_verticalGap="12dp"/>
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp"
+                android:baselineAligned="false">
 
-            <LinearLayout
-                android:id="@+id/cardDaya"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minWidth="100dp"
-                app:layout_constrainedWidth="true"
-                android:background="@drawable/bg_glass"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Daya (est W)"
-                    android:textSize="11sp"
-                    android:textColor="@color/text_secondary"/>
-                <TextView
-                    android:id="@+id/tvDayaW"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:layout_marginTop="2dp"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"/>
-            </LinearLayout>
-            
-            <LinearLayout
-                android:id="@+id/cardEnergi"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minWidth="100dp"
-                app:layout_constrainedWidth="true"
-                android:background="@drawable/bg_glass"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Energi (kWh)"
-                    android:textSize="11sp"
-                    android:textColor="@color/text_secondary"/>
-                <TextView
-                    android:id="@+id/tvEnergiKwh"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0.00"
-                    android:layout_marginTop="2dp"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"/>
-            </LinearLayout>
-            
-            <LinearLayout
-                android:id="@+id/cardSumber"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:minWidth="100dp"
-                app:layout_constrainedWidth="true"
-                android:background="@drawable/bg_glass"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Sumber"
-                    android:textSize="11sp"
-                    android:textColor="@color/text_secondary"/>
-                <TextView
-                    android:id="@+id/tvDataSource"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="CLOUD"
-                    android:layout_marginTop="2dp"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/cyan"/>
+                <!-- Daya Aktif -->
+                <LinearLayout
+                    android:id="@+id/cardDaya"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_glass"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="14dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Daya (W)"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvDayaW"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:layout_marginTop="6dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+                </LinearLayout>
+
+                <!-- Energi kWh -->
+                <LinearLayout
+                    android:id="@+id/cardEnergi"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginHorizontal="3dp"
+                    android:background="@drawable/bg_glass"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="14dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Energi (kWh)"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvEnergiKwh"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.000"
+                        android:layout_marginTop="6dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+                </LinearLayout>
+
+                <!-- Sumber Data -->
+                <LinearLayout
+                    android:id="@+id/cardSumber"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_glass"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="14dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sumber"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvDataSource"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="CLOUD"
+                        android:layout_marginTop="6dp"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/cyan"/>
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Chart Section -->
+            <!-- ══ CHART SECTION ═══════════════════════════════════════════ -->
             <TextView
-                android:id="@+id/titleChart"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="28dp"
                 android:text="GRAFIK REALTIME"
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/flowSecondary"/>
-                
+                android:letterSpacing="0.08"/>
+
             <RelativeLayout
                 android:id="@+id/chartContainer"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                app:layout_constraintDimensionRatio="H,16:9"
-                app:layout_constraintHeight_min="240dp"
-                app:layout_constraintTop_toBottomOf="@id/titleChart"
-                android:layout_marginTop="12dp"
+                android:layout_height="220dp"
+                android:layout_marginTop="10dp"
                 android:background="@drawable/bg_glass"
                 android:padding="8dp">
                 <TextView
@@ -316,99 +335,189 @@
                     android:layout_centerInParent="true"
                     android:textSize="12sp"
                     android:textColor="@color/text_secondary"
-                    android:text="Menunggu data..." />
+                    android:text="Menunggu data..."/>
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/lineChart"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"/>
             </RelativeLayout>
 
-
-            <!-- Statistics Block -->
+            <!-- ══ STATISTIK (20 DATA TERAKHIR) ═══════════════════════════ -->
+            <!--
+                Menggunakan ConstraintLayout sebagai container agar Flow widget
+                dapat me-reference sibling views dengan benar.
+                4 kotak: AVG Arus | MAX Arus | AVG Teg | MAX Teg  →  2 kolom x 2 baris
+            -->
             <TextView
-                android:id="@+id/titleStats"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="28dp"
                 android:text="STATISTIK (20 DATA TERAKHIR)"
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/chartContainer"/>
+                android:letterSpacing="0.08"/>
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/containerStats"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 android:background="@drawable/bg_glass"
-                android:padding="16dp"
-                app:layout_constraintTop_toBottomOf="@id/titleStats"
-                android:orientation="vertical">
-                
+                android:padding="14dp">
+
                 <androidx.constraintlayout.helper.widget.Flow
                     android:id="@+id/flowStats"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
                     app:constraint_referenced_ids="statAvgArus,statMaxArus,statAvgTeg,statMaxTeg"
-                    app:flow_wrapMode="chain"
-                    app:flow_horizontalGap="8dp"
-                    app:flow_verticalGap="12dp"/>
-                    
-                <LinearLayout android:id="@+id/statAvgArus" android:layout_width="0dp" android:layout_height="wrap_content" app:layout_constrainedWidth="true" android:minWidth="70dp" android:orientation="vertical" android:gravity="center">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVG Arus" android:textSize="11sp" android:textColor="@color/text_secondary"/>
-                    <TextView android:id="@+id/tvAvgArus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 A" android:textSize="14sp" android:textColor="@color/cyan" android:textStyle="bold"/>
-                </LinearLayout>
-                <LinearLayout android:id="@+id/statMaxArus" android:layout_width="0dp" android:layout_height="wrap_content" app:layout_constrainedWidth="true" android:minWidth="70dp" android:orientation="vertical" android:gravity="center">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MAX Arus" android:textSize="11sp" android:textColor="@color/text_secondary"/>
-                    <TextView android:id="@+id/tvMaxArus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 A" android:textSize="14sp" android:textColor="@color/red" android:textStyle="bold"/>
-                </LinearLayout>
-                <LinearLayout android:id="@+id/statAvgTeg" android:layout_width="0dp" android:layout_height="wrap_content" app:layout_constrainedWidth="true" android:minWidth="70dp" android:orientation="vertical" android:gravity="center">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AVG Teg" android:textSize="11sp" android:textColor="@color/text_secondary"/>
-                    <TextView android:id="@+id/tvAvgTeg" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 V" android:textSize="14sp" android:textColor="@color/yellow" android:textStyle="bold"/>
-                </LinearLayout>
-                <LinearLayout android:id="@+id/statMaxTeg" android:layout_width="0dp" android:layout_height="wrap_content" app:layout_constrainedWidth="true" android:minWidth="70dp" android:orientation="vertical" android:gravity="center">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MAX Teg" android:textSize="11sp" android:textColor="@color/text_secondary"/>
-                    <TextView android:id="@+id/tvMaxTeg" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0 V" android:textSize="14sp" android:textColor="@color/yellow" android:textStyle="bold"/>
-                </LinearLayout>
-            </LinearLayout>
+                    app:flow_wrapMode="aligned"
+                    app:flow_maxElementsWrap="2"
+                    app:flow_horizontalGap="10dp"
+                    app:flow_verticalGap="10dp"
+                    app:flow_horizontalStyle="spread_inside"
+                    app:flow_verticalStyle="packed"/>
 
-            <!-- History Section -->
+                <!-- AVG Arus -->
+                <LinearLayout
+                    android:id="@+id/statAvgArus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_glass"
+                    android:padding="14dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AVG Arus"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvAvgArus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0 A"
+                        android:textSize="18sp"
+                        android:textColor="@color/cyan"
+                        android:textStyle="bold"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <!-- MAX Arus -->
+                <LinearLayout
+                    android:id="@+id/statMaxArus"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_glass"
+                    android:padding="14dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MAX Arus"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvMaxArus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0 A"
+                        android:textSize="18sp"
+                        android:textColor="@color/red"
+                        android:textStyle="bold"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <!-- AVG Tegangan -->
+                <LinearLayout
+                    android:id="@+id/statAvgTeg"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_glass"
+                    android:padding="14dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="AVG Teg"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvAvgTeg"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0 V"
+                        android:textSize="18sp"
+                        android:textColor="@color/yellow"
+                        android:textStyle="bold"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <!-- MAX Tegangan -->
+                <LinearLayout
+                    android:id="@+id/statMaxTeg"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_glass"
+                    android:padding="14dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MAX Teg"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvMaxTeg"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0 V"
+                        android:textSize="18sp"
+                        android:textColor="@color/yellow"
+                        android:textStyle="bold"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- ══ RIWAYAT LOG (15 TERAKHIR) ══════════════════════════════ -->
             <TextView
-                android:id="@+id/titleLog"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="28dp"
                 android:text="RIWAYAT LOG (15 TERAKHIR)"
                 android:textSize="13sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/containerStats"/>
-                
+                android:letterSpacing="0.08"/>
+
             <TextView
                 android:id="@+id/tvHistoryEmpty"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 android:text="Belum ada riwayat."
                 android:textColor="@color/text_secondary"
                 android:gravity="center"
-                android:padding="20dp"
-                android:background="@drawable/bg_glass"
-                app:layout_constraintTop_toBottomOf="@id/titleLog"/>
-                
+                android:padding="24dp"
+                android:background="@drawable/bg_glass"/>
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvHistory"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="10dp"
                 android:nestedScrollingEnabled="false"
-                android:clipToPadding="false"
-                app:layout_constraintTop_toBottomOf="@id/titleLog"/>
+                android:clipToPadding="false"/>
 
-            <!-- Relay Control -->
+            <!-- ══ RELAY CONTROL (admin only) ══════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/relaySection"
                 android:layout_width="match_parent"
@@ -416,9 +525,8 @@
                 android:background="@drawable/bg_glass"
                 android:padding="24dp"
                 android:orientation="vertical"
-                android:layout_marginTop="32dp"
-                android:gravity="center"
-                app:layout_constraintTop_toBottomOf="@id/rvHistory">
+                android:layout_marginTop="24dp"
+                android:gravity="center">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -432,22 +540,23 @@
                     android:gravity="center">
                     <Button
                         android:id="@+id/btnRelayOn"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="8dp"
                         android:backgroundTint="@color/green"
                         android:text="Turn ON"/>
-                    <Space android:layout_width="16dp" android:layout_height="wrap_content"/>
                     <Button
                         android:id="@+id/btnRelayOff"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="48dp"
                         android:backgroundTint="@color/red"
                         android:text="Turn OFF"/>
                 </LinearLayout>
             </LinearLayout>
 
-    
-            <!-- Demo Mode Section -->
+            <!-- ══ DEMO MODE (admin only) ══════════════════════════════════ -->
             <LinearLayout
                 android:id="@+id/demoSection"
                 android:layout_width="match_parent"
@@ -455,9 +564,8 @@
                 android:background="@drawable/bg_glass"
                 android:padding="24dp"
                 android:orientation="vertical"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                app:layout_constraintTop_toBottomOf="@id/relaySection">
+                android:layout_marginTop="12dp"
+                android:gravity="center">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -483,24 +591,27 @@
                     android:gravity="center">
                     <Button
                         android:id="@+id/btnDemoNormal"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
                         android:layout_height="40dp"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="6dp"
                         android:textSize="12sp"
                         android:backgroundTint="@color/green"
                         android:text="NORMAL"/>
                     <Button
                         android:id="@+id/btnDemoWarning"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
                         android:layout_height="40dp"
-                        android:layout_marginEnd="8dp"
+                        android:layout_marginEnd="6dp"
                         android:textSize="12sp"
                         android:backgroundTint="@color/yellow"
                         android:textColor="#000000"
                         android:text="WARN"/>
                     <Button
                         android:id="@+id/btnDemoDanger"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
                         android:layout_height="40dp"
                         android:textSize="12sp"
                         android:backgroundTint="@color/red"
@@ -508,6 +619,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

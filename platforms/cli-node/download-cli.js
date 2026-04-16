@@ -1,14 +1,11 @@
 #!/usr/bin/env node
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-import https from "https";
-import http from "http";
-import { createWriteStream } from "fs";
-import { execSync } from "child_process";
+const { readFileSync } = require("fs");
+const { join, dirname } = require("path");
+const https = require("https");
+const http = require("http");
+const { createWriteStream } = require("fs");
+const { execSync } = require("child_process");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Version Manager class for CLI
 class VersionManager {

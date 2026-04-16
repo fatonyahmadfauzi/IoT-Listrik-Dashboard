@@ -1,13 +1,41 @@
 #!/usr/bin/env node
-const fetchInfo = require("node-fetch");
-global.fetch = fetchInfo;
-global.Headers = fetchInfo.Headers;
-global.Request = fetchInfo.Request;
-global.Response = fetchInfo.Response;
-globalThis.fetch = fetchInfo;
-globalThis.Headers = fetchInfo.Headers;
-globalThis.Request = fetchInfo.Request;
-globalThis.Response = fetchInfo.Response;
+
+// Global error handler untuk mencegah window terminal langsung tertutup otomatis di Windows (force close)
+process.on('uncaughtException', (err) => {
+  console.error("\n[CRITICAL ERROR] Aplikasi berhenti tiba-tiba:");
+  console.error(err);
+  console.log("\nProses dihentikan. Tekan Enter untuk keluar...");
+  try {
+    const fs = require('fs');
+    const buffer = Buffer.alloc(1);
+    fs.readSync(0, buffer, 0, 1, null);
+  } catch (e) {}
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error("\n[UNHANDLED PROMISE REJECTION] Promise yang ditolak:");
+  console.error(reason);
+  console.log("\nProses dihentikan. Tekan Enter untuk keluar...");
+  try {
+    const fs = require('fs');
+    const buffer = Buffer.alloc(1);
+    fs.readSync(0, buffer, 0, 1, null);
+  } catch (e) {}
+  process.exit(1);
+});
+
+// Bypass TLS/CA bundle mismatches in pkg environments that causes undici native fetch to fail
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
+// Polyfill global fetch menggunakan node-fetch (penting untuk Firebase v10 di pkg/Node<18)
+if (!globalThis.fetch) {
+  const fetchPolyfill = require("node-fetch");
+  globalThis.fetch = fetchPolyfill;
+  globalThis.Headers = fetchPolyfill.Headers;
+  globalThis.Request = fetchPolyfill.Request;
+  globalThis.Response = fetchPolyfill.Response;
+}
 
 const inquirer = require("inquirer");
 const chalk = require("chalk");
@@ -19,7 +47,8 @@ const { getAuth, signInWithEmailAndPassword, signOut } = require("firebase/auth"
 const { getDatabase, ref, onValue, set, get, query, limitToLast, orderByKey, off } = require("firebase/database");
 const os = require("os");
 const dns = require("dns");
-// Memaksa Node.js menggunakan IPv4 terlebih dahulu untuk mencegah error network-request-failed (terutama NodeJS 17+ di WSL/Termux dimana IPv6 diutamakan tapi sering gagal)
+
+// Memaksa Node.js menggunakan IPv4 terlebih dahulu
 if (dns.setDefaultResultOrder) {
   dns.setDefaultResultOrder("ipv4first");
 }

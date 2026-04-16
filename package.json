@@ -1,6 +1,6 @@
 {
   "name": "iot-listrik-dashboard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "> **Skripsi S1 — Program Studi Teknik Informatika**   > Universitas Bina Insani, Bekasi — 2026",
   "main": "index.js",
   "directories": {

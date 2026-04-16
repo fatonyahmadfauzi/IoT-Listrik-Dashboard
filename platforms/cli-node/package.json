@@ -1,6 +1,6 @@
 {
   "name": "iot-listrik-dashboard-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI for IoT Listrik Dashboard - Real-time monitoring via terminal.",
   "main": "index.js",
   "bin": {

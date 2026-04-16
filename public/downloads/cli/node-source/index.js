@@ -294,7 +294,9 @@ async function mainMenu() {
   }
 }
 
-mainMenu().catch(err => {
+mainMenu().catch(async err => {
   console.error("Kesalahan fatal:", err);
+  console.log("\nProses dihentikan. Tekan Enter untuk keluar...");
+  await new Promise(r => process.stdin.once('data', r));
   process.exit(1);
 });

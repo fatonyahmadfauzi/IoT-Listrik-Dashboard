@@ -143,8 +143,11 @@ def enforce_login():
                 
             current_user = {"email": email.strip(), "token": user['idToken']}
             time.sleep(1)
+        except EOFError:
+            sys.exit(0)
         except Exception as e:
             console.print(f"\n[bold red]Login gagal:[/bold red] Pastikan kredensial benar.\n")
+            time.sleep(1) # Prevent infinite spam loop if TTY fails differently
 
 def handle_logout():
     global current_user
@@ -313,4 +316,5 @@ if __name__ == "__main__":
         main_menu()
     except Exception as e:
         console.print(f"\n[bold red]Terminated:[/bold red] {e}")
+        time.sleep(3)
         sys.exit(1)

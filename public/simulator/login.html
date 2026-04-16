@@ -350,7 +350,7 @@ onAuthStateChanged(auth, async user => {
   if (user && !_installMode) {
     try {
       const token = await user.getIdTokenResult();
-      if (!token.claims?.isTempAccount) {
+      if (!token.claims?.isTempAccount && !user.email.startsWith('sim_')) {
         // ❌ Bukan temp account (admin/user biasa) — TOLAK dan logout paksa
         await signOut(auth);
         const errEl = document.getElementById('loginError');

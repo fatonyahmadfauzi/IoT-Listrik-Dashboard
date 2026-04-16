@@ -4,6 +4,10 @@ global.fetch = fetchInfo;
 global.Headers = fetchInfo.Headers;
 global.Request = fetchInfo.Request;
 global.Response = fetchInfo.Response;
+globalThis.fetch = fetchInfo;
+globalThis.Headers = fetchInfo.Headers;
+globalThis.Request = fetchInfo.Request;
+globalThis.Response = fetchInfo.Response;
 
 const inquirer = require("inquirer");
 const chalk = require("chalk");

@@ -97,7 +97,9 @@ platforms/electron/release-build-all/
 .vercel
 
 # Local downloads and binaries
-public/downloads/
+public/downloads/**/*.exe
+public/downloads/**/*.zip
+public/downloads/**/*.msi
 
 # Junk binary files
 test-msi-download.msi

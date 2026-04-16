@@ -1,0 +1,20 @@
+{
+  "name": "iot-listrik-dashboard-cli",
+  "version": "1.0.0",
+  "description": "CLI for IoT Listrik Dashboard - Real-time monitoring via terminal.",
+  "main": "index.js",
+  "bin": {
+    "iot-listrik": "./index.js",
+    "iot-listrik-download": "./download-cli.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Fatony Ahmad Fauzi",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "firebase": "^10.8.1",
+    "inquirer": "^8.0.0"
+  }
+}

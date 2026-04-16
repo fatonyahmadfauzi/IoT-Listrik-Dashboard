@@ -96,10 +96,12 @@ platforms/electron/release-build-all/
 
 .vercel
 
-# Local downloads and binaries
+# Local downloads and binaries (uploaded to GitHub Release Assets, not committed)
 public/downloads/**/*.exe
 public/downloads/**/*.zip
 public/downloads/**/*.msi
+public/downloads/**/*.apk
+public/downloads/cli/iot-listrik-dashboard-cli-linux
 
 # Junk binary files
 test-msi-download.msi

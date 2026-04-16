@@ -100,6 +100,7 @@
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 24px; margin-bottom: 16px;">
             <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-node.exe" download class="btn" style="background: #38bdf8; color: #0f172a; border-radius: 999px; padding: 12px 24px; font-weight: 600; font-size: 0.95rem; text-decoration: none; transition: 0.2s;"> Node.js Ver (Win x64) </a>
             <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-python.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); padding: 12px 24px; font-weight: 500; font-size: 0.95rem; text-decoration: none; transition: 0.2s;"> Python Ver (Win x64) </a>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-dashboard-cli-linux" download class="btn" style="background: #10b981; color: #ffffff; border-radius: 999px; padding: 12px 24px; font-weight: 600; font-size: 0.95rem; text-decoration: none; transition: 0.2s;"> Linux Binary (x64) </a>
           </div>
 
           <div style="font-size: 0.9rem;">
@@ -148,12 +149,13 @@
 
         document.querySelectorAll('a[download]').forEach(a => {
           const href = a.getAttribute('href');
-          if (href.includes('Setup-'))        a.href = d.downloads.windows?.setup?.url    || a.href;
-          else if (href.includes('Portable-')) a.href = d.downloads.windows?.portable?.url || a.href;
-          else if (href.includes('.apk'))      a.href = d.downloads.android?.url           || a.href;
-          else if (href.includes('cli-node'))  a.href = d.downloads.cli?.node?.url         || a.href;
-          else if (href.includes('cli-python'))a.href = d.downloads.cli?.python?.url       || a.href;
-          else if (href.includes('.msi'))      a.href = d.downloads.windows?.msi?.url      || a.href;
+          if (href.includes('Setup-'))               a.href = d.downloads.windows?.setup?.url    || a.href;
+          else if (href.includes('Portable-'))        a.href = d.downloads.windows?.portable?.url || a.href;
+          else if (href.includes('.apk'))             a.href = d.downloads.android?.url           || a.href;
+          else if (href.includes('cli-node'))         a.href = d.downloads.cli?.node?.url         || a.href;
+          else if (href.includes('cli-python'))       a.href = d.downloads.cli?.python?.url       || a.href;
+          else if (href.includes('.msi'))             a.href = d.downloads.windows?.msi?.url      || a.href;
+          else if (href.includes('cli-linux'))        a.href = d.downloads.cli?.linux?.url        || a.href;
         });
 
       }

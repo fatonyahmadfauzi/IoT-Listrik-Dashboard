@@ -1,0 +1,6 @@
+Pembaruan Layar Monitoring Android (versi 1.0.2):
+- Penyesuaian layout constraint pada UI riwayat `item_history.xml` untuk mengatasi teks waktu/tanggal yang memanjang atau tumpang tindih saat menampilkan data Real-Time.
+- Pembaruan parser regex untuk format ISO-8601 di Date/Time sehingga waktu dan tanggal tampil sempurna dan tidak menampilkan simbol (-) lagi.
+- Placeholder state *"Belum ada riwayat statistik"* ditambahkan di grafik MPAndroidChart untuk penanganan empty-state yang lebih informatif.
+- Penyesuaian sinkronisasi awal (lazy fetch) agar 20 titik di chart langsung memuat data histori dari Firebase Simulator sejak layar Android dibuka.
+- Persiapan deploy link unduhan v1.0.2 untuk Android di Web Vercel (`app-version.json`).

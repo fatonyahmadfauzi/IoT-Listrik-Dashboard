@@ -8,7 +8,11 @@ const { initializeApp } = require("firebase/app");
 const { getAuth, signInWithEmailAndPassword, signOut } = require("firebase/auth");
 const { getDatabase, ref, onValue, set, get, query, limitToLast, orderByKey, off } = require("firebase/database");
 const os = require("os");
-
+const dns = require("dns");
+// Memaksa Node.js menggunakan IPv4 terlebih dahulu untuk mencegah error network-request-failed (terutama NodeJS 17+ di WSL/Termux dimana IPv6 diutamakan tapi sering gagal)
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder("ipv4first");
+}
 const SESSION_FILE = path.join(os.homedir(), ".iot-listrik-session.json");
 
 const firebaseConfig = {
@@ -187,11 +191,13 @@ async function enforceLogin() {
     ]);
     
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const cleanEmail = email.trim();
+      const cleanPassword = password.trim();
+      await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
       await processUserClaims();
       console.log(chalk.green("\nLogin berhasil!\n"));
       // Save session credentials permanently until manual Logout
-      fs.writeFileSync(SESSION_FILE, JSON.stringify({ email, password }));
+      fs.writeFileSync(SESSION_FILE, JSON.stringify({ email: cleanEmail, password: cleanPassword }));
       loggedIn = true;
     } catch (e) {
       console.log(chalk.red("\nLogin gagal:"), e.message, "\n");

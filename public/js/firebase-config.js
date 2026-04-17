@@ -14,7 +14,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, initializeAuth, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getFunctions } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
-
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 // ─── FILL IN YOUR FIREBASE CONFIG HERE ───────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyD99N-FQdkTPNnNGY-fof6ijskxg0bzARc",
@@ -49,5 +49,6 @@ if (isSim) {
 const db = getDatabase(app);
 // Region disesuaikan dengan database (asia-southeast1 = Singapore)
 const functions = getFunctions(app, 'asia-southeast1');
+const messaging = typeof window !== "undefined" && "Notification" in window ? getMessaging(app) : null;
 
-export { app, auth, db, functions, firebaseConfig };
+export { app, auth, db, functions, messaging, getToken, firebaseConfig };

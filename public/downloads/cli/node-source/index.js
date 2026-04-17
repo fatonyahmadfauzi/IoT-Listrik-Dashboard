@@ -28,15 +28,32 @@ process.on('unhandledRejection', (reason, promise) => {
 // Bypass TLS/CA bundle mismatches in pkg environments that causes undici native fetch to fail
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-// Polyfill global fetch menggunakan node-fetch (penting untuk Firebase v10 di pkg/Node<18)
-if (!globalThis.fetch) {
-  const fetchPolyfill = require("node-fetch");
-  globalThis.fetch = fetchPolyfill;
-  globalThis.Headers = fetchPolyfill.Headers;
-  globalThis.Request = fetchPolyfill.Request;
-  globalThis.Response = fetchPolyfill.Response;
-}
+// PENTING: Firebase Auth v10 di Node.js menggunakan import/require('undici') secara eksplisit.
+// Karena kita meng-ignore 'undici' di pkg.ignore (karena .wasm error), require('undici') akan return {}.
+// Kita perlu mock package 'undici' dengan 'node-fetch' di level module resolution Node.js.
+{
+  const nodeFetch = require("node-fetch");
+  const Module = require("module");
+  const originalRequire = Module.prototype.require;
 
+  Module.prototype.require = function(request) {
+    if (request === "undici") {
+      return {
+        fetch: nodeFetch,
+        Headers: nodeFetch.Headers,
+        Request: nodeFetch.Request,
+        Response: nodeFetch.Response
+      };
+    }
+    return originalRequire.apply(this, arguments);
+  };
+  
+  // Set global fallback just in case
+  globalThis.fetch   = nodeFetch;
+  globalThis.Headers = nodeFetch.Headers;
+  globalThis.Request = nodeFetch.Request;
+  globalThis.Response = nodeFetch.Response;
+}
 const inquirer = require("inquirer");
 const chalk = require("chalk");
 const readline = require("readline");
@@ -339,9 +356,112 @@ async function handleLogout() {
 }
 
 /** SIKLUS UTAMA / MAIN LOOP */
+let adminAppInstance = null;
+let lastStatusFCM = null;
+let lastRelayFCM = null;
+
+async function startFCMBackgroundServer() {
+  if (pathPrefix !== "") return; // Hanya admin CLI yang berhak jadi Server
+
+  const admin = require("firebase-admin");
+  const possiblePaths = [
+    path.join(process.cwd(), "serviceAccountKey.json"),
+    path.join(process.cwd(), "backend-local", "serviceAccountKey.json"),
+    path.resolve(__dirname, "../../../../../backend-local/serviceAccountKey.json")
+  ];
+  let keyPath = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      keyPath = p;
+      break;
+    }
+  }
+
+  if (!keyPath) {
+    console.log(chalk.gray("\n[FCM Server] serviceAccountKey.json tidak ditemukan lokal. CLI berjalan dlm Standard Mode."));
+    return;
+  }
+
+  try {
+    const serviceAccount = require(keyPath);
+    if (!admin.apps.length) {
+      adminAppInstance = admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: firebaseConfig.databaseURL
+      });
+      console.log(chalk.green.bold("\n[!] Super-Admin Terdeteksi! FCM Local Server aktif me-rutekan pesan."));
+      
+      const statusRef = ref(db, "listrik/status");
+      onValue(statusRef, async (snap) => {
+        const status = snap.val();
+        if (!status) return;
+        if (lastStatusFCM === null) { lastStatusFCM = status; return; }
+        if (lastStatusFCM !== status) {
+          lastStatusFCM = status;
+          if (status === "DANGER" || status === "LEAKAGE") {
+            blastPushNotification("⚠️ Peringatan Kritis System!", `Kondisi Listrik berubah: ${status}`);
+          } else if (status === "NORMAL") {
+            blastPushNotification("✅ Sistem Telah Pulih", "Kondisi arus/tegangan listrik kembali NORMAL.");
+          }
+        }
+      });
+
+      const relayRef = ref(db, "listrik/relay");
+      onValue(relayRef, async (snap) => {
+        const relay = snap.val();
+        if (relay === null) return;
+        if (lastRelayFCM === null) { lastRelayFCM = relay; return; }
+        if (lastRelayFCM !== relay) {
+          lastRelayFCM = relay;
+          blastPushNotification("🔌 Relay Dimodifikasi", `Kondisi saklar telah bergeser ke: ${relay ? 'ON' : 'OFF'}`);
+        }
+      });
+    }
+  } catch (err) {
+    console.error(chalk.red("\n[FCM Server] Gagal menginisialisasi:"), err.message);
+  }
+}
+
+async function blastPushNotification(title, body) {
+  if (!adminAppInstance) return;
+  const admin = require("firebase-admin");
+  try {
+    const tokensSnap = await get(ref(db, "fcm_tokens/web"));
+    if (!tokensSnap.exists()) return;
+    
+    // Flatten the objects into an array of token strings
+    const tokensObj = tokensSnap.val();
+    const tokens = [];
+    for (const uid in tokensObj) {
+      if (tokensObj[uid] && typeof tokensObj[uid] === 'string') {
+        tokens.push(tokensObj[uid]);
+      }
+    }
+    
+    if (tokens.length === 0) return;
+
+    const message = {
+      notification: { title, body },
+      webpush: {
+        notification: {
+          icon: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png",
+          vibrate: [200, 100, 200]
+        }
+      },
+      tokens: tokens
+    };
+
+    const response = await admin.messaging().sendEachForMulticast(message);
+    // Silent fire in the background
+  } catch (err) {}
+}
+
 async function mainMenu() {
   // Wajib Auth di awal
   await enforceLogin();
+  
+  // Nyalakan server background (jika kredensial tervalidasi)
+  await startFCMBackgroundServer();
 
   let isRunning = true;
 

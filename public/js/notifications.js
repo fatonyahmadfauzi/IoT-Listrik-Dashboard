@@ -35,17 +35,46 @@ function isAlarmDisabled() {
   }
 }
 
+import { messaging, getToken, db, auth } from "./firebase-config.js";
+import { ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
 /**
  * Request notification permission on first user interaction.
  * Call this once at page load.
  */
 async function requestNotificationPermission() {
   if (!('Notification' in window)) return false;
-  if (Notification.permission === 'granted') return true;
-  if (Notification.permission === 'denied')  return false;
+  if (Notification.permission === 'granted') {
+    registerFCMToken();
+    return true;
+  }
+  if (Notification.permission === 'denied') return false;
 
   const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    registerFCMToken();
+  }
   return perm === 'granted';
+}
+
+async function registerFCMToken() {
+  if (!messaging) return;
+  try {
+    const token = await getToken(messaging, { 
+      vapidKey: "g9Cx-PNOUASH7e5oCunyYgut0I6sUIobkq-QoffeCEw" 
+    });
+    if (token) {
+      console.log("[FCM] Got token, submitting to local RTDB for CLI Backend...");
+      // Simpan langsung ke RTDB agar Node CLI bisa membacanya dan bertindak sebagai Server.
+      const uid = auth.currentUser ? auth.currentUser.uid : "anon_" + Date.now();
+      await set(ref(db, `fcm_tokens/web/${uid}`), token);
+      console.log("[FCM] Registration token saved to RTDB successfully.");
+    } else {
+      console.warn("[FCM] No registration token available.");
+    }
+  } catch (err) {
+    console.error("[FCM] Error obtaining token", err);
+  }
 }
 
 /**

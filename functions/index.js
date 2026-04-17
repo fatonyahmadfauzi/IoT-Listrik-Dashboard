@@ -255,6 +255,14 @@ exports.onStatusChanged = onValueUpdated(
           topic: "iot_alarms",
           data: { action: fcmAction, status: statusBaru, title: embed.title, message: embed.description },
           android: { priority: "high" },
+          webpush: {
+            notification: {
+              title: embed.title,
+              body: embed.description,
+              icon: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png",
+              vibrate: [200, 100, 200]
+            }
+          }
         });
         console.log("FCM terkirim:", fcmAction);
       } catch (err) { console.error("FCM error:", err); }
@@ -283,6 +291,22 @@ exports.onRelayChanged = onValueUpdated(
       footer: { text: `IoT Listrik Dashboard • ${waktuIndonesia()}` },
     };
     await sendDiscordEmbed(WEBHOOK_RELAY, embed);
+
+    // Kirim Push Notification ke seluruh perangkat jika Relay berubah
+    try {
+      await admin.messaging().send({
+        topic: "iot_alarms",
+        data: { action: "RELAY_CHANGED", status: relayBaru ? "ON" : "OFF" },
+        android: { priority: "high" },
+        webpush: {
+          notification: {
+            title: embed.title,
+            body: embed.description,
+            icon: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png"
+          }
+        }
+      });
+    } catch (err) { console.error("FCM relay error:", err); }
   }
 );
 
@@ -433,6 +457,26 @@ exports.createTempAccount = onCall(
     }
 
     return { tempEmail, password, expiresAt, uid: userRecord.uid };
+  }
+);
+
+// ══════════════════════════════════════════════════════════════
+// [FCM] SUBSCRIBE BROWSER TOKEN TO TOPICS
+// ══════════════════════════════════════════════════════════════
+exports.subscribeToAlarms = onCall(
+  { region: "asia-southeast1" },
+  async (request) => {
+    const { token } = request.data;
+    if (!token) throw new HttpsError("invalid-argument", "Token tidak disertakan.");
+    
+    try {
+      await admin.messaging().subscribeToTopic([token], "iot_alarms");
+      console.log("Berhasil mendaftarkan FCM Token browser ke topik iot_alarms");
+      return { success: true };
+    } catch (err) {
+      console.error("Gagal subscribe FCM Web Push:", err);
+      throw new HttpsError("internal", err.message);
+    }
   }
 );
 

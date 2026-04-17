@@ -8,14 +8,25 @@
     "iot-listrik-download": "./download-cli.js"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node --no-deprecation index.js",
+    "build:win": "npx pkg index.js --targets node18-win-x64 --output iot-listrik-cli-node.exe",
+    "build:linux": "npx pkg index.js --targets node18-linux-x64 --output iot-listrik-dashboard-cli-linux"
   },
   "author": "Fatony Ahmad Fauzi",
   "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.2",
     "firebase": "^10.8.1",
+    "firebase-admin": "^13.8.0",
     "inquirer": "^8.0.0",
     "node-fetch": "^2.7.0"
+  },
+  "pkg": {
+    "scripts": [],
+    "assets": [],
+    "ignore": [
+      "node_modules/undici/**",
+      "node_modules/@firebase/webchannel-wrapper/empty.js"
+    ]
   }
 }

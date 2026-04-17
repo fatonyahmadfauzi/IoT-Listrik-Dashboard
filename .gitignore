@@ -108,3 +108,5 @@ test-msi-download.msi
 
 # CLI Node Build Artifacts
 platforms/cli-node/build/
+
+public/downloads/cli/node-source/iot-listrik-dashboard-cli-*

@@ -13,6 +13,35 @@ interface SettingsProps {
   onLogout: () => void;
 }
 
+function normalizeTelegramChatId(value: unknown): string {
+  const id = String(value ?? '').trim();
+  return /^-?\d+$/.test(id) ? id : '';
+}
+
+function parseTelegramChatIds(...sources: unknown[]): string[] {
+  const ids: string[] = [];
+  const add = (value: unknown) => {
+    const id = normalizeTelegramChatId(value);
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+
+  const visit = (source: unknown) => {
+    if (source == null) return;
+    if (Array.isArray(source)) {
+      source.forEach(visit);
+      return;
+    }
+    if (typeof source === 'object') {
+      Object.values(source as Record<string, unknown>).forEach(visit);
+      return;
+    }
+    String(source).split(/[\s,;]+/).forEach(add);
+  };
+
+  sources.forEach(visit);
+  return ids;
+}
+
 export function Settings({ onLogout }: SettingsProps) {
   const { settings, users } = useDataStore();
   const { role, user } = useAuthStore();
@@ -45,7 +74,26 @@ export function Settings({ onLogout }: SettingsProps) {
   // Telegram
   const [telegramNotifyEnabled, setTelegramNotifyEnabled] = useState(settings?.telegramNotifyEnabled ?? true);
   const [telegramBotToken, setTelegramBotToken] = useState(settings?.telegramBotToken ?? settings?.telegram?.bot_token ?? '');
-  const [telegramChatId, setTelegramChatId] = useState(settings?.telegramChatId ?? settings?.telegram?.chat_id ?? '');
+  const [telegramChatIds, setTelegramChatIds] = useState<string[]>(() =>
+    parseTelegramChatIds(
+      settings?.telegramChatIds,
+      settings?.telegramChatId,
+      settings?.telegram?.chat_id
+    )
+  );
+  const [telegramChatIdDraft, setTelegramChatIdDraft] = useState('');
+  const [editingChatIdIndex, setEditingChatIdIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!settings) return;
+    setTelegramNotifyEnabled(settings.telegramNotifyEnabled ?? true);
+    setTelegramBotToken(settings.telegramBotToken ?? settings.telegram?.bot_token ?? '');
+    setTelegramChatIds(parseTelegramChatIds(
+      settings.telegramChatIds,
+      settings.telegramChatId,
+      settings.telegram?.chat_id
+    ));
+  }, [settings]);
 
   // Discord
   const dSettings = settings?.discord || {};
@@ -107,11 +155,39 @@ export function Settings({ onLogout }: SettingsProps) {
 
   const handleSaveTelegram = async () => {
     if (!isAdmin) return;
+
+    let nextChatIds = [...telegramChatIds];
+    const draft = telegramChatIdDraft.trim();
+    if (draft) {
+      const chatId = normalizeTelegramChatId(draft);
+      if (!chatId) {
+        alert('Chat ID harus angka. Untuk grup biasanya diawali -100.');
+        return;
+      }
+
+      const duplicateIndex = nextChatIds.findIndex((id) => id === chatId);
+      if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
+        alert('Chat ID sudah ada di daftar.');
+        return;
+      }
+
+      if (editingChatIdIndex !== null) {
+        nextChatIds[editingChatIdIndex] = chatId;
+      } else {
+        nextChatIds.push(chatId);
+      }
+
+      setTelegramChatIds(nextChatIds);
+      setTelegramChatIdDraft('');
+      setEditingChatIdIndex(null);
+    }
+
     setLoading(true);
     try {
       await update(ref(db, 'settings'), {
         telegramBotToken,
-        telegramChatId,
+        telegramChatId: nextChatIds.join(','),
+        telegramChatIds: nextChatIds,
         telegramNotifyEnabled,
       });
       alert('Telegram integration saved successfully');
@@ -120,6 +196,44 @@ export function Settings({ onLogout }: SettingsProps) {
       alert('Failed to save telegram integration');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const addOrUpdateTelegramChatId = () => {
+    const chatId = normalizeTelegramChatId(telegramChatIdDraft);
+    if (!chatId) {
+      alert('Chat ID harus angka. Untuk grup biasanya diawali -100.');
+      return;
+    }
+
+    const duplicateIndex = telegramChatIds.findIndex((id) => id === chatId);
+    if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
+      alert('Chat ID sudah ada di daftar.');
+      return;
+    }
+
+    if (editingChatIdIndex !== null) {
+      setTelegramChatIds((ids) =>
+        ids.map((id, index) => (index === editingChatIdIndex ? chatId : id))
+      );
+    } else {
+      setTelegramChatIds((ids) => [...ids, chatId]);
+    }
+
+    setTelegramChatIdDraft('');
+    setEditingChatIdIndex(null);
+  };
+
+  const editTelegramChatId = (index: number) => {
+    setTelegramChatIdDraft(telegramChatIds[index]);
+    setEditingChatIdIndex(index);
+  };
+
+  const removeTelegramChatId = (index: number) => {
+    setTelegramChatIds((ids) => ids.filter((_, itemIndex) => itemIndex !== index));
+    if (editingChatIdIndex === index) {
+      setTelegramChatIdDraft('');
+      setEditingChatIdIndex(null);
     }
   };
 
@@ -430,15 +544,73 @@ export function Settings({ onLogout }: SettingsProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Chat ID
+              Chat ID / Group ID
             </label>
-            <input
-              type="text"
-              value={telegramChatId}
-              onChange={(e) => setTelegramChatId(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-              placeholder="-100123456789"
-            />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={telegramChatIdDraft}
+                onChange={(e) => setTelegramChatIdDraft(e.target.value)}
+                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                placeholder="Masukkan ID lalu klik Tambah"
+              />
+              <button
+                type="button"
+                onClick={addOrUpdateTelegramChatId}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition"
+              >
+                {editingChatIdIndex === null ? 'Tambah' : 'Update'}
+              </button>
+              {editingChatIdIndex !== null && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTelegramChatIdDraft('');
+                    setEditingChatIdIndex(null);
+                  }}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition"
+                >
+                  Batal
+                </button>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Untuk grup biasanya diawali -100. Untuk pribadi gunakan ID numerik positif.
+            </p>
+            <div className="mt-3 space-y-2">
+              {telegramChatIds.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-3 text-sm text-gray-500 dark:text-gray-400">
+                  Belum ada Chat ID tersimpan.
+                </div>
+              ) : (
+                telegramChatIds.map((chatId, index) => (
+                  <div
+                    key={`${chatId}-${index}`}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3"
+                  >
+                    <span className="font-mono text-sm text-gray-900 dark:text-white break-all">
+                      {chatId}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => editTelegramChatId(index)}
+                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeTelegramChatId(index)}
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           <div className="flex items-center space-x-3 mt-4">

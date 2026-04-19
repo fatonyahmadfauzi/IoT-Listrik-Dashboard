@@ -697,6 +697,57 @@ body.page-bg {
   border-radius: var(--radius-lg);
 }
 
+.chat-id-manager {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.chat-id-actions,
+.chat-id-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-id-list {
+  display: grid;
+  gap: 8px;
+}
+
+.chat-id-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.04);
+}
+
+.chat-id-value {
+  min-width: 0;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.chat-id-empty {
+  padding: 10px 12px;
+  border: 1px dashed rgba(255,255,255,0.16);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .chat-id-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 /* ── Forms ─────────────────────────────────────────────────── */
 .form-group {
   margin-bottom: 16px;

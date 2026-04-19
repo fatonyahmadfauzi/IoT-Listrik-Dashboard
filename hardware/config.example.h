@@ -138,7 +138,7 @@ struct RuntimeSettings {
   // not in firmware. This means they can be changed without reflashing.
   // They are protected by admin-only write rules in database.rules.json.
   String        telegramBotToken    = "";      // "1234567890:ABCDEF..."
-  String        telegramChatId      = "";      // "123456789" or "-100123456789"
+  String        telegramChatId      = "";      // "123456789", "-100123456789", or comma-separated IDs
   bool          telegramNotifyEnabled = true;
 
   // ── Timing ───────────────────────────────────────────────────

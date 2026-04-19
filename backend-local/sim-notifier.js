@@ -95,10 +95,53 @@ async function sendDiscordEmbed(webhookUrl, embed) {
 }
 
 // ── Helper: Kirim Telegram Message ─────────────────────────────────────────
-async function sendTelegram(botToken, chatId, message) {
-  if (!botToken || !chatId) return false;
+function normalizeTelegramChatId(value) {
+  const id = String(value ?? '').trim();
+  return /^-?\d+$/.test(id) ? id : '';
+}
+
+function parseTelegramChatIds(...sources) {
+  const ids = [];
+  const add = (value) => {
+    const id = normalizeTelegramChatId(value);
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+
+  const visit = (source) => {
+    if (source == null) return;
+    if (Array.isArray(source)) {
+      source.forEach(visit);
+      return;
+    }
+    if (typeof source === 'object') {
+      Object.values(source).forEach(visit);
+      return;
+    }
+    String(source).split(/[\s,;]+/).forEach(add);
+  };
+
+  sources.forEach(visit);
+  return ids;
+}
+
+function getTelegramChatIds(cfg) {
+  return parseTelegramChatIds(
+    cfg?.telegramChatIds,
+    cfg?.telegramChatId,
+    cfg?.telegram?.chat_id
+  );
+}
+
+function hasTelegramConfig(cfg) {
+  return !!(cfg?.telegramBotToken && getTelegramChatIds(cfg).length > 0);
+}
+
+async function sendTelegram(botToken, chatIds, message) {
+  const ids = parseTelegramChatIds(chatIds);
+  if (!botToken || ids.length === 0) return false;
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  try {
+
+  const results = await Promise.allSettled(ids.map(async (chatId) => {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -111,14 +154,19 @@ async function sendTelegram(botToken, chatId, message) {
     const json = await res.json();
     if (json.ok) {
       return true;
-    } else {
-      console.error(`[Telegram] Error: ${json.description}`);
-      return false;
     }
-  } catch (err) {
-    console.error('[Telegram] Fetch error:', err.message);
     return false;
-  }
+  }));
+
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error(`[Telegram] Fetch error ${ids[index]}:`, result.reason?.message || result.reason);
+    } else if (!result.value) {
+      console.error(`[Telegram] Gagal terkirim ke ${ids[index]}`);
+    }
+  });
+
+  return results.some((result) => result.status === 'fulfilled' && result.value);
 }
 
 // ── Helper: Kirim FCM Push ─────────────────────────────────────────────────
@@ -228,9 +276,9 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
   // ── 3. Telegram ────────────────────────────────────────────────────────
   const tgEnabled = cfg.telegramNotifyEnabled !== false;
   const tgToken   = cfg.telegramBotToken;
-  const tgChatId  = cfg.telegramChatId;
+  const tgChatIds = getTelegramChatIds(cfg);
 
-  if (tgEnabled && tgToken && tgChatId) {
+  if (tgEnabled && tgToken && tgChatIds.length > 0) {
     let msg = '';
     if (currentStatus === 'DANGER') {
       msg = `🔴 <b>[SIMULATOR] BAHAYA KRITIS!</b>\n` +
@@ -251,11 +299,11 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
         `🕐 ${waktuId()}`;
     }
     if (msg) {
-      const ok = await sendTelegram(tgToken, tgChatId, msg);
+      const ok = await sendTelegram(tgToken, tgChatIds, msg);
       console.log(`  [Telegram] ${ok ? '✅ Terkirim' : '❌ Gagal'}`);
     }
   } else {
-    console.log(`  [Telegram] ⚠️ Skip: enabled=${tgEnabled}, hasToken=${!!(tgToken)}, hasChatId=${!!(tgChatId)}`);
+    console.log(`  [Telegram] ⚠️ Skip: enabled=${tgEnabled}, hasToken=${!!(tgToken)}, chatIds=${tgChatIds.length}`);
   }
 
   // ── 4. FCM Push Notification (Android/Web) ─────────────────────────────
@@ -366,7 +414,8 @@ function setupListenersForUid(uid) {
 
       // Kirim summary data ke Telegram saat streaming jika ada token
       // Hanya kirim jika ada data streaming aktif (arus > 0)
-      if (cfg.telegramNotifyEnabled !== false && cfg.telegramBotToken && cfg.telegramChatId && d.arus) {
+      const telegramChatIds = getTelegramChatIds(cfg);
+      if (cfg.telegramNotifyEnabled !== false && cfg.telegramBotToken && telegramChatIds.length > 0 && d.arus) {
         const msg = `📊 <b>[SIM] Data Telemetri</b>\n` +
           `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
           `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
@@ -374,7 +423,7 @@ function setupListenersForUid(uid) {
           `${statusEmoji(currentStatus)} Status: <b>${currentStatus}</b>\n` +
           `🕐 ${waktuId()}\n` +
           `<i>Session: ${uid.slice(0,12)}...</i>`;
-        sendTelegram(cfg.telegramBotToken, cfg.telegramChatId, msg)
+        sendTelegram(cfg.telegramBotToken, telegramChatIds, msg)
           .then(ok => { if (ok) console.log(`[Monitor] [${uid.slice(0,8)}] Telegram data ✅`); })
           .catch(() => {});
       }
@@ -449,7 +498,7 @@ app.post('/api/sim/test-notify', async (req, res) => {
 
   // Selalu fetch config terbaru dari Firebase untuk memastikan data akurat
   let cfg = simState[uid]?.config;
-  if (!cfg || (!cfg.telegramBotToken && !cfg.discord?.webhookAlerts)) {
+  if (!cfg || (!hasTelegramConfig(cfg) && !cfg.discord?.webhookAlerts)) {
     console.log(`[Test] Config tidak ada di state untuk ${uid.slice(0,8)}, fetch dari Firebase...`);
     cfg = await fetchConfigFresh(uid);
     // Update state jika UID sudah diregister
@@ -483,10 +532,11 @@ app.post('/api/sim/test-notify', async (req, res) => {
   }
 
   // Test Telegram
-  if (cfg.telegramBotToken && cfg.telegramChatId) {
+  const telegramChatIds = getTelegramChatIds(cfg);
+  if (cfg.telegramBotToken && telegramChatIds.length > 0) {
     results.telegram = await sendTelegram(
       cfg.telegramBotToken,
-      cfg.telegramChatId,
+      telegramChatIds,
       `🔔 <b>[SIMULATOR] Test Notifikasi Berhasil!</b>\n` +
       `Sistem notifikasi siap menerima alert.\n` +
       `🕐 ${waktuId()}\n` +
@@ -495,7 +545,7 @@ app.post('/api/sim/test-notify', async (req, res) => {
     console.log(`[Test Telegram] ${results.telegram ? '✅' : '❌'}`);
   }
 
-  res.json({ ok: true, results, configFound: !!(cfg.telegramBotToken || cfg.discord?.webhookAlerts) });
+  res.json({ ok: true, results, configFound: !!(hasTelegramConfig(cfg) || cfg.discord?.webhookAlerts) });
 });
 
 // Endpoint untuk mengirim test alert dari simulator control panel
@@ -505,7 +555,7 @@ app.post('/api/sim/alert', async (req, res) => {
 
   // Selalu fetch config terbaru. Jika state kosong, ambil dari Firebase
   let cfg = simState[uid]?.config;
-  if (!cfg || (!cfg.telegramBotToken && !cfg.discord?.webhookAlerts)) {
+  if (!cfg || (!hasTelegramConfig(cfg) && !cfg.discord?.webhookAlerts)) {
     console.log(`[Alert] Config tidak ada di state untuk ${uid.slice(0,8)}, fetch dari Firebase...`);
     cfg = await fetchConfigFresh(uid);
     if (simState[uid]) {
@@ -524,7 +574,7 @@ app.post('/api/sim/alert', async (req, res) => {
 
   try {
     await handleStatusChange(uid, status, prevStatus, data || {}, cfg);
-    res.json({ ok: true, uid, status, configFound: !!(cfg.telegramBotToken || cfg.discord?.webhookAlerts) });
+    res.json({ ok: true, uid, status, configFound: !!(hasTelegramConfig(cfg) || cfg.discord?.webhookAlerts) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -544,7 +594,7 @@ app.post('/api/sim/reload-config', async (req, res) => {
       simState[uid].config = cfg;
     }
     console.log(`[Config] Config di-reload untuk ${uid.slice(0,8)}: telegram=${!!(cfg.telegramBotToken)}, discord.enabled=${cfg.discord?.enabled}`);
-    res.json({ ok: true, uid, configFound: !!(cfg.telegramBotToken || cfg.discord?.webhookAlerts) });
+    res.json({ ok: true, uid, configFound: !!(hasTelegramConfig(cfg) || cfg.discord?.webhookAlerts) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

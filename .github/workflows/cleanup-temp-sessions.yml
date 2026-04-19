@@ -1,0 +1,50 @@
+name: Cleanup Temp Sessions
+
+on:
+  schedule:
+    # GitHub Actions supports a 5-minute minimum. This runs every 15 minutes,
+    # offset from :00 to reduce schedule delay during peak load.
+    - cron: "7,22,37,52 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  cleanup:
+    name: Call Vercel cleanup endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      # Optional override. If empty, production URL below is used.
+      CLEANUP_URL: ${{ secrets.CLEANUP_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+    steps:
+      - name: Cleanup expired temporary simulator sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cleanup_url="${CLEANUP_URL:-https://iot-listrik-dashboard.vercel.app/api/cleanup}"
+
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "Missing GitHub Actions secret: CRON_SECRET"
+            exit 1
+          fi
+
+          response="$(
+            curl -sS -X POST "${cleanup_url}" \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Content-Type: application/json" \
+              -w "\n%{http_code}"
+          )"
+
+          status="$(printf "%s" "${response}" | tail -n 1)"
+          body="$(printf "%s" "${response}" | sed '$d')"
+
+          echo "${body}"
+
+          if [ "${status}" -lt 200 ] || [ "${status}" -ge 300 ]; then
+            echo "Cleanup failed with HTTP ${status}"
+            exit 1
+          fi

@@ -46,15 +46,61 @@ async function sendDiscordEmbed(webhookUrl, embed) {
 }
 
 // ─── Helper: Telegram message ──────────────────────────────────
-async function sendTelegramMessage(botToken, chatId, text) {
-  if (!botToken || !chatId) return;
-  try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+function normalizeTelegramChatId(value) {
+  const id = String(value ?? "").trim();
+  return /^-?\d+$/.test(id) ? id : "";
+}
+
+function parseTelegramChatIds(...sources) {
+  const ids = [];
+  const add = (value) => {
+    const id = normalizeTelegramChatId(value);
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+
+  const visit = (source) => {
+    if (source == null) return;
+    if (Array.isArray(source)) {
+      source.forEach(visit);
+      return;
+    }
+    if (typeof source === "object") {
+      Object.values(source).forEach(visit);
+      return;
+    }
+    String(source).split(/[\s,;]+/).forEach(add);
+  };
+
+  sources.forEach(visit);
+  return ids;
+}
+
+function getTelegramChatIds(settings) {
+  return parseTelegramChatIds(
+    settings?.telegramChatIds,
+    settings?.telegramChatId,
+    settings?.telegram?.chat_id
+  );
+}
+
+async function sendTelegramMessage(botToken, chatIds, text) {
+  const ids = parseTelegramChatIds(chatIds);
+  if (!botToken || ids.length === 0) return false;
+
+  const results = await Promise.allSettled(ids.map(async (chatId) => {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
     });
-  } catch (err) { console.error("Gagal ke Telegram:", err); }
+    if (!res.ok) {
+      console.error(`Telegram error ${res.status} untuk ${chatId}: ${await res.text()}`);
+      return false;
+    }
+    return true;
+  }));
+
+  return results.some((result) => result.status === "fulfilled" && result.value);
 }
 
 function statusColor(s) {
@@ -431,7 +477,7 @@ exports.createTempAccount = onCall(
         thresholdArus: 10, warningPercent: 80,
         buzzerEnabled: true, autoCutoffEnabled: true,
         sendIntervalMs: 2000,
-        telegramBotToken: "", telegramChatId: "",
+        telegramBotToken: "", telegramChatId: "", telegramChatIds: [],
         telegramNotifyEnabled: false,
         discord: {
           enabled: false,
@@ -577,18 +623,20 @@ exports.testSimNotification = onCall(
     const results = {};
 
     // ── Telegram ──────────────────────────────────────────────────────
-    if (channels.includes("telegram") && s.telegramBotToken && s.telegramChatId) {
+    const telegramChatIds = getTelegramChatIds(s);
+    if (channels.includes("telegram") && s.telegramBotToken && telegramChatIds.length > 0) {
       const msg = `🧪 *TEST SIMULASI — ${scenario}*\n`
         + `⚡ Arus: ${sc.arus} A | 🔋 Tegangan: ${sc.tegangan} V\n`
         + `💡 Daya: ${active} W (${apparent} VA)\n`
         + `📊 PF: ${sc.pf} | 📡 Freq: ${frekuensi} Hz\n`
         + `🔌 Relay: ${sc.relay ? "ON" : "OFF"} | 🔴 Status: ${scenario}\n`
         + `_IoT Listrik Dashboard Simulator_`;
-      await sendTelegramMessage(s.telegramBotToken, s.telegramChatId, msg);
-      results.telegram = "sent";
+      results.telegram = await sendTelegramMessage(s.telegramBotToken, telegramChatIds, msg)
+        ? "sent"
+        : "failed";
     } else {
       // Fix bug: hanya "not_configured" jika keduanya tidak ada
-      results.telegram = (!s.telegramBotToken || !s.telegramChatId)
+      results.telegram = (!s.telegramBotToken || telegramChatIds.length === 0)
         ? "not_configured"
         : "channel_not_requested";
     }

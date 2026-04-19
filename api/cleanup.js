@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+const crypto = require("crypto");
 
 // Initialize Firebase Admin lazily to avoid multiple init errors in Serverless
 if (!admin.apps.length) {
@@ -13,9 +14,64 @@ if (!admin.apps.length) {
   }
 }
 
+function getHeader(req, name) {
+  const value = req.headers?.[name.toLowerCase()] ?? req.headers?.[name];
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function safeEqual(a, b) {
+  if (!a || !b) return false;
+
+  const left = Buffer.from(String(a));
+  const right = Buffer.from(String(b));
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+function getProvidedSecret(req) {
+  const authHeader = getHeader(req, "authorization");
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.slice("Bearer ".length).trim();
+  }
+
+  const headerSecret = getHeader(req, "x-cron-secret");
+  if (headerSecret) return String(headerSecret).trim();
+
+  const querySecret = req.query?.secret;
+  return Array.isArray(querySecret) ? querySecret[0] : querySecret;
+}
+
+function validateCleanupSecret(req) {
+  const expectedSecret = process.env.CRON_SECRET || process.env.CLEANUP_SECRET;
+
+  if (!expectedSecret) {
+    return {
+      ok: false,
+      status: 500,
+      message: "CRON_SECRET belum diset di environment Vercel.",
+    };
+  }
+
+  if (!safeEqual(getProvidedSecret(req), expectedSecret)) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Unauthorized cleanup request.",
+    };
+  }
+
+  return { ok: true };
+}
+
 export default async function handler(req, res) {
-  // Hanya izinkan Vercel Cron dan manual trigger (POST/GET) 
-  // Opsi: Anda bisa amankan ujung API ini dengan header khusus. Di sini kita biarkan terbuka untuk kemudahan testing.
+  if (!["GET", "POST"].includes(req.method)) {
+    res.setHeader("Allow", "GET, POST");
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const secretCheck = validateCleanupSecret(req);
+  if (!secretCheck.ok) {
+    return res.status(secretCheck.status).json({ error: secretCheck.message });
+  }
   
   if (!admin.apps.length) {
     return res.status(500).json({ error: "Firebase Admin tidak terinisialisasi" });

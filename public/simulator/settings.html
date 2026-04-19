@@ -648,7 +648,7 @@
             <div class="settings-section" style="grid-column: 1 / -1">
               <div class="settings-section-title"><span class="material-symbols-rounded">send</span>Konfigurasi Telegram</div>
               <div class="info-panel info-panel--green">
-                <strong>Aman:</strong> Token dan Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
+                <strong>Aman:</strong> Token dan daftar Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
               </div>
 
               <div class="input-row">
@@ -685,11 +685,11 @@
                     id="inpChatId"
                     class="form-input"
                     type="text"
-                    placeholder="-100123456789 atau 123456789"
+                    placeholder="Masukkan ID lalu klik Tambah"
                     autocomplete="off"
                   />
                   <div class="form-hint">
-                    Untuk grup: awali dengan -100. Untuk pribadi: ID numerik positif.<br />
+                    Tambahkan satu atau lebih tujuan. Untuk grup: awali dengan -100. Untuk pribadi: ID numerik positif.<br />
                     Cara cek: kirim pesan ke <a href="https://t.me/iot_kebocoran_bot" target="_blank" style="color: var(--cyan); text-decoration: underline; font-weight: 500;">@iot_kebocoran_bot</a> → buka <a href="https://api.telegram.org/bot<TOKEN>/getUpdates" target="_blank" style="color: var(--text-muted); text-decoration: underline;">api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</a>
                   </div>
                   <div id="valChatId" class="validation-msg"></div>

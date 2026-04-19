@@ -69,17 +69,58 @@ async function sendDiscordFallback(webhookUrl, embed) {
 }
 
 // ── Kirim Telegram langsung dari browser (fallback jika CF gagal) ─────────
-async function sendTelegramFallback(botToken, chatId, message) {
-  if (!botToken || !chatId) return false;
-  try {
+function normalizeTelegramChatId(value) {
+  const id = String(value ?? '').trim();
+  return /^-?\d+$/.test(id) ? id : '';
+}
+
+function parseTelegramChatIds(...sources) {
+  const ids = [];
+  const add = (value) => {
+    const id = normalizeTelegramChatId(value);
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+
+  const visit = (source) => {
+    if (source == null) return;
+    if (Array.isArray(source)) {
+      source.forEach(visit);
+      return;
+    }
+    if (typeof source === 'object') {
+      Object.values(source).forEach(visit);
+      return;
+    }
+    String(source).split(/[\s,;]+/).forEach(add);
+  };
+
+  sources.forEach(visit);
+  return ids;
+}
+
+function getTelegramChatIds(settings) {
+  return parseTelegramChatIds(
+    settings?.telegramChatIds,
+    settings?.telegramChatId,
+    settings?.telegram?.chat_id
+  );
+}
+
+async function sendTelegramFallback(botToken, chatIds, message) {
+  const ids = parseTelegramChatIds(chatIds);
+  if (!botToken || ids.length === 0) return false;
+
+  const results = await Promise.allSettled(ids.map(async (chatId) => {
     const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: 'HTML' }),
     });
     const json = await res.json();
-    return json.ok;
-  } catch { return false; }
+    return !!json.ok;
+  }));
+
+  return results.some((result) => result.status === 'fulfilled' && result.value);
 }
 
 // ── Build full sensor payload (identik dengan hardware SCT-013 + ZMPT101B) ─
@@ -262,10 +303,11 @@ function initControlPanel() {
         });
       }
 
-      if (settings?.telegramNotifyEnabled !== false && settings?.telegramBotToken && settings?.telegramChatId) {
+      const telegramChatIds = getTelegramChatIds(settings);
+      if (settings?.telegramNotifyEnabled !== false && settings?.telegramBotToken && telegramChatIds.length > 0) {
         fbResults.telegram = await sendTelegramFallback(
           settings.telegramBotToken,
-          settings.telegramChatId,
+          telegramChatIds,
           `🔴 <b>[SIM] BAHAYA — OVERCURRENT!</b>\n⚡ Arus: <b>${data?.arus ?? '-'} A</b>\n🔋 Tegangan: ${data?.tegangan ?? '-'} V\n💡 Daya: ${data?.daya_w ?? '-'} W\n🔌 Relay: OFF (Auto Cutoff)\n🕐 ${waktu}`
         );
       }
@@ -411,10 +453,11 @@ function initControlPanel() {
       // Fallback Telegram — hanya jika CF tidak mengirim ke Telegram
       //    INDEPENDENT dari Discord agar tidak saling memblokir
       if (cfResults.telegram !== 'sent') {
-        if (settings?.telegramBotToken && settings?.telegramChatId) {
+        const telegramChatIds = getTelegramChatIds(settings);
+        if (settings?.telegramBotToken && telegramChatIds.length > 0) {
           fbResults.telegram = await sendTelegramFallback(
             settings.telegramBotToken,
-            settings.telegramChatId,
+            telegramChatIds,
             `🔔 <b>[SIM] Test Notifikasi — WARNING</b>\n⚡ Arus: <b>${testData.arus} A</b>\n🔋 Tegangan: ${testData.tegangan} V\n💡 Daya: ${testData.daya_w} W\n🕐 ${waktu}\n<i>Session: ${uid?.slice(0,12) ?? 'unknown'}...</i>`
           );
         }

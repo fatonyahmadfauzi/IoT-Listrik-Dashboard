@@ -28,13 +28,41 @@ static const char* TELEGRAM_API_BASE = "https://api.telegram.org/bot";
 static unsigned long _lastTelegramMs = 0;
 static String        _lastTelegramMsg = "";
 
+bool isTelegramChatSeparator(char c) {
+  return c == ',' || c == ';' || c == '\n' || c == '\r' || c == '\t' || c == ' ';
+}
+
+bool sendTelegramToOneChat(const String& message,
+                           const String& botToken,
+                           const String& chatId) {
+  String url = String(TELEGRAM_API_BASE)
+             + botToken
+             + "/sendMessage?chat_id=" + urlEncode(chatId)
+             + "&text="               + urlEncode(message)
+             + "&parse_mode=HTML";
+
+  HTTPClient http;
+  http.begin(url);
+  http.setTimeout(8000);
+  int code = http.GET();
+  http.end();
+
+  if (code == 200) {
+    Serial.printf("[Telegram] Terkirim ke %s (HTTP %d)\n", chatId.c_str(), code);
+    return true;
+  }
+
+  Serial.printf("[Telegram] Gagal ke %s (HTTP %d)\n", chatId.c_str(), code);
+  return false;
+}
+
 // ─── sendTelegram() ───────────────────────────────────────────
 /**
  * Send a text message to a Telegram chat via Bot API.
  *
  * @param message   HTML-formatted message body
  * @param botToken  Bot token from RuntimeSettings.telegramBotToken
- * @param chatId    Chat/group ID from RuntimeSettings.telegramChatId
+ * @param chatId    One or more chat/group IDs from RuntimeSettings.telegramChatId
  * @param cooldownMs Min milliseconds between repeated messages (anti-spam)
  * @param force     If true, bypass cooldown and duplicate checks
  * @return true if message was sent successfully
@@ -71,26 +99,31 @@ bool sendTelegram(const String& message,
     }
   }
 
-  // Build Telegram sendMessage URL
-  String url = String(TELEGRAM_API_BASE)
-             + botToken
-             + "/sendMessage?chat_id=" + urlEncode(chatId)
-             + "&text="               + urlEncode(message)
-             + "&parse_mode=HTML";
+  int total = 0;
+  int sent = 0;
+  String current = "";
 
-  HTTPClient http;
-  http.begin(url);
-  http.setTimeout(8000);
-  int code = http.GET();
-  http.end();
+  for (size_t i = 0; i <= chatId.length(); i++) {
+    char c = (i < chatId.length()) ? chatId.charAt(i) : ',';
+    if (isTelegramChatSeparator(c)) {
+      current.trim();
+      if (!current.isEmpty()) {
+        total++;
+        if (sendTelegramToOneChat(message, botToken, current)) sent++;
+      }
+      current = "";
+    } else {
+      current += c;
+    }
+  }
 
-  bool ok = (code == 200);
+  bool ok = sent > 0;
   if (ok) {
     _lastTelegramMs  = now;
     _lastTelegramMsg = message;
-    Serial.printf("[Telegram] Terkirim (HTTP %d)\n", code);
+    Serial.printf("[Telegram] Terkirim ke %d/%d tujuan\n", sent, total);
   } else {
-    Serial.printf("[Telegram] Gagal (HTTP %d)\n", code);
+    Serial.printf("[Telegram] Gagal ke semua tujuan (%d)\n", total);
   }
   return ok;
 }
@@ -146,7 +179,7 @@ String buildAlertMessage(const String& status,
  * @param tegangan    Voltage reading (V)
  * @param relay       Relay state
  * @param botToken    From RuntimeSettings.telegramBotToken
- * @param chatId      From RuntimeSettings.telegramChatId
+ * @param chatId      One or more IDs from RuntimeSettings.telegramChatId
  * @param cooldownMs  From RuntimeSettings.telegramCooldownMs
  */
 void sendAlertIfNeeded(const String& newStatus, const String& lastStatus,

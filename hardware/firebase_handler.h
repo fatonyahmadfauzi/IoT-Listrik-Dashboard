@@ -184,7 +184,7 @@ bool updateRelayState(int relayVal) {
  *
  * Fields read:
  *   thresholdArus, buzzerEnabled, autoCutoffEnabled,
- *   telegramBotToken, telegramChatId,
+ *   telegramBotToken, telegramChatId (supports comma-separated IDs),
  *   arusCalibration, teganganCalibration,
  *   sendIntervalMs
  *

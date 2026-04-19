@@ -28,20 +28,6 @@
         "size": "94.70 MB",
         "architectures": ["x64"],
         "type": "installer"
-      },
-      "msiArm64": {
-        "filename": "IoT-Listrik-Dashboard-1.0.0-arm64.msi",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0-arm64.msi",
-        "size": "91.98 MB",
-        "architectures": ["arm64"],
-        "type": "installer"
-      },
-      "msiIa32": {
-        "filename": "IoT-Listrik-Dashboard-1.0.0-ia32.msi",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0-ia32.msi",
-        "size": "90.25 MB",
-        "architectures": ["ia32"],
-        "type": "installer"
       }
     },
     "cli": {

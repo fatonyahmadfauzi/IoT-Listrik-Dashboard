@@ -65,7 +65,13 @@ function parseTelegramChatIds(...sources) {
       return;
     }
     if (typeof source === "object") {
-      Object.values(source).forEach(visit);
+      if ("chatId" in source || "telegramChatId" in source || "id" in source) {
+        add(source.chatId ?? source.telegramChatId ?? source.id);
+        return;
+      }
+      Object.entries(source)
+        .filter(([key]) => !["name", "label", "displayName", "title"].includes(key))
+        .forEach(([, value]) => visit(value));
       return;
     }
     String(source).split(/[\s,;]+/).forEach(add);
@@ -77,6 +83,7 @@ function parseTelegramChatIds(...sources) {
 
 function getTelegramChatIds(settings) {
   return parseTelegramChatIds(
+    settings?.telegramRecipients,
     settings?.telegramChatIds,
     settings?.telegramChatId,
     settings?.telegram?.chat_id
@@ -477,7 +484,7 @@ exports.createTempAccount = onCall(
         thresholdArus: 10, warningPercent: 80,
         buzzerEnabled: true, autoCutoffEnabled: true,
         sendIntervalMs: 2000,
-        telegramBotToken: "", telegramChatId: "", telegramChatIds: [],
+        telegramBotToken: "", telegramChatId: "", telegramChatIds: [], telegramRecipients: [],
         telegramNotifyEnabled: false,
         discord: {
           enabled: false,

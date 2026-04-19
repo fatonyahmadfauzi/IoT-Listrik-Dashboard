@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "buildDate": "2026-04-17",
+  "buildDate": "2026-04-19",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard-1.0.0.apk",
@@ -11,22 +11,36 @@
       "setup": {
         "filename": "IoT-Listrik-Dashboard-Setup-1.0.0.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup-1.0.0.exe",
-        "size": "267.20 MB",
+        "size": "267.21 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable-1.0.0.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable-1.0.0.exe",
-        "size": "266.93 MB",
+        "size": "266.94 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
       "msi": {
         "filename": "IoT-Listrik-Dashboard-1.0.0.msi",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.msi",
-        "size": "94.68 MB",
+        "size": "94.70 MB",
         "architectures": ["x64"],
+        "type": "installer"
+      },
+      "msiArm64": {
+        "filename": "IoT-Listrik-Dashboard-1.0.0-arm64.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0-arm64.msi",
+        "size": "91.98 MB",
+        "architectures": ["arm64"],
+        "type": "installer"
+      },
+      "msiIa32": {
+        "filename": "IoT-Listrik-Dashboard-1.0.0-ia32.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0-ia32.msi",
+        "size": "90.25 MB",
+        "architectures": ["ia32"],
         "type": "installer"
       }
     },

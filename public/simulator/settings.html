@@ -645,14 +645,14 @@
             </div>
 
             <!-- Card 3: Telegram ─────────────────────────────────── -->
-            <div class="settings-section" style="grid-column: 1 / -1">
+            <div class="settings-section telegram-settings-section" style="grid-column: 1 / -1">
               <div class="settings-section-title"><span class="material-symbols-rounded">send</span>Konfigurasi Telegram</div>
-              <div class="info-panel info-panel--green">
+              <div class="info-panel info-panel--green telegram-info-panel">
                 <strong>Aman:</strong> Token dan daftar Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
               </div>
 
-              <div class="input-row">
-                <div class="form-group field-sensitive">
+              <div class="telegram-config-stack">
+                <div class="form-group field-sensitive telegram-token-group">
                   <label class="form-label" for="inpBotToken">Bot Token</label>
                   <div class="input-reveal-wrap">
                     <input
@@ -677,34 +677,50 @@
                   <div id="valBotToken" class="validation-msg"></div>
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label" for="inpChatId"
-                    >Chat ID / Group ID</label
-                  >
-                  <input
-                    id="inpChatId"
-                    class="form-input"
-                    type="text"
-                    placeholder="Masukkan ID lalu klik Tambah"
-                    autocomplete="off"
-                  />
-                  <div class="form-hint">
+                <div class="form-group telegram-recipient-group">
+                  <div class="recipient-editor-grid telegram-recipient-grid">
+                    <div>
+                      <label class="form-label" for="inpTelegramRecipientName"
+                        >Nama / Label</label
+                      >
+                      <input
+                        id="inpTelegramRecipientName"
+                        class="form-input"
+                        type="text"
+                        placeholder="Contoh: Pak Budi atau Grup Lab"
+                        autocomplete="off"
+                      />
+                    </div>
+                    <div>
+                      <label class="form-label" for="inpChatId"
+                        >Chat ID / Group ID</label
+                      >
+                      <input
+                        id="inpChatId"
+                        class="form-input"
+                        type="text"
+                        placeholder="Masukkan ID lalu klik Tambah"
+                        autocomplete="off"
+                      />
+                    </div>
+                  </div>
+                  <div class="form-hint telegram-recipient-help">
                     Tambahkan satu atau lebih tujuan. Untuk grup: awali dengan -100. Untuk pribadi: ID numerik positif.<br />
                     Cara cek: kirim pesan ke <a href="https://t.me/iot_kebocoran_bot" target="_blank" style="color: var(--cyan); text-decoration: underline; font-weight: 500;">@iot_kebocoran_bot</a> → buka <a href="https://api.telegram.org/bot<TOKEN>/getUpdates" target="_blank" style="color: var(--text-muted); text-decoration: underline;">api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</a>
                   </div>
                   <div id="valChatId" class="validation-msg"></div>
                 </div>
-              </div>
 
-              <div class="toggle-row">
-                <div class="toggle-info">
-                  <h4>Notifikasi Telegram</h4>
-                  <p>Kirim alert saat perubahan status (master switch)</p>
+                <div class="toggle-row telegram-toggle-row">
+                  <div class="toggle-info">
+                    <h4>Notifikasi Telegram</h4>
+                    <p>Kirim alert saat perubahan status (master switch)</p>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" id="inpTelegramNotify" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
                 </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="inpTelegramNotify" checked />
-                  <span class="toggle-slider"></span>
-                </label>
               </div>
             </div>
 

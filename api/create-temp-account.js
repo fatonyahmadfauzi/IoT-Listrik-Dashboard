@@ -312,7 +312,7 @@ export default async function handler(req, res) {
         thresholdArus: 10, warningPercent: 80,
         buzzerEnabled: true, autoCutoffEnabled: true,
         sendIntervalMs: 2000,
-        telegramBotToken: "", telegramChatId: "", telegramChatIds: [],
+        telegramBotToken: "", telegramChatId: "", telegramChatIds: [], telegramRecipients: [],
         telegramNotifyEnabled: false,
         discord: {
           enabled: false,

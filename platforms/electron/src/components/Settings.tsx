@@ -13,16 +13,47 @@ interface SettingsProps {
   onLogout: () => void;
 }
 
+interface TelegramRecipient {
+  name: string;
+  chatId: string;
+}
+
 function normalizeTelegramChatId(value: unknown): string {
   const id = String(value ?? '').trim();
   return /^-?\d+$/.test(id) ? id : '';
 }
 
-function parseTelegramChatIds(...sources: unknown[]): string[] {
-  const ids: string[] = [];
+function normalizeTelegramRecipient(value: unknown): TelegramRecipient | null {
+  if (value == null) return null;
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const item = value as Record<string, unknown>;
+    const chatId = normalizeTelegramChatId(
+      item.chatId ?? item.telegramChatId ?? item.id
+    );
+    if (!chatId) return null;
+    return {
+      name: String(item.name ?? item.label ?? '').trim(),
+      chatId,
+    };
+  }
+
+  const chatId = normalizeTelegramChatId(value);
+  return chatId ? { name: '', chatId } : null;
+}
+
+function parseTelegramRecipients(...sources: unknown[]): TelegramRecipient[] {
+  const recipients: TelegramRecipient[] = [];
   const add = (value: unknown) => {
-    const id = normalizeTelegramChatId(value);
-    if (id && !ids.includes(id)) ids.push(id);
+    const recipient = normalizeTelegramRecipient(value);
+    if (!recipient) return;
+
+    const existing = recipients.find((item) => item.chatId === recipient.chatId);
+    if (existing) {
+      if (!existing.name && recipient.name) existing.name = recipient.name;
+      return;
+    }
+    recipients.push(recipient);
   };
 
   const visit = (source: unknown) => {
@@ -32,15 +63,31 @@ function parseTelegramChatIds(...sources: unknown[]): string[] {
       return;
     }
     if (typeof source === 'object') {
-      Object.values(source as Record<string, unknown>).forEach(visit);
+      const item = source as Record<string, unknown>;
+      if ('chatId' in item || 'telegramChatId' in item || 'id' in item) {
+        add(source);
+        return;
+      }
+      Object.entries(item)
+        .filter(([key]) => !['name', 'label', 'displayName', 'title'].includes(key))
+        .forEach(([, value]) => visit(value));
       return;
     }
     String(source).split(/[\s,;]+/).forEach(add);
   };
 
   sources.forEach(visit);
-  return ids;
+  return recipients;
 }
+
+const telegramLabelClass =
+  'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2';
+const telegramInputClass =
+  'w-full min-h-[46px] rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
+const telegramPrimaryActionClass =
+  'min-h-[46px] px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-semibold transition';
+const telegramMutedActionClass =
+  'min-h-[46px] px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-semibold transition';
 
 export function Settings({ onLogout }: SettingsProps) {
   const { settings, users } = useDataStore();
@@ -74,13 +121,15 @@ export function Settings({ onLogout }: SettingsProps) {
   // Telegram
   const [telegramNotifyEnabled, setTelegramNotifyEnabled] = useState(settings?.telegramNotifyEnabled ?? true);
   const [telegramBotToken, setTelegramBotToken] = useState(settings?.telegramBotToken ?? settings?.telegram?.bot_token ?? '');
-  const [telegramChatIds, setTelegramChatIds] = useState<string[]>(() =>
-    parseTelegramChatIds(
+  const [telegramRecipients, setTelegramRecipients] = useState<TelegramRecipient[]>(() =>
+    parseTelegramRecipients(
+      settings?.telegramRecipients,
       settings?.telegramChatIds,
       settings?.telegramChatId,
       settings?.telegram?.chat_id
     )
   );
+  const [telegramRecipientNameDraft, setTelegramRecipientNameDraft] = useState('');
   const [telegramChatIdDraft, setTelegramChatIdDraft] = useState('');
   const [editingChatIdIndex, setEditingChatIdIndex] = useState<number | null>(null);
 
@@ -88,7 +137,8 @@ export function Settings({ onLogout }: SettingsProps) {
     if (!settings) return;
     setTelegramNotifyEnabled(settings.telegramNotifyEnabled ?? true);
     setTelegramBotToken(settings.telegramBotToken ?? settings.telegram?.bot_token ?? '');
-    setTelegramChatIds(parseTelegramChatIds(
+    setTelegramRecipients(parseTelegramRecipients(
+      settings.telegramRecipients,
       settings.telegramChatIds,
       settings.telegramChatId,
       settings.telegram?.chat_id
@@ -156,31 +206,39 @@ export function Settings({ onLogout }: SettingsProps) {
   const handleSaveTelegram = async () => {
     if (!isAdmin) return;
 
-    let nextChatIds = [...telegramChatIds];
+    let nextRecipients = [...telegramRecipients];
+    const name = telegramRecipientNameDraft.trim();
     const draft = telegramChatIdDraft.trim();
-    if (draft) {
+    if (draft || name) {
+      if (!draft && name) {
+        alert('Chat ID wajib diisi.');
+        return;
+      }
       const chatId = normalizeTelegramChatId(draft);
       if (!chatId) {
         alert('Chat ID harus angka. Untuk grup biasanya diawali -100.');
         return;
       }
 
-      const duplicateIndex = nextChatIds.findIndex((id) => id === chatId);
+      const duplicateIndex = nextRecipients.findIndex((item) => item.chatId === chatId);
       if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
         alert('Chat ID sudah ada di daftar.');
         return;
       }
 
+      const recipient = { name, chatId };
       if (editingChatIdIndex !== null) {
-        nextChatIds[editingChatIdIndex] = chatId;
+        nextRecipients[editingChatIdIndex] = recipient;
       } else {
-        nextChatIds.push(chatId);
+        nextRecipients.push(recipient);
       }
 
-      setTelegramChatIds(nextChatIds);
+      setTelegramRecipients(nextRecipients);
+      setTelegramRecipientNameDraft('');
       setTelegramChatIdDraft('');
       setEditingChatIdIndex(null);
     }
+    const nextChatIds = nextRecipients.map((recipient) => recipient.chatId);
 
     setLoading(true);
     try {
@@ -188,6 +246,7 @@ export function Settings({ onLogout }: SettingsProps) {
         telegramBotToken,
         telegramChatId: nextChatIds.join(','),
         telegramChatIds: nextChatIds,
+        telegramRecipients: nextRecipients,
         telegramNotifyEnabled,
       });
       alert('Telegram integration saved successfully');
@@ -200,40 +259,52 @@ export function Settings({ onLogout }: SettingsProps) {
   };
 
   const addOrUpdateTelegramChatId = () => {
+    const name = telegramRecipientNameDraft.trim();
+    if (!telegramChatIdDraft.trim() && name) {
+      alert('Chat ID wajib diisi.');
+      return;
+    }
+
     const chatId = normalizeTelegramChatId(telegramChatIdDraft);
     if (!chatId) {
       alert('Chat ID harus angka. Untuk grup biasanya diawali -100.');
       return;
     }
 
-    const duplicateIndex = telegramChatIds.findIndex((id) => id === chatId);
+    const duplicateIndex = telegramRecipients.findIndex((item) => item.chatId === chatId);
     if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
       alert('Chat ID sudah ada di daftar.');
       return;
     }
 
+    const recipient = { name, chatId };
     if (editingChatIdIndex !== null) {
-      setTelegramChatIds((ids) =>
-        ids.map((id, index) => (index === editingChatIdIndex ? chatId : id))
+      setTelegramRecipients((items) =>
+        items.map((item, index) => (index === editingChatIdIndex ? recipient : item))
       );
     } else {
-      setTelegramChatIds((ids) => [...ids, chatId]);
+      setTelegramRecipients((items) => [...items, recipient]);
     }
 
+    setTelegramRecipientNameDraft('');
     setTelegramChatIdDraft('');
     setEditingChatIdIndex(null);
   };
 
   const editTelegramChatId = (index: number) => {
-    setTelegramChatIdDraft(telegramChatIds[index]);
+    setTelegramRecipientNameDraft(telegramRecipients[index].name);
+    setTelegramChatIdDraft(telegramRecipients[index].chatId);
     setEditingChatIdIndex(index);
   };
 
   const removeTelegramChatId = (index: number) => {
-    setTelegramChatIds((ids) => ids.filter((_, itemIndex) => itemIndex !== index));
+    setTelegramRecipients((items) => items.filter((_, itemIndex) => itemIndex !== index));
     if (editingChatIdIndex === index) {
+      setTelegramRecipientNameDraft('');
       setTelegramChatIdDraft('');
       setEditingChatIdIndex(null);
+    } else if (editingChatIdIndex !== null && editingChatIdIndex > index) {
+      setEditingChatIdIndex(editingChatIdIndex - 1);
     }
   };
 
@@ -516,13 +587,22 @@ export function Settings({ onLogout }: SettingsProps) {
 
       {/* Telegram Tab */}
       {tab === 'telegram' && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Telegram Integration
-          </h3>
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow space-y-5">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Telegram Integration
+            </h3>
+            <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+              Atur token bot, daftar penerima, dan status notifikasi Telegram.
+            </p>
+          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm leading-6 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
+            <strong className="font-semibold">Aman:</strong> Token dan daftar Chat ID tersimpan di Firebase, bukan di firmware.
+          </div>
+
+          <div className="space-y-2">
+            <label className={telegramLabelClass}>
               Bot Token
             </label>
             <div className="relative">
@@ -530,11 +610,12 @@ export function Settings({ onLogout }: SettingsProps) {
                 type={showTgToken ? "text" : "password"}
                 value={telegramBotToken}
                 onChange={(e) => setTelegramBotToken(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                className={`${telegramInputClass} pr-12 font-mono`}
                 placeholder="1234567890:ABCDEF..."
               />
               <button 
-                className="absolute right-3 top-3 text-gray-500"
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-gray-500 transition hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
                 onClick={() => setShowTgToken(!showTgToken)}
               >
                 {showTgToken ? <EyeOff size={20}/> : <Eye size={20}/>}
@@ -542,67 +623,92 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Chat ID / Group ID
+          <div className="space-y-3">
+            <label className={telegramLabelClass}>
+              Penerima Telegram
             </label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                value={telegramChatIdDraft}
-                onChange={(e) => setTelegramChatIdDraft(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-                placeholder="Masukkan ID lalu klik Tambah"
-              />
-              <button
-                type="button"
-                onClick={addOrUpdateTelegramChatId}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition"
-              >
-                {editingChatIdIndex === null ? 'Tambah' : 'Update'}
-              </button>
-              {editingChatIdIndex !== null && (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto] lg:items-end">
+              <div className="min-w-0">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Nama / Label
+                </label>
+                <input
+                  type="text"
+                  value={telegramRecipientNameDraft}
+                  onChange={(e) => setTelegramRecipientNameDraft(e.target.value)}
+                  className={telegramInputClass}
+                  placeholder="Contoh: Pak Budi"
+                />
+              </div>
+              <div className="min-w-0">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Chat ID / Group ID
+                </label>
+                <input
+                  type="text"
+                  value={telegramChatIdDraft}
+                  onChange={(e) => setTelegramChatIdDraft(e.target.value)}
+                  className={`${telegramInputClass} font-mono`}
+                  placeholder="-1001234567890"
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    setTelegramChatIdDraft('');
-                    setEditingChatIdIndex(null);
-                  }}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition"
+                  onClick={addOrUpdateTelegramChatId}
+                  className={telegramPrimaryActionClass}
                 >
-                  Batal
+                  {editingChatIdIndex === null ? 'Tambah' : 'Update'}
                 </button>
-              )}
+                {editingChatIdIndex !== null && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTelegramRecipientNameDraft('');
+                      setTelegramChatIdDraft('');
+                      setEditingChatIdIndex(null);
+                    }}
+                    className={telegramMutedActionClass}
+                  >
+                    Batal
+                  </button>
+                )}
+              </div>
             </div>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Untuk grup biasanya diawali -100. Untuk pribadi gunakan ID numerik positif.
             </p>
-            <div className="mt-3 space-y-2">
-              {telegramChatIds.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-3 text-sm text-gray-500 dark:text-gray-400">
-                  Belum ada Chat ID tersimpan.
+            <div className="space-y-2">
+              {telegramRecipients.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-4 text-center text-sm leading-6 text-gray-500 dark:text-gray-400">
+                  Belum ada penerima Telegram tersimpan.
                 </div>
               ) : (
-                telegramChatIds.map((chatId, index) => (
+                telegramRecipients.map((recipient, index) => (
                   <div
-                    key={`${chatId}-${index}`}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3"
+                    key={`${recipient.chatId}-${index}`}
+                    className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                   >
-                    <span className="font-mono text-sm text-gray-900 dark:text-white break-all">
-                      {chatId}
-                    </span>
-                    <div className="flex gap-2">
+                    <div className="min-w-0">
+                      <div className="break-words text-sm font-semibold leading-5 text-gray-900 dark:text-white">
+                        {recipient.name || `Penerima ${index + 1}`}
+                      </div>
+                      <div className="break-all font-mono text-sm leading-6 text-gray-500 dark:text-gray-400">
+                        {recipient.chatId}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:flex">
                       <button
                         type="button"
                         onClick={() => editTelegramChatId(index)}
-                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition"
+                        className="min-h-[42px] rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => removeTelegramChatId(index)}
-                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition"
+                        className="min-h-[42px] rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
                       >
                         Hapus
                       </button>
@@ -613,23 +719,36 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 mt-4">
-            <input
-              type="checkbox"
-              id="tgNotify"
-              checked={telegramNotifyEnabled}
-              onChange={(e) => setTelegramNotifyEnabled(e.target.checked)}
-              className="rounded"
-            />
-            <label htmlFor="tgNotify" className="text-gray-700 dark:text-gray-300">
-              Aktifkan Telegram Notifications
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+            <label htmlFor="tgNotify" className="min-w-0">
+              <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                Notifikasi Telegram
+              </span>
+              <span className="block text-sm leading-6 text-gray-500 dark:text-gray-400">
+                Aktifkan pengiriman alert saat status berubah.
+              </span>
+            </label>
+            <label
+              htmlFor="tgNotify"
+              className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center"
+              aria-label="Aktifkan notifikasi Telegram"
+            >
+              <input
+                type="checkbox"
+                id="tgNotify"
+                checked={telegramNotifyEnabled}
+                onChange={(e) => setTelegramNotifyEnabled(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span className="absolute inset-0 rounded-full border border-gray-300 bg-gray-200 transition peer-checked:border-emerald-500 peer-checked:bg-emerald-500/25 dark:border-gray-700 dark:bg-gray-800" />
+              <span className="absolute left-1 top-1 h-5 w-5 rounded-full bg-gray-500 transition peer-checked:translate-x-5 peer-checked:bg-emerald-500" />
             </label>
           </div>
 
           <button
             onClick={handleSaveTelegram}
             disabled={loading}
-            className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+            className="w-full min-h-[46px] px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-semibold transition"
           >
             {loading ? 'Saving...' : 'Save Telegram Config'}
           </button>

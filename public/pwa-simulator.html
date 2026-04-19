@@ -520,53 +520,82 @@ No data.
                     value="50"
                   />
                 </div>
-                <div class="settings-section">
-                  <label class="form-label" for="inpBotToken">Bot Token</label>
-                  <input
-                    id="inpBotToken"
-                    class="form-input"
-                    type="password"
-                    placeholder="••••••••••••••••••••••••••••••••••"
-                    autocomplete="off"
-                  />
-                  <div class="form-hint">
-                    Get from @BotFather → /newbot → copy token.
+                <div
+                  class="settings-section telegram-settings-section"
+                  style="grid-column: 1 / -1"
+                >
+                  <div class="settings-section-title">
+                    <span class="material-symbols-rounded">send</span>
+                    Konfigurasi Telegram
                   </div>
-                </div>
-                <div class="settings-section">
-                  <label class="form-label" for="inpChatId"
-                    >Chat ID / Group ID</label
-                  >
-                  <input
-                    id="inpChatId"
-                    class="form-input"
-                    type="text"
-                    placeholder="Masukkan ID lalu klik Tambah"
-                    autocomplete="off"
-                  />
-                  <div class="form-hint">
-                    Add one or more targets. For groups: prefix with -100. For private: positive numeric ID.
+                  <div class="telegram-info-panel">
+                    <strong>Aman:</strong> Token dan daftar penerima tersimpan
+                    lokal untuk sesi simulator ini.
                   </div>
-                </div>
-                <div class="settings-section" style="grid-column: 1 / -1">
-                  <label class="form-label" for="inpTelegramNotify"
-                    >Notifikasi Telegram</label
-                  >
-                  <div
-                    style="
-                      display: flex;
-                      align-items: center;
-                      justify-content: space-between;
-                    "
-                  >
-                    <span class="text-sm text-muted"
-                      >Transmit alerts on status change (master switch).</span
-                    ><label class="toggle-switch"
-                      ><input
-                        type="checkbox"
-                        id="inpTelegramNotify"
-                        checked /><span class="toggle-slider"></span
-                    ></label>
+                  <div class="telegram-config-stack">
+                    <div class="form-group field-sensitive telegram-token-group">
+                      <label class="form-label" for="inpBotToken"
+                        >Bot Token</label
+                      >
+                      <input
+                        id="inpBotToken"
+                        class="form-input"
+                        type="password"
+                        placeholder="••••••••••••••••••••••••••••••••••"
+                        autocomplete="off"
+                      />
+                      <div class="form-hint">
+                        Get from @BotFather → /newbot → copy token.
+                      </div>
+                    </div>
+                    <div class="form-group telegram-recipient-group">
+                      <div class="recipient-editor-grid telegram-recipient-grid">
+                        <div>
+                          <label
+                            class="form-label"
+                            for="inpTelegramRecipientName"
+                            >Nama / Label</label
+                          >
+                          <input
+                            id="inpTelegramRecipientName"
+                            class="form-input"
+                            type="text"
+                            placeholder="Contoh: Pak Budi atau Grup Lab"
+                            autocomplete="off"
+                          />
+                        </div>
+                        <div>
+                          <label class="form-label" for="inpChatId"
+                            >Chat ID / Group ID</label
+                          >
+                          <input
+                            id="inpChatId"
+                            class="form-input"
+                            type="text"
+                            placeholder="Masukkan ID lalu klik Tambah"
+                            autocomplete="off"
+                          />
+                        </div>
+                      </div>
+                      <div class="form-hint telegram-recipient-help">
+                        Add one or more targets. For groups: prefix with -100.
+                        For private: positive numeric ID.
+                      </div>
+                    </div>
+                    <div class="toggle-row telegram-toggle-row">
+                      <div class="toggle-info">
+                        <h4>Notifikasi Telegram</h4>
+                        <p>Transmit alerts on status change (master switch).</p>
+                      </div>
+                      <label class="toggle-switch">
+                        <input
+                          type="checkbox"
+                          id="inpTelegramNotify"
+                          checked
+                        />
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
                   </div>
                 </div>
                 <div class="settings-section">

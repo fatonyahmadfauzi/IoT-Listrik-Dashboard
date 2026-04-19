@@ -31,6 +31,7 @@ const inpTeganganCal = document.getElementById('inpTeganganCal');
 const inpPowerFactor = document.getElementById('inpPowerFactor');
 const inpFrequency = document.getElementById('inpFrequency');
 const inpBotToken = document.getElementById('inpBotToken');
+const inpRecipientName = document.getElementById('inpTelegramRecipientName');
 const inpChatId = document.getElementById('inpChatId');
 const inpTelegramNotify = document.getElementById('inpTelegramNotify');
 const inpPublicApiBase = document.getElementById('inpPublicApiBase');
@@ -43,7 +44,7 @@ const inpTimeoutMs = document.getElementById('inpTimeoutMs');
 
 const SESSION_KEY = 'pwa_demo_session';
 const SETTINGS_KEY = 'pwa_demo_settings';
-let telegramChatIds = [];
+let telegramRecipients = [];
 let editingChatIdIndex = -1;
 let chatIdListEl = null;
 let addChatIdBtn = null;
@@ -62,6 +63,7 @@ const DEFAULT_SETTINGS = {
   botToken: '',
   chatId: '',
   chatIds: [],
+  recipients: [],
   telegramNotify: true,
   publicApiBase: '',
   localApiBase: 'http://localhost:3000',
@@ -141,11 +143,34 @@ function normalizeTelegramChatId(value) {
   return /^-?\d+$/.test(id) ? id : '';
 }
 
-function parseTelegramChatIds(...sources) {
-  const ids = [];
+function normalizeTelegramRecipient(value) {
+  if (value == null) return null;
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const chatId = normalizeTelegramChatId(value.chatId ?? value.telegramChatId ?? value.id);
+    if (!chatId) return null;
+    return {
+      name: String(value.name ?? value.label ?? '').trim(),
+      chatId,
+    };
+  }
+
+  const chatId = normalizeTelegramChatId(value);
+  return chatId ? { name: '', chatId } : null;
+}
+
+function parseTelegramRecipients(...sources) {
+  const recipients = [];
   const add = (value) => {
-    const id = normalizeTelegramChatId(value);
-    if (id && !ids.includes(id)) ids.push(id);
+    const recipient = normalizeTelegramRecipient(value);
+    if (!recipient) return;
+
+    const existing = recipients.find((item) => item.chatId === recipient.chatId);
+    if (existing) {
+      if (!existing.name && recipient.name) existing.name = recipient.name;
+      return;
+    }
+    recipients.push(recipient);
   };
 
   const visit = (source) => {
@@ -155,35 +180,50 @@ function parseTelegramChatIds(...sources) {
       return;
     }
     if (typeof source === 'object') {
-      Object.values(source).forEach(visit);
+      if ('chatId' in source || 'telegramChatId' in source || 'id' in source) {
+        add(source);
+        return;
+      }
+      Object.entries(source)
+        .filter(([key]) => !['name', 'label', 'displayName', 'title'].includes(key))
+        .forEach(([, value]) => visit(value));
       return;
     }
     String(source).split(/[\s,;]+/).forEach(add);
   };
 
   sources.forEach(visit);
-  return ids;
+  return recipients;
 }
 
 function renderTelegramChatIds() {
   if (!chatIdListEl) return;
   chatIdListEl.innerHTML = '';
 
-  if (telegramChatIds.length === 0) {
+  if (telegramRecipients.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'chat-id-empty';
-    empty.textContent = 'Belum ada Chat ID tersimpan.';
+    empty.textContent = 'Belum ada penerima Telegram tersimpan.';
     chatIdListEl.appendChild(empty);
     return;
   }
 
-  telegramChatIds.forEach((chatId, index) => {
+  telegramRecipients.forEach((recipient, index) => {
     const item = document.createElement('div');
     item.className = 'chat-id-item';
 
+    const main = document.createElement('div');
+    main.className = 'chat-id-main';
+
+    const name = document.createElement('span');
+    name.className = 'chat-id-name';
+    name.textContent = recipient.name || `Penerima ${index + 1}`;
+
     const value = document.createElement('span');
     value.className = 'chat-id-value';
-    value.textContent = chatId;
+    value.textContent = recipient.chatId;
+
+    main.append(name, value);
 
     const actions = document.createElement('div');
     actions.className = 'chat-id-item-actions';
@@ -203,21 +243,27 @@ function renderTelegramChatIds() {
     deleteBtn.textContent = 'Hapus';
 
     actions.append(editBtn, deleteBtn);
-    item.append(value, actions);
+    item.append(main, actions);
     chatIdListEl.appendChild(item);
   });
 }
 
 function resetChatIdEditor() {
   editingChatIdIndex = -1;
+  if (inpRecipientName) inpRecipientName.value = '';
   if (inpChatId) inpChatId.value = '';
   if (addChatIdBtn) addChatIdBtn.textContent = 'Tambah';
   if (cancelChatIdEditBtn) cancelChatIdEditBtn.hidden = true;
 }
 
 function commitChatIdInput() {
+  const name = inpRecipientName?.value.trim() || '';
   const raw = inpChatId?.value.trim() || '';
-  if (!raw) return true;
+  if (!raw && !name) return true;
+  if (!raw && name) {
+    showStatus('Chat ID wajib diisi.', 'error');
+    return false;
+  }
 
   const chatId = normalizeTelegramChatId(raw);
   if (!chatId) {
@@ -225,21 +271,22 @@ function commitChatIdInput() {
     return false;
   }
 
-  const duplicateIndex = telegramChatIds.findIndex((id) => id === chatId);
+  const duplicateIndex = telegramRecipients.findIndex((item) => item.chatId === chatId);
   if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
     showStatus('Chat ID sudah ada di daftar.', 'error');
     return false;
   }
 
+  const recipient = { name, chatId };
   if (editingChatIdIndex >= 0) {
-    telegramChatIds[editingChatIdIndex] = chatId;
+    telegramRecipients[editingChatIdIndex] = recipient;
   } else {
-    telegramChatIds.push(chatId);
+    telegramRecipients.push(recipient);
   }
 
   resetChatIdEditor();
   renderTelegramChatIds();
-  showStatus('Chat ID siap disimpan.', 'success');
+  showStatus('Penerima siap disimpan.', 'success');
   return true;
 }
 
@@ -275,11 +322,12 @@ function initTelegramChatManager() {
     const button = event.target.closest('[data-chat-action]');
     if (!button) return;
     const index = Number(button.dataset.index);
-    if (!Number.isInteger(index) || index < 0 || index >= telegramChatIds.length) return;
+    if (!Number.isInteger(index) || index < 0 || index >= telegramRecipients.length) return;
 
     if (button.dataset.chatAction === 'edit') {
       editingChatIdIndex = index;
-      inpChatId.value = telegramChatIds[index];
+      if (inpRecipientName) inpRecipientName.value = telegramRecipients[index].name || '';
+      inpChatId.value = telegramRecipients[index].chatId;
       inpChatId.focus();
       if (addChatIdBtn) addChatIdBtn.textContent = 'Update';
       if (cancelChatIdEditBtn) cancelChatIdEditBtn.hidden = false;
@@ -287,21 +335,27 @@ function initTelegramChatManager() {
     }
 
     if (button.dataset.chatAction === 'delete') {
-      telegramChatIds.splice(index, 1);
+      telegramRecipients.splice(index, 1);
       resetChatIdEditor();
       renderTelegramChatIds();
-      showStatus('Chat ID dihapus dari daftar.', 'success');
+      showStatus('Penerima dihapus dari daftar.', 'success');
     }
   });
 
   manager.append(actions, chatIdListEl);
-  inpChatId.insertAdjacentElement('afterend', manager);
+  const editorGrid = inpChatId.closest('.recipient-editor-grid');
+  if (editorGrid) {
+    editorGrid.insertAdjacentElement('afterend', manager);
+  } else {
+    inpChatId.insertAdjacentElement('afterend', manager);
+  }
   renderTelegramChatIds();
 }
 
 function saveSettings() {
   if (!commitChatIdInput()) return;
 
+  const chatIds = telegramRecipients.map((recipient) => recipient.chatId);
   const payload = {
     threshold: parseFloat(inpThreshold.value) || 10,
     warningPercent: parseFloat(inpWarningPercent.value) || 80,
@@ -313,8 +367,9 @@ function saveSettings() {
     powerFactor: parseFloat(inpPowerFactor.value) || 0.85,
     frequency: parseFloat(inpFrequency.value) || 50,
     botToken: inpBotToken.value.trim(),
-    chatId: telegramChatIds.join(','),
-    chatIds: telegramChatIds,
+    chatId: chatIds.join(','),
+    chatIds,
+    recipients: telegramRecipients,
     telegramNotify: inpTelegramNotify.checked,
     publicApiBase: inpPublicApiBase.value.trim(),
     localApiBase: inpLocalApiBase.value.trim() || 'http://localhost:3000',
@@ -342,7 +397,7 @@ function applySettings() {
   inpPowerFactor.value = config.powerFactor;
   inpFrequency.value = config.frequency;
   inpBotToken.value = config.botToken;
-  telegramChatIds = parseTelegramChatIds(config.chatIds, config.chatId);
+  telegramRecipients = parseTelegramRecipients(config.recipients, config.chatIds, config.chatId);
   resetChatIdEditor();
   renderTelegramChatIds();
   inpTelegramNotify.checked = config.telegramNotify;

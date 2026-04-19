@@ -62,8 +62,9 @@ const inpTeganganCal  = document.getElementById('inpTeganganCal');
 
 // ── DOM: Telegram ─────────────────────────────────────────────
 const inpBotToken     = document.getElementById('inpBotToken');
+const inpRecipientName = document.getElementById('inpTelegramRecipientName');
 const inpChatId       = document.getElementById('inpChatId');
-let telegramChatIds = [];
+let telegramRecipients = [];
 let editingChatIdIndex = -1;
 let chatIdListEl = null;
 let addChatIdBtn = null;
@@ -144,11 +145,34 @@ function normalizeTelegramChatId(value) {
   return /^-?\d+$/.test(id) ? id : '';
 }
 
-function parseTelegramChatIds(...sources) {
-  const ids = [];
+function normalizeTelegramRecipient(value) {
+  if (value == null) return null;
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const chatId = normalizeTelegramChatId(value.chatId ?? value.telegramChatId ?? value.id);
+    if (!chatId) return null;
+    return {
+      name: String(value.name ?? value.label ?? '').trim(),
+      chatId,
+    };
+  }
+
+  const chatId = normalizeTelegramChatId(value);
+  return chatId ? { name: '', chatId } : null;
+}
+
+function parseTelegramRecipients(...sources) {
+  const recipients = [];
   const add = (value) => {
-    const id = normalizeTelegramChatId(value);
-    if (id && !ids.includes(id)) ids.push(id);
+    const recipient = normalizeTelegramRecipient(value);
+    if (!recipient) return;
+
+    const existing = recipients.find((item) => item.chatId === recipient.chatId);
+    if (existing) {
+      if (!existing.name && recipient.name) existing.name = recipient.name;
+      return;
+    }
+    recipients.push(recipient);
   };
 
   const visit = (source) => {
@@ -158,7 +182,13 @@ function parseTelegramChatIds(...sources) {
       return;
     }
     if (typeof source === 'object') {
-      Object.values(source).forEach(visit);
+      if ('chatId' in source || 'telegramChatId' in source || 'id' in source) {
+        add(source);
+        return;
+      }
+      Object.entries(source)
+        .filter(([key]) => !['name', 'label', 'displayName', 'title'].includes(key))
+        .forEach(([, value]) => visit(value));
       return;
     }
     String(source)
@@ -169,11 +199,12 @@ function parseTelegramChatIds(...sources) {
   };
 
   sources.forEach(visit);
-  return ids;
+  return recipients;
 }
 
-function getTelegramChatIdsFromSettings(settings) {
-  return parseTelegramChatIds(
+function getTelegramRecipientsFromSettings(settings) {
+  return parseTelegramRecipients(
+    settings?.telegramRecipients,
     settings?.telegramChatIds,
     settings?.telegramChatId,
     settings?.telegram?.chat_id
@@ -185,21 +216,30 @@ function renderTelegramChatIds() {
 
   chatIdListEl.innerHTML = '';
 
-  if (telegramChatIds.length === 0) {
+  if (telegramRecipients.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'chat-id-empty';
-    empty.textContent = 'Belum ada Chat ID tersimpan.';
+    empty.textContent = 'Belum ada penerima Telegram tersimpan.';
     chatIdListEl.appendChild(empty);
     return;
   }
 
-  telegramChatIds.forEach((chatId, index) => {
+  telegramRecipients.forEach((recipient, index) => {
     const item = document.createElement('div');
     item.className = 'chat-id-item';
 
+    const main = document.createElement('div');
+    main.className = 'chat-id-main';
+
+    const name = document.createElement('span');
+    name.className = 'chat-id-name';
+    name.textContent = recipient.name || `Penerima ${index + 1}`;
+
     const value = document.createElement('span');
     value.className = 'chat-id-value';
-    value.textContent = chatId;
+    value.textContent = recipient.chatId;
+
+    main.append(name, value);
 
     const actions = document.createElement('div');
     actions.className = 'chat-id-item-actions';
@@ -219,13 +259,14 @@ function renderTelegramChatIds() {
     deleteBtn.textContent = 'Hapus';
 
     actions.append(editBtn, deleteBtn);
-    item.append(value, actions);
+    item.append(main, actions);
     chatIdListEl.appendChild(item);
   });
 }
 
 function resetChatIdEditor() {
   editingChatIdIndex = -1;
+  if (inpRecipientName) inpRecipientName.value = '';
   if (inpChatId) inpChatId.value = '';
   if (addChatIdBtn) addChatIdBtn.textContent = 'Tambah';
   if (cancelChatIdEditBtn) cancelChatIdEditBtn.hidden = true;
@@ -233,8 +274,13 @@ function resetChatIdEditor() {
 }
 
 function commitChatIdInput({ silent = false } = {}) {
+  const name = inpRecipientName?.value.trim() || '';
   const raw = inpChatId?.value.trim() || '';
-  if (!raw) return true;
+  if (!raw && !name) return true;
+  if (!raw && name) {
+    if (!silent) setValidation('valChatId', 'Chat ID wajib diisi', false);
+    return false;
+  }
 
   const chatId = normalizeTelegramChatId(raw);
   if (!chatId) {
@@ -242,21 +288,22 @@ function commitChatIdInput({ silent = false } = {}) {
     return false;
   }
 
-  const duplicateIndex = telegramChatIds.findIndex((id) => id === chatId);
+  const duplicateIndex = telegramRecipients.findIndex((item) => item.chatId === chatId);
   if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
     setValidation('valChatId', 'Chat ID sudah ada di daftar', false);
     return false;
   }
 
+  const recipient = { name, chatId };
   if (editingChatIdIndex >= 0) {
-    telegramChatIds[editingChatIdIndex] = chatId;
+    telegramRecipients[editingChatIdIndex] = recipient;
   } else {
-    telegramChatIds.push(chatId);
+    telegramRecipients.push(recipient);
   }
 
   resetChatIdEditor();
   renderTelegramChatIds();
-  setValidation('valChatId', 'Chat ID siap disimpan', true);
+  setValidation('valChatId', 'Penerima siap disimpan', true);
   return true;
 }
 
@@ -293,28 +340,34 @@ function initTelegramChatManager() {
     if (!button) return;
 
     const index = Number(button.dataset.index);
-    if (!Number.isInteger(index) || index < 0 || index >= telegramChatIds.length) return;
+    if (!Number.isInteger(index) || index < 0 || index >= telegramRecipients.length) return;
 
     if (button.dataset.chatAction === 'edit') {
       editingChatIdIndex = index;
-      inpChatId.value = telegramChatIds[index];
+      if (inpRecipientName) inpRecipientName.value = telegramRecipients[index].name || '';
+      inpChatId.value = telegramRecipients[index].chatId;
       inpChatId.focus();
       if (addChatIdBtn) addChatIdBtn.textContent = 'Update';
       if (cancelChatIdEditBtn) cancelChatIdEditBtn.hidden = false;
-      setValidation('valChatId', 'Edit Chat ID lalu klik Update', true);
+      setValidation('valChatId', 'Edit penerima lalu klik Update', true);
       return;
     }
 
     if (button.dataset.chatAction === 'delete') {
-      telegramChatIds.splice(index, 1);
+      telegramRecipients.splice(index, 1);
       resetChatIdEditor();
       renderTelegramChatIds();
-      setValidation('valChatId', 'Chat ID dihapus dari daftar', true);
+      setValidation('valChatId', 'Penerima dihapus dari daftar', true);
     }
   });
 
   manager.append(actions, chatIdListEl);
-  inpChatId.insertAdjacentElement('afterend', manager);
+  const editorGrid = inpChatId.closest('.recipient-editor-grid');
+  if (editorGrid) {
+    editorGrid.insertAdjacentElement('afterend', manager);
+  } else {
+    inpChatId.insertAdjacentElement('afterend', manager);
+  }
   renderTelegramChatIds();
 }
 
@@ -411,7 +464,7 @@ function loadSettings() {
         ? '••• (tersimpan)'
         : '1234567890:ABCDEF...';
     }
-    telegramChatIds = getTelegramChatIdsFromSettings(d);
+    telegramRecipients = getTelegramRecipientsFromSettings(d);
     resetChatIdEditor();
     renderTelegramChatIds();
     if (saveStatus) {
@@ -422,8 +475,7 @@ function loadSettings() {
 }
 
 async function saveSettings() {
-  if (!commitChatIdInput({ silent: true })) {
-    setValidation('valChatId', 'Chat ID harus angka', false);
+  if (!commitChatIdInput()) {
     showToast('Periksa kembali Chat ID Telegram', 'error');
     return;
   }
@@ -446,6 +498,8 @@ async function saveSettings() {
   };
   const token  = inpBotToken?.value.trim();
   if (token)  payload.telegramBotToken = token;
+  const telegramChatIds = telegramRecipients.map((recipient) => recipient.chatId);
+  payload.telegramRecipients = telegramRecipients;
   payload.telegramChatIds = telegramChatIds;
   payload.telegramChatId = telegramChatIds.join(',');
 

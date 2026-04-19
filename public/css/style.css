@@ -697,10 +697,74 @@ body.page-bg {
   border-radius: var(--radius-lg);
 }
 
+.telegram-settings-section {
+  min-width: 0;
+}
+
+.telegram-config-stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.settings-section .telegram-config-stack .form-group {
+  margin-bottom: 0;
+}
+
+.telegram-info-panel {
+  border-radius: var(--radius-md);
+  padding: 11px 14px;
+  font-size: 12px;
+  line-height: 1.55;
+  background: rgba(34, 197, 94, 0.07);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+  color: var(--green-light);
+  overflow-wrap: anywhere;
+}
+
+.telegram-info-panel strong {
+  color: var(--green-light);
+  font-weight: 700;
+}
+
+.telegram-info-panel a {
+  color: var(--primary-light);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.telegram-token-group,
+.telegram-recipient-group {
+  min-width: 0;
+}
+
+.telegram-token-group .form-input,
+.telegram-recipient-grid .form-input {
+  min-height: 42px;
+}
+
+.recipient-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.recipient-editor-grid > * {
+  min-width: 0;
+}
+
+.telegram-recipient-help {
+  margin-top: 9px;
+}
+
 .chat-id-manager {
   display: grid;
-  gap: 10px;
-  margin-top: 10px;
+  grid-column: 1 / -1;
+  gap: 12px;
+  margin-top: 12px;
+  width: 100%;
 }
 
 .chat-id-actions,
@@ -710,41 +774,151 @@ body.page-bg {
   gap: 8px;
 }
 
+.chat-id-actions .btn {
+  justify-content: center;
+  min-width: 116px;
+}
+
 .chat-id-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chat-id-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 14px;
+  padding: 14px;
   border: 1px solid rgba(255,255,255,0.09);
   border-radius: var(--radius-md);
   background: rgba(255,255,255,0.04);
 }
 
-.chat-id-value {
+.chat-id-main {
+  display: grid;
+  gap: 4px;
   min-width: 0;
-  font-family: var(--font-mono);
+}
+
+.chat-id-name {
   color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
+.chat-id-value {
+  min-width: 0;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.chat-id-item-actions {
+  flex-wrap: nowrap;
+}
+
+.chat-id-item-actions .btn {
+  justify-content: center;
+  min-width: 78px;
+}
+
 .chat-id-empty {
-  padding: 10px 12px;
+  padding: 13px 14px;
   border: 1px dashed rgba(255,255,255,0.16);
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.telegram-toggle-row {
+  gap: 14px;
+  margin-top: 2px;
+  padding: 14px !important;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.035);
+}
+
+.telegram-toggle-row .toggle-info {
+  min-width: 0;
+}
+
+.telegram-toggle-row .toggle-info h4 {
+  line-height: 1.35;
+}
+
+.telegram-toggle-row .toggle-info p {
+  max-width: 58ch;
+}
+
+@media (max-width: 760px) {
+  .telegram-config-stack {
+    gap: 14px;
+  }
+
+  .recipient-editor-grid {
+    grid-template-columns: 1fr;
+    gap: 11px;
+  }
 }
 
 @media (max-width: 560px) {
+  .telegram-info-panel {
+    padding: 10px 12px;
+    font-size: 11.5px;
+  }
+
+  .chat-id-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  }
+
+  .chat-id-actions .btn {
+    width: 100%;
+  }
+
   .chat-id-item {
+    grid-template-columns: 1fr;
     align-items: stretch;
-    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .chat-id-item-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .chat-id-item-actions .btn {
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .telegram-toggle-row {
+    align-items: flex-start;
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .telegram-config-stack {
+    gap: 12px;
+  }
+
+  .chat-id-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .telegram-toggle-row {
+    gap: 10px;
   }
 }
 

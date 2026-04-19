@@ -79,12 +79,16 @@
           <h3>Windows Desktop</h3>
           <p>Aplikasi PC berbasis Electron untuk laboratorium atau monitoring skala besar terpusat.</p>
           <div class="dl-windows-btn-row">
-            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup-1.0.0.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download Setup (x64)</a>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup-1.0.0.exe" download class="btn" style="background: #202124; color: #ffffff; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download Setup</a>
             <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable-1.0.0.exe" download class="btn" style="background: #E8EAED; color: #202124; border-radius: 999px; padding: 12px 24px; font-weight: 500; border: none; text-decoration: none; transition: 0.2s;">Download Portable</a>
           </div>
           <div style="font-size: 0.9rem; margin-top: 8px;">
             <span style="color: var(--text-muted); margin-right: 8px;">Opsi lain:</span>
-            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.msi" download style="color: var(--text-muted); text-decoration: underline; transition: 0.2s;">.msi (x64)</a>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.msi" download data-windows-asset="msi" style="color: var(--text-muted); text-decoration: underline; transition: 0.2s;">MSI x64</a>
+            <span style="color: rgba(255,255,255,0.28); margin: 0 6px;">/</span>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0-arm64.msi" download data-windows-asset="msiArm64" style="color: var(--text-muted); text-decoration: underline; transition: 0.2s;">MSI ARM64</a>
+            <span style="color: rgba(255,255,255,0.28); margin: 0 6px;">/</span>
+            <a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0-ia32.msi" download data-windows-asset="msiIa32" style="color: var(--text-muted); text-decoration: underline; transition: 0.2s;">MSI 32-bit</a>
           </div>
           <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 12px;">
             <strong>Min. Requirements:</strong> Windows 10/11 (64-bit/ARM), 4GB RAM, 200MB Storage.
@@ -154,6 +158,7 @@
           else if (href.includes('.apk'))             a.href = d.downloads.android?.url           || a.href;
           else if (href.includes('cli-node'))         a.href = d.downloads.cli?.node?.url         || a.href;
           else if (href.includes('cli-python'))       a.href = d.downloads.cli?.python?.url       || a.href;
+          else if (a.dataset.windowsAsset)            a.href = d.downloads.windows?.[a.dataset.windowsAsset]?.url || a.href;
           else if (href.includes('.msi'))             a.href = d.downloads.windows?.msi?.url      || a.href;
           else if (href.includes('cli-linux'))        a.href = d.downloads.cli?.linux?.url        || a.href;
         });

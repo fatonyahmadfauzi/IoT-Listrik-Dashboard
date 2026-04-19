@@ -22,6 +22,8 @@ public/downloads/**/*.msi
 public/downloads/**/*.apk
 public/downloads/**/*.aab
 public/downloads/**/*.7z
+public/downloads/cli/iot-listrik-dashboard-cli-linux
+public/downloads/cli/node-source/
 
 # Firebase redirect (bukan bagian web app utama)
 firebase-redirect/

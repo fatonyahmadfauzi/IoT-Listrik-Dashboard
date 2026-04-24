@@ -58,6 +58,16 @@ let lastRelayVal = -1;
 let stopHybrid = null;
 let stopLogs = null;
 
+function formatSeenTime(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return new Date(n).toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
 function getStatusLabel(status) {
   if (status === "DANGER" || status === "LEAKAGE")
     return "Bahaya — arus abnormal melewati ambang";
@@ -104,6 +114,20 @@ function renderConnectionMeta(m) {
   if (m.fallbackActive) {
     elEndpointBadge.textContent = "FALLBACK";
     elEndpointBadge.className = "ep-badge ep-fallback";
+  }
+  if (elUpdated) {
+    const seenLabel = formatSeenTime(m.lastDeviceSeenAt);
+    if (seenLabel) {
+      elUpdated.textContent = `Update ${seenLabel}`;
+    } else if (m.connection === "Device Offline") {
+      elUpdated.textContent = "Tanpa heartbeat";
+    } else if (m.connection === "Memeriksa perangkat...") {
+      elUpdated.textContent = "Menunggu heartbeat";
+    } else if (m.connection === "Memulihkan...") {
+      elUpdated.textContent = "Menyambungkan cloud";
+    } else {
+      elUpdated.textContent = "—";
+    }
   }
 }
 
@@ -193,10 +217,8 @@ function startRealtimeListener() {
       if (elPF) elPF.textContent = d.power_factor.toFixed(2);
       if (elFreq) elFreq.textContent = d.frekuensi.toFixed(0) + " Hz";
 
-      if (elUpdated) {
-        elUpdated.textContent = d.updated_at
-          ? new Date().toLocaleTimeString("id-ID")
-          : new Date().toLocaleTimeString("id-ID");
+      if (elUpdated && Number(d.updated_at) > 1e12) {
+        elUpdated.textContent = `Update ${new Date(Number(d.updated_at)).toLocaleTimeString("id-ID")}`;
       }
 
       renderStatus(d.status);

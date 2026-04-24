@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
-import { db } from '../lib/firebase';
+import { db, functions } from '../lib/firebase';
 import { ref, update, remove, set } from 'firebase/database';
+import { httpsCallable } from 'firebase/functions';
 import {
   loadClientConfig,
   saveClientConfig,
@@ -176,6 +177,12 @@ export function Settings({ onLogout }: SettingsProps) {
   const [deviceDbUrl, setDeviceDbUrl] = useState(bootstrapSettings.firebaseDbUrl || '');
   const [deviceEmail, setDeviceEmail] = useState(bootstrapSettings.iotEmail || '');
   const [devicePassword, setDevicePassword] = useState(bootstrapSettings.iotPassword || '');
+  const [liveResetOtp, setLiveResetOtp] = useState('');
+  const [liveResetActionId, setLiveResetActionId] = useState('');
+  const [liveResetExpiresAt, setLiveResetExpiresAt] = useState<number | null>(null);
+  const [liveResetMaskedEmail, setLiveResetMaskedEmail] = useState('');
+  const [liveResetState, setLiveResetState] = useState<'idle' | 'otp_sent' | 'success' | 'error'>('idle');
+  const [liveResetMessage, setLiveResetMessage] = useState('Bagian ini hanya mengosongkan data realtime di /listrik. Histori log tidak dihapus.');
 
   const [newUserEmail, setNewUserEmail] = useState('');
   
@@ -188,6 +195,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showDeviceWifiPassword, setShowDeviceWifiPassword] = useState(false);
   const [showDeviceApiKey, setShowDeviceApiKey] = useState(false);
   const [showDevicePassword, setShowDevicePassword] = useState(false);
+  const [liveResetLoading, setLiveResetLoading] = useState(false);
 
   const isAdmin = role === 'admin';
   const canManageDeviceBootstrap = isAdmin && !isTempAccount;
@@ -202,6 +210,12 @@ export function Settings({ onLogout }: SettingsProps) {
       portal: 'Masuk captive portal',
       error: 'Gagal diterapkan',
     }[deviceBootstrapStatus] || bootstrapSettings.status || 'Siap';
+  const liveResetStatusLabel = {
+    idle: 'Siap',
+    otp_sent: 'OTP terkirim',
+    success: 'Reset berhasil',
+    error: 'Perlu perhatian',
+  }[liveResetState];
 
   useEffect(() => {
     const next = (settings?.deviceBootstrap || {}) as DeviceBootstrapSettings;
@@ -454,6 +468,88 @@ export function Settings({ onLogout }: SettingsProps) {
       alert('Gagal menghapus bootstrap device');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getCallableErrorMessage = (error: unknown, fallback: string) => {
+    const raw = error instanceof Error ? error.message : String(error || '');
+    return raw
+      .replace(/^internal\s*/i, '')
+      .replace(/^permission-denied\s*/i, '')
+      .replace(/^invalid-argument\s*/i, '')
+      .replace(/^failed-precondition\s*/i, '')
+      .replace(/^resource-exhausted\s*/i, '')
+      .replace(/^deadline-exceeded\s*/i, '')
+      .replace(/^not-found\s*/i, '')
+      .replace(/^unauthenticated\s*/i, '')
+      .trim() || fallback;
+  };
+
+  const handleRequestLiveResetOtp = async () => {
+    if (!canManageDeviceBootstrap) return;
+    setLiveResetLoading(true);
+    try {
+      const requestOtp = httpsCallable(functions, 'requestListrikDataResetOtp');
+      const result = await requestOtp({});
+      const data = (result.data || {}) as {
+        actionId?: string;
+        expiresAt?: number;
+        maskedEmail?: string;
+      };
+
+      setLiveResetActionId(String(data.actionId || ''));
+      setLiveResetExpiresAt(Number(data.expiresAt || 0) || null);
+      setLiveResetMaskedEmail(String(data.maskedEmail || user?.email || ''));
+      setLiveResetOtp('');
+      setLiveResetState('otp_sent');
+      setLiveResetMessage('Kode OTP sudah dikirim ke email admin. Masukkan 6 digit OTP untuk mengosongkan data realtime /listrik.');
+      alert('OTP reset data realtime berhasil dikirim ke email admin.');
+    } catch (error) {
+      const msg = getCallableErrorMessage(error, 'Gagal meminta OTP reset data realtime.');
+      setLiveResetState('error');
+      setLiveResetMessage(msg);
+      alert(msg);
+    } finally {
+      setLiveResetLoading(false);
+    }
+  };
+
+  const handleConfirmLiveReset = async () => {
+    if (!canManageDeviceBootstrap) return;
+    if (!liveResetActionId) {
+      alert('Minta OTP dulu sebelum mengosongkan data realtime.');
+      return;
+    }
+    if (!/^\d{6}$/.test(liveResetOtp.trim())) {
+      alert('OTP harus 6 digit angka.');
+      return;
+    }
+
+    setLiveResetLoading(true);
+    try {
+      const confirmReset = httpsCallable(functions, 'confirmListrikDataReset');
+      const result = await confirmReset({
+        otp: liveResetOtp.trim(),
+        actionId: liveResetActionId,
+      });
+      const data = (result.data || {}) as { clearedAt?: number };
+      const clearedLabel = data.clearedAt
+        ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+        : 'baru saja';
+
+      setLiveResetActionId('');
+      setLiveResetExpiresAt(null);
+      setLiveResetOtp('');
+      setLiveResetState('success');
+      setLiveResetMessage(`Data realtime /listrik berhasil dikosongkan pada ${clearedLabel} WIB.`);
+      alert('Data realtime perangkat IoT berhasil dikosongkan.');
+    } catch (error) {
+      const msg = getCallableErrorMessage(error, 'Gagal mengosongkan data realtime /listrik.');
+      setLiveResetState('error');
+      setLiveResetMessage(msg);
+      alert(msg);
+    } finally {
+      setLiveResetLoading(false);
     }
   };
 
@@ -1170,6 +1266,72 @@ export function Settings({ onLogout }: SettingsProps) {
             >
               Hapus Wi-Fi & Buka Setup
             </button>
+          </div>
+
+          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+            <div className="space-y-2">
+              <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                Reset Data Realtime IoT
+              </h4>
+              <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+                Aksi ini mengosongkan data realtime sensor pada <code>/listrik</code> setelah OTP 6 digit
+                dikirim ke email admin yang sedang login.
+              </p>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              Histori log tidak dihapus. Jika device fisik masih online, data baru dapat muncul lagi pada heartbeat berikutnya.
+            </div>
+
+            <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+              OTP akan dikirim ke email admin: <strong>{user?.email || '—'}</strong>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Kode OTP Email Admin
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={liveResetOtp}
+                  onChange={(e) => setLiveResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                  placeholder="Masukkan 6 digit OTP"
+                />
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+                <div className="font-semibold">Status verifikasi: {liveResetStatusLabel}</div>
+                <div className="mt-2">{liveResetMessage}</div>
+                {liveResetMaskedEmail && <div className="mt-2">Email tujuan: {liveResetMaskedEmail}</div>}
+                {liveResetActionId && <div>ID verifikasi: {liveResetActionId}</div>}
+                {liveResetExpiresAt && (
+                  <div>
+                    OTP berlaku sampai:{' '}
+                    {new Date(liveResetExpiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                onClick={handleRequestLiveResetOtp}
+                disabled={liveResetLoading || !canManageDeviceBootstrap}
+                className="px-4 py-2 bg-transparent border border-gray-400 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 rounded-lg font-semibold transition"
+              >
+                {liveResetLoading ? 'Mengirim...' : 'Kirim OTP ke Email Admin'}
+              </button>
+              <button
+                onClick={handleConfirmLiveReset}
+                disabled={liveResetLoading || !canManageDeviceBootstrap}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+              >
+                {liveResetLoading ? 'Memproses...' : 'Kosongkan Data Realtime'}
+              </button>
+            </div>
           </div>
         </div>
       )}

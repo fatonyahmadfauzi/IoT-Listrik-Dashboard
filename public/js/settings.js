@@ -1,7 +1,7 @@
 /**
- * settings.js — Settings page (Admin only) — NO Firebase Functions required
+ * settings.js — Settings page (Admin only)
  * ─────────────────────────────────────────────────────────────────────
- * User management tanpa Firebase Functions:
+ * User management utama tetap tanpa Firebase Functions:
  *
  *   LIST   → baca /users dari RTDB langsung
  *   CREATE → pakai Secondary Firebase App (admin tidak ter-logout)
@@ -16,10 +16,13 @@
  *      (user masih bisa login tapi tidak punya role → dianggap unauthorized)
  *  ⚠️  Admin tidak bisa set password langsung — hanya bisa kirim reset email
  *  ⚠️  List user hanya menampilkan yang pernah login (ada di RTDB /users)
+ *
+ * Fitur sensitif yang memakai Firebase Functions:
+ *   - OTP email untuk reset data realtime /listrik
  * ─────────────────────────────────────────────────────────────────────
  */
 
-import { db, auth, firebaseConfig }  from './firebase-config.js';
+import { db, auth, firebaseConfig, functions }  from './firebase-config.js';
 import { loadClientConfig, saveClientConfig } from './client-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount, getCurrentUser } from './auth.js';
 import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
@@ -34,6 +37,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeApp, deleteApp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { httpsCallable }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 // ── DOM: System settings ──────────────────────────────────────
 const inpThreshold    = document.getElementById('inpThreshold');
@@ -108,6 +113,19 @@ const deviceBootstrapStatus  = document.getElementById('deviceBootstrapStatus');
 const deviceBootstrapMeta    = document.getElementById('deviceBootstrapMeta');
 
 let latestDeviceBootstrap = {};
+
+// ── DOM: Admin live data reset via OTP ────────────────────────
+const liveDataResetSection   = document.getElementById('liveDataResetSection');
+const adminResetEmail        = document.getElementById('adminResetEmail');
+const inpLiveResetOtp        = document.getElementById('inpLiveResetOtp');
+const sendLiveResetOtpBtn    = document.getElementById('sendLiveResetOtpBtn');
+const confirmLiveResetBtn    = document.getElementById('confirmLiveResetBtn');
+const liveDataResetStatus    = document.getElementById('liveDataResetStatus');
+const liveDataResetMeta      = document.getElementById('liveDataResetMeta');
+
+let liveResetActionId = '';
+let liveResetExpiresAt = 0;
+let liveResetMaskedEmail = '';
 
 // ── Helper: Reload config di sim-notifier setelah settings disimpan ────────
 async function reloadSimNotifierConfig() {
@@ -460,9 +478,34 @@ function isRealAdminSettingsSession() {
   return !isTempAccount() && getDbPrefix() === '';
 }
 
+function getCallableErrorMessage(err, fallback = 'Terjadi kesalahan.') {
+  const message = String(err?.message || fallback)
+    .replace(/^internal\s*/i, '')
+    .replace(/^permission-denied\s*/i, '')
+    .replace(/^invalid-argument\s*/i, '')
+    .replace(/^failed-precondition\s*/i, '')
+    .replace(/^resource-exhausted\s*/i, '')
+    .replace(/^deadline-exceeded\s*/i, '')
+    .replace(/^not-found\s*/i, '')
+    .replace(/^unauthenticated\s*/i, '')
+    .trim();
+  return message || fallback;
+}
+
 function setDeviceBootstrapVisibility() {
   if (!deviceBootstrapSection) return;
   deviceBootstrapSection.hidden = !isRealAdminSettingsSession();
+}
+
+function setLiveDataResetVisibility() {
+  if (!liveDataResetSection) return;
+  liveDataResetSection.hidden = !isRealAdminSettingsSession();
+  if (adminResetEmail) {
+    const currentUser = getCurrentUser();
+    adminResetEmail.textContent = currentUser?.email
+      ? `OTP akan dikirim ke email admin yang sedang login: ${currentUser.email}`
+      : 'OTP akan dikirim ke email admin yang sedang login.';
+  }
 }
 
 function renderDeviceBootstrapStatus(data = {}) {
@@ -501,6 +544,34 @@ function renderDeviceBootstrapStatus(data = {}) {
   if (activeSsid) meta.push(`SSID aktif: ${activeSsid}`);
   if (data.lastError) meta.push(`Detail error: ${String(data.lastError)}`);
   deviceBootstrapMeta.innerHTML = meta.join('<br>');
+}
+
+function renderLiveDataResetState({ type = 'idle', message = '' } = {}) {
+  if (!liveDataResetStatus || !liveDataResetMeta) return;
+
+  const now = Date.now();
+  const expiresLabel = liveResetExpiresAt > now
+    ? new Date(liveResetExpiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+    : '';
+
+  const statusMap = {
+    idle: 'Siap',
+    otp_sent: 'OTP terkirim',
+    success: 'Reset berhasil',
+    error: 'Perlu perhatian',
+  };
+
+  liveDataResetStatus.textContent = statusMap[type] || 'Siap';
+
+  const parts = [];
+  if (message) parts.push(message);
+  if (liveResetMaskedEmail) parts.push(`Email tujuan: ${liveResetMaskedEmail}`);
+  if (liveResetActionId) parts.push(`ID verifikasi: ${liveResetActionId}`);
+  if (expiresLabel) parts.push(`OTP berlaku sampai: ${expiresLabel} WIB`);
+  if (!parts.length) {
+    parts.push('Bagian ini hanya mengosongkan data realtime di /listrik. Histori log tidak dihapus.');
+  }
+  liveDataResetMeta.innerHTML = parts.join('<br>');
 }
 
 function validateDeviceBootstrapPayload() {
@@ -636,6 +707,98 @@ async function clearDeviceBootstrapSettings() {
     if (clearDeviceBootstrapBtn) {
       clearDeviceBootstrapBtn.disabled = false;
       clearDeviceBootstrapBtn.innerHTML = '<span class="material-symbols-rounded">wifi_off</span> Hapus Wi-Fi & Buka Setup';
+    }
+  }
+}
+
+async function requestLiveDataResetOtp() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Fitur reset data realtime hanya untuk admin utama.', 'error');
+    return;
+  }
+
+  try {
+    if (sendLiveResetOtpBtn) {
+      sendLiveResetOtpBtn.disabled = true;
+      sendLiveResetOtpBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Mengirim OTP...';
+    }
+
+    const call = httpsCallable(functions, 'requestListrikDataResetOtp');
+    const result = await call({});
+    const data = result.data || {};
+
+    liveResetActionId = String(data.actionId || '');
+    liveResetExpiresAt = Number(data.expiresAt || 0);
+    liveResetMaskedEmail = String(data.maskedEmail || getCurrentUser()?.email || '');
+
+    if (inpLiveResetOtp) inpLiveResetOtp.value = '';
+    renderLiveDataResetState({
+      type: 'otp_sent',
+      message: 'Kode OTP sudah dikirim ke email admin. Masukkan 6 digit OTP untuk mengosongkan data realtime /listrik.',
+    });
+    showToast('OTP reset data realtime berhasil dikirim ke email admin.', 'success');
+  } catch (err) {
+    renderLiveDataResetState({
+      type: 'error',
+      message: getCallableErrorMessage(err, 'Gagal meminta OTP reset data realtime.'),
+    });
+    showToast(getCallableErrorMessage(err, 'Gagal meminta OTP reset data realtime.'), 'error');
+  } finally {
+    if (sendLiveResetOtpBtn) {
+      sendLiveResetOtpBtn.disabled = false;
+      sendLiveResetOtpBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Kirim OTP ke Email Admin';
+    }
+  }
+}
+
+async function confirmLiveDataReset() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Fitur reset data realtime hanya untuk admin utama.', 'error');
+    return;
+  }
+  if (!liveResetActionId) {
+    showToast('Minta OTP dulu sebelum mengosongkan data realtime.', 'warning');
+    return;
+  }
+
+  const otp = inpLiveResetOtp?.value.trim() || '';
+  if (!/^\d{6}$/.test(otp)) {
+    showToast('OTP harus 6 digit angka.', 'error');
+    return;
+  }
+
+  try {
+    if (confirmLiveResetBtn) {
+      confirmLiveResetBtn.disabled = true;
+      confirmLiveResetBtn.innerHTML = '<span class="material-symbols-rounded">delete_forever</span> Memproses...';
+    }
+
+    const call = httpsCallable(functions, 'confirmListrikDataReset');
+    const result = await call({ otp, actionId: liveResetActionId });
+    const data = result.data || {};
+    const clearedLabel = data.clearedAt
+      ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+      : 'baru saja';
+
+    liveResetActionId = '';
+    liveResetExpiresAt = 0;
+    if (inpLiveResetOtp) inpLiveResetOtp.value = '';
+
+    renderLiveDataResetState({
+      type: 'success',
+      message: `Data realtime /listrik berhasil dikosongkan pada ${clearedLabel} WIB.`,
+    });
+    showToast('Data realtime perangkat IoT berhasil dikosongkan.', 'success');
+  } catch (err) {
+    renderLiveDataResetState({
+      type: 'error',
+      message: getCallableErrorMessage(err, 'Gagal mengosongkan data realtime /listrik.'),
+    });
+    showToast(getCallableErrorMessage(err, 'Gagal mengosongkan data realtime /listrik.'), 'error');
+  } finally {
+    if (confirmLiveResetBtn) {
+      confirmLiveResetBtn.disabled = false;
+      confirmLiveResetBtn.innerHTML = '<span class="material-symbols-rounded">delete_forever</span> Kosongkan Data Realtime';
     }
   }
 }
@@ -1042,6 +1205,8 @@ initPage({
     populateSidebar(user, role);
     initSidebarToggle();
     setDeviceBootstrapVisibility();
+    setLiveDataResetVisibility();
+    renderLiveDataResetState();
     initTelegramChatManager();
     loadSettings();
     loadClientConfigUi();
@@ -1052,6 +1217,8 @@ initPage({
     saveDiscordBtn?.addEventListener('click', saveDiscordSettings);
     saveDeviceBootstrapBtn?.addEventListener('click', saveDeviceBootstrapSettings);
     clearDeviceBootstrapBtn?.addEventListener('click', clearDeviceBootstrapSettings);
+    sendLiveResetOtpBtn?.addEventListener('click', requestLiveDataResetOtp);
+    confirmLiveResetBtn?.addEventListener('click', confirmLiveDataReset);
     testDiscordBtn?.addEventListener('click', testDiscordWebhook);
     saveClientBtn?.addEventListener('click', saveClientConfigFromForm);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);

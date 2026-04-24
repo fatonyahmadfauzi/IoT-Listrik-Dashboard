@@ -12,7 +12,7 @@
 import { db }           from './firebase-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix } from './auth.js';
 import { createRealtimeChart, loadHistoryIntoChart } from './charts.js';
-import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
+import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, query, orderByKey, limitToLast, onValue }
                         from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -38,6 +38,7 @@ function startAlarmMonitor() {
     const arus = Number(d.arus || 0);
     const tegangan = Number(d.tegangan || 0);
     checkAndNotify(status, arus, tegangan);
+    checkAdminResetNotify(d);
   });
 }
 

@@ -10,6 +10,7 @@ import {
   Query,
 } from 'firebase/database';
 import { startHybridListrik } from './hybridListrik';
+import { showNotification } from './notifikasi';
 
 interface UserStore {
   user: User | null;
@@ -52,7 +53,10 @@ export const useAuthStore = create<UserStore>((set, get) => {
               return;
             } else {
               authTimer = setTimeout(() => {
-                alert("Sesi demo telah berakhir (15 menit). Anda akan dilogout secara otomatis.");
+                showNotification(
+                  'Sesi demo berakhir',
+                  'Durasi 15 menit telah habis. Anda akan logout otomatis.'
+                );
                 get().logout();
               }, timeRemaining);
             }
@@ -107,6 +111,9 @@ interface ListrikData {
   relay: boolean;
   status: 'NORMAL' | 'WARNING' | 'LEAKAGE' | 'DANGER';
   updated_at: number;
+  reset_by_admin?: boolean;
+  reset_at?: string | number | null;
+  reset_note?: string;
 }
 
 interface DataStore {
@@ -158,6 +165,9 @@ export const useDataStore = create<DataStore>((set) => {
               relay: d.relay === 1,
               status: d.status as ListrikData['status'],
               updated_at: d.updated_at ?? 0,
+              reset_by_admin: Boolean((d as any).reset_by_admin),
+              reset_at: (d as any).reset_at ?? null,
+              reset_note: String((d as any).reset_note || ''),
             },
             loading: false,
           });

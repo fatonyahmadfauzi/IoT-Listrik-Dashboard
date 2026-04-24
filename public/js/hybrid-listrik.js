@@ -45,6 +45,9 @@ export function normalizeListrikPayload(d) {
     status: d?.status || 'NORMAL',
     relay,
     updated_at: d?.updated_at != null ? Number(d.updated_at) : null,
+    reset_by_admin: !!d?.reset_by_admin,
+    reset_at: d?.reset_at ?? null,
+    reset_note: d?.reset_note ? String(d.reset_note) : '',
   };
 }
 

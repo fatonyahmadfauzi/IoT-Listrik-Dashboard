@@ -18,6 +18,7 @@ import {
 import {
   requestNotificationPermission,
   checkAndNotify,
+  checkAdminResetNotify,
   showToast,
   initAudio,
 } from "./notifications.js";
@@ -251,6 +252,7 @@ function startRealtimeListener() {
 
       renderStatus(d.status);
       renderRelay(d.relay);
+      checkAdminResetNotify(d);
 
       if (chart) {
         const label = new Date().toLocaleTimeString("id-ID");

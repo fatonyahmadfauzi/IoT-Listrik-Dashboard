@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
     private var lastDeviceHeartbeatAt = 0L
     private var lastUpdatedMarker: Long? = null
     private var lastSensorSignature = ""
+    private var lastResetMarker: String? = null
     private var watchStartedAt = System.currentTimeMillis()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -262,6 +263,21 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    private fun notifyAdminReset(resetAt: String, resetNote: String) {
+        if (lastResetMarker == null) {
+            lastResetMarker = resetAt
+            return
+        }
+        if (lastResetMarker == resetAt) return
+
+        lastResetMarker = resetAt
+        val message = resetNote.ifBlank {
+            "Admin mengosongkan data realtime sensor perangkat IoT."
+        }
+        showToast(message)
+        triggerInfoNotification("Data realtime dikosongkan", message)
+    }
+
     private fun isLikelyEpochMs(value: Long): Boolean = value > 1_000_000_000_000L
 
     private fun buildSensorSignature(
@@ -433,6 +449,9 @@ class MainActivity : AppCompatActivity() {
                     ?: snapshot.child("updated_at").getValue(Double::class.java)?.toLong()
                     ?: snapshot.child("updated_at").getValue(String::class.java)?.toLongOrNull()
                     ?: 0L
+                val resetByAdmin = snapshot.child("reset_by_admin").getValue(Boolean::class.java) ?: false
+                val resetAt = snapshot.child("reset_at").getValue(String::class.java) ?: ""
+                val resetNote = snapshot.child("reset_note").getValue(String::class.java) ?: ""
 
                 registerDeviceHeartbeat(
                     updatedAt = updatedAt,
@@ -444,6 +463,10 @@ class MainActivity : AppCompatActivity() {
                     frekuensi = frekuensi,
                     pf = pf
                 )
+
+                if (resetByAdmin && resetAt.isNotBlank()) {
+                    notifyAdminReset(resetAt, resetNote)
+                }
 
                 binding.tvStatus.text = status
                 binding.tvArus.text = String.format("%.2f", arus)
@@ -782,5 +805,30 @@ class MainActivity : AppCompatActivity() {
             .setAutoCancel(true)
 
         notificationManager.notify(1001, notificationBuilder.build())
+    }
+
+    private fun triggerInfoNotification(title: String, message: String) {
+        val channelId = "INFO_CHANNEL_ID"
+        val notificationManager =
+            getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                channelId,
+                "Info Updates",
+                android.app.NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notificationBuilder = androidx.core.app.NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+
+        notificationManager.notify(1002, notificationBuilder.build())
     }
 }

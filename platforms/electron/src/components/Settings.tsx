@@ -3,6 +3,7 @@ import { LogOut, Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
 import { db } from '../lib/firebase';
 import { ref, update, remove, set } from 'firebase/database';
+import { showNotification } from '../lib/notifikasi';
 import {
   loadClientConfig,
   saveClientConfig,
@@ -239,10 +240,10 @@ export function Settings({ onLogout }: SettingsProps) {
         powerFactorEstimate,
         frequencyHz,
       });
-      alert('System configuration saved successfully');
+      notifyDesktop('Pengaturan sistem tersimpan', 'Konfigurasi utama berhasil diperbarui.');
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Failed to save settings');
+      notifyDesktop('Gagal menyimpan pengaturan', 'Konfigurasi sistem tidak berhasil diperbarui.');
     } finally {
       setLoading(false);
     }
@@ -256,10 +257,10 @@ export function Settings({ onLogout }: SettingsProps) {
         arusCalibration,
         teganganCalibration,
       });
-      alert('Calibration saved successfully');
+      notifyDesktop('Kalibrasi tersimpan', 'Nilai kalibrasi arus dan tegangan berhasil diperbarui.');
     } catch (error) {
       console.error('Error saving calibration:', error);
-      alert('Failed to save calibration');
+      notifyDesktop('Gagal menyimpan kalibrasi', 'Periksa kembali nilai kalibrasi lalu coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -273,18 +274,18 @@ export function Settings({ onLogout }: SettingsProps) {
     const draft = telegramChatIdDraft.trim();
     if (draft || name) {
       if (!draft && name) {
-        alert('Chat ID wajib diisi.');
+        notifyDesktop('Validasi Telegram', 'Chat ID wajib diisi.');
         return;
       }
       const chatId = normalizeTelegramChatId(draft);
       if (!chatId) {
-        alert('Chat ID harus angka. Untuk grup biasanya diawali -100.');
+        notifyDesktop('Validasi Telegram', 'Chat ID harus angka. Untuk grup biasanya diawali -100.');
         return;
       }
 
       const duplicateIndex = nextRecipients.findIndex((item) => item.chatId === chatId);
       if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
-        alert('Chat ID sudah ada di daftar.');
+        notifyDesktop('Validasi Telegram', 'Chat ID sudah ada di daftar.');
         return;
       }
 
@@ -311,10 +312,10 @@ export function Settings({ onLogout }: SettingsProps) {
         telegramRecipients: nextRecipients,
         telegramNotifyEnabled,
       });
-      alert('Telegram integration saved successfully');
+      notifyDesktop('Telegram tersimpan', 'Konfigurasi Telegram berhasil diperbarui.');
     } catch (error) {
       console.error('Error saving Telegram settings:', error);
-      alert('Failed to save telegram integration');
+      notifyDesktop('Gagal menyimpan Telegram', 'Konfigurasi Telegram tidak berhasil disimpan.');
     } finally {
       setLoading(false);
     }
@@ -323,19 +324,19 @@ export function Settings({ onLogout }: SettingsProps) {
   const addOrUpdateTelegramChatId = () => {
     const name = telegramRecipientNameDraft.trim();
     if (!telegramChatIdDraft.trim() && name) {
-      alert('Chat ID wajib diisi.');
+      notifyDesktop('Validasi Telegram', 'Chat ID wajib diisi.');
       return;
     }
 
     const chatId = normalizeTelegramChatId(telegramChatIdDraft);
     if (!chatId) {
-      alert('Chat ID harus angka. Untuk grup biasanya diawali -100.');
+      notifyDesktop('Validasi Telegram', 'Chat ID harus angka. Untuk grup biasanya diawali -100.');
       return;
     }
 
     const duplicateIndex = telegramRecipients.findIndex((item) => item.chatId === chatId);
     if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
-      alert('Chat ID sudah ada di daftar.');
+      notifyDesktop('Validasi Telegram', 'Chat ID sudah ada di daftar.');
       return;
     }
 
@@ -381,10 +382,10 @@ export function Settings({ onLogout }: SettingsProps) {
         webhookLogs: discordLogs,
         enabled: discordEnabled,
       });
-      alert('Discord configuration saved successfully');
+      notifyDesktop('Discord tersimpan', 'Konfigurasi Discord berhasil diperbarui.');
     } catch (error) {
       console.error('Error saving Discord settings:', error);
-      alert('Failed to save discord integration');
+      notifyDesktop('Gagal menyimpan Discord', 'Konfigurasi Discord tidak berhasil disimpan.');
     } finally {
       setLoading(false);
     }
@@ -408,7 +409,7 @@ export function Settings({ onLogout }: SettingsProps) {
 
     const validationError = validateDeviceBootstrap();
     if (validationError) {
-      alert(validationError);
+      notifyDesktop('Validasi bootstrap device', validationError);
       return;
     }
 
@@ -432,10 +433,10 @@ export function Settings({ onLogout }: SettingsProps) {
         lastError: '',
         restartRequired: true,
       });
-      alert('Permintaan bootstrap dikirim. ESP32 akan restart setelah menerapkan konfigurasi baru.');
+      notifyDesktop('Bootstrap device dikirim', 'ESP32 akan restart setelah menerapkan konfigurasi baru.');
     } catch (error) {
       console.error('Error saving device bootstrap:', error);
-      alert('Gagal menyimpan bootstrap device');
+      notifyDesktop('Gagal bootstrap device', 'Permintaan bootstrap tidak berhasil dikirim.');
     } finally {
       setLoading(false);
     }
@@ -461,10 +462,10 @@ export function Settings({ onLogout }: SettingsProps) {
         lastError: '',
         restartRequired: true,
       });
-      alert('Permintaan hapus bootstrap dikirim. Device akan masuk mode setup setelah restart.');
+      notifyDesktop('Bootstrap device dihapus', 'Device akan masuk mode setup setelah restart.');
     } catch (error) {
       console.error('Error clearing device bootstrap:', error);
-      alert('Gagal menghapus bootstrap device');
+      notifyDesktop('Gagal menghapus bootstrap', 'Permintaan hapus bootstrap tidak berhasil dikirim.');
     } finally {
       setLoading(false);
     }
@@ -482,6 +483,10 @@ export function Settings({ onLogout }: SettingsProps) {
       .replace(/^not-found\s*/i, '')
       .replace(/^unauthenticated\s*/i, '')
       .trim() || fallback;
+  };
+
+  const notifyDesktop = (title: string, body: string) => {
+    showNotification(title, body);
   };
 
   const getLiveResetApiBase = () => 'https://iot-listrik-dashboard.vercel.app';
@@ -525,12 +530,12 @@ export function Settings({ onLogout }: SettingsProps) {
       setLiveResetOtp('');
       setLiveResetState('otp_sent');
       setLiveResetMessage('Kode OTP sudah dikirim ke email admin. Masukkan 6 digit OTP untuk mengosongkan data realtime /listrik.');
-      alert('OTP reset data realtime berhasil dikirim ke email admin.');
+      notifyDesktop('OTP reset dikirim', 'Kode OTP reset data realtime sudah dikirim ke email admin.');
     } catch (error) {
       const msg = getCallableErrorMessage(error, 'Gagal meminta OTP reset data realtime.');
       setLiveResetState('error');
       setLiveResetMessage(msg);
-      alert(msg);
+      notifyDesktop('Gagal meminta OTP', msg);
     } finally {
       setLiveResetLoading(false);
     }
@@ -539,11 +544,11 @@ export function Settings({ onLogout }: SettingsProps) {
   const handleConfirmLiveReset = async () => {
     if (!canManageDeviceBootstrap) return;
     if (!liveResetActionId) {
-      alert('Minta OTP dulu sebelum mengosongkan data realtime.');
+      notifyDesktop('Reset data realtime', 'Minta OTP dulu sebelum mengosongkan data realtime.');
       return;
     }
     if (!/^\d{6}$/.test(liveResetOtp.trim())) {
-      alert('OTP harus 6 digit angka.');
+      notifyDesktop('Validasi OTP', 'OTP harus 6 digit angka.');
       return;
     }
 
@@ -562,12 +567,12 @@ export function Settings({ onLogout }: SettingsProps) {
       setLiveResetOtp('');
       setLiveResetState('success');
       setLiveResetMessage(`Data realtime /listrik berhasil dikosongkan pada ${clearedLabel} WIB.`);
-      alert('Data realtime perangkat IoT berhasil dikosongkan.');
+      notifyDesktop('Data realtime dikosongkan', 'Data realtime perangkat IoT berhasil dikosongkan.');
     } catch (error) {
       const msg = getCallableErrorMessage(error, 'Gagal mengosongkan data realtime /listrik.');
       setLiveResetState('error');
       setLiveResetMessage(msg);
-      alert(msg);
+      notifyDesktop('Gagal mengosongkan data', msg);
     } finally {
       setLiveResetLoading(false);
     }
@@ -575,7 +580,7 @@ export function Settings({ onLogout }: SettingsProps) {
 
   const testDiscordWebhook = async () => {
     if (!discordAlerts.startsWith('https://discord.com/api/webhooks/')) {
-      alert('Isi Webhook #alerts terlebih dahulu untuk test');
+      notifyDesktop('Test Discord', 'Isi Webhook #alerts terlebih dahulu untuk test.');
       return;
     }
     setLoading(true);
@@ -597,12 +602,12 @@ export function Settings({ onLogout }: SettingsProps) {
         }),
       });
       if (res.ok || res.status === 204) {
-        alert('Test embed berhasil dikirim ke #alerts!');
+        notifyDesktop('Test Discord berhasil', 'Embed test berhasil dikirim ke channel #alerts.');
       } else {
-        alert(`Discord menolak: HTTP ${res.status}`);
+        notifyDesktop('Discord menolak', `Webhook mengembalikan HTTP ${res.status}.`);
       }
     } catch (error: any) {
-      alert('Gagal kirim test: ' + error.message);
+      notifyDesktop('Gagal kirim test Discord', error.message || 'Terjadi kesalahan saat mengirim test.');
     } finally {
       setLoading(false);
     }

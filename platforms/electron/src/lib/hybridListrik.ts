@@ -31,6 +31,9 @@ export interface NormalizedListrik {
   status: string;
   relay: 0 | 1;
   updated_at: number | null;
+  reset_by_admin: boolean;
+  reset_at: string | number | null;
+  reset_note: string;
 }
 
 export function normalizeListrikPayload(d: Record<string, unknown> | null): NormalizedListrik {
@@ -39,6 +42,7 @@ export function normalizeListrikPayload(d: Record<string, unknown> | null): Norm
   const pf = Number(d?.power_factor ?? d?.powerFactor ?? 0.85);
   const apparent = Number(d?.daya ?? arus * teg);
   const relayRaw = d?.relay;
+  const rawResetAt = d?.reset_at;
   const relay: 0 | 1 = relayRaw === true || Number(relayRaw) === 1 ? 1 : 0;
   return {
     arus,
@@ -51,6 +55,12 @@ export function normalizeListrikPayload(d: Record<string, unknown> | null): Norm
     status: String(d?.status || 'NORMAL'),
     relay,
     updated_at: d?.updated_at != null ? Number(d.updated_at) : null,
+    reset_by_admin: Boolean(d?.reset_by_admin),
+    reset_at:
+      typeof rawResetAt === 'string' || typeof rawResetAt === 'number'
+        ? rawResetAt
+        : null,
+    reset_note: d?.reset_note ? String(d.reset_note) : '',
   };
 }
 

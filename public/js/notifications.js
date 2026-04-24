@@ -19,12 +19,15 @@ try {
 const REPEAT_INTERVAL_MS = 3000;
 let lastRepeatAt = 0;
 let lastRepeatStatus = null;
+let lastResetNotifiedAt = 0;
 
 try {
   const at = localStorage.getItem('iot_last_alarm_repeat_at');
   const st = localStorage.getItem('iot_last_alarm_repeat_status');
+  const resetAt = localStorage.getItem('iot_last_reset_notified_at');
   if (at) lastRepeatAt = Number(at) || 0;
   if (st) lastRepeatStatus = st;
+  if (resetAt) lastResetNotifiedAt = Number(resetAt) || 0;
 } catch (_) {}
 
 function isAlarmDisabled() {
@@ -158,6 +161,40 @@ function stopWebSiren() {
   }
 }
 
+function parseResetTimestamp(value) {
+  if (value == null) return 0;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const direct = Number(value);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function checkAdminResetNotify(payload) {
+  const resetByAdmin = !!payload?.reset_by_admin;
+  const resetAt = parseResetTimestamp(payload?.reset_at);
+  if (!resetByAdmin || !resetAt) return false;
+  if (resetAt <= lastResetNotifiedAt) return false;
+
+  const message =
+    payload?.reset_note ||
+    'Admin mengosongkan data realtime sensor perangkat IoT pada /listrik.';
+
+  sendNotification(
+    'Data realtime sensor dikosongkan',
+    message,
+    '/assets/icons/icon-192.png',
+    'admin-live-reset'
+  );
+  showToast(message, 'info', 5000);
+
+  lastResetNotifiedAt = resetAt;
+  try {
+    localStorage.setItem('iot_last_reset_notified_at', String(resetAt));
+  } catch (_) {}
+  return true;
+}
+
 /**
  * Check status and send notification if status is critical.
  * Prevents duplicate notifications for the same status.
@@ -267,4 +304,4 @@ function showToast(message, type = 'success', duration = 4000) {
   }, duration);
 }
 
-export { requestNotificationPermission, sendNotification, checkAndNotify, showToast, initAudio, stopWebSiren };
+export { requestNotificationPermission, sendNotification, checkAndNotify, checkAdminResetNotify, showToast, initAudio, stopWebSiren };

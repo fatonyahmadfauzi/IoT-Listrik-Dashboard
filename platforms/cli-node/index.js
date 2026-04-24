@@ -36,6 +36,7 @@ let lastUpdatedMarker = null;
 let lastSensorSignature = "";
 let watchStartedAt = Date.now();
 let latestListrikSnapshot = null;
+let lastAdminResetMarker = null;
 
 function isLikelyEpochMs(value) {
   return Number.isFinite(value) && value > 1e12;
@@ -86,6 +87,22 @@ function currentConnectionLabel(now = Date.now()) {
   return (now - lastDeviceHeartbeatAt) > DEVICE_STALE_MS ? "Device Offline" : "Connected";
 }
 
+function handleAdminResetNotice(data) {
+  const resetByAdmin = !!data?.reset_by_admin;
+  const resetAt = String(data?.reset_at || "").trim();
+  if (!resetByAdmin || !resetAt) return;
+
+  if (lastAdminResetMarker == null) {
+    lastAdminResetMarker = resetAt;
+    return;
+  }
+  if (lastAdminResetMarker === resetAt) return;
+
+  lastAdminResetMarker = resetAt;
+  const note = String(data?.reset_note || "Admin mengosongkan data realtime sensor perangkat IoT.");
+  console.log(chalk.cyan(`\n[INFO] ${note}`));
+}
+
 function relayBlockedReason() {
   const label = currentConnectionLabel();
   if (label === "Device Offline") return "Perangkat offline. Relay fisik tidak menerima perintah.";
@@ -102,6 +119,7 @@ function startPresenceWatch() {
   lastUpdatedMarker = null;
   lastSensorSignature = "";
   latestListrikSnapshot = null;
+  lastAdminResetMarker = null;
   watchStartedAt = Date.now();
 
   presenceListrikRef = ref(db, `${pathPrefix}/listrik`);
@@ -110,6 +128,7 @@ function startPresenceWatch() {
     if (!data) return;
     latestListrikSnapshot = data;
     registerDeviceHeartbeat(data);
+    handleAdminResetNotice(data);
   });
 
   presenceConnRef = ref(db, ".info/connected");

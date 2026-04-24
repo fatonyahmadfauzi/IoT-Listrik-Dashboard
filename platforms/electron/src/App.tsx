@@ -27,6 +27,7 @@ function App() {
 
   const [page, setPage] = useState<Page>('dashboard');
   const prevStatus = useRef<string | undefined>(undefined);
+  const prevResetAt = useRef<string | number | null | undefined>(undefined);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -95,6 +96,36 @@ function App() {
 
     prevStatus.current = status;
   }, [user, currentData?.status, notifications]);
+
+  useEffect(() => {
+    if (!user) {
+      prevResetAt.current = undefined;
+      return;
+    }
+
+    const resetAt = currentData?.reset_at;
+    const resetByAdmin = currentData?.reset_by_admin;
+    if (!resetByAdmin || !resetAt) {
+      if (resetAt) prevResetAt.current = resetAt;
+      return;
+    }
+
+    if (prevResetAt.current == null) {
+      prevResetAt.current = resetAt;
+      return;
+    }
+
+    if (prevResetAt.current !== resetAt) {
+      showNotification(
+        'Data sensor dikosongkan',
+        currentData?.reset_note || 'Admin mengosongkan data realtime sensor perangkat IoT.'
+      );
+      prevResetAt.current = resetAt;
+      return;
+    }
+
+    prevResetAt.current = resetAt;
+  }, [user, currentData?.reset_at, currentData?.reset_by_admin, currentData?.reset_note]);
 
   const renderPage = () => {
     switch (page) {

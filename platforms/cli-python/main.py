@@ -50,6 +50,7 @@ last_updated_marker = None
 last_sensor_signature = ""
 watch_started_at = int(time.time() * 1000)
 latest_listrik_snapshot = None
+last_admin_reset_marker = None
 
 def is_likely_epoch_ms(value):
     return isinstance(value, (int, float)) and value > 1_000_000_000_000
@@ -107,12 +108,33 @@ def relay_blocked_reason():
         return "Sistem masih menunggu heartbeat perangkat."
     return "Perangkat belum siap menerima perintah."
 
+def handle_admin_reset_notice(snapshot):
+    global last_admin_reset_marker
+    if not snapshot or not snapshot.get("reset_by_admin"):
+        return
+
+    reset_at = str(snapshot.get("reset_at") or "").strip()
+    if not reset_at:
+        return
+
+    if last_admin_reset_marker is None:
+        last_admin_reset_marker = reset_at
+        return
+
+    if last_admin_reset_marker == reset_at:
+        return
+
+    last_admin_reset_marker = reset_at
+    note = str(snapshot.get("reset_note") or "Admin mengosongkan data realtime sensor perangkat IoT.")
+    console.print(f"\n[bold cyan][INFO][/bold cyan] {note}")
+
 def fetch_listrik_snapshot():
     global latest_listrik_snapshot
     snapshot = db.child(f"{path_prefix}listrik").get(current_user['token']).val()
     if snapshot:
         latest_listrik_snapshot = snapshot
         register_device_heartbeat(snapshot)
+        handle_admin_reset_notice(snapshot)
     return snapshot
 
 def probe_device_ready(wait_seconds=4.0):
@@ -147,7 +169,7 @@ def handle_session_expired():
     os._exit(0)
 
 def process_user_claims(user_data):
-    global path_prefix, session_timeout_timer, watch_started_at, last_device_heartbeat_at, last_updated_marker, last_sensor_signature, latest_listrik_snapshot
+    global path_prefix, session_timeout_timer, watch_started_at, last_device_heartbeat_at, last_updated_marker, last_sensor_signature, latest_listrik_snapshot, last_admin_reset_marker
     
     token = user_data.get('idToken', '')
     local_id = user_data.get('localId', '')
@@ -178,6 +200,7 @@ def process_user_claims(user_data):
     last_updated_marker = None
     last_sensor_signature = ""
     latest_listrik_snapshot = None
+    last_admin_reset_marker = None
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')

@@ -1,59 +1,4 @@
 #!/usr/bin/env node
-
-// Global error handler untuk mencegah window terminal langsung tertutup otomatis di Windows (force close)
-process.on('uncaughtException', (err) => {
-  console.error("\n[CRITICAL ERROR] Aplikasi berhenti tiba-tiba:");
-  console.error(err);
-  console.log("\nProses dihentikan. Tekan Enter untuk keluar...");
-  try {
-    const fs = require('fs');
-    const buffer = Buffer.alloc(1);
-    fs.readSync(0, buffer, 0, 1, null);
-  } catch (e) {}
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error("\n[UNHANDLED PROMISE REJECTION] Promise yang ditolak:");
-  console.error(reason);
-  console.log("\nProses dihentikan. Tekan Enter untuk keluar...");
-  try {
-    const fs = require('fs');
-    const buffer = Buffer.alloc(1);
-    fs.readSync(0, buffer, 0, 1, null);
-  } catch (e) {}
-  process.exit(1);
-});
-
-// Bypass TLS/CA bundle mismatches in pkg environments that causes undici native fetch to fail
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
-// PENTING: Firebase Auth v10 di Node.js menggunakan import/require('undici') secara eksplisit.
-// Karena kita meng-ignore 'undici' di pkg.ignore (karena .wasm error), require('undici') akan return {}.
-// Kita perlu mock package 'undici' dengan 'node-fetch' di level module resolution Node.js.
-{
-  const nodeFetch = require("node-fetch");
-  const Module = require("module");
-  const originalRequire = Module.prototype.require;
-
-  Module.prototype.require = function(request) {
-    if (request === "undici") {
-      return {
-        fetch: nodeFetch,
-        Headers: nodeFetch.Headers,
-        Request: nodeFetch.Request,
-        Response: nodeFetch.Response
-      };
-    }
-    return originalRequire.apply(this, arguments);
-  };
-  
-  // Set global fallback just in case
-  globalThis.fetch   = nodeFetch;
-  globalThis.Headers = nodeFetch.Headers;
-  globalThis.Request = nodeFetch.Request;
-  globalThis.Response = nodeFetch.Response;
-}
 const inquirer = require("inquirer");
 const chalk = require("chalk");
 const readline = require("readline");
@@ -63,12 +8,7 @@ const { initializeApp } = require("firebase/app");
 const { getAuth, signInWithEmailAndPassword, signOut } = require("firebase/auth");
 const { getDatabase, ref, onValue, set, get, query, limitToLast, orderByKey, off } = require("firebase/database");
 const os = require("os");
-const dns = require("dns");
 
-// Memaksa Node.js menggunakan IPv4 terlebih dahulu
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder("ipv4first");
-}
 const SESSION_FILE = path.join(os.homedir(), ".iot-listrik-session.json");
 
 const firebaseConfig = {
@@ -85,8 +25,166 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+const DEVICE_STALE_MS = 15000;
 let pathPrefix = "";
 let sessionTimeoutTimer = null;
+let presenceListrikRef = null;
+let presenceConnRef = null;
+let firebaseConnected = true;
+let lastDeviceHeartbeatAt = 0;
+let lastUpdatedMarker = null;
+let lastSensorSignature = "";
+let watchStartedAt = Date.now();
+let latestListrikSnapshot = null;
+let lastAdminResetMarker = null;
+
+function isLikelyEpochMs(value) {
+  return Number.isFinite(value) && value > 1e12;
+}
+
+function buildSensorSignature(d = {}) {
+  return [
+    Number(d?.arus ?? 0).toFixed(3),
+    Number(d?.tegangan ?? 0).toFixed(1),
+    Number(d?.daya ?? d?.apparent_power ?? 0).toFixed(1),
+    Number(d?.energi_kwh ?? 0).toFixed(4),
+    Number(d?.frekuensi ?? 0).toFixed(2),
+    Number(d?.power_factor ?? 0).toFixed(3),
+    String(d?.status || "NORMAL"),
+  ].join("|");
+}
+
+function registerDeviceHeartbeat(data) {
+  const updatedAt = data?.updated_at != null ? Number(data.updated_at) : null;
+  const sensorSignature = buildSensorSignature(data);
+  let heartbeatDetected = false;
+
+  if (Number.isFinite(updatedAt) && updatedAt > 0) {
+    if (lastUpdatedMarker == null) {
+      if (isLikelyEpochMs(updatedAt) && (Date.now() - updatedAt) <= DEVICE_STALE_MS) {
+        heartbeatDetected = true;
+      }
+    } else if (updatedAt !== lastUpdatedMarker) {
+      heartbeatDetected = true;
+    }
+    lastUpdatedMarker = updatedAt;
+  } else if (lastSensorSignature && lastSensorSignature !== sensorSignature) {
+    heartbeatDetected = true;
+  }
+
+  lastSensorSignature = sensorSignature;
+
+  if (heartbeatDetected) {
+    lastDeviceHeartbeatAt = Date.now();
+  }
+}
+
+function currentConnectionLabel(now = Date.now()) {
+  if (!firebaseConnected) return "Memulihkan...";
+  if (!lastDeviceHeartbeatAt) {
+    return (now - watchStartedAt) > DEVICE_STALE_MS ? "Device Offline" : "Memeriksa perangkat...";
+  }
+  return (now - lastDeviceHeartbeatAt) > DEVICE_STALE_MS ? "Device Offline" : "Connected";
+}
+
+function handleAdminResetNotice(data) {
+  const resetByAdmin = !!data?.reset_by_admin;
+  const resetAt = String(data?.reset_at || "").trim();
+  if (!resetByAdmin || !resetAt) return;
+
+  if (lastAdminResetMarker == null) {
+    lastAdminResetMarker = resetAt;
+    return;
+  }
+  if (lastAdminResetMarker === resetAt) return;
+
+  lastAdminResetMarker = resetAt;
+  const note = String(data?.reset_note || "Admin mengosongkan data realtime sensor perangkat IoT.");
+  console.log(chalk.cyan(`\n[INFO] ${note}`));
+}
+
+function relayBlockedReason() {
+  const label = currentConnectionLabel();
+  if (label === "Device Offline") return "Perangkat offline. Relay fisik tidak menerima perintah.";
+  if (label === "Memeriksa perangkat...") return "Sistem masih menunggu heartbeat perangkat.";
+  if (label === "Memulihkan...") return "Koneksi cloud sedang dipulihkan.";
+  return "Perangkat belum siap menerima perintah.";
+}
+
+function startPresenceWatch() {
+  if (presenceListrikRef) off(presenceListrikRef);
+  if (presenceConnRef) off(presenceConnRef);
+
+  lastDeviceHeartbeatAt = 0;
+  lastUpdatedMarker = null;
+  lastSensorSignature = "";
+  latestListrikSnapshot = null;
+  lastAdminResetMarker = null;
+  watchStartedAt = Date.now();
+
+  presenceListrikRef = ref(db, `${pathPrefix}/listrik`);
+  onValue(presenceListrikRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    latestListrikSnapshot = data;
+    registerDeviceHeartbeat(data);
+    handleAdminResetNotice(data);
+  });
+
+  presenceConnRef = ref(db, ".info/connected");
+  onValue(presenceConnRef, (snapshot) => {
+    firebaseConnected = !!snapshot.val();
+    if (firebaseConnected) {
+      watchStartedAt = Date.now();
+    }
+  });
+}
+
+function stopPresenceWatch() {
+  if (presenceListrikRef) {
+    off(presenceListrikRef);
+    presenceListrikRef = null;
+  }
+  if (presenceConnRef) {
+    off(presenceConnRef);
+    presenceConnRef = null;
+  }
+}
+
+function renderLiveMonitoring(data) {
+  printHeader();
+  console.log(chalk.yellow("Memulai Live Stream Data Firebase..."));
+  console.log(chalk.gray("Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n"));
+
+  const connection = currentConnectionLabel();
+  const connectionColor =
+    connection === "Connected"
+      ? chalk.green
+      : connection === "Memeriksa perangkat..."
+        ? chalk.yellow
+        : chalk.red;
+
+  console.log(chalk.cyan.bold("=== Data Realtime ==="));
+  console.log(`${chalk.blue("Koneksi    :")} ${connectionColor(connection)}`);
+
+  if (!data) {
+    console.log(chalk.gray("Belum ada data perangkat."));
+    return;
+  }
+
+  console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
+  console.log(`${chalk.blue("Arus (A)   :")} ${chalk.white(data.arus || "0")}`);
+  console.log(`${chalk.blue("Tegangan(V):")} ${chalk.white(data.tegangan || "0")}`);
+  console.log(`${chalk.blue("Daya (VA)  :")} ${chalk.white(data.apparent_power || data.daya || "0")}`);
+
+  let statusColor = chalk.green;
+  if (data.status === "WARNING") statusColor = chalk.yellow;
+  if (data.status === "DANGER") statusColor = chalk.red.bold;
+  console.log(`${chalk.blue("Status     :")} ${statusColor(data.status || "-")}`);
+  console.log(
+    `${chalk.blue("Relay      :")} ${data.relay ? chalk.green("ON") : chalk.red("OFF")}`
+  );
+}
 
 function handleSessionExpired() {
   console.clear();
@@ -113,18 +211,16 @@ function printHeader() {
 /** Tampilan Live Monitoring */
 async function runLiveMonitoring() {
   return new Promise((resolve) => {
-    printHeader();
-    console.log(chalk.yellow("Memulai Live Stream Data Firebase..."));
-    console.log(chalk.gray("Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n"));
-
-    const listrikRef = ref(db, `${pathPrefix}/listrik`);
-    let initialDraw = true;
+    renderLiveMonitoring(latestListrikSnapshot);
+    const renderTick = setInterval(() => {
+      renderLiveMonitoring(latestListrikSnapshot);
+    }, 2500);
 
     const onKeypress = (str, key) => {
       if (key && (key.name === 'q' || (key.ctrl && key.name === 'c'))) {
         process.stdin.removeListener('keypress', onKeypress);
         if (process.stdin.isTTY) process.stdin.setRawMode(false);
-        off(listrikRef); 
+        clearInterval(renderTick);
         resolve(); 
       }
     };
@@ -132,36 +228,17 @@ async function runLiveMonitoring() {
     if (process.stdin.isTTY) process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.on('keypress', onKeypress);
-
-    onValue(listrikRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-
-      readline.cursorTo(process.stdout, 0, 8); 
-      readline.clearScreenDown(process.stdout);
-
-      console.log(chalk.cyan.bold("=== Data Realtime ==="));
-      console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
-      console.log(`${chalk.blue("Arus (A)   :")} ${chalk.white(data.arus || "0")}`);
-      console.log(`${chalk.blue("Tegangan(V):")} ${chalk.white(data.tegangan || "0")}`);
-      console.log(`${chalk.blue("Daya (VA)  :")} ${chalk.white(data.apparent_power || "0")}`);
-      
-      let statusColor = chalk.green;
-      if (data.status === "WARNING") statusColor = chalk.yellow;
-      if (data.status === "DANGER") statusColor = chalk.red.bold;
-      console.log(`${chalk.blue("Status     :")} ${statusColor(data.status || "-")}`);
-
-      console.log(
-        `${chalk.blue("Relay      :")} ${data.relay ? chalk.green("ON") : chalk.red("OFF")}`
-      );
-      
-      if (initialDraw) initialDraw = false;
-    });
   });
 }
 
 /** Hit API untuk mengubah Relay */
 async function toggleRelay() {
+  if (currentConnectionLabel() !== "Connected") {
+    console.log(chalk.yellow(`\nPerintah relay diblokir: ${relayBlockedReason()}`));
+    await holdForEnter();
+    return;
+  }
+
   const { confirmToggle } = await inquirer.prompt([
     {
       type: "list",
@@ -196,33 +273,11 @@ async function viewLogs() {
     
     if (snap.exists()) {
       const logs = snap.val();
-      // Header tabel
-      const hWaktu  = chalk.cyan.bold("Waktu".padEnd(22));
-      const hArus   = chalk.cyan.bold("Arus(A)".padEnd(10));
-      const hTeg    = chalk.cyan.bold("Teg.(V)".padEnd(10));
-      const hStatus = chalk.cyan.bold("Status");
-      console.log(`${hWaktu} ${hArus} ${hTeg} ${hStatus}`);
-      console.log(chalk.gray("-".repeat(58)));
-
       Object.keys(logs).forEach(key => {
         const item = logs[key];
-
-        // Gunakan field 'waktu' (ISO string atau timestamp ms)
-        let time = "-";
-        if (item.waktu) {
-          const d = new Date(item.waktu);
-          time = isNaN(d) ? String(item.waktu) : d.toLocaleString("id-ID");
-        }
-
-        const arus    = String(item.arus    ?? "-").padEnd(10);
-        const teg     = String(item.tegangan ?? "-").padEnd(10);
-
-        let statusStr;
-        if (item.status === "DANGER")  statusStr = chalk.red.bold(item.status);
-        else if (item.status === "WARNING") statusStr = chalk.yellow(item.status);
-        else statusStr = chalk.green(item.status || "-");
-
-        console.log(`${chalk.white(time.padEnd(22))} ${chalk.yellow(arus)} ${chalk.blue(teg)} ${statusStr}`);
+        const time = new Date(item.timestamp).toLocaleString();
+        const typeStr = item.type === 'alert' ? chalk.red('[ALERT]') : chalk.green('[INFO]');
+        console.log(`${chalk.gray(time)} ${typeStr} ${item.message}`);
       });
     } else {
       console.log(chalk.gray("Belum ada catatan aktivitas."));
@@ -252,6 +307,7 @@ async function enforceLogin() {
       const session = JSON.parse(fs.readFileSync(SESSION_FILE, "utf-8"));
       await signInWithEmailAndPassword(auth, session.email, session.password);
       await processUserClaims();
+      startPresenceWatch();
       console.log(chalk.green(`Meresume sesi login untuk: ${session.email}...\n`));
       return true;
     } catch (e) {
@@ -263,53 +319,21 @@ async function enforceLogin() {
   // Manual Login
   let loggedIn = false;
   while (!loggedIn) {
-    const { email } = await inquirer.prompt([
+    const { email, password } = await inquirer.prompt([
       { type: "input", name: "email", message: "Email:" },
-    ]);
-    const cleanEmail = email.trim();
-
-    // Deteksi akun temp untuk pesan informatif
-    const isTempEmail = cleanEmail.endsWith("@iotlistrik.demo");
-    if (isTempEmail) {
-      console.log(chalk.yellow("\n[INFO] Akun demo terdeteksi. Password akan ditampilkan agar bisa diverifikasi.\n"));
-    }
-
-    const { password } = await inquirer.prompt([
-      // Tampilkan password untuk akun demo agar bisa diverifikasi (akun demo tidak sensitif)
-      // Gunakan type 'password' untuk akun non-demo
-      {
-        type: isTempEmail ? "input" : "password",
-        name: "password",
-        message: isTempEmail ? "Password (pastikan tidak ada spasi tersembunyi):" : "Password:",
-      },
+      { type: "password", name: "password", message: "Password:" },
     ]);
     
     try {
-      // Bersihkan semua whitespace tersembunyi di password (termasuk di tengah)
-      const cleanPassword = password.replace(/[\s\u200B\u200C\u200D\uFEFF]/g, "").trim();
-      
-      if (isTempEmail && cleanPassword !== password.trim()) {
-        console.log(chalk.yellow("[PERINGATAN] Spasi/karakter tersembunyi ditemukan di password dan sudah dibersihkan otomatis.\n"));
-      }
-
-      await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+      await signInWithEmailAndPassword(auth, email, password);
       await processUserClaims();
+      startPresenceWatch();
       console.log(chalk.green("\nLogin berhasil!\n"));
       // Save session credentials permanently until manual Logout
-      fs.writeFileSync(SESSION_FILE, JSON.stringify({ email: cleanEmail, password: cleanPassword }));
+      fs.writeFileSync(SESSION_FILE, JSON.stringify({ email, password }));
       loggedIn = true;
     } catch (e) {
-      if (e.code === "auth/invalid-credential" && isTempEmail) {
-        console.log(chalk.red("\n[!] Login gagal: Kredensial tidak valid untuk akun demo.\n"));
-        console.log(chalk.yellow("Kemungkinan penyebab:"));
-        console.log(chalk.gray("  1. Akun sudah expired (berlaku hanya 15 menit sejak dibuat)"));
-        console.log(chalk.gray("  2. Password salah — cek ulang email, tidak ada typo?"));
-        console.log(chalk.gray("  3. Akun sudah dihapus otomatis oleh sistem cleanup\n"));
-        console.log(chalk.cyan("Solusi: Buat akun demo baru di:"));
-        console.log(chalk.white("  https://iot-listrik-dashboard.vercel.app\n"));
-      } else {
-        console.log(chalk.red("\nLogin gagal:"), e.message, "\n");
-      }
+      console.log(chalk.red("\nLogin gagal:"), e.message, "\n");
     }
   }
 }
@@ -349,6 +373,7 @@ async function handleLogout() {
     if (fs.existsSync(SESSION_FILE)) {
       fs.unlinkSync(SESSION_FILE); // Hapus session agar tidak auto-login
     }
+    stopPresenceWatch();
     await signOut(auth);
     console.log(chalk.green("\nBerhasil Log out. Aplikasi akan ditutup."));
     process.exit(0);
@@ -356,112 +381,9 @@ async function handleLogout() {
 }
 
 /** SIKLUS UTAMA / MAIN LOOP */
-let adminAppInstance = null;
-let lastStatusFCM = null;
-let lastRelayFCM = null;
-
-async function startFCMBackgroundServer() {
-  if (pathPrefix !== "") return; // Hanya admin CLI yang berhak jadi Server
-
-  const admin = require("firebase-admin");
-  const possiblePaths = [
-    path.join(process.cwd(), "serviceAccountKey.json"),
-    path.join(process.cwd(), "backend-local", "serviceAccountKey.json"),
-    path.resolve(__dirname, "../../../../../backend-local/serviceAccountKey.json")
-  ];
-  let keyPath = null;
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      keyPath = p;
-      break;
-    }
-  }
-
-  if (!keyPath) {
-    console.log(chalk.gray("\n[FCM Server] serviceAccountKey.json tidak ditemukan lokal. CLI berjalan dlm Standard Mode."));
-    return;
-  }
-
-  try {
-    const serviceAccount = require(keyPath);
-    if (!admin.apps.length) {
-      adminAppInstance = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: firebaseConfig.databaseURL
-      });
-      console.log(chalk.green.bold("\n[!] Super-Admin Terdeteksi! FCM Local Server aktif me-rutekan pesan."));
-      
-      const statusRef = ref(db, "listrik/status");
-      onValue(statusRef, async (snap) => {
-        const status = snap.val();
-        if (!status) return;
-        if (lastStatusFCM === null) { lastStatusFCM = status; return; }
-        if (lastStatusFCM !== status) {
-          lastStatusFCM = status;
-          if (status === "DANGER" || status === "LEAKAGE") {
-            blastPushNotification("⚠️ Peringatan Kritis System!", `Kondisi Listrik berubah: ${status}`);
-          } else if (status === "NORMAL") {
-            blastPushNotification("✅ Sistem Telah Pulih", "Kondisi arus/tegangan listrik kembali NORMAL.");
-          }
-        }
-      });
-
-      const relayRef = ref(db, "listrik/relay");
-      onValue(relayRef, async (snap) => {
-        const relay = snap.val();
-        if (relay === null) return;
-        if (lastRelayFCM === null) { lastRelayFCM = relay; return; }
-        if (lastRelayFCM !== relay) {
-          lastRelayFCM = relay;
-          blastPushNotification("🔌 Relay Dimodifikasi", `Kondisi saklar telah bergeser ke: ${relay ? 'ON' : 'OFF'}`);
-        }
-      });
-    }
-  } catch (err) {
-    console.error(chalk.red("\n[FCM Server] Gagal menginisialisasi:"), err.message);
-  }
-}
-
-async function blastPushNotification(title, body) {
-  if (!adminAppInstance) return;
-  const admin = require("firebase-admin");
-  try {
-    const tokensSnap = await get(ref(db, "fcm_tokens/web"));
-    if (!tokensSnap.exists()) return;
-    
-    // Flatten the objects into an array of token strings
-    const tokensObj = tokensSnap.val();
-    const tokens = [];
-    for (const uid in tokensObj) {
-      if (tokensObj[uid] && typeof tokensObj[uid] === 'string') {
-        tokens.push(tokensObj[uid]);
-      }
-    }
-    
-    if (tokens.length === 0) return;
-
-    const message = {
-      notification: { title, body },
-      webpush: {
-        notification: {
-          icon: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png",
-          vibrate: [200, 100, 200]
-        }
-      },
-      tokens: tokens
-    };
-
-    const response = await admin.messaging().sendEachForMulticast(message);
-    // Silent fire in the background
-  } catch (err) {}
-}
-
 async function mainMenu() {
   // Wajib Auth di awal
   await enforceLogin();
-  
-  // Nyalakan server background (jika kredensial tervalidasi)
-  await startFCMBackgroundServer();
 
   let isRunning = true;
 
@@ -499,6 +421,7 @@ async function mainMenu() {
         break;
       case "exit":
         console.log(chalk.gray("\nMenutup CLI dan menghentikan proses... Sampai jumpa!\n"));
+        stopPresenceWatch();
         isRunning = false;
         process.exit(0);
         break;
@@ -506,9 +429,7 @@ async function mainMenu() {
   }
 }
 
-mainMenu().catch(async err => {
+mainMenu().catch(err => {
   console.error("Kesalahan fatal:", err);
-  console.log("\nProses dihentikan. Tekan Enter untuk keluar...");
-  await new Promise(r => process.stdin.once('data', r));
   process.exit(1);
 });

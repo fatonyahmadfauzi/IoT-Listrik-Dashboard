@@ -25,7 +25,7 @@
 import { db, auth, firebaseConfig }  from './firebase-config.js';
 import { loadClientConfig, saveClientConfig } from './client-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount, getCurrentUser } from './auth.js';
-import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
+import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, onValue, set, update, remove, get }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
@@ -1052,6 +1052,7 @@ function startAlarmMonitor() {
     const arus = Number(d.arus || 0);
     const tegangan = Number(d.tegangan || 0);
     checkAndNotify(status, arus, tegangan);
+    checkAdminResetNotify(d);
   });
 }
 

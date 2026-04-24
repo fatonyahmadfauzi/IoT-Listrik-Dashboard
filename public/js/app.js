@@ -57,6 +57,8 @@ let currentRole = null;
 let lastRelayVal = -1;
 let stopHybrid = null;
 let stopLogs = null;
+let relayControlAllowed = false;
+let relayControlReason = "Menunggu status perangkat";
 
 function formatSeenTime(value) {
   const n = Number(value);
@@ -115,6 +117,24 @@ function renderConnectionMeta(m) {
     elEndpointBadge.textContent = "FALLBACK";
     elEndpointBadge.className = "ep-badge ep-fallback";
   }
+  relayControlAllowed = m.connection === "Connected";
+  relayControlReason = relayControlAllowed
+    ? ""
+    : m.connection === "Device Offline"
+      ? "Perangkat offline. Relay fisik tidak bisa menerima perintah."
+      : m.connection === "Memeriksa perangkat..."
+        ? "Sistem masih menunggu heartbeat perangkat."
+        : m.connection === "Memulihkan..."
+          ? "Koneksi cloud sedang dipulihkan."
+          : "Perangkat belum siap menerima perintah.";
+  if (elRelayOn) {
+    elRelayOn.disabled = !relayControlAllowed;
+    elRelayOn.title = relayControlAllowed ? "Nyalakan relay" : relayControlReason;
+  }
+  if (elRelayOff) {
+    elRelayOff.disabled = !relayControlAllowed;
+    elRelayOff.title = relayControlAllowed ? "Matikan relay" : relayControlReason;
+  }
   if (elUpdated) {
     const seenLabel = formatSeenTime(m.lastDeviceSeenAt);
     if (seenLabel) {
@@ -151,6 +171,14 @@ async function sendRelayCommand(val) {
       showToast(
         "Akses ditolak: hanya admin yang bisa mengontrol relay.",
         "error",
+      );
+      return;
+    }
+
+    if (!relayControlAllowed) {
+      showToast(
+        relayControlReason || "Perangkat offline. Perintah relay diblokir.",
+        "warning",
       );
       return;
     }

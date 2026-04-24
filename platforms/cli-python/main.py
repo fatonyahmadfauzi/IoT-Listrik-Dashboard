@@ -44,6 +44,86 @@ db = firebase.database()
 current_user = None
 path_prefix = ""
 session_timeout_timer = None
+DEVICE_STALE_MS = 15000
+last_device_heartbeat_at = 0
+last_updated_marker = None
+last_sensor_signature = ""
+watch_started_at = int(time.time() * 1000)
+latest_listrik_snapshot = None
+
+def is_likely_epoch_ms(value):
+    return isinstance(value, (int, float)) and value > 1_000_000_000_000
+
+def build_sensor_signature(data):
+    d = data or {}
+    return "|".join([
+        f"{float(d.get('arus', 0) or 0):.3f}",
+        f"{float(d.get('tegangan', 0) or 0):.1f}",
+        f"{float(d.get('daya', d.get('apparent_power', 0)) or 0):.1f}",
+        f"{float(d.get('energi_kwh', 0) or 0):.4f}",
+        f"{float(d.get('frekuensi', 0) or 0):.2f}",
+        f"{float(d.get('power_factor', 0) or 0):.3f}",
+        str(d.get('status', 'NORMAL'))
+    ])
+
+def register_device_heartbeat(data):
+    global last_device_heartbeat_at, last_updated_marker, last_sensor_signature
+
+    updated_at_raw = None if data is None else data.get("updated_at")
+    try:
+        updated_at = int(float(updated_at_raw)) if updated_at_raw is not None else None
+    except Exception:
+        updated_at = None
+
+    sensor_signature = build_sensor_signature(data)
+    heartbeat_detected = False
+
+    if updated_at and updated_at > 0:
+        if last_updated_marker is None:
+            if is_likely_epoch_ms(updated_at) and (int(time.time() * 1000) - updated_at) <= DEVICE_STALE_MS:
+                heartbeat_detected = True
+        elif updated_at != last_updated_marker:
+            heartbeat_detected = True
+        last_updated_marker = updated_at
+    elif last_sensor_signature and last_sensor_signature != sensor_signature:
+        heartbeat_detected = True
+
+    last_sensor_signature = sensor_signature
+
+    if heartbeat_detected:
+        last_device_heartbeat_at = int(time.time() * 1000)
+
+def current_connection_label():
+    now = int(time.time() * 1000)
+    if not last_device_heartbeat_at:
+        return "Device Offline" if (now - watch_started_at) > DEVICE_STALE_MS else "Memeriksa perangkat..."
+    return "Device Offline" if (now - last_device_heartbeat_at) > DEVICE_STALE_MS else "Connected"
+
+def relay_blocked_reason():
+    label = current_connection_label()
+    if label == "Device Offline":
+        return "Perangkat offline. Relay fisik tidak menerima perintah."
+    if label == "Memeriksa perangkat...":
+        return "Sistem masih menunggu heartbeat perangkat."
+    return "Perangkat belum siap menerima perintah."
+
+def fetch_listrik_snapshot():
+    global latest_listrik_snapshot
+    snapshot = db.child(f"{path_prefix}listrik").get(current_user['token']).val()
+    if snapshot:
+        latest_listrik_snapshot = snapshot
+        register_device_heartbeat(snapshot)
+    return snapshot
+
+def probe_device_ready(wait_seconds=4.0):
+    global watch_started_at
+    watch_started_at = int(time.time() * 1000)
+    fetch_listrik_snapshot()
+    if current_connection_label() == "Connected":
+        return True
+    time.sleep(wait_seconds)
+    fetch_listrik_snapshot()
+    return current_connection_label() == "Connected"
 
 def decode_jwt(token):
     try:
@@ -67,7 +147,7 @@ def handle_session_expired():
     os._exit(0)
 
 def process_user_claims(user_data):
-    global path_prefix, session_timeout_timer
+    global path_prefix, session_timeout_timer, watch_started_at, last_device_heartbeat_at, last_updated_marker, last_sensor_signature, latest_listrik_snapshot
     
     token = user_data.get('idToken', '')
     local_id = user_data.get('localId', '')
@@ -92,6 +172,12 @@ def process_user_claims(user_data):
         if session_timeout_timer:
             session_timeout_timer.cancel()
             session_timeout_timer = None
+
+    watch_started_at = int(time.time() * 1000)
+    last_device_heartbeat_at = 0
+    last_updated_marker = None
+    last_sensor_signature = ""
+    latest_listrik_snapshot = None
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -212,6 +298,11 @@ def view_logs():
     hold_for_enter()
 
 def toggle_relay():
+    if not probe_device_ready():
+        console.print(f"\n[bold yellow]Perintah relay diblokir:[/bold yellow] {relay_blocked_reason()}")
+        hold_for_enter()
+        return
+
     answer = questionary.select(
         "Kontrol Relay Jarak Jauh:",
         choices=[
@@ -234,6 +325,7 @@ def toggle_relay():
 
 def stream_handler(message):
     try:
+        global latest_listrik_snapshot
         data = message["data"]
         # Ini terjadi kalau data terubah (misal yang diubah hanya 'arus') 
         # Di Pyrebase, kalau path `/listrik` dipantau, message["data"] adalah state utuh awalnya, 
@@ -248,6 +340,8 @@ def stream_handler(message):
         # Karena pyrebase menjalankan ini di thread background
         # kita clear saja dan redraw (bisa layar kedip sedikit)
         clear_screen()
+        latest_listrik_snapshot = full_data
+        register_device_heartbeat(full_data)
         console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
         console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
         console.print(f"[bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]\n")
@@ -255,10 +349,18 @@ def stream_handler(message):
         console.print("[dim]Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n[/dim]")
 
         console.print("[bold cyan]=== Data Realtime ===[/bold cyan]")
+        connection = current_connection_label()
+        if connection == "Connected":
+            conn_str = f"[green]{connection}[/green]"
+        elif connection == "Memeriksa perangkat...":
+            conn_str = f"[yellow]{connection}[/yellow]"
+        else:
+            conn_str = f"[bold red]{connection}[/bold red]"
+        console.print(f"[blue]Koneksi    :[/blue] {conn_str}")
         console.print(f"[blue]Waktu      :[/blue] {full_data.get('timestamp', '-')}")
         console.print(f"[blue]Arus (A)   :[/blue] [white]{full_data.get('arus', '0')}[/white]")
         console.print(f"[blue]Tegangan(V):[/blue] [white]{full_data.get('tegangan', '0')}[/white]")
-        console.print(f"[blue]Daya (VA)  :[/blue] [white]{full_data.get('apparent_power', '0')}[/white]")
+        console.print(f"[blue]Daya (VA)  :[/blue] [white]{full_data.get('apparent_power', full_data.get('daya', '0'))}[/white]")
         
         status = full_data.get('status', 'NORMAL')
         color = "green"
@@ -275,20 +377,28 @@ def stream_handler(message):
 
 
 def run_live_monitoring():
+    global watch_started_at
     print_header()
     console.print("[yellow]Memulai Live Stream Data Firebase...[/yellow]")
     console.print("[dim]Tekan sembarang tombol dari keyboard untuk kembali ke Menu Utama.\n[/dim]")
 
     try:
+        watch_started_at = int(time.time() * 1000)
+        fetch_listrik_snapshot()
         # Start the stream in background
         my_stream = db.child(f"{path_prefix}listrik").stream(stream_handler, token=current_user['token'])
         
         # Windows Keyboard listener wait
         if msvcrt:
+            last_render = 0.0
             while True:
                 if msvcrt.kbhit():
                     msvcrt.getch() # baca tombol
                     break
+                now = time.time()
+                if now - last_render >= 2.5 and latest_listrik_snapshot:
+                    stream_handler({"data": latest_listrik_snapshot})
+                    last_render = now
                 time.sleep(0.1)
         else:
             # Fallback for linux/mac if needed (use raw input wrapper)

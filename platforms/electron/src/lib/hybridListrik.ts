@@ -2,6 +2,8 @@ import type { Database } from 'firebase/database';
 import { ref, onValue } from 'firebase/database';
 import { loadClientConfig } from './clientConfig';
 
+const DEVICE_STALE_MS = 15000;
+
 function trimBase(u: string) {
   return String(u || '').replace(/\/+$/, '');
 }
@@ -52,6 +54,22 @@ export function normalizeListrikPayload(d: Record<string, unknown> | null): Norm
   };
 }
 
+function isLikelyEpochMs(value: number) {
+  return Number.isFinite(value) && value > 1e12;
+}
+
+function buildSensorSignature(d: Record<string, unknown> | null) {
+  return [
+    Number(d?.arus ?? 0).toFixed(3),
+    Number(d?.tegangan ?? 0).toFixed(1),
+    Number(d?.daya ?? 0).toFixed(1),
+    Number(d?.energi_kwh ?? 0).toFixed(4),
+    Number(d?.frekuensi ?? 0).toFixed(2),
+    Number(d?.power_factor ?? 0).toFixed(3),
+    String(d?.status || 'NORMAL'),
+  ].join('|');
+}
+
 export function startHybridListrik(
   db: Database,
   handlers: {
@@ -66,8 +84,51 @@ export function startHybridListrik(
   let connUnsub: (() => void) | null = null;
   let fbConnected = true;
   let usingLocal = false;
+  let lastDataReceivedTime = 0;
+  let lastUpdatedMarker: number | null = null;
+  let lastSensorSignature = '';
+  let watchStartedAt = Date.now();
+  const forceCloud = Boolean(handlers.prefix);
 
   const meta = (partial: Record<string, unknown>) => handlers.onMeta?.(partial);
+
+  const isDeviceOffline = (now = Date.now()) => {
+    const base = lastDataReceivedTime || watchStartedAt;
+    return (now - base) > DEVICE_STALE_MS;
+  };
+
+  const getConnectionLabel = (backendOnline = fbConnected) => {
+    if (!backendOnline) return 'Memulihkan...';
+    if (!lastDataReceivedTime) {
+      return isDeviceOffline() ? 'Device Offline' : 'Memeriksa perangkat...';
+    }
+    return isDeviceOffline() ? 'Device Offline' : 'Connected';
+  };
+
+  const registerDeviceHeartbeat = (payload: NormalizedListrik) => {
+    const updatedAt = payload?.updated_at != null ? Number(payload.updated_at) : null;
+    const sensorSignature = buildSensorSignature(payload as unknown as Record<string, unknown>);
+    let heartbeatDetected = false;
+
+    if (Number.isFinite(updatedAt) && Number(updatedAt) > 0) {
+      if (lastUpdatedMarker == null) {
+        if (isLikelyEpochMs(Number(updatedAt)) && (Date.now() - Number(updatedAt)) <= DEVICE_STALE_MS) {
+          heartbeatDetected = true;
+        }
+      } else if (Number(updatedAt) !== lastUpdatedMarker) {
+        heartbeatDetected = true;
+      }
+      lastUpdatedMarker = Number(updatedAt);
+    } else if (lastSensorSignature && lastSensorSignature !== sensorSignature) {
+      heartbeatDetected = true;
+    }
+
+    lastSensorSignature = sensorSignature;
+
+    if (heartbeatDetected) {
+      lastDataReceivedTime = Date.now();
+    }
+  };
 
   const pollRest = async (base: string, label: string) => {
     const cfg = loadClientConfig();
@@ -78,13 +139,16 @@ export function startHybridListrik(
     await fetchJson(`${b}${path}`, to);
     const data = await fetchJson(`${b}/api/listrik`, to);
     if (disposed) return true;
-    handlers.onData(normalizeListrikPayload(data));
+    const payload = normalizeListrikPayload(data);
+    registerDeviceHeartbeat(payload);
+    handlers.onData(payload);
     const fallbackActive = label === 'LOCAL' && cfg.mode === 'AUTO' && cfg.autoFailover;
     meta({
       source: label,
       fallbackActive,
-      connection: 'Connected',
+      connection: getConnectionLabel(true),
       endpointBadge: label === 'LOCAL' ? 'LOCAL' : 'CLOUD',
+      lastDeviceSeenAt: lastDataReceivedTime || null,
     });
     usingLocal = label === 'LOCAL';
     return true;
@@ -105,8 +169,9 @@ export function startHybridListrik(
       if (cfg.mode === 'PUBLIC') {
         meta({
           source: 'CLOUD',
-          connection: fbConnected ? 'Connected' : 'Reconnecting',
+          connection: getConnectionLabel(fbConnected),
           endpointBadge: 'CLOUD',
+          lastDeviceSeenAt: lastDataReceivedTime || null,
         });
         return;
       }
@@ -119,17 +184,38 @@ export function startHybridListrik(
             connection: 'Offline',
             fallbackActive: true,
             endpointBadge: 'FALLBACK',
+            lastDeviceSeenAt: lastDataReceivedTime || null,
           });
         }
         return;
       }
       if (usingLocal && fbConnected) {
         usingLocal = false;
-        meta({ fallbackActive: false, endpointBadge: 'CLOUD' });
+        meta({
+          source: 'CLOUD',
+          connection: getConnectionLabel(true),
+          fallbackActive: false,
+          endpointBadge: 'CLOUD',
+          lastDeviceSeenAt: lastDataReceivedTime || null,
+        });
+      }
+
+      if (fbConnected) {
+        meta({
+          source: 'CLOUD',
+          connection: getConnectionLabel(true),
+          endpointBadge: 'CLOUD',
+          lastDeviceSeenAt: lastDataReceivedTime || null,
+        });
       }
     } catch {
       if (cfg.mode === 'LOCAL') {
-        meta({ connection: 'Offline', source: 'LOCAL', endpointBadge: 'LOCAL' });
+        meta({
+          connection: 'Offline',
+          source: 'LOCAL',
+          endpointBadge: 'LOCAL',
+          lastDeviceSeenAt: lastDataReceivedTime || null,
+        });
       }
     }
   };
@@ -142,13 +228,13 @@ export function startHybridListrik(
 
   const attachFirebase = () => {
     const cfg = loadClientConfig();
-    if (cfg.mode === 'LOCAL') {
+    if (!forceCloud && cfg.mode === 'LOCAL') {
       meta({ source: 'LOCAL', connection: 'Reconnecting', endpointBadge: 'LOCAL' });
       void tick();
       startPolling();
       return;
     }
-    if (cfg.mode === 'PUBLIC' && cfg.publicApiBase) {
+    if (!forceCloud && cfg.mode === 'PUBLIC' && cfg.publicApiBase) {
       void tick();
       startPolling();
       return;
@@ -160,19 +246,22 @@ export function startHybridListrik(
       listrikRef,
       (snap) => {
         const cfg2 = loadClientConfig();
-        if (cfg2.mode === 'AUTO' && cfg2.autoFailover && !fbConnected) return;
+        if (!forceCloud && cfg2.mode === 'AUTO' && cfg2.autoFailover && !fbConnected) return;
         const v = snap.val();
         if (!v) return;
-        handlers.onData(normalizeListrikPayload(v));
+        const payload = normalizeListrikPayload(v);
+        registerDeviceHeartbeat(payload);
+        handlers.onData(payload);
         meta({
           source: 'CLOUD',
-          connection: 'Connected',
+          connection: getConnectionLabel(true),
           fallbackActive: false,
           endpointBadge: 'CLOUD',
+          lastDeviceSeenAt: lastDataReceivedTime || null,
         });
       },
       () => {
-        meta({ connection: 'Reconnecting' });
+        meta({ connection: 'Memulihkan...', lastDeviceSeenAt: lastDataReceivedTime || null });
       }
     );
 
@@ -180,13 +269,17 @@ export function startHybridListrik(
     connUnsub = onValue(connRef, (snap) => {
       const c = !!snap.val();
       fbConnected = c;
-      if (c) {
+      if (!c) {
+        meta({ connection: 'Memulihkan...', lastDeviceSeenAt: lastDataReceivedTime || null });
+      } else {
         usingLocal = false;
+        watchStartedAt = Date.now();
         meta({
-          connection: 'Connected',
+          connection: getConnectionLabel(true),
           source: 'CLOUD',
           fallbackActive: false,
           endpointBadge: 'CLOUD',
+          lastDeviceSeenAt: lastDataReceivedTime || null,
         });
       }
     });

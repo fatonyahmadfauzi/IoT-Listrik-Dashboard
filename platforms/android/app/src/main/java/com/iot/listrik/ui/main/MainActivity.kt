@@ -56,6 +56,19 @@ class MainActivity : AppCompatActivity() {
     private var isTempAccount = false
     private var pathPrefix = ""
     private var sessionTimer: android.os.CountDownTimer? = null
+    private val deviceStaleMs = 15000L
+    private val presenceHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val presenceCheckRunnable = object : Runnable {
+        override fun run() {
+            refreshPresenceUi()
+            presenceHandler.postDelayed(this, 3000)
+        }
+    }
+    private var firebaseConnected = true
+    private var lastDeviceHeartbeatAt = 0L
+    private var lastUpdatedMarker: Long? = null
+    private var lastSensorSignature = ""
+    private var watchStartedAt = System.currentTimeMillis()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,6 +123,8 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         initializeSession()
+        presenceHandler.removeCallbacks(presenceCheckRunnable)
+        presenceHandler.post(presenceCheckRunnable)
     }
 
     override fun onStop() {
@@ -119,6 +134,7 @@ class MainActivity : AppCompatActivity() {
             listenersAttached = false
         }
         sessionTimer?.cancel()
+        presenceHandler.removeCallbacks(presenceCheckRunnable)
     }
 
     private fun detachListeners() {
@@ -238,10 +254,107 @@ class MainActivity : AppCompatActivity() {
             binding.relaySection.visibility = View.GONE
             binding.demoSection.visibility = View.GONE
         }
+
+        updateRelayControls()
     }
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun isLikelyEpochMs(value: Long): Boolean = value > 1_000_000_000_000L
+
+    private fun buildSensorSignature(
+        status: String,
+        arus: Double,
+        tegangan: Double,
+        apparent: Double,
+        energi: Double,
+        frekuensi: Double,
+        pf: Double
+    ): String {
+        return listOf(
+            String.format("%.3f", arus),
+            String.format("%.1f", tegangan),
+            String.format("%.1f", apparent),
+            String.format("%.4f", energi),
+            String.format("%.2f", frekuensi),
+            String.format("%.3f", pf),
+            status
+        ).joinToString("|")
+    }
+
+    private fun registerDeviceHeartbeat(
+        updatedAt: Long,
+        status: String,
+        arus: Double,
+        tegangan: Double,
+        apparent: Double,
+        energi: Double,
+        frekuensi: Double,
+        pf: Double
+    ) {
+        val sensorSignature = buildSensorSignature(status, arus, tegangan, apparent, energi, frekuensi, pf)
+        var heartbeatDetected = false
+
+        if (updatedAt > 0L) {
+            if (lastUpdatedMarker == null) {
+                if (isLikelyEpochMs(updatedAt) && System.currentTimeMillis() - updatedAt <= deviceStaleMs) {
+                    heartbeatDetected = true
+                }
+            } else if (updatedAt != lastUpdatedMarker) {
+                heartbeatDetected = true
+            }
+            lastUpdatedMarker = updatedAt
+        } else if (lastSensorSignature.isNotEmpty() && lastSensorSignature != sensorSignature) {
+            heartbeatDetected = true
+        }
+
+        lastSensorSignature = sensorSignature
+
+        if (heartbeatDetected) {
+            lastDeviceHeartbeatAt = System.currentTimeMillis()
+        }
+    }
+
+    private fun currentConnectionLabel(now: Long = System.currentTimeMillis()): String {
+        if (!firebaseConnected) return "Memulihkan..."
+        if (lastDeviceHeartbeatAt == 0L) {
+            return if (now - watchStartedAt > deviceStaleMs) "Device Offline" else "Memeriksa perangkat..."
+        }
+        return if (now - lastDeviceHeartbeatAt > deviceStaleMs) "Device Offline" else "Connected"
+    }
+
+    private fun relayBlockedReason(): String {
+        return when (currentConnectionLabel()) {
+            "Device Offline" -> "Perangkat offline. Relay fisik tidak menerima perintah."
+            "Memeriksa perangkat..." -> "Sistem masih menunggu heartbeat perangkat."
+            "Memulihkan..." -> "Koneksi cloud sedang dipulihkan."
+            else -> "Perangkat belum siap menerima perintah."
+        }
+    }
+
+    private fun updateRelayControls() {
+        val canControl = isAdmin && !isTempAccount && currentConnectionLabel() == "Connected"
+        binding.btnRelayOn.isEnabled = canControl
+        binding.btnRelayOff.isEnabled = canControl
+        binding.btnRelayOn.alpha = if (canControl) 1f else 0.55f
+        binding.btnRelayOff.alpha = if (canControl) 1f else 0.55f
+    }
+
+    private fun refreshPresenceUi() {
+        val label = currentConnectionLabel()
+        val color = when (label) {
+            "Connected" -> Color.parseColor("#22c55e")
+            "Memeriksa perangkat..." -> Color.parseColor("#f59e0b")
+            "Memulihkan..." -> Color.parseColor("#f59e0b")
+            else -> Color.parseColor("#ef4444")
+        }
+
+        binding.tvConnectionState.text = label
+        binding.tvConnectionState.setTextColor(color)
+        binding.tvDataSource.text = if (label == "Connected") "CLOUD" else "CLOUD • $label"
+        updateRelayControls()
     }
 
     private fun setupChart() {
@@ -285,14 +398,11 @@ class MainActivity : AppCompatActivity() {
         connectedRef = db.getReference(".info/connected")
         connectedListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val connected = snapshot.getValue(Boolean::class.java) ?: false
-                if (connected) {
-                    binding.tvConnectionState.text = "Connected"
-                    binding.tvConnectionState.setTextColor(Color.parseColor("#22c55e"))
-                } else {
-                    binding.tvConnectionState.text = "Offline / Reconnecting..."
-                    binding.tvConnectionState.setTextColor(Color.parseColor("#ef4444"))
+                firebaseConnected = snapshot.getValue(Boolean::class.java) ?: false
+                if (firebaseConnected) {
+                    watchStartedAt = System.currentTimeMillis()
                 }
+                refreshPresenceUi()
             }
             override fun onCancelled(error: DatabaseError) { }
         }
@@ -310,6 +420,7 @@ class MainActivity : AppCompatActivity() {
                 val status = snapshot.child("status").getValue(String::class.java) ?: "NORMAL"
                 val arus = snapshot.child("arus").getValue(Double::class.java) ?: 0.0
                 val tegangan = snapshot.child("tegangan").getValue(Double::class.java) ?: 0.0
+                val frekuensi = snapshot.child("frekuensi").getValue(Double::class.java) ?: 50.0
                 val pf = snapshot.child("power_factor").getValue(Double::class.java) ?: 0.85
                 val apparent = snapshot.child("apparent_power").getValue(Double::class.java)
                     ?: snapshot.child("daya").getValue(Double::class.java)
@@ -318,13 +429,28 @@ class MainActivity : AppCompatActivity() {
                 val dayaW = snapshot.child("daya_w").getValue(Double::class.java)
                     ?: (apparent * pf)
                 val energi = snapshot.child("energi_kwh").getValue(Double::class.java) ?: 0.0
+                val updatedAt = snapshot.child("updated_at").getValue(Long::class.java)
+                    ?: snapshot.child("updated_at").getValue(Double::class.java)?.toLong()
+                    ?: snapshot.child("updated_at").getValue(String::class.java)?.toLongOrNull()
+                    ?: 0L
+
+                registerDeviceHeartbeat(
+                    updatedAt = updatedAt,
+                    status = status,
+                    arus = arus,
+                    tegangan = tegangan,
+                    apparent = apparent,
+                    energi = energi,
+                    frekuensi = frekuensi,
+                    pf = pf
+                )
 
                 binding.tvStatus.text = status
                 binding.tvArus.text = String.format("%.2f", arus)
                 binding.tvTegangan.text = String.format("%.1f", tegangan)
                 binding.tvDayaW.text = String.format("%.0f", dayaW)
                 binding.tvEnergiKwh.text = String.format("%.3f", energi)
-                binding.tvDataSource.text = "CLOUD"
+                refreshPresenceUi()
 
                 updateStatusColor(status)
                 addChartEntry(arus.toFloat(), tegangan.toFloat())
@@ -582,6 +708,11 @@ class MainActivity : AppCompatActivity() {
     private fun setRelay(value: Int) {
         if (!isAdmin || isTempAccount) {
             showToast("Akses ditolak: hanya admin yang bisa mengontrol relay.")
+            return
+        }
+
+        if (currentConnectionLabel() != "Connected") {
+            showToast(relayBlockedReason())
             return
         }
 

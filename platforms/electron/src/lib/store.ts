@@ -157,7 +157,7 @@ export const useDataStore = create<DataStore>((set) => {
               power_factor: d.power_factor,
               relay: d.relay === 1,
               status: d.status as ListrikData['status'],
-              updated_at: d.updated_at ?? Date.now(),
+              updated_at: d.updated_at ?? 0,
             },
             loading: false,
           });

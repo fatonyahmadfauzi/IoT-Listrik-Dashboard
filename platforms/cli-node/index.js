@@ -25,8 +25,147 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+const DEVICE_STALE_MS = 15000;
 let pathPrefix = "";
 let sessionTimeoutTimer = null;
+let presenceListrikRef = null;
+let presenceConnRef = null;
+let firebaseConnected = true;
+let lastDeviceHeartbeatAt = 0;
+let lastUpdatedMarker = null;
+let lastSensorSignature = "";
+let watchStartedAt = Date.now();
+let latestListrikSnapshot = null;
+
+function isLikelyEpochMs(value) {
+  return Number.isFinite(value) && value > 1e12;
+}
+
+function buildSensorSignature(d = {}) {
+  return [
+    Number(d?.arus ?? 0).toFixed(3),
+    Number(d?.tegangan ?? 0).toFixed(1),
+    Number(d?.daya ?? d?.apparent_power ?? 0).toFixed(1),
+    Number(d?.energi_kwh ?? 0).toFixed(4),
+    Number(d?.frekuensi ?? 0).toFixed(2),
+    Number(d?.power_factor ?? 0).toFixed(3),
+    String(d?.status || "NORMAL"),
+  ].join("|");
+}
+
+function registerDeviceHeartbeat(data) {
+  const updatedAt = data?.updated_at != null ? Number(data.updated_at) : null;
+  const sensorSignature = buildSensorSignature(data);
+  let heartbeatDetected = false;
+
+  if (Number.isFinite(updatedAt) && updatedAt > 0) {
+    if (lastUpdatedMarker == null) {
+      if (isLikelyEpochMs(updatedAt) && (Date.now() - updatedAt) <= DEVICE_STALE_MS) {
+        heartbeatDetected = true;
+      }
+    } else if (updatedAt !== lastUpdatedMarker) {
+      heartbeatDetected = true;
+    }
+    lastUpdatedMarker = updatedAt;
+  } else if (lastSensorSignature && lastSensorSignature !== sensorSignature) {
+    heartbeatDetected = true;
+  }
+
+  lastSensorSignature = sensorSignature;
+
+  if (heartbeatDetected) {
+    lastDeviceHeartbeatAt = Date.now();
+  }
+}
+
+function currentConnectionLabel(now = Date.now()) {
+  if (!firebaseConnected) return "Memulihkan...";
+  if (!lastDeviceHeartbeatAt) {
+    return (now - watchStartedAt) > DEVICE_STALE_MS ? "Device Offline" : "Memeriksa perangkat...";
+  }
+  return (now - lastDeviceHeartbeatAt) > DEVICE_STALE_MS ? "Device Offline" : "Connected";
+}
+
+function relayBlockedReason() {
+  const label = currentConnectionLabel();
+  if (label === "Device Offline") return "Perangkat offline. Relay fisik tidak menerima perintah.";
+  if (label === "Memeriksa perangkat...") return "Sistem masih menunggu heartbeat perangkat.";
+  if (label === "Memulihkan...") return "Koneksi cloud sedang dipulihkan.";
+  return "Perangkat belum siap menerima perintah.";
+}
+
+function startPresenceWatch() {
+  if (presenceListrikRef) off(presenceListrikRef);
+  if (presenceConnRef) off(presenceConnRef);
+
+  lastDeviceHeartbeatAt = 0;
+  lastUpdatedMarker = null;
+  lastSensorSignature = "";
+  latestListrikSnapshot = null;
+  watchStartedAt = Date.now();
+
+  presenceListrikRef = ref(db, `${pathPrefix}/listrik`);
+  onValue(presenceListrikRef, (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    latestListrikSnapshot = data;
+    registerDeviceHeartbeat(data);
+  });
+
+  presenceConnRef = ref(db, ".info/connected");
+  onValue(presenceConnRef, (snapshot) => {
+    firebaseConnected = !!snapshot.val();
+    if (firebaseConnected) {
+      watchStartedAt = Date.now();
+    }
+  });
+}
+
+function stopPresenceWatch() {
+  if (presenceListrikRef) {
+    off(presenceListrikRef);
+    presenceListrikRef = null;
+  }
+  if (presenceConnRef) {
+    off(presenceConnRef);
+    presenceConnRef = null;
+  }
+}
+
+function renderLiveMonitoring(data) {
+  printHeader();
+  console.log(chalk.yellow("Memulai Live Stream Data Firebase..."));
+  console.log(chalk.gray("Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n"));
+
+  const connection = currentConnectionLabel();
+  const connectionColor =
+    connection === "Connected"
+      ? chalk.green
+      : connection === "Memeriksa perangkat..."
+        ? chalk.yellow
+        : chalk.red;
+
+  console.log(chalk.cyan.bold("=== Data Realtime ==="));
+  console.log(`${chalk.blue("Koneksi    :")} ${connectionColor(connection)}`);
+
+  if (!data) {
+    console.log(chalk.gray("Belum ada data perangkat."));
+    return;
+  }
+
+  console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
+  console.log(`${chalk.blue("Arus (A)   :")} ${chalk.white(data.arus || "0")}`);
+  console.log(`${chalk.blue("Tegangan(V):")} ${chalk.white(data.tegangan || "0")}`);
+  console.log(`${chalk.blue("Daya (VA)  :")} ${chalk.white(data.apparent_power || data.daya || "0")}`);
+
+  let statusColor = chalk.green;
+  if (data.status === "WARNING") statusColor = chalk.yellow;
+  if (data.status === "DANGER") statusColor = chalk.red.bold;
+  console.log(`${chalk.blue("Status     :")} ${statusColor(data.status || "-")}`);
+  console.log(
+    `${chalk.blue("Relay      :")} ${data.relay ? chalk.green("ON") : chalk.red("OFF")}`
+  );
+}
 
 function handleSessionExpired() {
   console.clear();
@@ -53,18 +192,16 @@ function printHeader() {
 /** Tampilan Live Monitoring */
 async function runLiveMonitoring() {
   return new Promise((resolve) => {
-    printHeader();
-    console.log(chalk.yellow("Memulai Live Stream Data Firebase..."));
-    console.log(chalk.gray("Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n"));
-
-    const listrikRef = ref(db, `${pathPrefix}/listrik`);
-    let initialDraw = true;
+    renderLiveMonitoring(latestListrikSnapshot);
+    const renderTick = setInterval(() => {
+      renderLiveMonitoring(latestListrikSnapshot);
+    }, 2500);
 
     const onKeypress = (str, key) => {
       if (key && (key.name === 'q' || (key.ctrl && key.name === 'c'))) {
         process.stdin.removeListener('keypress', onKeypress);
         if (process.stdin.isTTY) process.stdin.setRawMode(false);
-        off(listrikRef); 
+        clearInterval(renderTick);
         resolve(); 
       }
     };
@@ -72,36 +209,17 @@ async function runLiveMonitoring() {
     if (process.stdin.isTTY) process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.on('keypress', onKeypress);
-
-    onValue(listrikRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-
-      readline.cursorTo(process.stdout, 0, 8); 
-      readline.clearScreenDown(process.stdout);
-
-      console.log(chalk.cyan.bold("=== Data Realtime ==="));
-      console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
-      console.log(`${chalk.blue("Arus (A)   :")} ${chalk.white(data.arus || "0")}`);
-      console.log(`${chalk.blue("Tegangan(V):")} ${chalk.white(data.tegangan || "0")}`);
-      console.log(`${chalk.blue("Daya (VA)  :")} ${chalk.white(data.apparent_power || "0")}`);
-      
-      let statusColor = chalk.green;
-      if (data.status === "WARNING") statusColor = chalk.yellow;
-      if (data.status === "DANGER") statusColor = chalk.red.bold;
-      console.log(`${chalk.blue("Status     :")} ${statusColor(data.status || "-")}`);
-
-      console.log(
-        `${chalk.blue("Relay      :")} ${data.relay ? chalk.green("ON") : chalk.red("OFF")}`
-      );
-      
-      if (initialDraw) initialDraw = false;
-    });
   });
 }
 
 /** Hit API untuk mengubah Relay */
 async function toggleRelay() {
+  if (currentConnectionLabel() !== "Connected") {
+    console.log(chalk.yellow(`\nPerintah relay diblokir: ${relayBlockedReason()}`));
+    await holdForEnter();
+    return;
+  }
+
   const { confirmToggle } = await inquirer.prompt([
     {
       type: "list",
@@ -170,6 +288,7 @@ async function enforceLogin() {
       const session = JSON.parse(fs.readFileSync(SESSION_FILE, "utf-8"));
       await signInWithEmailAndPassword(auth, session.email, session.password);
       await processUserClaims();
+      startPresenceWatch();
       console.log(chalk.green(`Meresume sesi login untuk: ${session.email}...\n`));
       return true;
     } catch (e) {
@@ -189,6 +308,7 @@ async function enforceLogin() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       await processUserClaims();
+      startPresenceWatch();
       console.log(chalk.green("\nLogin berhasil!\n"));
       // Save session credentials permanently until manual Logout
       fs.writeFileSync(SESSION_FILE, JSON.stringify({ email, password }));
@@ -234,6 +354,7 @@ async function handleLogout() {
     if (fs.existsSync(SESSION_FILE)) {
       fs.unlinkSync(SESSION_FILE); // Hapus session agar tidak auto-login
     }
+    stopPresenceWatch();
     await signOut(auth);
     console.log(chalk.green("\nBerhasil Log out. Aplikasi akan ditutup."));
     process.exit(0);
@@ -281,6 +402,7 @@ async function mainMenu() {
         break;
       case "exit":
         console.log(chalk.gray("\nMenutup CLI dan menghentikan proses... Sampai jumpa!\n"));
+        stopPresenceWatch();
         isRunning = false;
         process.exit(0);
         break;

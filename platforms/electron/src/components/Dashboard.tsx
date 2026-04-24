@@ -12,9 +12,27 @@ export function Dashboard() {
   // Alarm/notification sekarang dikontrol global dari App.tsx
   useStore();
 
+  const ep = String(connectionMeta?.endpointBadge || 'CLOUD');
+  const conn = String(connectionMeta?.connection || '—');
+  const fb = connectionMeta?.fallbackActive ? ' · FALLBACK' : '';
+  const lastDeviceSeenAt = Number(connectionMeta?.lastDeviceSeenAt ?? 0);
+  const relayControlAllowed = role === 'admin' && conn === 'Connected';
+  const relayDisabledReason =
+    conn === 'Device Offline'
+      ? 'Perangkat offline. Relay fisik tidak menerima perintah.'
+      : conn === 'Memeriksa perangkat...'
+      ? 'Sistem masih menunggu heartbeat perangkat.'
+      : conn === 'Memulihkan...'
+      ? 'Koneksi cloud sedang dipulihkan.'
+      : 'Perangkat belum siap menerima perintah.';
+
   const handleRelayToggle = async () => {
     if (role !== 'admin') {
       showNotification('Akses ditolak', 'Hanya admin yang bisa mengontrol relay.');
+      return;
+    }
+    if (!relayControlAllowed) {
+      showNotification('Perintah relay diblokir', relayDisabledReason);
       return;
     }
     setLoadingRelay(true);
@@ -66,10 +84,6 @@ export function Dashboard() {
     const date = new Date(timestamp);
     return date.toLocaleString('id-ID');
   };
-
-  const ep = String(connectionMeta?.endpointBadge || 'CLOUD');
-  const conn = String(connectionMeta?.connection || '—');
-  const fb = connectionMeta?.fallbackActive ? ' · FALLBACK' : '';
 
   return (
     <div className="space-y-6">
@@ -178,7 +192,8 @@ export function Dashboard() {
             {role === 'admin' && (
               <button
                 onClick={handleRelayToggle}
-                disabled={loadingRelay}
+                disabled={loadingRelay || !relayControlAllowed}
+                title={relayControlAllowed ? 'Toggle relay' : relayDisabledReason}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
               >
                 {loadingRelay ? 'Loading...' : 'Toggle'}
@@ -186,7 +201,7 @@ export function Dashboard() {
             )}
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Updated: {formatTime(currentData?.updated_at)}
+            Updated: {formatTime(lastDeviceSeenAt || currentData?.updated_at)}
           </p>
         </div>
 
@@ -198,7 +213,7 @@ export function Dashboard() {
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Status:</span>
               <span className="font-semibold text-gray-900 dark:text-white">
-                {currentData ? 'Online' : 'Offline'}
+                {conn}
               </span>
             </div>
             <div className="flex justify-between">

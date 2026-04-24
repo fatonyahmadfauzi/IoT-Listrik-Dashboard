@@ -38,10 +38,17 @@ const db = admin.database();
 console.log('[Discord Notifier] Terhubung ke Firebase RTDB ✅');
 
 // ── Config cache dari RTDB ────────────────────────────────────────────────
+let settingsConfig = {};
 let discordConfig = { enabled: false };
+
+db.ref('/settings').on('value', (snap) => {
+  settingsConfig = snap.val() || {};
+  if (!settingsConfig.discord) settingsConfig.discord = discordConfig;
+});
 
 db.ref('/settings/discord').on('value', (snap) => {
   discordConfig = snap.val() || { enabled: false };
+  settingsConfig = { ...settingsConfig, discord: discordConfig };
   console.log(`[Config] Discord config dimuat: enabled=${discordConfig.enabled}`);
 });
 
@@ -66,6 +73,74 @@ async function sendEmbed(webhookUrl, embed) {
   }
 }
 
+function normalizeTelegramChatId(value) {
+  const id = String(value ?? '').trim();
+  return /^-?\d+$/.test(id) ? id : '';
+}
+
+function parseTelegramChatIds(...sources) {
+  const ids = [];
+  const add = (value) => {
+    const id = normalizeTelegramChatId(value);
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+
+  const visit = (source) => {
+    if (source == null) return;
+    if (Array.isArray(source)) {
+      source.forEach(visit);
+      return;
+    }
+    if (typeof source === 'object') {
+      if ('chatId' in source || 'telegramChatId' in source || 'id' in source) {
+        add(source.chatId ?? source.telegramChatId ?? source.id);
+        return;
+      }
+      Object.entries(source)
+        .filter(([key]) => !['name', 'label', 'displayName', 'title'].includes(key))
+        .forEach(([, value]) => visit(value));
+      return;
+    }
+    String(source).split(/[\s,;]+/).forEach(add);
+  };
+
+  sources.forEach(visit);
+  return ids;
+}
+
+function getTelegramChatIds(settings) {
+  return parseTelegramChatIds(
+    settings?.telegramRecipients,
+    settings?.telegramChatIds,
+    settings?.telegramChatId,
+    settings?.telegram?.chat_id
+  );
+}
+
+async function sendTelegram(botToken, chatIds, message) {
+  const ids = parseTelegramChatIds(chatIds);
+  if (!botToken || ids.length === 0) return false;
+
+  const results = await Promise.allSettled(ids.map(async (chatId) => {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: String(chatId),
+        text: message,
+        parse_mode: 'HTML',
+      }),
+    });
+    if (!res.ok) {
+      console.error(`[Telegram] HTTP ${res.status} untuk ${chatId}:`, (await res.text()).slice(0, 200));
+      return false;
+    }
+    return true;
+  }));
+
+  return results.some((result) => result.status === 'fulfilled' && result.value);
+}
+
 // ── Helper: Warna & emoji status ─────────────────────────────────────────
 function statusColor(s) {
   switch ((s || '').toUpperCase()) {
@@ -85,6 +160,94 @@ function statusEmoji(s) {
 }
 function waktu() {
   return new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'medium' });
+}
+
+function buildMonitoringSummary(d = {}) {
+  return [
+    `Arus ${d.arus ?? '-'} A`,
+    `Tegangan ${d.tegangan ?? '-'} V`,
+    `Daya ${d.daya ?? '-'} W`,
+    `Relay ${d.relay ? 'ON' : 'OFF'}`,
+    `Status ${d.status ?? 'NORMAL'}`,
+  ].join(' • ');
+}
+
+async function publishClientEvent({
+  event,
+  title,
+  message,
+  severity = 'info',
+  payload = {},
+}) {
+  const eventId = `physical-${event}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const createdAt = Date.now();
+  const nextPayload = {
+    id: eventId,
+    event,
+    source: 'hardware',
+    scope: 'physical',
+    target: 'physical',
+    severity,
+    title,
+    message,
+    created_at: createdAt,
+    created_at_iso: new Date(createdAt).toISOString(),
+    ...payload,
+  };
+  await db.ref('/notifications/system/latest').set(nextPayload);
+  return nextPayload;
+}
+
+async function sendInfoFCM(title, message, event, severity = 'info') {
+  try {
+    await admin.messaging().send({
+      topic: 'iot_alarms',
+      data: {
+        action: 'SHOW_INFO',
+        event,
+        severity,
+        title,
+        message,
+        source: 'hardware',
+        scope: 'physical',
+      },
+      android: { priority: 'high' },
+      webpush: {
+        notification: {
+          title,
+          body: message,
+          icon: 'https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png',
+          vibrate: [200, 100, 200],
+        },
+      },
+    });
+  } catch (err) {
+    console.error('[FCM] Info event gagal dikirim:', err.message);
+  }
+}
+
+async function broadcastPhysicalSystemEvent({
+  event,
+  title,
+  message,
+  severity = 'info',
+  telegramMessage = '',
+  payload = {},
+}) {
+  const telegramEnabled = settingsConfig.telegramNotifyEnabled !== false;
+  const telegramBotToken = String(settingsConfig.telegramBotToken || '').trim();
+  const telegramChatIds = getTelegramChatIds(settingsConfig);
+
+  const tasks = [
+    publishClientEvent({ event, title, message, severity, payload }),
+    sendInfoFCM(title, message, event, severity),
+  ];
+
+  if (telegramEnabled && telegramBotToken && telegramChatIds.length > 0 && telegramMessage) {
+    tasks.push(sendTelegram(telegramBotToken, telegramChatIds, telegramMessage));
+  }
+
+  await Promise.allSettled(tasks);
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -176,6 +339,16 @@ setInterval(async () => {
       footer: { text: `IoT Listrik Dashboard • ${waktu()}` }
     };
     await sendEmbed(discordConfig.webhookAlerts, embed);
+    await broadcastPhysicalSystemEvent({
+      event: 'device_offline',
+      title: embed.title,
+      message: embed.description,
+      severity: 'danger',
+      telegramMessage:
+        `🔴 <b>[OFFLINE] Perangkat Terputus</b>\n` +
+        `Koneksi dari hardware utama terputus. Tidak ada data masuk selama lebih dari 30 detik.\n` +
+        `🕐 ${waktu()}`,
+    });
   }
 }, 10000);
 
@@ -195,6 +368,16 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
       footer: { text: `IoT Listrik Dashboard • ${waktu()}` }
     };
     await sendEmbed(discordConfig.webhookAlerts, embed);
+    await broadcastPhysicalSystemEvent({
+      event: 'device_online',
+      title: embed.title,
+      message: embed.description,
+      severity: 'success',
+      telegramMessage:
+        `🟢 <b>[ONLINE] Perangkat Terhubung</b>\n` +
+        `Koneksi kembali pulih. Data telemetri mulai diterima.\n` +
+        `🕐 ${waktu()}`,
+    });
   }
 
   if (now - lastMonitoringSent < 5 * 60 * 1000) return; // rate limit 5 mins
@@ -222,6 +405,35 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
   };
 
   await sendEmbed(discordConfig.webhookMonitoring, embed);
+  await broadcastPhysicalSystemEvent({
+    event: 'monitoring_update',
+    title: embed.title,
+    message: buildMonitoringSummary(d),
+    severity: 'info',
+    telegramMessage:
+      `📊 <b>Update Data Monitoring Listrik</b>\n` +
+      `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
+      `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
+      `💡 Daya: ${d.daya ?? '-'} W\n` +
+      `🔌 Relay: <b>${d.relay ? 'ON' : 'OFF'}</b>\n` +
+      `📡 Frekuensi: ${d.frekuensi ?? '-'} Hz\n` +
+      `📊 Power Factor: ${d.power_factor ?? '-'}\n` +
+      `🔆 Energi: ${d.energi_kwh ?? '-'} kWh\n` +
+      `${statusEmoji(d.status)} Status: <b>${d.status ?? 'NORMAL'}</b>\n` +
+      `🕐 ${waktu()}`,
+    payload: {
+      metrics: {
+        arus: d.arus ?? 0,
+        tegangan: d.tegangan ?? 0,
+        daya: d.daya ?? 0,
+        relay: d.relay ? 1 : 0,
+        frekuensi: d.frekuensi ?? 0,
+        power_factor: d.power_factor ?? 0,
+        energi_kwh: d.energi_kwh ?? 0,
+        status: d.status ?? 'NORMAL',
+      },
+    },
+  });
 });
 
 // ════════════════════════════════════════════════════════════════════════

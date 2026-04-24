@@ -541,7 +541,13 @@ exports.onStatusChanged = onValueUpdated(
       try {
         await admin.messaging().send({
           topic: "iot_alarms",
-          data: { action: fcmAction, status: statusBaru, title: embed.title, message: embed.description },
+          data: {
+            action: fcmAction,
+            status: statusBaru,
+            title: embed.title,
+            message: embed.description,
+            source: "hardware",
+          },
           android: { priority: "high" },
           webpush: {
             notification: {
@@ -584,7 +590,11 @@ exports.onRelayChanged = onValueUpdated(
     try {
       await admin.messaging().send({
         topic: "iot_alarms",
-        data: { action: "RELAY_CHANGED", status: relayBaru ? "ON" : "OFF" },
+        data: {
+          action: "RELAY_CHANGED",
+          status: relayBaru ? "ON" : "OFF",
+          source: "hardware",
+        },
         android: { priority: "high" },
         webpush: {
           notification: {

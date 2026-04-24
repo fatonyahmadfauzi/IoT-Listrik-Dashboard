@@ -9,12 +9,14 @@ import { Analytics } from './components/Analytics';
 import { Settings } from './components/Settings';
 import { Login } from './components/Login';
 import { playAlarm, showNotification, stopAlarm } from './lib/notifikasi';
+import { db } from './lib/firebase';
+import { onValue, ref } from 'firebase/database';
 
 type Page = 'dashboard' | 'history' | 'analytics' | 'settings';
 
 function App() {
   const { theme, notifications } = useStore();
-  const { user, role, loading, initAuth, logout } = useAuthStore();
+  const { user, role, loading, initAuth, logout, isTempAccount } = useAuthStore();
   const {
     currentData,
     subscribeToData,
@@ -28,6 +30,7 @@ function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const prevStatus = useRef<string | undefined>(undefined);
   const prevResetAt = useRef<string | number | null | undefined>(undefined);
+  const prevSystemEventId = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -126,6 +129,42 @@ function App() {
 
     prevResetAt.current = resetAt;
   }, [user, currentData?.reset_at, currentData?.reset_by_admin, currentData?.reset_note]);
+
+  useEffect(() => {
+    if (!user || isTempAccount) {
+      prevSystemEventId.current = undefined;
+      return;
+    }
+
+    const unsub = onValue(ref(db, 'notifications/system/latest'), (snapshot) => {
+      const payload = snapshot.val();
+      if (!payload) return;
+      if ((payload.target && payload.target !== 'physical') || (payload.scope && payload.scope !== 'physical')) {
+        return;
+      }
+
+      const eventId = String(payload.id || '').trim();
+      if (!eventId) return;
+
+      if (prevSystemEventId.current == null) {
+        prevSystemEventId.current = eventId;
+        const createdAt = Number(payload.created_at || Date.parse(String(payload.created_at_iso || '')) || 0);
+        if (!createdAt || Math.max(0, Date.now() - createdAt) > 15000) {
+          return;
+        }
+      }
+
+      if (prevSystemEventId.current === eventId) return;
+      prevSystemEventId.current = eventId;
+
+      const title = String(payload.title || 'Pembaruan Sistem').trim();
+      const message = String(payload.message || '').trim();
+      if (!message) return;
+      showNotification(title, message);
+    });
+
+    return () => unsub();
+  }, [user, isTempAccount]);
 
   const renderPage = () => {
     switch (page) {

@@ -178,8 +178,9 @@ async function sendTelegram(botToken, chatIds, message) {
 
 // ── Helper: Kirim FCM Push ─────────────────────────────────────────────────
 async function sendFCM(status, uid) {
+  const topic = `iot_sim_${uid}`;
   const payload = {
-    topic: 'iot_alarms',
+    topic,
     data: {
       action: status === 'DANGER' ? 'TRIGGER_ALARM' : 'STOP_ALARM',
       status,
@@ -194,7 +195,7 @@ async function sendFCM(status, uid) {
   };
   try {
     await admin.messaging().send(payload);
-    console.log(`[FCM] Alarm terkirim → status=${status}, uid=${uid.slice(0,8)}`);
+    console.log(`[FCM] Alarm simulator terkirim → topic=${topic}, status=${status}, uid=${uid.slice(0,8)}`);
   } catch (err) {
     console.error('[FCM] Error:', err.code || err.message);
   }

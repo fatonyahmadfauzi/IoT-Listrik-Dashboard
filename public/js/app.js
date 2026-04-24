@@ -19,6 +19,7 @@ import {
   requestNotificationPermission,
   checkAndNotify,
   checkAdminResetNotify,
+  startSystemNotificationFeed,
   showToast,
   initAudio,
 } from "./notifications.js";
@@ -335,6 +336,7 @@ initPage({
     startMiniLogsListener();
 
     await requestNotificationPermission();
+    startSystemNotificationFeed({ enabled: !isTempAccount() });
 
     window.addEventListener(
       "click",

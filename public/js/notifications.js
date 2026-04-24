@@ -20,14 +20,18 @@ const REPEAT_INTERVAL_MS = 3000;
 let lastRepeatAt = 0;
 let lastRepeatStatus = null;
 let lastResetNotifiedAt = 0;
+let lastSystemEventId = '';
+let stopSystemNotificationFeed = null;
 
 try {
   const at = localStorage.getItem('iot_last_alarm_repeat_at');
   const st = localStorage.getItem('iot_last_alarm_repeat_status');
   const resetAt = localStorage.getItem('iot_last_reset_notified_at');
+  const systemEventId = localStorage.getItem('iot_last_system_event_id');
   if (at) lastRepeatAt = Number(at) || 0;
   if (st) lastRepeatStatus = st;
   if (resetAt) lastResetNotifiedAt = Number(resetAt) || 0;
+  if (systemEventId) lastSystemEventId = systemEventId;
 } catch (_) {}
 
 function isAlarmDisabled() {
@@ -39,7 +43,7 @@ function isAlarmDisabled() {
 }
 
 import { messaging, getToken, db, auth } from "./firebase-config.js";
-import { ref, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 /**
  * Request notification permission on first user interaction.
@@ -195,6 +199,77 @@ function checkAdminResetNotify(payload) {
   return true;
 }
 
+function getToastTypeForSeverity(severity) {
+  switch (String(severity || '').toLowerCase()) {
+    case 'danger':
+    case 'error':
+      return 'error';
+    case 'success':
+      return 'success';
+    case 'warning':
+      return 'warning';
+    default:
+      return 'info';
+  }
+}
+
+function checkSystemEventNotify(payload, options = {}) {
+  const { initialFreshWindowMs = 15000 } = options;
+  const id = String(payload?.id || '').trim();
+  if (!id) return false;
+  if (payload?.target && payload.target !== 'physical') return false;
+  if (payload?.scope && payload.scope !== 'physical') return false;
+
+  const createdAt = parseResetTimestamp(payload?.created_at ?? payload?.created_at_iso);
+  if (id === lastSystemEventId) return false;
+
+  if (!lastSystemEventId && createdAt) {
+    const ageMs = Math.max(0, Date.now() - createdAt);
+    if (ageMs > initialFreshWindowMs) {
+      lastSystemEventId = id;
+      try {
+        localStorage.setItem('iot_last_system_event_id', id);
+      } catch (_) {}
+      return false;
+    }
+  }
+
+  const title = String(payload?.title || 'Pembaruan Sistem').trim();
+  const message = String(payload?.message || '').trim();
+  if (!message) return false;
+
+  sendNotification(title, message, '/assets/icons/icon-192.png', `system-${payload?.event || id}`);
+  showToast(`${title} — ${message}`, getToastTypeForSeverity(payload?.severity), 5500);
+
+  lastSystemEventId = id;
+  try {
+    localStorage.setItem('iot_last_system_event_id', id);
+  } catch (_) {}
+  return true;
+}
+
+function startSystemNotificationFeed(options = {}) {
+  const { enabled = true } = options;
+  if (stopSystemNotificationFeed) {
+    stopSystemNotificationFeed();
+    stopSystemNotificationFeed = null;
+  }
+  if (!enabled) return () => {};
+
+  stopSystemNotificationFeed = onValue(ref(db, '/notifications/system/latest'), (snap) => {
+    const payload = snap.val();
+    if (!payload) return;
+    checkSystemEventNotify(payload);
+  });
+
+  return () => {
+    if (stopSystemNotificationFeed) {
+      stopSystemNotificationFeed();
+      stopSystemNotificationFeed = null;
+    }
+  };
+}
+
 /**
  * Check status and send notification if status is critical.
  * Prevents duplicate notifications for the same status.
@@ -304,4 +379,14 @@ function showToast(message, type = 'success', duration = 4000) {
   }, duration);
 }
 
-export { requestNotificationPermission, sendNotification, checkAndNotify, checkAdminResetNotify, showToast, initAudio, stopWebSiren };
+export {
+  requestNotificationPermission,
+  sendNotification,
+  checkAndNotify,
+  checkAdminResetNotify,
+  checkSystemEventNotify,
+  startSystemNotificationFeed,
+  showToast,
+  initAudio,
+  stopWebSiren,
+};

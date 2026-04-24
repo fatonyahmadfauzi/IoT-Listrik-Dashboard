@@ -10,9 +10,9 @@
  */
 
 import { db }           from './firebase-config.js';
-import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix } from './auth.js';
+import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount } from './auth.js';
 import { createRealtimeChart, loadHistoryIntoChart } from './charts.js';
-import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
+import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, startSystemNotificationFeed, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, query, orderByKey, limitToLast, onValue }
                         from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -161,6 +161,7 @@ initPage({
 
     // Alarm: tetap bunyi walau pindah menu (history/settings) dengan memonitor status /listrik juga.
     requestNotificationPermission();
+    startSystemNotificationFeed({ enabled: !isTempAccount() });
     // Coba unlock lebih awal (kalau browser sudah pernah di-gesture di halaman sebelumnya).
     try { initAudio(); } catch (_) {}
     window.addEventListener('click', () => initAudio(), { once: true });

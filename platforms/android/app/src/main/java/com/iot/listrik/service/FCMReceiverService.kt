@@ -15,6 +15,11 @@ import com.iot.listrik.service.AlarmForegroundService
 
 class FCMReceiverService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
+        if (!shouldHandleMessage(message)) {
+            Log.d("FCM", "Message ignored due to session/source mismatch: ${message.data}")
+            return
+        }
+
         val action = message.data["action"]
         if (action == "TRIGGER_ALARM") {
             Log.d("FCM", "TRIGGER_ALARM received!")
@@ -27,6 +32,24 @@ class FCMReceiverService : FirebaseMessagingService() {
         } else if (action == "STOP_ALARM") {
             Log.d("FCM", "STOP_ALARM received - stopping service.")
             AlarmForegroundService.stop(this)
+        } else if (action == "SHOW_INFO") {
+            showInfoNotification(
+                message.data["title"] ?: "Pembaruan Sistem",
+                message.data["message"] ?: "Ada pembaruan baru dari perangkat IoT."
+            )
+        }
+    }
+
+    private fun shouldHandleMessage(message: RemoteMessage): Boolean {
+        val prefs = getSharedPreferences("iot_listrik_session", MODE_PRIVATE)
+        val source = (message.data["source"] ?: "hardware").trim().lowercase()
+        val isTempSession = prefs.getBoolean("session_is_temp", false)
+        val currentUid = prefs.getString("session_uid", "") ?: ""
+        val messageUid = (message.data["uid"] ?: "").trim()
+
+        return when (source) {
+            "simulator" -> isTempSession && currentUid.isNotBlank() && currentUid == messageUid
+            else -> !isTempSession
         }
     }
 
@@ -68,5 +91,29 @@ class FCMReceiverService : FirebaseMessagingService() {
             .setAutoCancel(true)
 
         notificationManager.notify(1001, notificationBuilder.build())
+    }
+
+    private fun showInfoNotification(title: String, message: String) {
+        val channelId = "INFO_CHANNEL_ID"
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Info Updates",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notificationBuilder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+
+        notificationManager.notify(1002, notificationBuilder.build())
     }
 }

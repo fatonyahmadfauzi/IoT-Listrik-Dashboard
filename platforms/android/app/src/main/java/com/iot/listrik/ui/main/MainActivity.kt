@@ -70,6 +70,7 @@ class MainActivity : AppCompatActivity() {
     private var lastSensorSignature = ""
     private var lastResetMarker: String? = null
     private var watchStartedAt = System.currentTimeMillis()
+    private val sessionPrefs by lazy { getSharedPreferences("iot_listrik_session", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,16 +87,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Sub to FCM Alarms
-            try {
-                FirebaseMessaging.getInstance().subscribeToTopic("iot_alarms")
-            } catch (e: Exception) {
-                Log.e("MainActivity", "FCM subscription failed", e)
-            }
-
             binding.btnLogout.setOnClickListener {
                 // Stop alarm supaya tidak lanjut bunyi setelah logout
                 AlarmForegroundService.stop(this)
+                clearNotificationTopics()
                 auth.signOut()
                 startActivity(Intent(this, LoginActivity::class.java))
                 finish()
@@ -157,6 +152,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Sesi demo berakhir (15 menit).", Toast.LENGTH_LONG).show()
         // Stop alarm supaya tidak lanjut bunyi setelah logout
         AlarmForegroundService.stop(this)
+        clearNotificationTopics()
         auth.signOut()
         startActivity(Intent(this, LoginActivity::class.java))
         finish()
@@ -190,6 +186,7 @@ class MainActivity : AppCompatActivity() {
 
             isTempAccount = isTemp
             pathPrefix = if (isTemp) "sim/${user.uid}/" else ""
+            syncNotificationTopics(user.uid, isTemp)
 
             if (isTemp && expiresAt != null) {
                 val timeRemaining = expiresAt - System.currentTimeMillis()
@@ -205,8 +202,58 @@ class MainActivity : AppCompatActivity() {
             attachListeners()
         }.addOnFailureListener {
             pathPrefix = ""
+            syncNotificationTopics(user.uid, false)
             fetchRoleAndApplyUi(user.uid)
             attachListeners()
+        }
+    }
+
+    private fun syncNotificationTopics(uid: String, isTemp: Boolean) {
+        try {
+            val messaging = FirebaseMessaging.getInstance()
+            val previousTopic = sessionPrefs.getString("fcm_topic", null)
+            val nextTopic = if (isTemp) "iot_sim_$uid" else "iot_alarms"
+
+            if (!previousTopic.isNullOrBlank() && previousTopic != nextTopic) {
+                messaging.unsubscribeFromTopic(previousTopic)
+            }
+
+            if (previousTopic != nextTopic) {
+                messaging.subscribeToTopic(nextTopic)
+            }
+
+            if (!isTemp) {
+                sessionPrefs.edit()
+                    .putBoolean("session_is_temp", false)
+                    .putString("session_uid", uid)
+                    .putString("fcm_topic", nextTopic)
+                    .apply()
+            } else {
+                sessionPrefs.edit()
+                    .putBoolean("session_is_temp", true)
+                    .putString("session_uid", uid)
+                    .putString("fcm_topic", nextTopic)
+                    .apply()
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "FCM topic sync failed", e)
+        }
+    }
+
+    private fun clearNotificationTopics() {
+        try {
+            val previousTopic = sessionPrefs.getString("fcm_topic", null)
+            if (!previousTopic.isNullOrBlank()) {
+                FirebaseMessaging.getInstance().unsubscribeFromTopic(previousTopic)
+            }
+        } catch (e: Exception) {
+            Log.w("MainActivity", "FCM topic unsubscribe failed", e)
+        } finally {
+            sessionPrefs.edit()
+                .remove("session_is_temp")
+                .remove("session_uid")
+                .remove("fcm_topic")
+                .apply()
         }
     }
 

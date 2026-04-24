@@ -116,6 +116,7 @@ statusRef.on('value', async (snapshot) => {
                 status: 'DANGER',
                 title: 'BAHAYA KRITIS!',
                 message: '⚠️ Arus melewati threshold (Via Local Backend)!',
+                source: 'hardware',
             },
             android: { priority: 'high' },
         };
@@ -131,7 +132,7 @@ statusRef.on('value', async (snapshot) => {
         console.log('🟢 Status recovered to NORMAL. Triggering STOP FCM...');
         const payload = {
             topic: 'iot_alarms',
-            data: { action: 'STOP_ALARM', status: 'NORMAL' },
+            data: { action: 'STOP_ALARM', status: 'NORMAL', source: 'hardware' },
             android: { priority: 'high' },
         };
         try {

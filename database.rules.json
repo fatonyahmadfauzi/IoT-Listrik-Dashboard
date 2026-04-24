@@ -21,6 +21,13 @@
       ".write": "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')"
     },
 
+    "notifications": {
+      "system": {
+        ".read": "auth != null && auth.token.isTempAccount !== true",
+        ".write": false
+      }
+    },
+
     "settings": {
       ".read":  "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
       ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",

@@ -25,7 +25,7 @@
 import { db, auth, firebaseConfig }  from './firebase-config.js';
 import { loadClientConfig, saveClientConfig } from './client-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount, getCurrentUser } from './auth.js';
-import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
+import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, startSystemNotificationFeed, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, onValue, set, update, remove, get }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
@@ -1256,6 +1256,7 @@ initPage({
 
     // Alarm: tetap bunyi walau pindah menu (settings) dengan memonitor status /listrik
     requestNotificationPermission();
+    startSystemNotificationFeed({ enabled: !isTempAccount() });
     // Coba unlock lebih awal (kalau browser sudah pernah di-gesture di halaman sebelumnya).
     try { initAudio(); } catch (_) {}
     window.addEventListener('click', () => initAudio(), { once: true });

@@ -302,7 +302,7 @@ function buildAdminResetOtpEmailHTML({ otp, email, expiresAt }) {
 <style>
   @media only screen and (max-width:600px) {
     .container { width: 100% !important; }
-    .outer-shell { padding: 18px 14px !important; }
+    .outer-shell { padding: 18px 14px 22px !important; border-radius: 26px !important; }
     .otp-panel,
     .info-panel,
     .warning-panel { padding: 22px 18px !important; }
@@ -321,27 +321,18 @@ function buildAdminResetOtpEmailHTML({ otp, email, expiresAt }) {
       <td align="center" style="padding:24px 12px 28px;">
         <table class="container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
           <tr>
-            <td class="outer-shell" style="background:#eef0ff;border:1px solid #d9ddfb;border-radius:28px;padding:24px 20px 28px;">
+            <td class="outer-shell" style="background:#eef0ff;border:1px solid #d9ddfb;border-radius:30px;padding:22px 20px 26px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="padding:4px 8px 18px;">
-                    <p style="margin:0;font-size:18px;font-weight:700;color:#424b66;line-height:1.4;">IoT Listrik Dashboard</p>
-                    <p style="margin:6px 0 0;font-size:13px;color:#6b7280;line-height:1.6;">
-                      Permintaan ini berasal dari akun admin <strong style="color:#4b5563;">${email}</strong> untuk reset data realtime di <strong>/listrik</strong>.
-                    </p>
-                  </td>
-                </tr>
-
-                <tr>
                   <td style="padding-bottom:18px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" class="otp-panel" style="background:#fbe7eb;border:2px solid #bc6a73;border-radius:28px;padding:24px 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" class="otp-panel" style="background:#f8e8ee;border:1.5px solid #e6b3bf;border-radius:28px;padding:24px 20px;">
                       <tr>
                         <td align="center">
-                          <p style="margin:0 0 18px;font-size:14px;font-weight:700;letter-spacing:4px;color:#a35f67;">KODE OTP</p>
-                          <div class="otp-code" style="display:inline-block;background:#3a2f35;border-radius:18px;padding:20px 28px;font-family:'Courier New',Courier,monospace;font-size:36px;font-weight:700;letter-spacing:10px;color:#f8fafc;line-height:1;">
+                          <p style="margin:0 0 18px;font-size:14px;font-weight:500;letter-spacing:4px;color:#ab6e79;">KODE OTP</p>
+                          <div class="otp-code" style="display:inline-block;background:#efe7ee;border-radius:18px;padding:20px 28px;font-family:'Courier New',Courier,monospace;font-size:36px;font-weight:700;letter-spacing:10px;color:#2f3441;line-height:1;">
                             ${otp}
                           </div>
-                          <p style="margin:20px 0 0;font-size:16px;color:#6c5a1d;line-height:1.5;">
+                          <p style="margin:20px 0 0;font-size:16px;color:#8b6d20;line-height:1.5;">
                             Berlaku sampai ${expiresStr} WIB
                           </p>
                         </td>
@@ -352,11 +343,11 @@ function buildAdminResetOtpEmailHTML({ otp, email, expiresAt }) {
 
                 <tr>
                   <td style="padding-bottom:18px;">
-                    <table width="100%" cellpadding="0" cellspacing="0" class="info-panel" style="background:#eef4ff;border:2px solid #1e7895;border-radius:28px;padding:24px 22px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" class="info-panel" style="background:#edf3ff;border:1.5px solid #bfd2fb;border-radius:28px;padding:24px 22px;">
                       <tr>
                         <td>
                           <p style="margin:0 0 14px;font-size:16px;font-weight:700;color:#42526e;line-height:1.5;">Yang akan terjadi setelah OTP benar:</p>
-                          <ul style="margin:0;padding-left:26px;font-size:16px;color:#5b6473;line-height:1.9;">
+                          <ul style="margin:0;padding-left:26px;font-size:16px;color:#5f6674;line-height:1.9;">
                             <li>Data realtime sensor di <strong>/listrik</strong> akan direset ke nilai kosong/default.</li>
                             <li>Histori log tidak dihapus.</li>
                             <li>Jika device fisik masih online, data baru bisa muncul lagi pada heartbeat berikutnya.</li>
@@ -369,10 +360,10 @@ function buildAdminResetOtpEmailHTML({ otp, email, expiresAt }) {
 
                 <tr>
                   <td>
-                    <table width="100%" cellpadding="0" cellspacing="0" class="warning-panel" style="background:#f7efe2;border:2px solid #9a7945;border-radius:28px;padding:22px 22px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" class="warning-panel" style="background:#f5efe8;border:1.5px solid #d8c5a8;border-radius:28px;padding:22px 22px;">
                       <tr>
                         <td>
-                          <p style="margin:0;font-size:16px;color:#6d5a2c;line-height:1.8;">
+                          <p style="margin:0;font-size:16px;color:#6e5a2b;line-height:1.8;">
                             Abaikan email ini jika Anda tidak sedang meminta reset data realtime perangkat IoT.
                           </p>
                         </td>
@@ -386,9 +377,7 @@ function buildAdminResetOtpEmailHTML({ otp, email, expiresAt }) {
 
           <tr>
             <td align="center" style="padding:22px 16px 0;">
-              <p style="margin:0;font-size:12px;color:#b8bec8;line-height:1.7;">Email ini dikirim otomatis. Jangan balas email ini.</p>
-              <p style="margin:6px 0 0;font-size:12px;color:#c5cad4;line-height:1.7;">&copy; 2025 IoT Listrik Dashboard</p>
-              <p style="margin:2px 0 0;font-size:11px;color:#b0b7c2;line-height:1.7;">Sistem Deteksi Kebocoran Arus &nbsp;&middot;&nbsp; Built by Fatony Ahmad Fauzi</p>
+              <p style="margin:0;font-size:12px;color:#c7ccd7;line-height:1.7;">&copy; 2026 IoT Listrik Dashboard</p>
             </td>
           </tr>
         </table>

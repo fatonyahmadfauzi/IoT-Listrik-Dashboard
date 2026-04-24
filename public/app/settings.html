@@ -823,6 +823,145 @@
               </div>
             </div>
 
+            <!-- Card 5: Bootstrap Device / Wi-Fi (Admin only, non-temp) -->
+            <div
+              id="deviceBootstrapSection"
+              class="settings-section"
+              style="grid-column: 1 / -1"
+              hidden
+            >
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded">wifi</span>
+                Bootstrap Device &amp; Wi-Fi ESP32
+              </div>
+              <div class="info-panel info-panel--yellow" style="margin-bottom: 14px;">
+                <strong>Khusus admin utama:</strong> bagian ini mengirim konfigurasi bootstrap ke device fisik melalui Firebase.
+                ESP32 akan menyimpan SSID, password Wi-Fi, API Key, URL Realtime Database, dan akun IoT ke NVS lalu restart otomatis.
+                <br />
+                <strong>Akun temp simulator tidak memakai bagian ini.</strong>
+              </div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label" for="inpDeviceWifiSsid">SSID Wi-Fi</label>
+                  <input
+                    id="inpDeviceWifiSsid"
+                    class="form-input"
+                    type="text"
+                    placeholder="Nama Wi-Fi tujuan"
+                    autocomplete="off"
+                  />
+                  <div class="form-hint">
+                    Device akan mencoba SSID ini lebih dulu saat boot. Jika gagal, ESP32 akan kembali membuka captive portal.
+                  </div>
+                </div>
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDeviceWifiPassword">Password Wi-Fi</label>
+                  <div class="input-reveal-wrap">
+                    <input
+                      id="inpDeviceWifiPassword"
+                      class="form-input"
+                      type="password"
+                      placeholder="Kosongkan jika jaringan tanpa password"
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="reveal-btn"
+                      onclick="toggleReveal('inpDeviceWifiPassword',this)"
+                      title="Tampilkan/sembunyikan"
+                    >
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDeviceApiKey">Firebase API Key</label>
+                  <div class="input-reveal-wrap">
+                    <input
+                      id="inpDeviceApiKey"
+                      class="form-input"
+                      type="password"
+                      placeholder="AIza..."
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="reveal-btn"
+                      onclick="toggleReveal('inpDeviceApiKey',this)"
+                      title="Tampilkan/sembunyikan"
+                    >
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="inpDeviceDbUrl">Realtime Database URL</label>
+                  <input
+                    id="inpDeviceDbUrl"
+                    class="form-input"
+                    type="url"
+                    placeholder="https://project-id-default-rtdb.firebaseio.com/"
+                    autocomplete="off"
+                  />
+                </div>
+              </div>
+
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="inpDeviceEmail">Email Akun IoT</label>
+                  <input
+                    id="inpDeviceEmail"
+                    class="form-input"
+                    type="email"
+                    placeholder="listrik.iot.device@gmail.com"
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDevicePassword">Password Akun IoT</label>
+                  <div class="input-reveal-wrap">
+                    <input
+                      id="inpDevicePassword"
+                      class="form-input"
+                      type="password"
+                      placeholder="Password akun device"
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="reveal-btn"
+                      onclick="toggleReveal('inpDevicePassword',this)"
+                      title="Tampilkan/sembunyikan"
+                    >
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-panel info-panel--blue" style="margin-top: 10px; margin-bottom: 14px;">
+                Saat menekan <strong>Simpan &amp; Terapkan</strong>, device fisik akan membaca permintaan ini, menyimpan konfigurasi baru ke NVS,
+                lalu restart otomatis. Bila menekan <strong>Hapus Wi-Fi &amp; Buka Setup</strong>, device akan menghapus bootstrap saat ini dan masuk
+                ke mode captive portal.
+              </div>
+
+              <div id="deviceBootstrapStatus" class="settings-save-status" style="margin-bottom: 6px;"></div>
+              <div id="deviceBootstrapMeta" class="form-hint" style="margin-bottom: 14px;"></div>
+
+              <div class="settings-btn-cluster">
+                <button id="saveDeviceBootstrapBtn" class="btn btn-primary">
+                  <span class="material-symbols-rounded">wifi</span> Simpan &amp; Terapkan ke Device
+                </button>
+                <button id="clearDeviceBootstrapBtn" class="btn btn-ghost">
+                  <span class="material-symbols-rounded">wifi_off</span> Hapus Wi-Fi &amp; Buka Setup
+                </button>
+              </div>
+            </div>
+
             <!-- Client: backend & failover (localStorage — per browser) -->
             <div class="settings-section" style="grid-column: 1 / -1">
               <div class="settings-section-title">

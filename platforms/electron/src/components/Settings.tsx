@@ -18,6 +18,22 @@ interface TelegramRecipient {
   chatId: string;
 }
 
+interface DeviceBootstrapSettings {
+  status?: string;
+  statusMessage?: string;
+  requestedAt?: string;
+  requestedBy?: string;
+  lastConfirmedAt?: string;
+  activeSsid?: string;
+  lastError?: string;
+  wifiSsid?: string;
+  wifiPassword?: string;
+  firebaseApiKey?: string;
+  firebaseDbUrl?: string;
+  iotEmail?: string;
+  iotPassword?: string;
+}
+
 function normalizeTelegramChatId(value: unknown): string {
   const id = String(value ?? '').trim();
   return /^-?\d+$/.test(id) ? id : '';
@@ -91,9 +107,9 @@ const telegramMutedActionClass =
 
 export function Settings({ onLogout }: SettingsProps) {
   const { settings, users } = useDataStore();
-  const { role, user } = useAuthStore();
+  const { role, user, isTempAccount } = useAuthStore();
   const [tab, setTab] = useState<
-    'system' | 'calibration' | 'telegram' | 'discord' | 'backend' | 'users'
+    'system' | 'calibration' | 'telegram' | 'discord' | 'device' | 'backend' | 'users'
   >('system');
   const [loading, setLoading] = useState(false);
   const [clientCfg, setClientCfg] = useState<ClientBackendConfig>(() =>
@@ -153,6 +169,14 @@ export function Settings({ onLogout }: SettingsProps) {
   const [discordLogs, setDiscordLogs] = useState(dSettings.webhookLogs || '');
   const [discordEnabled, setDiscordEnabled] = useState(dSettings.enabled ?? true);
 
+  const bootstrapSettings = (settings?.deviceBootstrap || {}) as DeviceBootstrapSettings;
+  const [deviceWifiSsid, setDeviceWifiSsid] = useState(bootstrapSettings.wifiSsid || '');
+  const [deviceWifiPassword, setDeviceWifiPassword] = useState(bootstrapSettings.wifiPassword || '');
+  const [deviceApiKey, setDeviceApiKey] = useState(bootstrapSettings.firebaseApiKey || '');
+  const [deviceDbUrl, setDeviceDbUrl] = useState(bootstrapSettings.firebaseDbUrl || '');
+  const [deviceEmail, setDeviceEmail] = useState(bootstrapSettings.iotEmail || '');
+  const [devicePassword, setDevicePassword] = useState(bootstrapSettings.iotPassword || '');
+
   const [newUserEmail, setNewUserEmail] = useState('');
   
   // Visibility toggles
@@ -161,8 +185,33 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showDiscordRelay, setShowDiscordRelay] = useState(false);
   const [showDiscordMonitoring, setShowDiscordMonitoring] = useState(false);
   const [showDiscordLogs, setShowDiscordLogs] = useState(false);
+  const [showDeviceWifiPassword, setShowDeviceWifiPassword] = useState(false);
+  const [showDeviceApiKey, setShowDeviceApiKey] = useState(false);
+  const [showDevicePassword, setShowDevicePassword] = useState(false);
 
   const isAdmin = role === 'admin';
+  const canManageDeviceBootstrap = isAdmin && !isTempAccount;
+  const deviceBootstrapStatus = String(bootstrapSettings.status || 'idle').toLowerCase();
+  const deviceBootstrapStatusLabel =
+    {
+      idle: 'Siap',
+      pending: 'Menunggu ESP32',
+      applying: 'Menyimpan ke NVS',
+      restarting: 'Sedang restart',
+      connected: 'Terkonfirmasi',
+      portal: 'Masuk captive portal',
+      error: 'Gagal diterapkan',
+    }[deviceBootstrapStatus] || bootstrapSettings.status || 'Siap';
+
+  useEffect(() => {
+    const next = (settings?.deviceBootstrap || {}) as DeviceBootstrapSettings;
+    setDeviceWifiSsid(next.wifiSsid || '');
+    setDeviceWifiPassword(next.wifiPassword || '');
+    setDeviceApiKey(next.firebaseApiKey || '');
+    setDeviceDbUrl(next.firebaseDbUrl || '');
+    setDeviceEmail(next.iotEmail || '');
+    setDevicePassword(next.iotPassword || '');
+  }, [settings?.deviceBootstrap]);
 
   const handleSaveSystem = async () => {
     if (!isAdmin) return;
@@ -328,6 +377,86 @@ export function Settings({ onLogout }: SettingsProps) {
     }
   };
 
+  const validateDeviceBootstrap = () => {
+    if (!deviceWifiSsid.trim()) return 'SSID Wi-Fi wajib diisi.';
+    if (!deviceApiKey.trim()) return 'Firebase API Key wajib diisi.';
+    if (!/^https:\/\/.+/.test(deviceDbUrl.trim())) {
+      return 'Realtime Database URL harus diawali https://';
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(deviceEmail.trim())) {
+      return 'Email akun IoT tidak valid.';
+    }
+    if (!devicePassword.trim()) return 'Password akun IoT wajib diisi.';
+    return '';
+  };
+
+  const handleSaveDeviceBootstrap = async () => {
+    if (!canManageDeviceBootstrap) return;
+
+    const validationError = validateDeviceBootstrap();
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await set(ref(db, 'settings/deviceBootstrap'), {
+        ...bootstrapSettings,
+        action: 'save',
+        requestId: `bootstrap-${Date.now()}`,
+        pending: true,
+        status: 'pending',
+        statusMessage: 'Menunggu ESP32 membaca permintaan bootstrap dari Firebase.',
+        requestedAt: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
+        requestedBy: user?.email || 'admin',
+        wifiSsid: deviceWifiSsid.trim(),
+        wifiPassword: deviceWifiPassword,
+        firebaseApiKey: deviceApiKey.trim(),
+        firebaseDbUrl: deviceDbUrl.trim(),
+        iotEmail: deviceEmail.trim(),
+        iotPassword: devicePassword,
+        lastError: '',
+        restartRequired: true,
+      });
+      alert('Permintaan bootstrap dikirim. ESP32 akan restart setelah menerapkan konfigurasi baru.');
+    } catch (error) {
+      console.error('Error saving device bootstrap:', error);
+      alert('Gagal menyimpan bootstrap device');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearDeviceBootstrap = async () => {
+    if (!canManageDeviceBootstrap) return;
+    if (!confirm('Hapus konfigurasi Wi-Fi device dan buka captive portal setup?')) return;
+
+    setLoading(true);
+    try {
+      await set(ref(db, 'settings/deviceBootstrap'), {
+        ...bootstrapSettings,
+        action: 'clear',
+        requestId: `bootstrap-clear-${Date.now()}`,
+        pending: true,
+        status: 'pending',
+        statusMessage: 'Menunggu ESP32 menghapus bootstrap lalu membuka captive portal.',
+        requestedAt: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
+        requestedBy: user?.email || 'admin',
+        wifiSsid: '',
+        wifiPassword: '',
+        lastError: '',
+        restartRequired: true,
+      });
+      alert('Permintaan hapus bootstrap dikirim. Device akan masuk mode setup setelah restart.');
+    } catch (error) {
+      console.error('Error clearing device bootstrap:', error);
+      alert('Gagal menghapus bootstrap device');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const testDiscordWebhook = async () => {
     if (!discordAlerts.startsWith('https://discord.com/api/webhooks/')) {
       alert('Isi Webhook #alerts terlebih dahulu untuk test');
@@ -421,8 +550,16 @@ export function Settings({ onLogout }: SettingsProps) {
       {/* Tabs */}
       <div className="flex space-x-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-lg overflow-x-auto">
         {(
-          ['system', 'calibration', 'telegram', 'discord', 'backend', 'users'] as const
-        ).map((t) => (
+          [
+            ['system', 'System'],
+            ['calibration', 'Calibration'],
+            ['telegram', 'Telegram'],
+            ['discord', 'Discord'],
+            ['device', 'Device'],
+            ['backend', 'Backend'],
+            ['users', 'Users'],
+          ] as const
+        ).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -432,7 +569,7 @@ export function Settings({ onLogout }: SettingsProps) {
                 : 'bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
-            {t}
+            {label}
           </button>
         ))}
       </div>
@@ -866,6 +1003,172 @@ export function Settings({ onLogout }: SettingsProps) {
               className="px-4 py-2 bg-transparent border border-[#5865F2] text-[#5865F2] hover:bg-[#5865F2] hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
             >
               Test Kirim Ke #alerts
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Device Bootstrap Tab */}
+      {tab === 'device' && (
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow space-y-5">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Bootstrap Device &amp; Wi-Fi ESP32
+            </h3>
+            <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+              Atur SSID, password Wi-Fi, Firebase API Key, Realtime Database URL, dan akun IoT untuk device fisik.
+              Setelah dikirim, ESP32 akan menyimpan konfigurasi ke NVS lalu restart otomatis.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+            <strong className="font-semibold">Khusus admin utama:</strong> tab ini tidak dipakai akun temp simulator.
+            Device perlu firmware terbaru ini satu kali, setelah itu ganti Wi-Fi berikutnya tidak perlu upload ulang.
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                SSID Wi-Fi
+              </label>
+              <input
+                type="text"
+                value={deviceWifiSsid}
+                onChange={(e) => setDeviceWifiSsid(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                placeholder="Nama Wi-Fi tujuan"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Password Wi-Fi
+              </label>
+              <div className="relative">
+                <input
+                  type={showDeviceWifiPassword ? 'text' : 'password'}
+                  value={deviceWifiPassword}
+                  onChange={(e) => setDeviceWifiPassword(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                  placeholder="Kosongkan jika tanpa password"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-3 text-gray-500"
+                  onClick={() => setShowDeviceWifiPassword(!showDeviceWifiPassword)}
+                >
+                  {showDeviceWifiPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Firebase API Key
+              </label>
+              <div className="relative">
+                <input
+                  type={showDeviceApiKey ? 'text' : 'password'}
+                  value={deviceApiKey}
+                  onChange={(e) => setDeviceApiKey(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                  placeholder="AIza..."
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-3 text-gray-500"
+                  onClick={() => setShowDeviceApiKey(!showDeviceApiKey)}
+                >
+                  {showDeviceApiKey ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Realtime Database URL
+              </label>
+              <input
+                type="url"
+                value={deviceDbUrl}
+                onChange={(e) => setDeviceDbUrl(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                placeholder="https://project-id-default-rtdb.firebaseio.com/"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email Akun IoT
+              </label>
+              <input
+                type="email"
+                value={deviceEmail}
+                onChange={(e) => setDeviceEmail(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                placeholder="listrik.iot.device@gmail.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Password Akun IoT
+              </label>
+              <div className="relative">
+                <input
+                  type={showDevicePassword ? 'text' : 'password'}
+                  value={devicePassword}
+                  onChange={(e) => setDevicePassword(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                  placeholder="Password akun device"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-3 text-gray-500"
+                  onClick={() => setShowDevicePassword(!showDevicePassword)}
+                >
+                  {showDevicePassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+            <div className="font-semibold">Status bootstrap: {deviceBootstrapStatusLabel}</div>
+            <div className="mt-2">{bootstrapSettings.statusMessage || 'Belum ada permintaan bootstrap yang dikirim.'}</div>
+            {bootstrapSettings.requestedBy && (
+              <div className="mt-2">Diminta oleh: {bootstrapSettings.requestedBy}</div>
+            )}
+            {bootstrapSettings.requestedAt && (
+              <div>Waktu permintaan: {bootstrapSettings.requestedAt}</div>
+            )}
+            {bootstrapSettings.lastConfirmedAt && (
+              <div>
+                Konfirmasi device:{' '}
+                {/^\d+$/.test(String(bootstrapSettings.lastConfirmedAt))
+                  ? `${bootstrapSettings.lastConfirmedAt} ms uptime`
+                  : bootstrapSettings.lastConfirmedAt}
+              </div>
+            )}
+            {bootstrapSettings.activeSsid && (
+              <div>SSID aktif: {bootstrapSettings.activeSsid}</div>
+            )}
+            {bootstrapSettings.lastError && (
+              <div className="text-red-600 dark:text-red-400">
+                Detail error: {bootstrapSettings.lastError}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleSaveDeviceBootstrap}
+              disabled={loading || !canManageDeviceBootstrap}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+            >
+              {loading ? 'Mengirim...' : 'Simpan & Terapkan ke Device'}
+            </button>
+            <button
+              onClick={handleClearDeviceBootstrap}
+              disabled={loading || !canManageDeviceBootstrap}
+              className="px-4 py-2 bg-transparent border border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white disabled:opacity-50 rounded-lg font-semibold transition"
+            >
+              Hapus Wi-Fi & Buka Setup
             </button>
           </div>
         </div>

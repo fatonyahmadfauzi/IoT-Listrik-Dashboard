@@ -23,7 +23,42 @@
 
     "settings": {
       ".read":  "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
-      ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "deviceBootstrap": {
+        "pending": {
+          ".write": "auth != null && auth.token.isTempAccount !== true && (root.child('users').child(auth.uid).child('role').val() === 'admin' || auth.token.email === 'listrik.iot.device@gmail.com')"
+        },
+        "status": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "statusMessage": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "lastSeenAt": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "lastAppliedRequestId": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "lastConfirmedAt": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "lastAction": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "activeSsid": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "deviceIp": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "lastError": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        },
+        "restartRequired": {
+          ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'"
+        }
+      }
     },
 
     "users": {

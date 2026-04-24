@@ -6,10 +6,10 @@
  *
  * Configuration Architecture (see config.h for full details):
  * ┌──────────────────────────────────────────────────────────┐
- * │ LAYER 1 — Bootstrap (NVS + WiFiManager captive portal)  │
+ * │ LAYER 1 — Bootstrap (NVS + WiFiManager + admin push)    │
  * │   WiFi SSID/password, Firebase API key, DB URL,         │
  * │   IoT device email/password                             │
- * │   → Changed via captive portal (no reflashing)         │
+ * │   → Changed via captive portal atau admin bootstrap    │
  * ├──────────────────────────────────────────────────────────┤
  * │ LAYER 2 — Runtime (Firebase /settings, admin web page)  │
  * │   Threshold, buzzer, auto-cutoff, Telegram token/chatId,│
@@ -89,6 +89,68 @@ unsigned long lastSendMs         = 0;
 unsigned long lastSettingsSyncMs = 0;
 unsigned long lastRelayCheckMs   = 0;
 unsigned long lastLogMs          = 0;
+unsigned long lastBootstrapCheckMs = 0;
+
+static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000UL;
+static const unsigned long REMOTE_BOOTSTRAP_POLL_MS = 5000UL;
+
+struct RemoteBootstrapRequest {
+  bool   pending = false;
+  String action;
+  String requestId;
+  String wifiSsid;
+  String wifiPassword;
+  String firebaseApiKey;
+  String firebaseDbUrl;
+  String iotEmail;
+  String iotPassword;
+};
+
+String readBootstrapMeta(const char* key) {
+  prefs.begin(NVS_NAMESPACE, true);
+  String value = prefs.getString(key, "");
+  prefs.end();
+  return value;
+}
+
+void writeBootstrapMeta(const char* key, const String& value) {
+  prefs.begin(NVS_NAMESPACE, false);
+  prefs.putString(key, value);
+  prefs.end();
+}
+
+void clearBootstrapMeta(const char* key) {
+  prefs.begin(NVS_NAMESPACE, false);
+  prefs.remove(key);
+  prefs.end();
+}
+
+void rememberHandledBootstrapRequest(const String& requestId) {
+  writeBootstrapMeta("last_req", requestId);
+}
+
+String getLastHandledBootstrapRequest() {
+  return readBootstrapMeta("last_req");
+}
+
+void setPendingBootstrapConfirmation(const String& requestId,
+                                     const String& action) {
+  writeBootstrapMeta("pending_req", requestId);
+  writeBootstrapMeta("pending_act", action);
+}
+
+String getPendingBootstrapConfirmationRequest() {
+  return readBootstrapMeta("pending_req");
+}
+
+String getPendingBootstrapConfirmationAction() {
+  return readBootstrapMeta("pending_act");
+}
+
+void clearPendingBootstrapConfirmation() {
+  clearBootstrapMeta("pending_req");
+  clearBootstrapMeta("pending_act");
+}
 
 // ═══════════════════════════════════════════════════════════════
 // LAYER 1 — NVS BOOTSTRAP CONFIG HELPERS
@@ -145,6 +207,195 @@ void eraseBootstrap() {
   Serial.println("[NVS] Bootstrap erased! Akan masuk ke captive portal.");
 }
 
+bool connectStoredWiFi(unsigned long timeoutMs = WIFI_CONNECT_TIMEOUT_MS) {
+  if (strlen(bootstrap.wifiSsid) == 0) {
+    Serial.println("[WiFi] SSID bootstrap kosong.");
+    return false;
+  }
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(bootstrap.wifiSsid, bootstrap.wifiPassword);
+  Serial.printf("[WiFi] Coba SSID bootstrap: %s\n", bootstrap.wifiSsid);
+
+  unsigned long startMs = millis();
+  while (WiFi.status() != WL_CONNECTED && (millis() - startMs) < timeoutMs) {
+    delay(300);
+    Serial.print('.');
+  }
+  Serial.println();
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("[WiFi] Bootstrap connect sukses. IP: %s\n",
+                  WiFi.localIP().toString().c_str());
+    return true;
+  }
+
+  Serial.println("[WiFi] Bootstrap connect gagal, lanjut captive portal.");
+  WiFi.disconnect(true, true);
+  delay(250);
+  return false;
+}
+
+bool writeBootstrapStatusString(const char* child, const String& value) {
+  if (!isFirebaseReady()) return false;
+  return Firebase.RTDB.setString(
+    &fbData,
+    String("/settings/deviceBootstrap/") + child,
+    value
+  );
+}
+
+bool writeBootstrapStatusBool(const char* child, bool value) {
+  if (!isFirebaseReady()) return false;
+  return Firebase.RTDB.setBool(
+    &fbData,
+    String("/settings/deviceBootstrap/") + child,
+    value
+  );
+}
+
+void updateRemoteBootstrapStatus(const String& status,
+                                 const String& message,
+                                 bool pending,
+                                 const String& lastError = "",
+                                 bool restartRequired = false) {
+  if (!isFirebaseReady()) return;
+  writeBootstrapStatusString("status", status);
+  writeBootstrapStatusString("statusMessage", message);
+  writeBootstrapStatusBool("pending", pending);
+  writeBootstrapStatusString("lastSeenAt", String(millis()));
+  writeBootstrapStatusString("lastError", lastError);
+  writeBootstrapStatusBool("restartRequired", restartRequired);
+  if (WiFi.status() == WL_CONNECTED) {
+    writeBootstrapStatusString("activeSsid", WiFi.SSID());
+    writeBootstrapStatusString("deviceIp", WiFi.localIP().toString());
+  }
+}
+
+void confirmPendingBootstrapIfNeeded() {
+  const String requestId = getPendingBootstrapConfirmationRequest();
+  const String action = getPendingBootstrapConfirmationAction();
+  if (requestId.isEmpty() || !isFirebaseReady()) return;
+
+  writeBootstrapStatusString("lastAppliedRequestId", requestId);
+  writeBootstrapStatusString("lastConfirmedAt", String(millis()));
+  writeBootstrapStatusString("lastAction", action);
+  updateRemoteBootstrapStatus(
+    "connected",
+    "ESP32 online dengan konfigurasi bootstrap terbaru.",
+    false,
+    "",
+    false
+  );
+  clearPendingBootstrapConfirmation();
+}
+
+bool readRemoteBootstrapRequest(RemoteBootstrapRequest& out) {
+  if (!isFirebaseReady()) return false;
+
+  if (!Firebase.RTDB.getJSON(&fbData, "/settings/deviceBootstrap")) {
+    const String reason = fbData.errorReason();
+    if (reason.indexOf("path not exist") == -1 &&
+        reason.indexOf("Path not exist") == -1) {
+      Serial.println("[Firebase] readRemoteBootstrapRequest gagal: " + reason);
+    }
+    return false;
+  }
+
+  FirebaseJson json;
+  FirebaseJsonData val;
+  json.setJsonData(fbData.jsonString());
+
+  if (json.get(val, "pending")) {
+    out.pending = (val.stringValue == "true" || val.intValue == 1);
+  }
+  if (json.get(val, "action")) out.action = val.stringValue;
+  if (json.get(val, "requestId")) out.requestId = val.stringValue;
+  if (json.get(val, "wifiSsid")) out.wifiSsid = val.stringValue;
+  if (json.get(val, "wifiPassword")) out.wifiPassword = val.stringValue;
+  if (json.get(val, "firebaseApiKey")) out.firebaseApiKey = val.stringValue;
+  if (json.get(val, "firebaseDbUrl")) out.firebaseDbUrl = val.stringValue;
+  if (json.get(val, "iotEmail")) out.iotEmail = val.stringValue;
+  if (json.get(val, "iotPassword")) out.iotPassword = val.stringValue;
+
+  return out.pending && !out.requestId.isEmpty();
+}
+
+void applyRemoteBootstrapRequest(const RemoteBootstrapRequest& cmd) {
+  if (!cmd.pending || cmd.requestId.isEmpty()) return;
+  if (cmd.requestId == getLastHandledBootstrapRequest()) return;
+
+  writeBootstrapStatusString("lastAppliedRequestId", cmd.requestId);
+  writeBootstrapStatusString("lastAction", cmd.action);
+
+  if (cmd.action == "clear") {
+    rememberHandledBootstrapRequest(cmd.requestId);
+    updateRemoteBootstrapStatus(
+      "portal",
+      "Konfigurasi bootstrap dihapus. ESP32 akan membuka captive portal.",
+      false,
+      "",
+      true
+    );
+    delay(250);
+    eraseBootstrap();
+    WiFiManager wm;
+    wm.resetSettings();
+    delay(500);
+    ESP.restart();
+    return;
+  }
+
+  const bool missingRequired =
+    cmd.wifiSsid.isEmpty() ||
+    cmd.firebaseApiKey.isEmpty() ||
+    cmd.firebaseDbUrl.isEmpty() ||
+    cmd.iotEmail.isEmpty() ||
+    cmd.iotPassword.isEmpty();
+
+  if (missingRequired) {
+    rememberHandledBootstrapRequest(cmd.requestId);
+    updateRemoteBootstrapStatus(
+      "error",
+      "Payload bootstrap tidak lengkap. Periksa SSID, Firebase, dan akun IoT.",
+      false,
+      "required_fields_missing",
+      false
+    );
+    return;
+  }
+
+  updateRemoteBootstrapStatus(
+    "applying",
+    "Konfigurasi bootstrap diterima. Menyimpan ke NVS...",
+    true,
+    "",
+    true
+  );
+
+  strlcpy(bootstrap.wifiSsid,        cmd.wifiSsid.c_str(),        sizeof(bootstrap.wifiSsid));
+  strlcpy(bootstrap.wifiPassword,    cmd.wifiPassword.c_str(),    sizeof(bootstrap.wifiPassword));
+  strlcpy(bootstrap.firebaseApiKey,  cmd.firebaseApiKey.c_str(),  sizeof(bootstrap.firebaseApiKey));
+  strlcpy(bootstrap.firebaseDbUrl,   cmd.firebaseDbUrl.c_str(),   sizeof(bootstrap.firebaseDbUrl));
+  strlcpy(bootstrap.iotEmail,        cmd.iotEmail.c_str(),        sizeof(bootstrap.iotEmail));
+  strlcpy(bootstrap.iotPassword,     cmd.iotPassword.c_str(),     sizeof(bootstrap.iotPassword));
+
+  saveBootstrap();
+  rememberHandledBootstrapRequest(cmd.requestId);
+  setPendingBootstrapConfirmation(cmd.requestId, "save");
+
+  updateRemoteBootstrapStatus(
+    "restarting",
+    "Konfigurasi bootstrap tersimpan. ESP32 restart untuk menerapkan jaringan baru.",
+    true,
+    "",
+    true
+  );
+
+  delay(500);
+  ESP.restart();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // LAYER 1 — WIFIMANAGER CAPTIVE PORTAL
 // ═══════════════════════════════════════════════════════════════
@@ -185,6 +436,10 @@ WiFiManagerParameter* param_iot_pass  = nullptr;
  * Blocks until connected or portal times out (then restarts).
  */
 void connectWithPortal() {
+  if (connectStoredWiFi()) {
+    return;
+  }
+
   // Create custom param objects with current NVS values as defaults
   param_fb_api   = new WiFiManagerParameter("fb_api",   "Firebase API Key",   bootstrap.firebaseApiKey, 128);
   param_fb_url   = new WiFiManagerParameter("fb_url",   "Firebase RTDB URL",  bootstrap.firebaseDbUrl,  128);
@@ -204,6 +459,8 @@ void connectWithPortal() {
 
   // Callback: save custom params to NVS when form is submitted
   wm.setSaveParamsCallback([&]() {
+    strlcpy(bootstrap.wifiSsid, WiFi.SSID().c_str(), 64);
+    strlcpy(bootstrap.wifiPassword, WiFi.psk().c_str(), 64);
     strlcpy(bootstrap.firebaseApiKey, param_fb_api->getValue(),   128);
     strlcpy(bootstrap.firebaseDbUrl,  param_fb_url->getValue(),   128);
     strlcpy(bootstrap.iotEmail,       param_iot_email->getValue(), 64);
@@ -223,6 +480,9 @@ void connectWithPortal() {
     ESP.restart();
   }
 
+  strlcpy(bootstrap.wifiSsid, WiFi.SSID().c_str(), 64);
+  strlcpy(bootstrap.wifiPassword, WiFi.psk().c_str(), 64);
+  saveBootstrap();
   Serial.printf("[WiFi] Terhubung! IP: %s\n", WiFi.localIP().toString().c_str());
 }
 
@@ -324,6 +584,7 @@ void setup() {
 
   // ── Load initial runtime settings from Firebase ──────────────
   if (isFirebaseReady()) {
+    confirmPendingBootstrapIfNeeded();
     readAllSettings(rt);
     lastSettingsSyncMs = millis();
   }
@@ -356,6 +617,15 @@ void loop() {
     WiFi.reconnect();
     delay(3000);
     return;
+  }
+
+  if (isFirebaseReady() && (now - lastBootstrapCheckMs >= REMOTE_BOOTSTRAP_POLL_MS)) {
+    lastBootstrapCheckMs = now;
+    confirmPendingBootstrapIfNeeded();
+    RemoteBootstrapRequest bootstrapCmd;
+    if (readRemoteBootstrapRequest(bootstrapCmd)) {
+      applyRemoteBootstrapRequest(bootstrapCmd);
+    }
   }
 
   // ── Read sensors using RUNTIME calibration ───────────────────

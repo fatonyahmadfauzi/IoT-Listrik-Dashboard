@@ -21,7 +21,7 @@
 
 import { db, auth, firebaseConfig }  from './firebase-config.js';
 import { loadClientConfig, saveClientConfig } from './client-config.js';
-import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix } from './auth.js';
+import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount, getCurrentUser } from './auth.js';
 import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { ref, onValue, set, update, remove, get }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
@@ -93,6 +93,21 @@ window.toggleReveal = (inputId, btn) => {
 // ── DOM: Controls ─────────────────────────────────────────────
 const saveBtn         = document.getElementById('saveSettingsBtn');
 const saveStatus      = document.getElementById('saveStatus');
+
+// ── DOM: Device bootstrap / Wi-Fi management (admin only) ────
+const deviceBootstrapSection = document.getElementById('deviceBootstrapSection');
+const inpDeviceWifiSsid      = document.getElementById('inpDeviceWifiSsid');
+const inpDeviceWifiPassword  = document.getElementById('inpDeviceWifiPassword');
+const inpDeviceApiKey        = document.getElementById('inpDeviceApiKey');
+const inpDeviceDbUrl         = document.getElementById('inpDeviceDbUrl');
+const inpDeviceEmail         = document.getElementById('inpDeviceEmail');
+const inpDevicePassword      = document.getElementById('inpDevicePassword');
+const saveDeviceBootstrapBtn = document.getElementById('saveDeviceBootstrapBtn');
+const clearDeviceBootstrapBtn = document.getElementById('clearDeviceBootstrapBtn');
+const deviceBootstrapStatus  = document.getElementById('deviceBootstrapStatus');
+const deviceBootstrapMeta    = document.getElementById('deviceBootstrapMeta');
+
+let latestDeviceBootstrap = {};
 
 // ── Helper: Reload config di sim-notifier setelah settings disimpan ────────
 async function reloadSimNotifierConfig() {
@@ -439,6 +454,190 @@ function validateAll() {
   }
 
   return valid;
+}
+
+function isRealAdminSettingsSession() {
+  return !isTempAccount() && getDbPrefix() === '';
+}
+
+function setDeviceBootstrapVisibility() {
+  if (!deviceBootstrapSection) return;
+  deviceBootstrapSection.hidden = !isRealAdminSettingsSession();
+}
+
+function renderDeviceBootstrapStatus(data = {}) {
+  if (!deviceBootstrapStatus || !deviceBootstrapMeta) return;
+
+  const status = String(data.status || 'idle').toLowerCase();
+  const requestedAt = data.requestedAt ? String(data.requestedAt) : '';
+  const confirmedAt = data.lastConfirmedAt ? String(data.lastConfirmedAt) : '';
+  const requestedBy = data.requestedBy ? String(data.requestedBy) : '';
+  const activeSsid = data.activeSsid ? String(data.activeSsid) : '';
+  const message = data.statusMessage
+    ? String(data.statusMessage)
+    : 'Belum ada permintaan bootstrap yang dikirim.';
+
+  const statusMap = {
+    idle: 'Siap',
+    pending: 'Menunggu ESP32',
+    applying: 'Menyimpan ke NVS',
+    restarting: 'Sedang restart',
+    connected: 'Terkonfirmasi',
+    portal: 'Masuk captive portal',
+    error: 'Gagal diterapkan',
+  };
+
+  deviceBootstrapStatus.textContent = statusMap[status] || status || 'Siap';
+
+  const meta = [];
+  meta.push(message);
+  if (requestedBy) meta.push(`Diminta oleh: ${requestedBy}`);
+  if (requestedAt) meta.push(`Waktu permintaan: ${requestedAt}`);
+  if (confirmedAt) {
+    meta.push(/^\d+$/.test(confirmedAt)
+      ? `Konfirmasi device (uptime): ${confirmedAt} ms`
+      : `Konfirmasi device: ${confirmedAt}`);
+  }
+  if (activeSsid) meta.push(`SSID aktif: ${activeSsid}`);
+  if (data.lastError) meta.push(`Detail error: ${String(data.lastError)}`);
+  deviceBootstrapMeta.innerHTML = meta.join('<br>');
+}
+
+function validateDeviceBootstrapPayload() {
+  if (!inpDeviceWifiSsid || !inpDeviceApiKey || !inpDeviceDbUrl || !inpDeviceEmail || !inpDevicePassword) {
+    return 'Form bootstrap device tidak tersedia.';
+  }
+
+  if (!inpDeviceWifiSsid.value.trim()) return 'SSID Wi-Fi wajib diisi.';
+  if (!inpDeviceApiKey.value.trim()) return 'Firebase API Key wajib diisi.';
+
+  const dbUrl = inpDeviceDbUrl.value.trim();
+  if (!dbUrl || !/^https:\/\/.+/.test(dbUrl)) {
+    return 'Realtime Database URL harus diawali https://';
+  }
+
+  const email = inpDeviceEmail.value.trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return 'Email akun IoT tidak valid.';
+  }
+
+  if (!inpDevicePassword.value.trim()) return 'Password akun IoT wajib diisi.';
+  return '';
+}
+
+function loadDeviceBootstrapSettings() {
+  if (!isRealAdminSettingsSession() || !deviceBootstrapSection) return;
+
+  onValue(ref(db, 'settings/deviceBootstrap'), (snap) => {
+    const data = snap.val() || {};
+    latestDeviceBootstrap = data;
+
+    if (inpDeviceWifiSsid)     inpDeviceWifiSsid.value = data.wifiSsid || '';
+    if (inpDeviceWifiPassword) inpDeviceWifiPassword.value = data.wifiPassword || '';
+    if (inpDeviceApiKey)       inpDeviceApiKey.value = data.firebaseApiKey || '';
+    if (inpDeviceDbUrl)        inpDeviceDbUrl.value = data.firebaseDbUrl || '';
+    if (inpDeviceEmail)        inpDeviceEmail.value = data.iotEmail || '';
+    if (inpDevicePassword)     inpDevicePassword.value = data.iotPassword || '';
+
+    renderDeviceBootstrapStatus(data);
+  });
+}
+
+async function saveDeviceBootstrapSettings() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Fitur bootstrap device hanya untuk admin utama.', 'error');
+    return;
+  }
+
+  const validationError = validateDeviceBootstrapPayload();
+  if (validationError) {
+    showToast(validationError, 'error');
+    return;
+  }
+
+  const currentUser = getCurrentUser();
+  const payload = {
+    ...latestDeviceBootstrap,
+    action: 'save',
+    requestId: `bootstrap-${Date.now()}`,
+    pending: true,
+    status: 'pending',
+    statusMessage: 'Menunggu ESP32 membaca permintaan bootstrap dari Firebase.',
+    requestedAt: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
+    requestedBy: currentUser?.email || 'admin',
+    wifiSsid: inpDeviceWifiSsid?.value.trim() || '',
+    wifiPassword: inpDeviceWifiPassword?.value ?? '',
+    firebaseApiKey: inpDeviceApiKey?.value.trim() || '',
+    firebaseDbUrl: inpDeviceDbUrl?.value.trim() || '',
+    iotEmail: inpDeviceEmail?.value.trim() || '',
+    iotPassword: inpDevicePassword?.value ?? '',
+    lastError: '',
+    restartRequired: true,
+  };
+
+  try {
+    if (saveDeviceBootstrapBtn) {
+      saveDeviceBootstrapBtn.disabled = true;
+      saveDeviceBootstrapBtn.textContent = 'Mengirim...';
+    }
+    await set(ref(db, 'settings/deviceBootstrap'), payload);
+    latestDeviceBootstrap = payload;
+    renderDeviceBootstrapStatus(payload);
+    showToast('Permintaan bootstrap dikirim. ESP32 akan restart setelah menerapkan konfigurasi baru.', 'success');
+  } catch (err) {
+    showToast('Gagal kirim bootstrap device: ' + err.message, 'error');
+  } finally {
+    if (saveDeviceBootstrapBtn) {
+      saveDeviceBootstrapBtn.disabled = false;
+      saveDeviceBootstrapBtn.innerHTML = '<span class="material-symbols-rounded">wifi</span> Simpan & Terapkan ke Device';
+    }
+  }
+}
+
+async function clearDeviceBootstrapSettings() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Fitur bootstrap device hanya untuk admin utama.', 'error');
+    return;
+  }
+
+  const confirmed = window.confirm(
+    'Hapus konfigurasi Wi-Fi dan bootstrap device? ESP32 akan restart lalu masuk captive portal setup.'
+  );
+  if (!confirmed) return;
+
+  const currentUser = getCurrentUser();
+  const payload = {
+    ...latestDeviceBootstrap,
+    action: 'clear',
+    requestId: `bootstrap-clear-${Date.now()}`,
+    pending: true,
+    status: 'pending',
+    statusMessage: 'Menunggu ESP32 menghapus konfigurasi bootstrap dan membuka captive portal.',
+    requestedAt: new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
+    requestedBy: currentUser?.email || 'admin',
+    wifiSsid: '',
+    wifiPassword: '',
+    lastError: '',
+    restartRequired: true,
+  };
+
+  try {
+    if (clearDeviceBootstrapBtn) {
+      clearDeviceBootstrapBtn.disabled = true;
+      clearDeviceBootstrapBtn.textContent = 'Mengirim...';
+    }
+    await set(ref(db, 'settings/deviceBootstrap'), payload);
+    latestDeviceBootstrap = payload;
+    renderDeviceBootstrapStatus(payload);
+    showToast('Permintaan hapus bootstrap dikirim. Device akan masuk mode setup setelah restart.', 'success');
+  } catch (err) {
+    showToast('Gagal hapus bootstrap device: ' + err.message, 'error');
+  } finally {
+    if (clearDeviceBootstrapBtn) {
+      clearDeviceBootstrapBtn.disabled = false;
+      clearDeviceBootstrapBtn.innerHTML = '<span class="material-symbols-rounded">wifi_off</span> Hapus Wi-Fi & Buka Setup';
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -842,13 +1041,17 @@ initPage({
   onAuthed: (user, role) => {
     populateSidebar(user, role);
     initSidebarToggle();
+    setDeviceBootstrapVisibility();
     initTelegramChatManager();
     loadSettings();
     loadClientConfigUi();
     loadDiscordSettings();
+    loadDeviceBootstrapSettings();
     loadUsers();
     saveBtn?.addEventListener('click', saveSettings);
     saveDiscordBtn?.addEventListener('click', saveDiscordSettings);
+    saveDeviceBootstrapBtn?.addEventListener('click', saveDeviceBootstrapSettings);
+    clearDeviceBootstrapBtn?.addEventListener('click', clearDeviceBootstrapSettings);
     testDiscordBtn?.addEventListener('click', testDiscordWebhook);
     saveClientBtn?.addEventListener('click', saveClientConfigFromForm);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);

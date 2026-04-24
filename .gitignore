@@ -16,6 +16,7 @@ firebase-seed.json
 # Android signing (do not commit secrets)
 platforms/android/keystore/*.jks
 platforms/android/keystore/keystore.properties
+android-app/keystore/
 
 # Windows/Electron signing (do not commit secrets)
 platforms/electron/signing/*.pfx
@@ -105,6 +106,21 @@ public/downloads/cli/iot-listrik-dashboard-cli-linux
 
 # Junk binary files
 test-msi-download.msi
+
+# Personal thesis revision files
+/acuan-*.md
+/laporan-*.md
+/diagram-*.png
+/kerangka-*.png
+/skripsi-*
+/~$*
+/*.doc
+/*.docx
+/*.xls
+/*.xlsx
+/*.ppt
+/*.pptx
+/*.pdf
 
 # CLI Node Build Artifacts
 platforms/cli-node/build/

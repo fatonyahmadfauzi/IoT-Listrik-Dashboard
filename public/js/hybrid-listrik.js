@@ -59,6 +59,7 @@ export function startHybridListrik(db, handlers) {
   let fbConnected = true;
   let disconnectSince = 0;
   let usingLocal = false;
+  let lastDataReceivedTime = Date.now();
 
   const meta = (partial) => handlers.onMeta?.(partial);
 
@@ -90,27 +91,58 @@ export function startHybridListrik(db, handlers) {
     // Simulator/temp accounts: ALWAYS use Firebase directly.
     // Local server reads /listrik (admin path), not /sim/{uid}/listrik.
     if (isTempAccount()) {
-      meta({ source: 'CLOUD', connection: fbConnected ? 'Connected' : 'Reconnecting', endpointBadge: 'CLOUD' });
+      const now = Date.now();
+      const isDeviceOffline = (now - lastDataReceivedTime) > 15000;
+
+      meta({
+        source: 'CLOUD',
+        connection: fbConnected ? (isDeviceOffline ? 'Device Offline' : 'Connected') : 'Memulihkan...',
+        endpointBadge: 'CLOUD'
+      });
       return;
     }
 
     try {
       if (cfg.mode === 'LOCAL') {
-        await pollRest(cfg.localApiBase, 'LOCAL');
+        const ok = await pollRest(cfg.localApiBase, 'LOCAL');
+        if (ok) {
+           const now = Date.now();
+           if ((now - lastDataReceivedTime) > 15000) {
+             meta({ connection: 'HW Offline' });
+           }
+        }
         return;
       }
       if (cfg.mode === 'PUBLIC' && cfg.publicApiBase) {
-        await pollRest(cfg.publicApiBase, 'CLOUD');
+        const ok = await pollRest(cfg.publicApiBase, 'CLOUD');
+        if (ok) {
+           const now = Date.now();
+           if ((now - lastDataReceivedTime) > 15000) {
+             meta({ connection: 'Device Offline' });
+           }
+        }
         return;
       }
       if (cfg.mode === 'PUBLIC') {
-        meta({ source: 'CLOUD', connection: fbConnected ? 'Connected' : 'Reconnecting', endpointBadge: 'CLOUD' });
+        const now = Date.now();
+        const isDeviceOffline = (now - lastDataReceivedTime) > 15000;
+        meta({
+          source: 'CLOUD',
+          connection: fbConnected ? (isDeviceOffline ? 'Device Offline' : 'Connected') : 'Memulihkan...',
+          endpointBadge: 'CLOUD'
+        });
         return;
       }
       // AUTO
       if (!fbConnected && cfg.autoFailover) {
         try {
-          await pollRest(cfg.localApiBase, 'LOCAL');
+          const ok = await pollRest(cfg.localApiBase, 'LOCAL');
+          if (ok) {
+             const now = Date.now();
+             if ((now - lastDataReceivedTime) > 15000) {
+               meta({ connection: 'HW Offline' });
+             }
+          }
         } catch {
           meta({
             source: 'LOCAL',
@@ -125,6 +157,17 @@ export function startHybridListrik(db, handlers) {
         usingLocal = false;
         meta({ fallbackActive: false, endpointBadge: 'CLOUD' });
       }
+
+      // Default auto
+      if (fbConnected) {
+         const now = Date.now();
+         if ((now - lastDataReceivedTime) > 15000) {
+           meta({ connection: 'Device Offline' });
+         } else {
+           meta({ connection: 'Connected' });
+         }
+      }
+
     } catch (e) {
       if (cfg.mode === 'LOCAL') {
         meta({ connection: 'Offline', source: 'LOCAL', endpointBadge: 'LOCAL' });
@@ -146,7 +189,7 @@ export function startHybridListrik(db, handlers) {
     const forceCloud = isTempAccount();
 
     if (!forceCloud && cfg.mode === 'LOCAL') {
-      meta({ source: 'LOCAL', connection: 'Reconnecting', endpointBadge: 'LOCAL' });
+      meta({ source: 'LOCAL', connection: 'Menghubungkan', endpointBadge: 'LOCAL' });
       tick();
       startPolling();
       return;
@@ -166,6 +209,9 @@ export function startHybridListrik(db, handlers) {
         if (!forceCloud && cfg2.mode === 'AUTO' && cfg2.autoFailover && !fbConnected) return;
         const v = snap.val();
         if (!v) return;
+
+        lastDataReceivedTime = Date.now(); // UPDATE PRESENCE
+
         handlers.onData(normalizeListrikPayload(v));
         meta({
           source: 'CLOUD',
@@ -175,7 +221,7 @@ export function startHybridListrik(db, handlers) {
         });
       },
       () => {
-        meta({ connection: 'Reconnecting' });
+        meta({ connection: 'Memulihkan...' });
       }
     );
 

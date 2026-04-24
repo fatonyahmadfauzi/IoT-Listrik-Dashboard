@@ -156,12 +156,48 @@ db.ref('/listrik/relay').on('value', async (snap) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// LISTENER 3 — updated_at → #monitoring (max 1x / 5 menit)
+// LISTENER 3 — updated_at → #monitoring & #alerts (Presence Watchdog)
 // ════════════════════════════════════════════════════════════════════════
 let lastMonitoringSent = 0;
+let lastSeenLocalTime = Date.now();
+let isOnline = true;
+
+// Watchdog interval (every 10 seconds)
+setInterval(async () => {
+  // If no data received for 30 seconds and we think it's online
+  if (Date.now() - lastSeenLocalTime > 30000 && isOnline) {
+    isOnline = false;
+    console.log('[Presence] 🔴 Perangkat OFFLINE (Koneksi terputus/Tidak ada data)');
+
+    const embed = {
+      title: '🔴 [OFFLINE] Perangkat Terputus',
+      description: 'Koneksi dari hardware utama terputus. Tidak ada data masuk selama lebih dari 30 detik.',
+      color: 0xED4245,
+      footer: { text: `IoT Listrik Dashboard • ${waktu()}` }
+    };
+    await sendEmbed(discordConfig.webhookAlerts, embed);
+  }
+}, 10000);
+
 db.ref('/listrik/updated_at').on('value', async (snap) => {
   const now = Date.now();
-  if (now - lastMonitoringSent < 5 * 60 * 1000) return; // rate limit
+  lastSeenLocalTime = now; // Update heartbeat time on any new data!
+
+  // If we were offline, we are now online!
+  if (!isOnline) {
+    isOnline = true;
+    console.log('[Presence] 🟢 Perangkat kembali ONLINE');
+
+    const embed = {
+      title: '🟢 [ONLINE] Perangkat Terhubung',
+      description: 'Koneksi kembali pulih. Data telemetri mulai diterima.',
+      color: 0x57F287,
+      footer: { text: `IoT Listrik Dashboard • ${waktu()}` }
+    };
+    await sendEmbed(discordConfig.webhookAlerts, embed);
+  }
+
+  if (now - lastMonitoringSent < 5 * 60 * 1000) return; // rate limit 5 mins
   if (!discordConfig.webhookMonitoring) return;
   lastMonitoringSent = now;
 

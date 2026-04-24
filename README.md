@@ -1,6 +1,6 @@
 # Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time
 
-> **Skripsi S1 — Program Studi Teknik Informatika**  
+> **Skripsi S1 — Program Studi Teknik Informatika**
 > Universitas Bina Insani, Bekasi — 2026
 
 | Info | Detail |
@@ -14,7 +14,7 @@
 
 ---
 
-Sistem deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan secara terintegrasi.  
+Sistem deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan secara terintegrasi.
 Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan **Terminal (CLI)**.
 
 
@@ -22,6 +22,9 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 ## Ringkasan Fitur
 
 - Monitoring realtime arus, tegangan, daya semu, status, dan relay.
+- **PWA Simulator Mode**: Platform simulasi virtual (*multi-akun*) yang terisolasi dari basis data utama, digunakan untuk pengujian atau presentasi tanpa memerlukan *hardware* fisik ESP32.
+- **Premium UI & Dark Mode**: Tampilan dasbor modern *(Glassmorphism)* yang responsif serta mendukung integrasi *Global Dark Mode* bawaan sistem operasi.
+- **Device Presence Detection (Watchdog)**: Deteksi otomatis status koneksi perangkat (**Online/Offline**) ketika aliran data terputus, bekerja secara *real-time* di seluruh platform tanpa modifikasi firmware ESP32.
 - Role-based access: aksi kritikal (relay/settings) hanya untuk admin.
 - Histori kejadian dan notifikasi multi-channel (Web push + Telegram + **Discord Webhook**).
 - Auto-cutoff relay saat kondisi berbahaya.
@@ -103,7 +106,7 @@ ESP32 + Sensor Arus & Relay
 │   ├── manifest.json              # PWA manifest untuk scope /
 │   └── service-worker.js          # Service worker scope /
 │
-├── backend-local/                 # Local Discord notifier & REST API (opsional)
+├── backend-local/                 # Local Node.js Notifier (discord-notifier.js & sim-notifier.js) & REST API
 ├── firebase-redirect/             # Firebase Hosting fallback → redirect ke Vercel
 ├── functions/                     # Firebase Cloud Functions (Node.js)
 ├── scripts/                       # Automation scripts (lihat scripts/README.md)
@@ -311,7 +314,7 @@ Notifikasi real-time dikirim ke 4 channel Discord terpisah. **Tidak memerlukan F
 
 | Channel | Trigger |
 |---------|---------|
-| `#alerts` | Status BAHAYA / WARNING / pulih NORMAL |
+| `#alerts` | Status BAHAYA / WARNING / pulih NORMAL, beserta notifikasi perangkat terputus (**OFFLINE 🔴**) / pulih (**ONLINE 🟢**) |
 | `#relay` | Relay ON↔OFF berubah |
 | `#monitoring` | Snapshot data listrik (max 1x / 5 menit) |
 | `#logs` | Entry log aktivitas baru `/logs` |
@@ -328,7 +331,14 @@ https://iot-listrik-dashboard.vercel.app/settings
 **2. Jalankan local notifier:**
 ```bash
 cd backend-local
-node discord-notifier.js
+npm install
+# Untuk Hardware Utama ESP32
+npm run discord
+# ATAU manual: node discord-notifier.js
+
+# Untuk Simulator Virtual PWA
+npm run sim-notify
+# ATAU manual: node sim-notifier.js
 ```
 
 Notifier membaca webhook URL dari RTDB secara real-time — ganti URL kapanpun dari admin UI tanpa restart.

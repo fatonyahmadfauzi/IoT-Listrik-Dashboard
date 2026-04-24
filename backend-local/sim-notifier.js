@@ -351,6 +351,8 @@ function setupListenersForUid(uid) {
   simState[uid].logsInitialized = false;
   simState[uid].listenersAttached = true;
   simState[uid].config = {};
+  simState[uid].lastSeenLocalTime = Date.now();
+  simState[uid].isDeviceOnline = true;
 
   // 1. Watch config settings (root)
   db.ref(`/sim/${uid}/settings`).on('value', (snap) => {
@@ -378,6 +380,38 @@ function setupListenersForUid(uid) {
   db.ref(`/sim/${uid}/listrik`).on('value', async (snap) => {
     const d = snap.val();
     if (!d) return;
+
+    // Update heartbeat
+    simState[uid].lastSeenLocalTime = Date.now();
+
+    // Pulih dari offline (Watchdog trigger)
+    if (!simState[uid].isDeviceOnline) {
+      simState[uid].isDeviceOnline = true;
+      console.log(`[Presence] [${uid.slice(0,8)}] 🟢 Simulator KEMBALI ONLINE`);
+      const cfg = simState[uid].config || {};
+
+      // Discord
+      if (cfg.discord?.enabled !== false && cfg.discord?.webhookAlerts) {
+        const embed = {
+          title: '🟢 [ONLINE] Simulator Terhubung',
+          description: 'Koneksi simulator pulih. Data sedang dikirim.',
+          color: 0x57F287,
+          footer: { text: `IoT Listrik Simulator • ${waktuId()}` }
+        };
+        sendDiscordEmbed(cfg.discord.webhookAlerts, embed).catch(()=>{});
+      }
+
+      // Telegram
+      const tgChatIds = getTelegramChatIds(cfg);
+      if (cfg.telegramNotifyEnabled !== false && cfg.telegramBotToken && tgChatIds.length > 0) {
+        const msg = `🟢 <b>[SIMULATOR] KEMBALI ONLINE</b>\nKoneksi telametery pulih.\n🕐 ${waktuId()}\n<i>Session: ${uid.slice(0,12)}...</i>`;
+        sendTelegram(cfg.telegramBotToken, tgChatIds, msg).catch(()=>{});
+      }
+
+      // Android Push
+      sendFCM('NORMAL', uid).catch(()=>{});
+    }
+
     const currentStatus = d.status || 'NORMAL';
     const prevStatus = simState[uid].lastStatus;
 
@@ -447,6 +481,40 @@ function setupListenersForUid(uid) {
     await handleNewLog(uid, snap.key, snap.val());
   });
 }
+
+// ── Watchdog Global untuk Offline/Online Detection ──────────────────────────
+setInterval(() => {
+  const now = Date.now();
+  for (const uid in simState) {
+    if (simState[uid].isDeviceOnline && (now - simState[uid].lastSeenLocalTime > 30000)) {
+       simState[uid].isDeviceOnline = false;
+       console.log(`[Presence] [${uid.slice(0,8)}] 🔴 Simulator OFFLINE (Koneksi terputus/Tidak ada data)`);
+
+       const cfg = simState[uid].config || {};
+
+       // Discord Alert
+       if (cfg.discord?.enabled !== false && cfg.discord?.webhookAlerts) {
+         const embed = {
+           title: '🔴 [OFFLINE] Simulator Terputus',
+           description: 'Koneksi ke Simulator terputus. Tidak ada data masuk lebih dari 30 detik.',
+           color: 0xED4245,
+           footer: { text: `IoT Listrik Simulator • ${waktuId()}` }
+         };
+         sendDiscordEmbed(cfg.discord.webhookAlerts, embed).catch(()=>{});
+       }
+
+       // Telegram Alert
+       const tgChatIds = getTelegramChatIds(cfg);
+       if (cfg.telegramNotifyEnabled !== false && cfg.telegramBotToken && tgChatIds.length > 0) {
+         const msg = `🔴 <b>[SIMULATOR] TERPUTUS / OFFLINE</b>\nTidak ada data masuk selama lebih dari 30 detik.\n🕐 ${waktuId()}\n<i>Session: ${uid.slice(0,12)}...</i>`;
+         sendTelegram(cfg.telegramBotToken, tgChatIds, msg).catch(()=>{});
+       }
+
+       // Firebase Push / Android App
+       sendFCM('DANGER', uid).catch(()=>{}); // Send DANGER to trigger push alert, the Android app interprets this
+    }
+  }
+}, 10000);
 
 // ── Core: Monitor /sim/ untuk semua UID (termasuk yang sudah ada) ──────────
 console.log('[Sim Notifier] Memantau aktivitas akun simulator di /sim/...');

@@ -27,3 +27,23 @@ public/downloads/cli/node-source/
 
 # Firebase redirect (bukan bagian web app utama)
 firebase-redirect/
+
+# Repo metadata & local-only material
+.github/
+android-app/
+android-app/keystore/
+
+# Dokumen revisi skripsi / file personal di root repo
+/acuan-*.md
+/laporan-*.md
+/diagram-*.png
+/kerangka-*.png
+/skripsi-*
+/~$*
+/*.doc
+/*.docx
+/*.xls
+/*.xlsx
+/*.ppt
+/*.pptx
+/*.pdf

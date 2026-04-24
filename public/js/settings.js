@@ -22,7 +22,7 @@
  * ─────────────────────────────────────────────────────────────────────
  */
 
-import { db, auth, firebaseConfig, functions }  from './firebase-config.js';
+import { db, auth, firebaseConfig }  from './firebase-config.js';
 import { loadClientConfig, saveClientConfig } from './client-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount, getCurrentUser } from './auth.js';
 import { requestNotificationPermission, checkAndNotify, initAudio, showToast, stopWebSiren } from './notifications.js';
@@ -37,8 +37,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { initializeApp, deleteApp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { httpsCallable }
-  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
 // ── DOM: System settings ──────────────────────────────────────
 const inpThreshold    = document.getElementById('inpThreshold');
@@ -492,6 +490,35 @@ function getCallableErrorMessage(err, fallback = 'Terjadi kesalahan.') {
   return message || fallback;
 }
 
+function getLiveResetApiBase() {
+  const origin = window.location?.origin || '';
+  return /^https?:\/\//i.test(origin)
+    ? origin
+    : 'https://iot-listrik-dashboard.vercel.app';
+}
+
+async function callLiveResetApi(path, body = {}) {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) {
+    throw new Error('Sesi admin tidak ditemukan. Silakan login ulang.');
+  }
+
+  const res = await fetch(`${getLiveResetApiBase()}/api/${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.error || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
 function setDeviceBootstrapVisibility() {
   if (!deviceBootstrapSection) return;
   deviceBootstrapSection.hidden = !isRealAdminSettingsSession();
@@ -723,9 +750,7 @@ async function requestLiveDataResetOtp() {
       sendLiveResetOtpBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Mengirim OTP...';
     }
 
-    const call = httpsCallable(functions, 'requestListrikDataResetOtp');
-    const result = await call({});
-    const data = result.data || {};
+    const data = await callLiveResetApi('request-live-reset-otp', {});
 
     liveResetActionId = String(data.actionId || '');
     liveResetExpiresAt = Number(data.expiresAt || 0);
@@ -773,9 +798,10 @@ async function confirmLiveDataReset() {
       confirmLiveResetBtn.innerHTML = '<span class="material-symbols-rounded">delete_forever</span> Memproses...';
     }
 
-    const call = httpsCallable(functions, 'confirmListrikDataReset');
-    const result = await call({ otp, actionId: liveResetActionId });
-    const data = result.data || {};
+    const data = await callLiveResetApi('confirm-live-reset', {
+      otp,
+      actionId: liveResetActionId,
+    });
     const clearedLabel = data.clearedAt
       ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
       : 'baru saja';

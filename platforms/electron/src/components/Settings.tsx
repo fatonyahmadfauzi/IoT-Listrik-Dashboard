@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
-import { db, functions } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { ref, update, remove, set } from 'firebase/database';
-import { httpsCallable } from 'firebase/functions';
 import {
   loadClientConfig,
   saveClientConfig,
@@ -485,17 +484,40 @@ export function Settings({ onLogout }: SettingsProps) {
       .trim() || fallback;
   };
 
+  const getLiveResetApiBase = () => 'https://iot-listrik-dashboard.vercel.app';
+
+  const callLiveResetApi = async (path: string, body: Record<string, unknown>) => {
+    const token = await user?.getIdToken();
+    if (!token) {
+      throw new Error('Sesi admin tidak ditemukan. Silakan login ulang.');
+    }
+
+    const response = await fetch(`${getLiveResetApiBase()}/api/${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+    return data as {
+      actionId?: string;
+      expiresAt?: number;
+      maskedEmail?: string;
+      clearedAt?: number;
+    };
+  };
+
   const handleRequestLiveResetOtp = async () => {
     if (!canManageDeviceBootstrap) return;
     setLiveResetLoading(true);
     try {
-      const requestOtp = httpsCallable(functions, 'requestListrikDataResetOtp');
-      const result = await requestOtp({});
-      const data = (result.data || {}) as {
-        actionId?: string;
-        expiresAt?: number;
-        maskedEmail?: string;
-      };
+      const data = await callLiveResetApi('request-live-reset-otp', {});
 
       setLiveResetActionId(String(data.actionId || ''));
       setLiveResetExpiresAt(Number(data.expiresAt || 0) || null);
@@ -527,12 +549,10 @@ export function Settings({ onLogout }: SettingsProps) {
 
     setLiveResetLoading(true);
     try {
-      const confirmReset = httpsCallable(functions, 'confirmListrikDataReset');
-      const result = await confirmReset({
+      const data = await callLiveResetApi('confirm-live-reset', {
         otp: liveResetOtp.trim(),
         actionId: liveResetActionId,
       });
-      const data = (result.data || {}) as { clearedAt?: number };
       const clearedLabel = data.clearedAt
         ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
         : 'baru saja';

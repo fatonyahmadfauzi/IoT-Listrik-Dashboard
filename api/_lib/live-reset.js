@@ -112,6 +112,178 @@ function maskEmail(email) {
   return `${visibleLocal}@${[maskedDomain, ...domainParts].filter(Boolean).join(".")}`;
 }
 
+function normalizeTelegramChatId(value) {
+  const id = String(value ?? "").trim();
+  return /^-?\d+$/.test(id) ? id : "";
+}
+
+function parseTelegramChatIds(...sources) {
+  const ids = [];
+  const add = (value) => {
+    const id = normalizeTelegramChatId(value);
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+
+  const visit = (source) => {
+    if (source == null) return;
+    if (Array.isArray(source)) {
+      source.forEach(visit);
+      return;
+    }
+    if (typeof source === "object") {
+      if ("chatId" in source || "telegramChatId" in source || "id" in source) {
+        add(source.chatId ?? source.telegramChatId ?? source.id);
+        return;
+      }
+      Object.entries(source)
+        .filter(([key]) => !["name", "label", "displayName", "title"].includes(key))
+        .forEach(([, value]) => visit(value));
+      return;
+    }
+    String(source).split(/[\s,;]+/).forEach(add);
+  };
+
+  sources.forEach(visit);
+  return ids;
+}
+
+function getTelegramChatIds(settings) {
+  return parseTelegramChatIds(
+    settings?.telegramRecipients,
+    settings?.telegramChatIds,
+    settings?.telegramChatId,
+    settings?.telegram?.chat_id
+  );
+}
+
+async function sendTelegramMessage(botToken, chatIds, text) {
+  const ids = parseTelegramChatIds(chatIds);
+  if (!botToken || ids.length === 0) return false;
+
+  const results = await Promise.allSettled(ids.map(async (chatId) => {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    });
+    if (!res.ok) {
+      console.error(`Telegram reset notification error ${res.status} untuk ${chatId}: ${await res.text()}`);
+      return false;
+    }
+    return true;
+  }));
+
+  return results.some((result) => result.status === "fulfilled" && result.value);
+}
+
+function isDiscordWebhookUrl(value) {
+  return typeof value === "string" && value.trim().startsWith("https://discord.com/api/webhooks/");
+}
+
+async function sendDiscordEmbed(webhookUrl, embed) {
+  if (!isDiscordWebhookUrl(webhookUrl)) return false;
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ embeds: [embed] }),
+    });
+
+    if (!res.ok && res.status !== 204) {
+      console.error(`Discord reset notification error ${res.status}: ${await res.text()}`);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Gagal kirim notifikasi reset ke Discord:", error);
+    return false;
+  }
+}
+
+function formatIndonesiaDateTime(value) {
+  return new Date(value).toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    dateStyle: "short",
+    timeStyle: "medium",
+  });
+}
+
+function buildAdminResetTelegramMessage({ email, targetPath, clearedAt }) {
+  return [
+    "Notifikasi Admin - IoT Listrik Dashboard",
+    "",
+    "Data realtime perangkat IoT berhasil dikosongkan.",
+    `Admin: ${email}`,
+    `Path: ${targetPath}`,
+    `Waktu: ${formatIndonesiaDateTime(clearedAt)} WIB`,
+    "Histori log tetap tersimpan.",
+    "Jika perangkat fisik masih online, data baru dapat muncul lagi pada heartbeat berikutnya.",
+  ].join("\n");
+}
+
+function buildAdminResetDiscordEmbed({ email, targetPath, clearedAt }) {
+  return {
+    title: "🧹 Data Realtime IoT Dikosongkan",
+    description: "Admin berhasil mengosongkan data realtime sensor perangkat IoT setelah verifikasi OTP email.",
+    color: 0x60A5FA,
+    fields: [
+      { name: "Admin", value: email, inline: false },
+      { name: "Path", value: targetPath, inline: true },
+      { name: "Waktu", value: `${formatIndonesiaDateTime(clearedAt)} WIB`, inline: true },
+      { name: "Histori Log", value: "Tetap tersimpan", inline: true },
+      { name: "Catatan", value: "Data baru bisa muncul lagi jika perangkat fisik masih online.", inline: false },
+    ],
+    footer: { text: "IoT Listrik Dashboard • Admin Reset Audit" },
+    timestamp: new Date(clearedAt).toISOString(),
+  };
+}
+
+async function sendAdminResetNotifications({ email, targetPath, clearedAt }) {
+  try {
+    const settingsSnap = await admin.database().ref("/settings").get();
+    const settings = settingsSnap.val() || {};
+    const discordSettings = settings.discord || {};
+
+    const telegramEnabled = settings.telegramNotifyEnabled !== false;
+    const telegramBotToken = String(settings.telegramBotToken || "").trim();
+    const telegramChatIds = getTelegramChatIds(settings);
+
+    const discordEnabled = discordSettings.enabled !== false;
+    const discordWebhook =
+      discordSettings.webhookLogs ||
+      discordSettings.webhookAlerts ||
+      discordSettings.webhookMonitoring ||
+      discordSettings.webhookRelay ||
+      "";
+
+    const telegramPromise = telegramEnabled
+      ? sendTelegramMessage(
+          telegramBotToken,
+          telegramChatIds,
+          buildAdminResetTelegramMessage({ email, targetPath, clearedAt })
+        )
+      : Promise.resolve(false);
+
+    const discordPromise = discordEnabled
+      ? sendDiscordEmbed(
+          discordWebhook,
+          buildAdminResetDiscordEmbed({ email, targetPath, clearedAt })
+        )
+      : Promise.resolve(false);
+
+    const [telegramResult, discordResult] = await Promise.allSettled([telegramPromise, discordPromise]);
+    return {
+      telegram: telegramResult.status === "fulfilled" ? telegramResult.value : false,
+      discord: discordResult.status === "fulfilled" ? discordResult.value : false,
+    };
+  } catch (error) {
+    console.error("Gagal menyiapkan notifikasi reset admin:", error);
+    return { telegram: false, discord: false };
+  }
+}
+
 function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
   const expiresStr = new Date(expiresAt).toLocaleString("id-ID", {
     timeZone: "Asia/Jakarta",
@@ -247,7 +419,7 @@ function hashResetOtp(uid, actionId, otp) {
     .digest("hex");
 }
 
-function buildClearedListrikPayload() {
+function buildClearedListrikPayload(clearedAt = new Date().toISOString()) {
   return {
     arus: 0,
     tegangan: 0,
@@ -262,7 +434,7 @@ function buildClearedListrikPayload() {
     updated_at: 0,
     reset_by_admin: true,
     reset_note: "Data realtime dikosongkan oleh admin setelah verifikasi OTP email.",
-    reset_at: new Date().toISOString(),
+    reset_at: clearedAt,
   };
 }
 
@@ -373,7 +545,8 @@ async function confirmLiveResetOtp(req) {
     );
   }
 
-  await admin.database().ref("/listrik").set(buildClearedListrikPayload());
+  const clearedAtIso = new Date(now).toISOString();
+  await admin.database().ref("/listrik").set(buildClearedListrikPayload(clearedAtIso));
   await otpRef.update({
     status: "completed",
     consumedAt: now,
@@ -381,12 +554,18 @@ async function confirmLiveResetOtp(req) {
     clearedByEmail: email,
     otpHash: null,
   });
+  const notificationResults = await sendAdminResetNotifications({
+    email,
+    targetPath: "/listrik",
+    clearedAt: clearedAtIso,
+  });
 
   return {
     success: true,
     clearedAt: now,
     targetPath: "/listrik",
     message: "Data realtime perangkat IoT berhasil dikosongkan.",
+    notifications: notificationResults,
   };
 }
 

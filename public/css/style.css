@@ -2278,9 +2278,82 @@ body > header > nav {
   line-height: 1.5;
 }
 
+.logic-explainer-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 0 56px;
+}
+
+.logic-explainer-header {
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logic-explainer-subtitle {
+  max-width: 760px;
+  margin: 12px auto 0;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.logic-explainer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.logic-explainer-card {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 24px;
+  min-height: 100%;
+}
+
+.logic-explainer-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--brand-light);
+}
+
+.logic-explainer-icon .material-symbols-rounded {
+  font-size: 24px;
+}
+
+.logic-explainer-card h3 {
+  font-size: 1.02rem;
+  line-height: 1.35;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.logic-explainer-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.logic-explainer-note {
+  margin: 18px auto 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  max-width: 920px;
+}
+
 @media (max-width: 768px) {
   .clean-features-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .logic-explainer-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2290,6 +2363,31 @@ body > header > nav {
   }
   .clean-cta {
     flex-direction: column;
+  }
+
+  .logic-explainer-section {
+    padding-bottom: 44px;
+  }
+
+  .logic-explainer-card {
+    padding: 20px;
+    gap: 14px;
+  }
+
+  .logic-explainer-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .logic-explainer-card h3 {
+    font-size: 0.98rem;
+  }
+
+  .logic-explainer-card p,
+  .logic-explainer-note,
+  .logic-explainer-subtitle {
+    font-size: 0.92rem;
   }
 }
 

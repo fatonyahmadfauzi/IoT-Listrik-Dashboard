@@ -108,6 +108,59 @@
   gap: 24px;
 }
 
+.feat-logic-section {
+  margin-top: 56px;
+}
+
+.feat-logic-header {
+  text-align: center;
+  max-width: 820px;
+  margin: 0 auto 28px;
+}
+
+.feat-logic-header h2 {
+  font-size: clamp(1.35rem, 3vw, 1.9rem);
+  margin-bottom: 12px;
+}
+
+.feat-logic-header p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.feat-logic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.feat-logic-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  min-height: 100%;
+}
+
+.feat-logic-card h3 {
+  font-size: 1.08rem;
+  margin-bottom: 10px;
+  color: var(--text-primary);
+}
+
+.feat-logic-card p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+.feat-logic-note {
+  margin: 18px auto 0;
+  color: var(--text-muted);
+  line-height: 1.7;
+  max-width: 900px;
+}
+
 /* ── CTA Section ────────────────────────────────────────────── */
 .feat-cta-section {
   margin-top: 80px;
@@ -144,6 +197,9 @@
     grid-template-columns: 1fr;
     gap: 20px;
   }
+  .feat-logic-grid {
+    grid-template-columns: 1fr;
+  }
   .feat-cta-section {
     margin-top: 56px;
   }
@@ -160,6 +216,9 @@
     font-size: 1rem;
   }
   .feat-clean-card {
+    padding: 22px 18px;
+  }
+  .feat-logic-card {
     padding: 22px 18px;
   }
   .feat-icon-wrap {

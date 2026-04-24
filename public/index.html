@@ -6,7 +6,7 @@
     <title>IoT Listrik Dashboard — Smart Power Monitoring</title>
     <meta
       name="description"
-      content="Platform monitoring listrik berbasis IoT untuk memantau arus, tegangan, status bahaya, dan kontrol relay secara realtime."
+      content="Platform monitoring listrik berbasis IoT untuk memantau arus, tegangan, indikasi arus abnormal, notifikasi cepat, dan kontrol relay secara realtime."
     />
     <link rel="stylesheet" href="/css/style.css" />
     <meta name="theme-color" content="#070c18" />
@@ -35,12 +35,12 @@
           </h1>
           <p class="hero-desc text-muted">
             IoT Listrik Dashboard membantu kamu memantau arus, tegangan, daya
-            semu, histori kejadian, serta status kebocoran listrik dengan
-            notifikasi cepat dan kontrol relay berbasis role. Project ini dibuat
-            untuk deteksi dini kebocoran arus listrik dan monitoring kondisi
-            kelistrikan secara terintegrasi. Sistem membaca data sensor dari
-            perangkat IoT, mengirim data ke cloud, lalu menampilkan dashboard
-            interaktif untuk analisis cepat dan tindakan preventif.
+            semu, histori kejadian, serta indikasi arus bocor atau arus
+            abnormal dengan notifikasi cepat dan kontrol relay berbasis role.
+            Project ini dibuat untuk peringatan dini kondisi listrik berbahaya
+            secara terintegrasi. Sistem membaca data sensor dari perangkat IoT,
+            mengirim data ke cloud, lalu menampilkan dashboard interaktif untuk
+            analisis cepat dan tindakan preventif.
           </p>
           <div class="landing-cta clean-cta">
             <a href="/login" class="btn btn-primary btn-large"> Get Started </a>
@@ -68,7 +68,7 @@
                 <div class="arch-box-icon" style="background: rgba(34, 197, 94, 0.1); color: var(--green);"><span class="material-symbols-rounded">memory</span></div>
                 <div class="arch-box-content">
                   <h4>Hardware Node (ESP32)</h4>
-                  <p>Sensor Arus (ZCT) &amp; Modul Relay</p>
+                  <p>Sensor SCT-013, ZMPT101B &amp; Modul Relay</p>
                 </div>
               </div>
 
@@ -186,12 +186,12 @@
           <div class="clean-feature-item">
             <span class="material-symbols-rounded">monitoring</span>
             <h3>Realtime Dashboard</h3>
-            <p>Pantau arus, tegangan, daya, dan status sistem secara langsung kapan saja.</p>
+            <p>Pantau arus, tegangan, daya, dan status NORMAL, WARNING, atau DANGER secara langsung kapan saja.</p>
           </div>
           <div class="clean-feature-item">
             <span class="material-symbols-rounded">power_settings_new</span>
             <h3>Safety Action</h3>
-            <p>Relay dimatikan otomatis saat sistem terdeteksi dalam kondisi berbahaya.</p>
+            <p>Relay dimatikan otomatis saat arus melewati ambang bahaya yang sudah ditentukan.</p>
           </div>
           <div class="clean-feature-item">
             <span class="material-symbols-rounded">forum</span>
@@ -206,6 +206,88 @@
           <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn" style="border-radius: 999px; padding: 12px 28px; font-size: 15px; background: linear-gradient(135deg,#5865F2,#7289da); color:white; border:none; box-shadow:0 4px 14px rgba(88,101,242,0.35); text-decoration:none; display:inline-flex; align-items:center; gap:8px; font-weight:600;">
             <span class="material-symbols-rounded" style="font-size:18px;">forum</span> Join Discord Server
           </a>
+        </div>
+      </section>
+
+      <section class="logic-explainer-section">
+        <div class="demo-clean-container">
+          <div class="section-header logic-explainer-header">
+            <div>
+              <h2 class="demo-clean-title" style="margin: 0">Logika Deteksi</h2>
+              <p class="logic-explainer-subtitle text-muted">
+                Penjelasan singkat agar status pada dashboard tidak disalahartikan
+                sebagai semua kondisi berbahaya yang sama.
+              </p>
+            </div>
+          </div>
+
+          <div class="logic-explainer-grid">
+            <article class="logic-explainer-card glass">
+              <div class="logic-explainer-icon">
+                <span class="material-symbols-rounded">electric_bolt</span>
+              </div>
+              <div>
+                <h3>Indikasi Arus Bocor</h3>
+                <p>
+                  Sistem membaca arus beban dengan SCT-013 lalu menampilkan
+                  indikasi arus bocor atau arus abnormal sebagai peringatan dini.
+                  Pembacaan ini bersifat indikatif, bukan pengukuran residual
+                  current presisi seperti ELCB atau RCD.
+                </p>
+              </div>
+            </article>
+
+            <article class="logic-explainer-card glass">
+              <div class="logic-explainer-icon">
+                <span class="material-symbols-rounded">speed</span>
+              </div>
+              <div>
+                <h3>Beban Tinggi Normal</h3>
+                <p>
+                  Arus tinggi tidak otomatis dianggap kebocoran. Selama arus
+                  masih berada di bawah ambang yang ditentukan dan sesuai
+                  kapasitas beban uji, sistem tetap memperlakukannya sebagai
+                  kondisi beban normal atau mendekati batas.
+                </p>
+              </div>
+            </article>
+
+            <article class="logic-explainer-card glass">
+              <div class="logic-explainer-icon">
+                <span class="material-symbols-rounded">warning</span>
+              </div>
+              <div>
+                <h3>Short dan Gangguan Ekstrem</h3>
+                <p>
+                  Lonjakan arus yang sangat besar dan cepat diperlakukan sebagai
+                  gangguan berat. Dashboard menandainya sebagai kondisi bahaya,
+                  sementara MCB atau ELCB tetap menjadi proteksi utama instalasi
+                  listrik.
+                </p>
+              </div>
+            </article>
+
+            <article class="logic-explainer-card glass">
+              <div class="logic-explainer-icon">
+                <span class="material-symbols-rounded">power_settings_new</span>
+              </div>
+              <div>
+                <h3>Auto-Cutoff</h3>
+                <p>
+                  Saat status DANGER terdeteksi, relay memutus beban secara
+                  otomatis dan perintah ON ditolak sampai kondisi kembali aman.
+                  Mekanisme ini membantu tindakan cepat tanpa menunggu kontrol
+                  manual dari admin.
+                </p>
+              </div>
+            </article>
+          </div>
+
+          <p class="logic-explainer-note text-muted">
+            Catatan: threshold perlu disesuaikan dengan kapasitas beban uji agar
+            konsumsi listrik tinggi yang masih normal tidak salah dibaca sebagai
+            indikasi kebocoran atau arus abnormal.
+          </p>
         </div>
       </section>
 

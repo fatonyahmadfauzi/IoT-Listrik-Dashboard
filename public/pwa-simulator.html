@@ -362,9 +362,10 @@ No data.
                     value="10"
                   />
                   <div class="form-hint">
-                    NORMAL &lt; threshold × warning%. WARNING between warning%
-                    and 100%. DANGER if current ≥ threshold. Recommended: 1–100
-                    A.
+                    NORMAL stays below the warning band. WARNING appears when
+                    current approaches the threshold. DANGER starts when current
+                    ≥ threshold. Match the threshold to the tested load so high
+                    but normal consumption is not misread as abnormal current.
                   </div>
                 </div>
                 <div class="settings-section">
@@ -382,6 +383,8 @@ No data.
                   />
                   <div class="form-hint">
                     Example: 80 → WARNING from 80% threshold up to &lt; 100%.
+                    High load below this band should still be treated as normal
+                    load, not automatic leakage.
                   </div>
                 </div>
                 <div class="settings-section">
@@ -446,7 +449,8 @@ No data.
                     </div>
                     <p class="text-sm text-muted">
                       Relay cuts off automatically on DANGER (current ≥
-                      threshold).
+                      threshold). Standard MCB or ELCB protection still remains
+                      the primary electrical safety layer.
                     </p>
                   </div>
                   <label class="toggle-switch"

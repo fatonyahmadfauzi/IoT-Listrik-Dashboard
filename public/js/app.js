@@ -60,7 +60,7 @@ let stopLogs = null;
 
 function getStatusLabel(status) {
   if (status === "DANGER" || status === "LEAKAGE")
-    return "Critical — arus tinggi";
+    return "Bahaya — arus abnormal melewati ambang";
   if (status === "WARNING") return "Peringatan — mendekati batas";
   return "Sistem stabil";
 }

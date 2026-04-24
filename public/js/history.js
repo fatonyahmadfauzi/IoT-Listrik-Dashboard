@@ -53,9 +53,10 @@ function fmtTime(waktu) {
 }
 
 function getStatusLabel(status) {
-  if (status === 'DANGER') return 'Critical Leak Detected';
-  if (status === 'WARNING') return 'Check Load';
-  return 'System Stable';
+  if (status === 'LEAKAGE') return 'Indikasi arus bocor';
+  if (status === 'DANGER') return 'Bahaya - arus abnormal';
+  if (status === 'WARNING') return 'Periksa beban';
+  return 'Sistem stabil';
 }
 
 // ─── Status chip ─────────────────────────────────────────────

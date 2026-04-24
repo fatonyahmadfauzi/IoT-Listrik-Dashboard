@@ -14,28 +14,36 @@
 
 ---
 
-Sistem deteksi dini kebocoran arus listrik dan monitoring kondisi kelistrikan secara terintegrasi.
+Sistem monitoring kondisi kelistrikan terintegrasi dengan deteksi dini **indikasi arus bocor** atau **arus abnormal** berbasis IoT.
 Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan **Terminal (CLI)**.
 
 
 
 ## Ringkasan Fitur
 
-- Monitoring realtime arus, tegangan, daya semu, status, dan relay.
+- Monitoring realtime arus, tegangan, daya semu, status `NORMAL / WARNING / DANGER`, dan relay.
 - **PWA Simulator Mode**: Platform simulasi virtual (*multi-akun*) yang terisolasi dari basis data utama, digunakan untuk pengujian atau presentasi tanpa memerlukan *hardware* fisik ESP32.
 - **Premium UI & Dark Mode**: Tampilan dasbor modern *(Glassmorphism)* yang responsif serta mendukung integrasi *Global Dark Mode* bawaan sistem operasi.
 - **Device Presence Detection (Watchdog)**: Deteksi otomatis status koneksi perangkat (**Online/Offline**) ketika aliran data terputus, bekerja secara *real-time* di seluruh platform tanpa modifikasi firmware ESP32.
 - Role-based access: aksi kritikal (relay/settings) hanya untuk admin.
 - Histori kejadian dan notifikasi multi-channel (Web push + Telegram + **Discord Webhook**).
-- Auto-cutoff relay saat kondisi berbahaya.
+- Auto-cutoff relay saat arus melewati ambang bahaya yang ditentukan.
 - Terminal UI (Hacker Mode) portabel untuk eksekusi tanpa GUI (Mendukung CLI Node.js & Python).
 - Build pipeline untuk Android APK dan Windows installer.
 - **Discord Webhook**: notifikasi real-time ke 4 channel Discord berbeda (alerts, relay, monitoring, logs) — dikonfigurasi via admin UI tanpa Firebase Billing.
 
+## Catatan Logika Deteksi
+
+- Sistem membaca arus beban menggunakan **SCT-013** dan tegangan menggunakan **ZMPT101B**.
+- Dashboard menampilkan **indikasi arus bocor** atau **arus abnormal** sebagai peringatan dini, bukan pengukuran residual current presisi seperti **RCD/ELCB**.
+- **Beban tinggi normal** tidak otomatis dianggap kebocoran selama nilai arus masih sesuai kapasitas beban uji dan belum melewati ambang yang ditentukan.
+- **Short circuit / gangguan ekstrem** diperlakukan sebagai kondisi bahaya dengan lonjakan arus sangat besar dan cepat.
+- **MCB / ELCB** tetap menjadi proteksi utama instalasi listrik, sedangkan sistem ini berfungsi sebagai monitoring, notifikasi, dan auto-cutoff tambahan.
+
 ## Arsitektur Singkat
 
 ```text
-ESP32 + Sensor Arus & Relay
+ESP32 + SCT-013 + ZMPT101B + Relay/Kontaktor
   -> Firebase Realtime Database (/listrik, /logs, /settings, /users)
   -> Client apps:
      - Web dashboard (public/js/*.js, public/css/*.css, PWA)
@@ -358,6 +366,7 @@ Catatan:
 - Konfigurasi route dan header ada di `vercel.json`.
 - Subfolder `public/js/` dan `public/css/` sudah dikonfigurasi cache header di `vercel.json`.
 - File biner (`.exe/.msi/.apk/.aab`) di-ignore lewat `.vercelignore`.
+- Dokumen revisi skripsi, file `.docx/.pdf`, dan file personal di root repo di-ignore lewat `.gitignore` dan `.vercelignore`.
 - Untuk distribusi file installer, gunakan GitHub Releases (via `scripts/upload-release.ps1`).
 
 ## Firebase Scope Saat Ini

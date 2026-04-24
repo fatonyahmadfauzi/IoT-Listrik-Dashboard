@@ -23,7 +23,7 @@
       <!-- HERO -->
       <section class="feat-hero text-center" style="text-align: center;">
         <h1>Fitur Lengkap</h1>
-        <p>Eksplorasi seluruh kemampuan Dashboard IoT Listrik. Dirancang untuk kontrol maksimal, keamanan tinggi, dan kemudahan pemantauan.</p>
+        <p>Eksplorasi seluruh kemampuan Dashboard IoT Listrik. Halaman ini merangkum fitur monitoring, notifikasi, auto-cutoff, serta cara sistem membedakan beban normal, indikasi arus abnormal, dan kondisi bahaya.</p>
       </section>
 
       <!-- FEAT GRID -->
@@ -35,7 +35,7 @@
             <span class="material-symbols-rounded">monitoring</span>
           </div>
           <h3>Realtime Monitoring</h3>
-          <p>Dapatkan data arus, tegangan, daya semu, dan indikasi kebocoran secara langsung (real-time) dengan latensi sub-detik melalui Firebase RTDB.</p>
+          <p>Dapatkan data arus, tegangan, daya semu, serta indikasi arus bocor atau arus abnormal secara langsung (real-time) dengan latensi sub-detik melalui Firebase RTDB.</p>
         </div>
 
         <!-- 2 -->
@@ -44,7 +44,7 @@
             <span class="material-symbols-rounded">power_settings_new</span>
           </div>
           <h3>Auto Cut-off &amp; Proteksi</h3>
-          <p>Relay akan otomatis memutus aliran listrik jika mendeteksi anomali berbahaya atau kebocoran arus untuk mencegah risiko korsleting dan kebakaran.</p>
+          <p>Relay akan otomatis memutus aliran listrik saat status DANGER tercapai. Fitur ini membantu respon cepat terhadap arus abnormal, sementara MCB atau ELCB tetap menjadi proteksi utama instalasi.</p>
         </div>
 
         <!-- 3 -->
@@ -62,7 +62,7 @@
             <span class="material-symbols-rounded">history</span>
           </div>
           <h3>Log &amp; Histori Kejadian</h3>
-          <p>Semua peristiwa penting seperti trigger kebocoran, perubahan status relay oleh admin, hingga error tercatat rapi secara real-time di panel History.</p>
+          <p>Semua peristiwa penting seperti status WARNING atau DANGER, perubahan relay oleh admin, hingga error tercatat rapi secara real-time di panel History.</p>
         </div>
 
         <!-- 5 -->
@@ -83,6 +83,39 @@
           <p>Alert dikirim secara real-time ke <strong>Telegram</strong> dan <strong>Discord</strong> (4 channel terpisah: alerts, relay, monitoring, logs). Dikonfigurasi langsung dari admin panel tanpa menyentuh kode.</p>
         </div>
 
+      </section>
+
+      <section class="feat-logic-section">
+        <div class="feat-logic-header">
+          <h2>Bagaimana Sistem Membaca Risiko</h2>
+          <p>Status pada dashboard mengikuti pembacaan arus beban, ambang yang diatur admin, serta auto-cutoff relay. Penjelasan ini membantu membedakan kondisi listrik yang terlihat mirip tetapi maknanya berbeda.</p>
+        </div>
+
+        <div class="feat-logic-grid">
+          <article class="feat-logic-card">
+            <h3>Status NORMAL, WARNING, DANGER</h3>
+            <p>NORMAL dipakai saat arus masih berada di bawah batas peringatan. WARNING muncul ketika arus mendekati threshold. DANGER aktif saat arus mencapai atau melewati threshold yang ditetapkan.</p>
+          </article>
+
+          <article class="feat-logic-card">
+            <h3>Indikasi Arus Bocor</h3>
+            <p>SCT-013 membaca arus pada konduktor beban. Karena itu dashboard menampilkan indikasi arus bocor atau arus abnormal sebagai peringatan dini, bukan pengukuran residual current presisi seperti RCD atau ELCB.</p>
+          </article>
+
+          <article class="feat-logic-card">
+            <h3>Beban Tinggi Normal</h3>
+            <p>Arus tinggi tidak otomatis dianggap kebocoran. Jika nilai arus masih sesuai kapasitas beban uji dan belum melewati threshold, sistem tetap memperlakukannya sebagai beban normal atau mendekati batas.</p>
+          </article>
+
+          <article class="feat-logic-card">
+            <h3>Short dan Gangguan Berat</h3>
+            <p>Lonjakan arus yang sangat besar dan cepat diperlakukan sebagai gangguan berat. Dalam kondisi ini sistem dapat mengaktifkan auto-cutoff, tetapi proteksi standar instalasi tetap mengandalkan MCB atau ELCB.</p>
+          </article>
+        </div>
+
+        <div class="feat-logic-note">
+          Gunakan threshold sesuai kapasitas beban uji agar konsumsi listrik maksimum yang masih wajar tidak salah dibaca sebagai indikasi kebocoran atau arus abnormal.
+        </div>
       </section>
 
       <!-- NOTIFICATION INTEGRATIONS -->

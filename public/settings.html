@@ -495,10 +495,11 @@
                   value="10"
                 />
                 <div class="form-hint">
-                  <strong>Logika baru:</strong> NORMAL &lt; threshold ×
-                  (peringatan%). WARNING antara peringatan% dan 100%. DANGER
-                  jika arus ≥ threshold.<br />
-                  Range rekomendasi: 1 – 100 A.
+                  <strong>Logika status:</strong> NORMAL berada di bawah batas
+                  peringatan. WARNING muncul saat arus mendekati threshold.
+                  DANGER aktif saat arus ≥ threshold.<br />
+                  Atur threshold sesuai kapasitas beban uji agar beban tinggi
+                  normal tidak salah dibaca sebagai indikasi arus abnormal.
                 </div>
                 <div id="valThreshold" class="validation-msg"></div>
               </div>
@@ -518,6 +519,8 @@
                 />
                 <div class="form-hint">
                   Contoh 80 → WARNING dari 80% threshold sampai &lt; 100%.
+                  Beban tinggi yang masih di bawah batas ini tidak langsung
+                  dikategorikan DANGER.
                 </div>
                 <div id="valWarningPercent" class="validation-msg"></div>
               </div>
@@ -556,7 +559,7 @@
               <div class="toggle-row">
                 <div class="toggle-info">
                   <h4>Auto-Cutoff Relay</h4>
-                  <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold)</p>
+                  <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold). MCB atau ELCB tetap menjadi proteksi utama instalasi.</p>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" id="inpAutoCutoff" checked />

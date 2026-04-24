@@ -299,66 +299,101 @@ function buildAdminResetOtpEmailHTML({ otp, email, expiresAt }) {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>OTP Reset Data IoT</title>
+<style>
+  @media only screen and (max-width:600px) {
+    .container { width: 100% !important; }
+    .outer-shell { padding: 18px 14px !important; }
+    .otp-panel,
+    .info-panel,
+    .warning-panel { padding: 22px 18px !important; }
+    .otp-code {
+      font-size: 30px !important;
+      letter-spacing: 8px !important;
+      padding: 18px 20px !important;
+    }
+  }
+</style>
 </head>
-<body style="margin:0;padding:0;background:#070c18;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#070c18;padding:40px 16px;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
-        <tr><td align="center" style="padding-bottom:28px;">
-          <div style="display:inline-block;background:linear-gradient(135deg,#1e293b,#0f172a);border:1px solid rgba(239,68,68,0.28);border-radius:16px;padding:20px 32px;">
-            <span style="font-size:40px;">🛡️</span>
-            <h1 style="color:#e2e8f0;font-size:22px;margin:8px 0 4px 0;font-weight:700;">IoT Listrik Dashboard</h1>
-            <p style="color:#94a3b8;font-size:13px;margin:0;">Verifikasi Reset Data Realtime IoT</p>
-          </div>
-        </td></tr>
+<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Kode OTP admin untuk reset data realtime sensor perangkat IoT telah dibuat. Gunakan dalam 10 menit.</div>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+    <tr>
+      <td align="center" style="padding:24px 12px 28px;">
+        <table class="container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td class="outer-shell" style="background:#eef0ff;border:1px solid #d9ddfb;border-radius:28px;padding:24px 20px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:4px 8px 18px;">
+                    <p style="margin:0;font-size:18px;font-weight:700;color:#424b66;line-height:1.4;">IoT Listrik Dashboard</p>
+                    <p style="margin:6px 0 0;font-size:13px;color:#6b7280;line-height:1.6;">
+                      Permintaan ini berasal dari akun admin <strong style="color:#4b5563;">${email}</strong> untuk reset data realtime di <strong>/listrik</strong>.
+                    </p>
+                  </td>
+                </tr>
 
-        <tr><td align="center" style="padding-bottom:20px;">
-          <h2 style="color:#e2e8f0;font-size:20px;margin:0;font-weight:700;">Kode OTP Admin</h2>
-          <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:10px 0 0;">
-            Kode ini diminta dari akun admin <strong style="color:#e2e8f0;">${email}</strong> untuk mengosongkan data realtime perangkat IoT pada node <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;color:#93c5fd;">/listrik</code>.
-          </p>
-        </td></tr>
+                <tr>
+                  <td style="padding-bottom:18px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" class="otp-panel" style="background:#fbe7eb;border:2px solid #bc6a73;border-radius:28px;padding:24px 20px;">
+                      <tr>
+                        <td align="center">
+                          <p style="margin:0 0 18px;font-size:14px;font-weight:700;letter-spacing:4px;color:#a35f67;">KODE OTP</p>
+                          <div class="otp-code" style="display:inline-block;background:#3a2f35;border-radius:18px;padding:20px 28px;font-family:'Courier New',Courier,monospace;font-size:36px;font-weight:700;letter-spacing:10px;color:#f8fafc;line-height:1;">
+                            ${otp}
+                          </div>
+                          <p style="margin:20px 0 0;font-size:16px;color:#6c5a1d;line-height:1.5;">
+                            Berlaku sampai ${expiresStr} WIB
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-        <tr><td style="padding-bottom:24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:14px;padding:24px;">
-            <tr><td align="center">
-              <p style="color:#fca5a5;font-size:12px;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px;">Kode OTP</p>
-              <div style="font-size:34px;font-weight:800;letter-spacing:10px;color:#f8fafc;font-family:monospace;background:rgba(255,255,255,0.05);border-radius:12px;padding:16px 20px;display:inline-block;">
-                ${otp}
-              </div>
-              <p style="color:#fbbf24;font-size:13px;margin:14px 0 0;">Berlaku sampai ${expiresStr} WIB</p>
-            </td></tr>
-          </table>
-        </td></tr>
+                <tr>
+                  <td style="padding-bottom:18px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" class="info-panel" style="background:#eef4ff;border:2px solid #1e7895;border-radius:28px;padding:24px 22px;">
+                      <tr>
+                        <td>
+                          <p style="margin:0 0 14px;font-size:16px;font-weight:700;color:#42526e;line-height:1.5;">Yang akan terjadi setelah OTP benar:</p>
+                          <ul style="margin:0;padding-left:26px;font-size:16px;color:#5b6473;line-height:1.9;">
+                            <li>Data realtime sensor di <strong>/listrik</strong> akan direset ke nilai kosong/default.</li>
+                            <li>Histori log tidak dihapus.</li>
+                            <li>Jika device fisik masih online, data baru bisa muncul lagi pada heartbeat berikutnya.</li>
+                          </ul>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-        <tr><td style="padding-bottom:24px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.22);border-radius:12px;padding:18px 20px;">
-            <tr><td>
-              <p style="color:#bfdbfe;font-size:13px;margin:0 0 8px;"><strong>Yang akan terjadi setelah OTP benar:</strong></p>
-              <ul style="margin:0;padding-left:18px;color:#cbd5e1;font-size:13px;line-height:1.7;">
-                <li>Data realtime sensor di <strong>/listrik</strong> akan direset ke nilai kosong/default.</li>
-                <li>Histori log tidak dihapus.</li>
-                <li>Jika device fisik masih online, data baru bisa muncul lagi pada heartbeat berikutnya.</li>
-              </ul>
-            </td></tr>
-          </table>
-        </td></tr>
+                <tr>
+                  <td>
+                    <table width="100%" cellpadding="0" cellspacing="0" class="warning-panel" style="background:#f7efe2;border:2px solid #9a7945;border-radius:28px;padding:22px 22px;">
+                      <tr>
+                        <td>
+                          <p style="margin:0;font-size:16px;color:#6d5a2c;line-height:1.8;">
+                            Abaikan email ini jika Anda tidak sedang meminta reset data realtime perangkat IoT.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-        <tr><td style="padding-bottom:28px;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.22);border-radius:12px;padding:16px 20px;">
-            <tr><td>
-              <p style="color:#fde68a;font-size:13px;line-height:1.7;margin:0;">
-                Abaikan email ini jika Anda tidak sedang meminta reset data realtime perangkat IoT.
-              </p>
-            </td></tr>
-          </table>
-        </td></tr>
-
-        <tr><td align="center">
-          <p style="color:#4b5563;font-size:12px;margin:0;">© 2026 IoT Listrik Dashboard</p>
-        </td></tr>
-      </table>
-    </td></tr>
+          <tr>
+            <td align="center" style="padding:22px 16px 0;">
+              <p style="margin:0;font-size:12px;color:#b8bec8;line-height:1.7;">Email ini dikirim otomatis. Jangan balas email ini.</p>
+              <p style="margin:6px 0 0;font-size:12px;color:#c5cad4;line-height:1.7;">&copy; 2025 IoT Listrik Dashboard</p>
+              <p style="margin:2px 0 0;font-size:11px;color:#b0b7c2;line-height:1.7;">Sistem Deteksi Kebocoran Arus &nbsp;&middot;&nbsp; Built by Fatony Ahmad Fauzi</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;

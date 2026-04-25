@@ -42,8 +42,52 @@ function isAlarmDisabled() {
   }
 }
 
-import { messaging, getToken, db, auth } from "./firebase-config.js";
+import { messaging, getToken, db, auth, functions } from "./firebase-config.js";
 import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
+
+const FCM_VAPID_KEY = "g9Cx-PNOUASH7e5oCunyYgut0I6sUIobkq-QoffeCEw";
+const HARDWARE_ALERTS_TOPIC = "iot_alarms";
+const LAST_FCM_TOPIC_KEY = "iot_last_fcm_topic_subscription";
+
+function isSimulatorScope() {
+  return window.location.pathname.startsWith("/simulator/");
+}
+
+async function resolveMessagingServiceWorkerRegistration() {
+  if (!("serviceWorker" in navigator)) return null;
+
+  try {
+    const scopePath = isSimulatorScope() ? "/simulator/" : "/app/";
+    const scopeUrl = new URL(scopePath, window.location.origin).href;
+    const scopedRegistration = await navigator.serviceWorker.getRegistration(scopeUrl);
+    if (scopedRegistration) return scopedRegistration;
+    return await navigator.serviceWorker.ready;
+  } catch (err) {
+    console.warn("[FCM] Service worker registration is not ready yet.", err);
+    return null;
+  }
+}
+
+async function subscribeBrowserTokenToHardwareTopic(token) {
+  if (!token || isSimulatorScope()) return false;
+
+  try {
+    const topicCacheValue = `${HARDWARE_ALERTS_TOPIC}:${token}`;
+    if (localStorage.getItem(LAST_FCM_TOPIC_KEY) === topicCacheValue) {
+      return true;
+    }
+
+    const subscribeToAlarms = httpsCallable(functions, "subscribeToAlarms");
+    await subscribeToAlarms({ token });
+    localStorage.setItem(LAST_FCM_TOPIC_KEY, topicCacheValue);
+    console.log("[FCM] Browser token subscribed to hardware alerts topic.");
+    return true;
+  } catch (err) {
+    console.warn("[FCM] Failed to subscribe browser token to hardware topic.", err);
+    return false;
+  }
+}
 
 /**
  * Request notification permission on first user interaction.
@@ -52,29 +96,37 @@ import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/fi
 async function requestNotificationPermission() {
   if (!('Notification' in window)) return false;
   if (Notification.permission === 'granted') {
-    registerFCMToken();
+    await registerFCMToken();
     return true;
   }
   if (Notification.permission === 'denied') return false;
 
   const perm = await Notification.requestPermission();
   if (perm === 'granted') {
-    registerFCMToken();
+    await registerFCMToken();
   }
   return perm === 'granted';
 }
 
 async function registerFCMToken() {
-  if (!messaging) return;
+  if (!messaging || isSimulatorScope()) return;
   try {
-    const token = await getToken(messaging, { 
-      vapidKey: "g9Cx-PNOUASH7e5oCunyYgut0I6sUIobkq-QoffeCEw" 
+    const serviceWorkerRegistration = await resolveMessagingServiceWorkerRegistration();
+    if (!serviceWorkerRegistration) {
+      console.warn("[FCM] No active service worker registration found for push notifications.");
+      return;
+    }
+
+    const token = await getToken(messaging, {
+      vapidKey: FCM_VAPID_KEY,
+      serviceWorkerRegistration,
     });
     if (token) {
       console.log("[FCM] Got token, submitting to local RTDB for CLI Backend...");
       // Simpan langsung ke RTDB agar Node CLI bisa membacanya dan bertindak sebagai Server.
       const uid = auth.currentUser ? auth.currentUser.uid : "anon_" + Date.now();
       await set(ref(db, `fcm_tokens/web/${uid}`), token);
+      await subscribeBrowserTokenToHardwareTopic(token);
       console.log("[FCM] Registration token saved to RTDB successfully.");
     } else {
       console.warn("[FCM] No registration token available.");

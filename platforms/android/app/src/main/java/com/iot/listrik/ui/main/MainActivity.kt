@@ -71,6 +71,7 @@ class MainActivity : AppCompatActivity() {
     private var lastResetMarker: String? = null
     private var watchStartedAt = System.currentTimeMillis()
     private val sessionPrefs by lazy { getSharedPreferences("iot_listrik_session", MODE_PRIVATE) }
+    private val notificationPrefs by lazy { getSharedPreferences("iot_listrik_notifications", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -310,6 +311,23 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    private fun buildAdminInfoEventId(resetAt: String, resetNote: String): String {
+        val isMonitoringWipe = resetNote.contains("Semua data monitoring", ignoreCase = true) ||
+            resetNote.contains("histori log", ignoreCase = true)
+        val prefix = if (isMonitoringWipe) "monitoring-wipe" else "admin-reset"
+        return "$prefix:$resetAt"
+    }
+
+    private fun hasHandledInfoEvent(eventId: String): Boolean {
+        if (eventId.isBlank()) return false
+        return notificationPrefs.getString("last_info_event_id", "") == eventId
+    }
+
+    private fun rememberHandledInfoEvent(eventId: String) {
+        if (eventId.isBlank()) return
+        notificationPrefs.edit().putString("last_info_event_id", eventId).apply()
+    }
+
     private fun notifyAdminReset(resetAt: String, resetNote: String) {
         if (lastResetMarker == null) {
             lastResetMarker = resetAt
@@ -321,8 +339,17 @@ class MainActivity : AppCompatActivity() {
         val message = resetNote.ifBlank {
             "Admin mengosongkan data realtime sensor perangkat IoT."
         }
+        val eventId = buildAdminInfoEventId(resetAt, resetNote)
         showToast(message)
-        triggerInfoNotification("Data realtime dikosongkan", message)
+        if (!hasHandledInfoEvent(eventId)) {
+            val title = if (eventId.startsWith("monitoring-wipe:")) {
+                "Semua data monitoring dikosongkan"
+            } else {
+                "Data realtime dikosongkan"
+            }
+            triggerInfoNotification(title, message)
+            rememberHandledInfoEvent(eventId)
+        }
     }
 
     private fun isLikelyEpochMs(value: Long): Boolean = value > 1_000_000_000_000L

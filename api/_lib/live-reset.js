@@ -204,6 +204,50 @@ async function sendDiscordEmbed(webhookUrl, embed) {
   }
 }
 
+async function sendHardwareInfoFcmNotification({ eventId, title, message }) {
+  if (!title || !message) return false;
+
+  try {
+    ensureAdminApp();
+    await admin.messaging().send({
+      topic: "iot_alarms",
+      data: {
+        action: "SHOW_INFO",
+        title: String(title).trim(),
+        message: String(message).trim(),
+        source: "hardware",
+        eventId: String(eventId || "").trim(),
+      },
+      android: {
+        priority: "high",
+      },
+      webpush: {
+        headers: {
+          Urgency: "high",
+        },
+        notification: {
+          title: String(title).trim(),
+          body: String(message).trim(),
+          icon: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192.png",
+          badge: "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-96.png",
+          tag: String(eventId || "iot-admin-info").trim() || "iot-admin-info",
+          vibrate: [200, 100, 200],
+        },
+        data: {
+          url: "/app/dashboard",
+        },
+        fcmOptions: {
+          link: "https://iot-listrik-dashboard.vercel.app/app/dashboard",
+        },
+      },
+    });
+    return true;
+  } catch (error) {
+    console.error("Gagal kirim notifikasi FCM info ke perangkat hardware:", error);
+    return false;
+  }
+}
+
 function formatIndonesiaDateTime(value) {
   return new Date(value).toLocaleString("id-ID", {
     timeZone: "Asia/Jakarta",
@@ -305,14 +349,25 @@ async function sendAdminResetNotifications({ email, targetPath, clearedAt }) {
         )
       : Promise.resolve(false);
 
-    const [telegramResult, discordResult] = await Promise.allSettled([telegramPromise, discordPromise]);
+    const fcmPromise = sendHardwareInfoFcmNotification({
+      eventId: `admin-reset:${clearedAt}`,
+      title: "Data realtime sensor dikosongkan",
+      message: `Admin ${email} mengosongkan data realtime sensor pada ${targetPath}. Histori log tidak dihapus.`,
+    });
+
+    const [telegramResult, discordResult, fcmResult] = await Promise.allSettled([
+      telegramPromise,
+      discordPromise,
+      fcmPromise,
+    ]);
     return {
       telegram: telegramResult.status === "fulfilled" ? telegramResult.value : false,
       discord: discordResult.status === "fulfilled" ? discordResult.value : false,
+      fcm: fcmResult.status === "fulfilled" ? fcmResult.value : false,
     };
   } catch (error) {
     console.error("Gagal menyiapkan notifikasi reset admin:", error);
-    return { telegram: false, discord: false };
+    return { telegram: false, discord: false, fcm: false };
   }
 }
 
@@ -349,14 +404,25 @@ async function sendMonitoringWipeNotifications({ email, targetPath, clearedAt })
         )
       : Promise.resolve(false);
 
-    const [telegramResult, discordResult] = await Promise.allSettled([telegramPromise, discordPromise]);
+    const fcmPromise = sendHardwareInfoFcmNotification({
+      eventId: `monitoring-wipe:${clearedAt}`,
+      title: "Semua data monitoring dikosongkan",
+      message: `Admin ${email} menghapus data monitoring pada ${targetPath}. Histori log ikut dihapus.`,
+    });
+
+    const [telegramResult, discordResult, fcmResult] = await Promise.allSettled([
+      telegramPromise,
+      discordPromise,
+      fcmPromise,
+    ]);
     return {
       telegram: telegramResult.status === "fulfilled" ? telegramResult.value : false,
       discord: discordResult.status === "fulfilled" ? discordResult.value : false,
+      fcm: fcmResult.status === "fulfilled" ? fcmResult.value : false,
     };
   } catch (error) {
     console.error("Gagal menyiapkan notifikasi hapus semua data monitoring:", error);
-    return { telegram: false, discord: false };
+    return { telegram: false, discord: false, fcm: false };
   }
 }
 

@@ -11,9 +11,12 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.iot.listrik.ui.alarm.AlarmActivity
+import com.iot.listrik.ui.main.MainActivity
 import com.iot.listrik.service.AlarmForegroundService
 
 class FCMReceiverService : FirebaseMessagingService() {
+    private val infoEventPrefs by lazy { getSharedPreferences("iot_listrik_notifications", MODE_PRIVATE) }
+
     override fun onMessageReceived(message: RemoteMessage) {
         if (!shouldHandleMessage(message)) {
             Log.d("FCM", "Message ignored due to session/source mismatch: ${message.data}")
@@ -33,11 +36,29 @@ class FCMReceiverService : FirebaseMessagingService() {
             Log.d("FCM", "STOP_ALARM received - stopping service.")
             AlarmForegroundService.stop(this)
         } else if (action == "SHOW_INFO") {
+            val eventId = (message.data["eventId"] ?: "").trim()
+            if (eventId.isNotBlank() && hasHandledInfoEvent(eventId)) {
+                Log.d("FCM", "SHOW_INFO ignored because event was already handled: $eventId")
+                return
+            }
+
             showInfoNotification(
                 message.data["title"] ?: "Pembaruan Sistem",
                 message.data["message"] ?: "Ada pembaruan baru dari perangkat IoT."
             )
+
+            if (eventId.isNotBlank()) {
+                rememberHandledInfoEvent(eventId)
+            }
         }
+    }
+
+    private fun hasHandledInfoEvent(eventId: String): Boolean {
+        return infoEventPrefs.getString("last_info_event_id", "") == eventId
+    }
+
+    private fun rememberHandledInfoEvent(eventId: String) {
+        infoEventPrefs.edit().putString("last_info_event_id", eventId).apply()
     }
 
     private fun shouldHandleMessage(message: RemoteMessage): Boolean {
@@ -96,6 +117,15 @@ class FCMReceiverService : FirebaseMessagingService() {
     private fun showInfoNotification(title: String, message: String) {
         val channelId = "INFO_CHANNEL_ID"
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val launchIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val contentIntent = PendingIntent.getActivity(
+            this,
+            1002,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -112,6 +142,7 @@ class FCMReceiverService : FirebaseMessagingService() {
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(contentIntent)
             .setAutoCancel(true)
 
         notificationManager.notify(1002, notificationBuilder.build())

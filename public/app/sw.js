@@ -126,12 +126,43 @@ self.addEventListener("fetch", (event) => {
 // ─── Push Notification (future FCM) ──────────────────────────
 self.addEventListener("push", (event) => {
   if (!event.data) return;
-  const data = event.data.json();
-  self.registration.showNotification(data.title || "IoT Alert", {
-    body:    data.body  || "",
-    icon:    "/assets/icons/icon-192.png",
-    badge:   "/assets/icons/icon-96.png",
-    tag:     data.tag   || "iot-push",
-    vibrate: [200, 100, 200],
-  });
+  let payload = {};
+  try {
+    payload = event.data.json();
+  } catch (_) {
+    payload = { body: event.data.text() };
+  }
+
+  const notification = payload.notification || payload;
+  const targetUrl = payload?.data?.url || payload?.url || "/app/dashboard";
+
+  event.waitUntil(
+    self.registration.showNotification(notification.title || "IoT Alert", {
+      body: notification.body || "",
+      icon: notification.icon || "/assets/icons/icon-192.png",
+      badge: notification.badge || "/assets/icons/icon-96.png",
+      tag: notification.tag || payload.tag || "iot-push",
+      vibrate: notification.vibrate || [200, 100, 200],
+      data: { url: targetUrl },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification?.data?.url || "/app/dashboard", self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client && client.url.startsWith(self.location.origin)) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+      return undefined;
+    })
+  );
 });

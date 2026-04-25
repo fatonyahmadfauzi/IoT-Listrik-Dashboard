@@ -17,8 +17,9 @@
  *  ⚠️  Admin tidak bisa set password langsung — hanya bisa kirim reset email
  *  ⚠️  List user hanya menampilkan yang pernah login (ada di RTDB /users)
  *
- * Fitur sensitif yang memakai Firebase Functions:
- *   - OTP email untuk reset data realtime /listrik
+ * Fitur sensitif yang memakai Vercel API + Admin SDK:
+ *   - Konfirmasi nama project untuk reset data realtime /listrik
+ *   - OTP email untuk hapus semua data monitoring (/listrik + /logs)
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -113,17 +114,26 @@ const deviceBootstrapMeta    = document.getElementById('deviceBootstrapMeta');
 let latestDeviceBootstrap = {};
 
 // ── DOM: Admin live data reset via OTP ────────────────────────
-const liveDataResetSection   = document.getElementById('liveDataResetSection');
-const adminResetEmail        = document.getElementById('adminResetEmail');
-const inpLiveResetOtp        = document.getElementById('inpLiveResetOtp');
-const sendLiveResetOtpBtn    = document.getElementById('sendLiveResetOtpBtn');
-const confirmLiveResetBtn    = document.getElementById('confirmLiveResetBtn');
-const liveDataResetStatus    = document.getElementById('liveDataResetStatus');
-const liveDataResetMeta      = document.getElementById('liveDataResetMeta');
+const liveDataResetSection      = document.getElementById('liveDataResetSection');
+const adminResetProjectNameHint = document.getElementById('adminResetProjectNameHint');
+const inpLiveResetProjectName   = document.getElementById('inpLiveResetProjectName');
+const confirmLiveResetBtn       = document.getElementById('confirmLiveResetBtn');
+const liveDataResetStatus       = document.getElementById('liveDataResetStatus');
+const liveDataResetMeta         = document.getElementById('liveDataResetMeta');
 
-let liveResetActionId = '';
-let liveResetExpiresAt = 0;
-let liveResetMaskedEmail = '';
+const monitoringWipeSection     = document.getElementById('monitoringWipeSection');
+const adminMonitoringWipeEmail  = document.getElementById('adminMonitoringWipeEmail');
+const inpMonitoringWipeOtp      = document.getElementById('inpMonitoringWipeOtp');
+const sendMonitoringWipeOtpBtn  = document.getElementById('sendMonitoringWipeOtpBtn');
+const confirmMonitoringWipeBtn  = document.getElementById('confirmMonitoringWipeBtn');
+const monitoringWipeStatus      = document.getElementById('monitoringWipeStatus');
+const monitoringWipeMeta        = document.getElementById('monitoringWipeMeta');
+
+const LIVE_RESET_CONFIRMATION_TEXT = 'IoT Listrik Dashboard';
+
+let monitoringWipeActionId = '';
+let monitoringWipeExpiresAt = 0;
+let monitoringWipeMaskedEmail = '';
 
 // ── Helper: Reload config di sim-notifier setelah settings disimpan ────────
 async function reloadSimNotifierConfig() {
@@ -527,9 +537,18 @@ function setDeviceBootstrapVisibility() {
 function setLiveDataResetVisibility() {
   if (!liveDataResetSection) return;
   liveDataResetSection.hidden = !isRealAdminSettingsSession();
-  if (adminResetEmail) {
+  if (adminResetProjectNameHint) {
+    adminResetProjectNameHint.innerHTML =
+      `Untuk melanjutkan, ketik persis nama project ini: <code>${LIVE_RESET_CONFIRMATION_TEXT}</code>`;
+  }
+}
+
+function setMonitoringWipeVisibility() {
+  if (!monitoringWipeSection) return;
+  monitoringWipeSection.hidden = !isRealAdminSettingsSession();
+  if (adminMonitoringWipeEmail) {
     const currentUser = getCurrentUser();
-    adminResetEmail.textContent = currentUser?.email
+    adminMonitoringWipeEmail.textContent = currentUser?.email
       ? `OTP akan dikirim ke email admin yang sedang login: ${currentUser.email}`
       : 'OTP akan dikirim ke email admin yang sedang login.';
   }
@@ -576,14 +595,8 @@ function renderDeviceBootstrapStatus(data = {}) {
 function renderLiveDataResetState({ type = 'idle', message = '' } = {}) {
   if (!liveDataResetStatus || !liveDataResetMeta) return;
 
-  const now = Date.now();
-  const expiresLabel = liveResetExpiresAt > now
-    ? new Date(liveResetExpiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
-    : '';
-
   const statusMap = {
     idle: 'Siap',
-    otp_sent: 'OTP terkirim',
     success: 'Reset berhasil',
     error: 'Perlu perhatian',
   };
@@ -592,13 +605,38 @@ function renderLiveDataResetState({ type = 'idle', message = '' } = {}) {
 
   const parts = [];
   if (message) parts.push(message);
-  if (liveResetMaskedEmail) parts.push(`Email tujuan: ${liveResetMaskedEmail}`);
-  if (liveResetActionId) parts.push(`ID verifikasi: ${liveResetActionId}`);
-  if (expiresLabel) parts.push(`OTP berlaku sampai: ${expiresLabel} WIB`);
   if (!parts.length) {
-    parts.push('Bagian ini hanya mengosongkan data realtime di /listrik. Histori log tidak dihapus.');
+    parts.push(`Bagian ini hanya mengosongkan data realtime di /listrik. Ketik persis "${LIVE_RESET_CONFIRMATION_TEXT}" untuk menjalankan aksi.`);
   }
   liveDataResetMeta.innerHTML = parts.join('<br>');
+}
+
+function renderMonitoringWipeState({ type = 'idle', message = '' } = {}) {
+  if (!monitoringWipeStatus || !monitoringWipeMeta) return;
+
+  const now = Date.now();
+  const expiresLabel = monitoringWipeExpiresAt > now
+    ? new Date(monitoringWipeExpiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+    : '';
+
+  const statusMap = {
+    idle: 'Siap',
+    otp_sent: 'OTP terkirim',
+    success: 'Hapus berhasil',
+    error: 'Perlu perhatian',
+  };
+
+  monitoringWipeStatus.textContent = statusMap[type] || 'Siap';
+
+  const parts = [];
+  if (message) parts.push(message);
+  if (monitoringWipeMaskedEmail) parts.push(`Email tujuan: ${monitoringWipeMaskedEmail}`);
+  if (monitoringWipeActionId) parts.push(`ID verifikasi: ${monitoringWipeActionId}`);
+  if (expiresLabel) parts.push(`OTP berlaku sampai: ${expiresLabel} WIB`);
+  if (!parts.length) {
+    parts.push('Aksi ini akan mengosongkan data realtime /listrik dan menghapus histori log /logs setelah OTP email diverifikasi.');
+  }
+  monitoringWipeMeta.innerHTML = parts.join('<br>');
 }
 
 function validateDeviceBootstrapPayload() {
@@ -738,77 +776,36 @@ async function clearDeviceBootstrapSettings() {
   }
 }
 
-async function requestLiveDataResetOtp() {
-  if (!isRealAdminSettingsSession()) {
-    showToast('Fitur reset data realtime hanya untuk admin utama.', 'error');
-    return;
-  }
-
-  try {
-    if (sendLiveResetOtpBtn) {
-      sendLiveResetOtpBtn.disabled = true;
-      sendLiveResetOtpBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Mengirim OTP...';
-    }
-
-    const data = await callLiveResetApi('request-live-reset-otp', {});
-
-    liveResetActionId = String(data.actionId || '');
-    liveResetExpiresAt = Number(data.expiresAt || 0);
-    liveResetMaskedEmail = String(data.maskedEmail || getCurrentUser()?.email || '');
-
-    if (inpLiveResetOtp) inpLiveResetOtp.value = '';
-    renderLiveDataResetState({
-      type: 'otp_sent',
-      message: 'Kode OTP sudah dikirim ke email admin. Masukkan 6 digit OTP untuk mengosongkan data realtime /listrik.',
-    });
-    showToast('OTP reset data realtime berhasil dikirim ke email admin.', 'success');
-  } catch (err) {
-    renderLiveDataResetState({
-      type: 'error',
-      message: getCallableErrorMessage(err, 'Gagal meminta OTP reset data realtime.'),
-    });
-    showToast(getCallableErrorMessage(err, 'Gagal meminta OTP reset data realtime.'), 'error');
-  } finally {
-    if (sendLiveResetOtpBtn) {
-      sendLiveResetOtpBtn.disabled = false;
-      sendLiveResetOtpBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Kirim OTP ke Email Admin';
-    }
-  }
-}
-
 async function confirmLiveDataReset() {
   if (!isRealAdminSettingsSession()) {
     showToast('Fitur reset data realtime hanya untuk admin utama.', 'error');
     return;
   }
-  if (!liveResetActionId) {
-    showToast('Minta OTP dulu sebelum mengosongkan data realtime.', 'warning');
+
+  const projectName = inpLiveResetProjectName?.value.trim() || '';
+  if (!projectName) {
+    showToast('Ketik nama project terlebih dahulu.', 'warning');
     return;
   }
-
-  const otp = inpLiveResetOtp?.value.trim() || '';
-  if (!/^\d{6}$/.test(otp)) {
-    showToast('OTP harus 6 digit angka.', 'error');
+  if (projectName !== LIVE_RESET_CONFIRMATION_TEXT) {
+    showToast(`Konfirmasi salah. Ketik persis "${LIVE_RESET_CONFIRMATION_TEXT}".`, 'error');
     return;
   }
 
   try {
     if (confirmLiveResetBtn) {
       confirmLiveResetBtn.disabled = true;
-      confirmLiveResetBtn.innerHTML = '<span class="material-symbols-rounded">delete_forever</span> Memproses...';
+      confirmLiveResetBtn.innerHTML = '<span class="material-symbols-rounded">ink_eraser</span> Memproses...';
     }
 
     const data = await callLiveResetApi('confirm-live-reset', {
-      otp,
-      actionId: liveResetActionId,
+      confirmationText: projectName,
     });
     const clearedLabel = data.clearedAt
       ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
       : 'baru saja';
 
-    liveResetActionId = '';
-    liveResetExpiresAt = 0;
-    if (inpLiveResetOtp) inpLiveResetOtp.value = '';
+    if (inpLiveResetProjectName) inpLiveResetProjectName.value = '';
 
     renderLiveDataResetState({
       type: 'success',
@@ -824,7 +821,98 @@ async function confirmLiveDataReset() {
   } finally {
     if (confirmLiveResetBtn) {
       confirmLiveResetBtn.disabled = false;
-      confirmLiveResetBtn.innerHTML = '<span class="material-symbols-rounded">delete_forever</span> Kosongkan Data Realtime';
+      confirmLiveResetBtn.innerHTML = '<span class="material-symbols-rounded">ink_eraser</span> Kosongkan Data Realtime';
+    }
+  }
+}
+
+async function requestMonitoringWipeOtp() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Fitur hapus semua data monitoring hanya untuk admin utama.', 'error');
+    return;
+  }
+
+  try {
+    if (sendMonitoringWipeOtpBtn) {
+      sendMonitoringWipeOtpBtn.disabled = true;
+      sendMonitoringWipeOtpBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Mengirim OTP...';
+    }
+
+    const data = await callLiveResetApi('request-monitoring-wipe-otp', {});
+
+    monitoringWipeActionId = String(data.actionId || '');
+    monitoringWipeExpiresAt = Number(data.expiresAt || 0);
+    monitoringWipeMaskedEmail = String(data.maskedEmail || getCurrentUser()?.email || '');
+
+    if (inpMonitoringWipeOtp) inpMonitoringWipeOtp.value = '';
+    renderMonitoringWipeState({
+      type: 'otp_sent',
+      message: 'Kode OTP sudah dikirim ke email admin. Masukkan 6 digit OTP untuk menghapus semua data monitoring.',
+    });
+    showToast('OTP hapus semua data monitoring berhasil dikirim ke email admin.', 'success');
+  } catch (err) {
+    renderMonitoringWipeState({
+      type: 'error',
+      message: getCallableErrorMessage(err, 'Gagal meminta OTP hapus semua data monitoring.'),
+    });
+    showToast(getCallableErrorMessage(err, 'Gagal meminta OTP hapus semua data monitoring.'), 'error');
+  } finally {
+    if (sendMonitoringWipeOtpBtn) {
+      sendMonitoringWipeOtpBtn.disabled = false;
+      sendMonitoringWipeOtpBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Kirim OTP ke Email Admin';
+    }
+  }
+}
+
+async function confirmMonitoringWipe() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Fitur hapus semua data monitoring hanya untuk admin utama.', 'error');
+    return;
+  }
+  if (!monitoringWipeActionId) {
+    showToast('Minta OTP dulu sebelum menghapus semua data monitoring.', 'warning');
+    return;
+  }
+
+  const otp = inpMonitoringWipeOtp?.value.trim() || '';
+  if (!/^\d{6}$/.test(otp)) {
+    showToast('OTP harus 6 digit angka.', 'error');
+    return;
+  }
+
+  try {
+    if (confirmMonitoringWipeBtn) {
+      confirmMonitoringWipeBtn.disabled = true;
+      confirmMonitoringWipeBtn.innerHTML = '<span class="material-symbols-rounded">delete_sweep</span> Memproses...';
+    }
+
+    const data = await callLiveResetApi('confirm-monitoring-wipe', {
+      otp,
+      actionId: monitoringWipeActionId,
+    });
+    const clearedLabel = data.clearedAt
+      ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+      : 'baru saja';
+
+    monitoringWipeActionId = '';
+    monitoringWipeExpiresAt = 0;
+    if (inpMonitoringWipeOtp) inpMonitoringWipeOtp.value = '';
+
+    renderMonitoringWipeState({
+      type: 'success',
+      message: `Semua data monitoring berhasil dikosongkan pada ${clearedLabel} WIB, termasuk histori log.`,
+    });
+    showToast('Semua data monitoring perangkat IoT berhasil dikosongkan.', 'success');
+  } catch (err) {
+    renderMonitoringWipeState({
+      type: 'error',
+      message: getCallableErrorMessage(err, 'Gagal menghapus semua data monitoring perangkat IoT.'),
+    });
+    showToast(getCallableErrorMessage(err, 'Gagal menghapus semua data monitoring perangkat IoT.'), 'error');
+  } finally {
+    if (confirmMonitoringWipeBtn) {
+      confirmMonitoringWipeBtn.disabled = false;
+      confirmMonitoringWipeBtn.innerHTML = '<span class="material-symbols-rounded">delete_sweep</span> Hapus Semua Data Monitoring';
     }
   }
 }
@@ -1233,7 +1321,9 @@ initPage({
     initSidebarToggle();
     setDeviceBootstrapVisibility();
     setLiveDataResetVisibility();
+    setMonitoringWipeVisibility();
     renderLiveDataResetState();
+    renderMonitoringWipeState();
     initTelegramChatManager();
     loadSettings();
     loadClientConfigUi();
@@ -1244,8 +1334,9 @@ initPage({
     saveDiscordBtn?.addEventListener('click', saveDiscordSettings);
     saveDeviceBootstrapBtn?.addEventListener('click', saveDeviceBootstrapSettings);
     clearDeviceBootstrapBtn?.addEventListener('click', clearDeviceBootstrapSettings);
-    sendLiveResetOtpBtn?.addEventListener('click', requestLiveDataResetOtp);
     confirmLiveResetBtn?.addEventListener('click', confirmLiveDataReset);
+    sendMonitoringWipeOtpBtn?.addEventListener('click', requestMonitoringWipeOtp);
+    confirmMonitoringWipeBtn?.addEventListener('click', confirmMonitoringWipe);
     testDiscordBtn?.addEventListener('click', testDiscordWebhook);
     saveClientBtn?.addEventListener('click', saveClientConfigFromForm);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);

@@ -177,12 +177,16 @@ export function Settings({ onLogout }: SettingsProps) {
   const [deviceDbUrl, setDeviceDbUrl] = useState(bootstrapSettings.firebaseDbUrl || '');
   const [deviceEmail, setDeviceEmail] = useState(bootstrapSettings.iotEmail || '');
   const [devicePassword, setDevicePassword] = useState(bootstrapSettings.iotPassword || '');
-  const [liveResetOtp, setLiveResetOtp] = useState('');
-  const [liveResetActionId, setLiveResetActionId] = useState('');
-  const [liveResetExpiresAt, setLiveResetExpiresAt] = useState<number | null>(null);
-  const [liveResetMaskedEmail, setLiveResetMaskedEmail] = useState('');
-  const [liveResetState, setLiveResetState] = useState<'idle' | 'otp_sent' | 'success' | 'error'>('idle');
-  const [liveResetMessage, setLiveResetMessage] = useState('Bagian ini hanya mengosongkan data realtime di /listrik. Histori log tidak dihapus.');
+  const [liveResetProjectName, setLiveResetProjectName] = useState('');
+  const [liveResetState, setLiveResetState] = useState<'idle' | 'success' | 'error'>('idle');
+  const [liveResetMessage, setLiveResetMessage] = useState('Bagian ini hanya mengosongkan data realtime di /listrik. Ketik persis nama project untuk menjalankan aksi.');
+  const [monitoringWipeOtp, setMonitoringWipeOtp] = useState('');
+  const [monitoringWipeActionId, setMonitoringWipeActionId] = useState('');
+  const [monitoringWipeExpiresAt, setMonitoringWipeExpiresAt] = useState<number | null>(null);
+  const [monitoringWipeMaskedEmail, setMonitoringWipeMaskedEmail] = useState('');
+  const [monitoringWipeState, setMonitoringWipeState] = useState<'idle' | 'otp_sent' | 'success' | 'error'>('idle');
+  const [monitoringWipeMessage, setMonitoringWipeMessage] = useState('Aksi ini akan mengosongkan data realtime /listrik dan menghapus histori log /logs setelah OTP email diverifikasi.');
+  const LIVE_RESET_CONFIRMATION_TEXT = 'IoT Listrik Dashboard';
 
   const [newUserEmail, setNewUserEmail] = useState('');
   
@@ -196,6 +200,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showDeviceApiKey, setShowDeviceApiKey] = useState(false);
   const [showDevicePassword, setShowDevicePassword] = useState(false);
   const [liveResetLoading, setLiveResetLoading] = useState(false);
+  const [monitoringWipeLoading, setMonitoringWipeLoading] = useState(false);
 
   const isAdmin = role === 'admin';
   const canManageDeviceBootstrap = isAdmin && !isTempAccount;
@@ -212,10 +217,15 @@ export function Settings({ onLogout }: SettingsProps) {
     }[deviceBootstrapStatus] || bootstrapSettings.status || 'Siap';
   const liveResetStatusLabel = {
     idle: 'Siap',
-    otp_sent: 'OTP terkirim',
     success: 'Reset berhasil',
     error: 'Perlu perhatian',
   }[liveResetState];
+  const monitoringWipeStatusLabel = {
+    idle: 'Siap',
+    otp_sent: 'OTP terkirim',
+    success: 'Hapus berhasil',
+    error: 'Perlu perhatian',
+  }[monitoringWipeState];
 
   useEffect(() => {
     const next = (settings?.deviceBootstrap || {}) as DeviceBootstrapSettings;
@@ -510,61 +520,30 @@ export function Settings({ onLogout }: SettingsProps) {
     if (!response.ok) {
       throw new Error(data?.error || `HTTP ${response.status}`);
     }
-    return data as {
-      actionId?: string;
-      expiresAt?: number;
-      maskedEmail?: string;
-      clearedAt?: number;
-    };
-  };
-
-  const handleRequestLiveResetOtp = async () => {
-    if (!canManageDeviceBootstrap) return;
-    setLiveResetLoading(true);
-    try {
-      const data = await callLiveResetApi('request-live-reset-otp', {});
-
-      setLiveResetActionId(String(data.actionId || ''));
-      setLiveResetExpiresAt(Number(data.expiresAt || 0) || null);
-      setLiveResetMaskedEmail(String(data.maskedEmail || user?.email || ''));
-      setLiveResetOtp('');
-      setLiveResetState('otp_sent');
-      setLiveResetMessage('Kode OTP sudah dikirim ke email admin. Masukkan 6 digit OTP untuk mengosongkan data realtime /listrik.');
-      notifyDesktop('OTP reset dikirim', 'Kode OTP reset data realtime sudah dikirim ke email admin.');
-    } catch (error) {
-      const msg = getCallableErrorMessage(error, 'Gagal meminta OTP reset data realtime.');
-      setLiveResetState('error');
-      setLiveResetMessage(msg);
-      notifyDesktop('Gagal meminta OTP', msg);
-    } finally {
-      setLiveResetLoading(false);
-    }
+    return data as Record<string, unknown>;
   };
 
   const handleConfirmLiveReset = async () => {
     if (!canManageDeviceBootstrap) return;
-    if (!liveResetActionId) {
-      notifyDesktop('Reset data realtime', 'Minta OTP dulu sebelum mengosongkan data realtime.');
+    if (!liveResetProjectName.trim()) {
+      notifyDesktop('Reset data realtime', 'Ketik nama project terlebih dahulu.');
       return;
     }
-    if (!/^\d{6}$/.test(liveResetOtp.trim())) {
-      notifyDesktop('Validasi OTP', 'OTP harus 6 digit angka.');
+    if (liveResetProjectName.trim() !== LIVE_RESET_CONFIRMATION_TEXT) {
+      notifyDesktop('Validasi nama project', `Ketik persis "${LIVE_RESET_CONFIRMATION_TEXT}".`);
       return;
     }
 
     setLiveResetLoading(true);
     try {
       const data = await callLiveResetApi('confirm-live-reset', {
-        otp: liveResetOtp.trim(),
-        actionId: liveResetActionId,
+        confirmationText: liveResetProjectName.trim(),
       });
       const clearedLabel = data.clearedAt
         ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
         : 'baru saja';
 
-      setLiveResetActionId('');
-      setLiveResetExpiresAt(null);
-      setLiveResetOtp('');
+      setLiveResetProjectName('');
       setLiveResetState('success');
       setLiveResetMessage(`Data realtime /listrik berhasil dikosongkan pada ${clearedLabel} WIB.`);
       notifyDesktop('Data realtime dikosongkan', 'Data realtime perangkat IoT berhasil dikosongkan.');
@@ -575,6 +554,66 @@ export function Settings({ onLogout }: SettingsProps) {
       notifyDesktop('Gagal mengosongkan data', msg);
     } finally {
       setLiveResetLoading(false);
+    }
+  };
+
+  const handleRequestMonitoringWipeOtp = async () => {
+    if (!canManageDeviceBootstrap) return;
+    setMonitoringWipeLoading(true);
+    try {
+      const data = await callLiveResetApi('request-monitoring-wipe-otp', {});
+
+      setMonitoringWipeActionId(String(data.actionId || ''));
+      setMonitoringWipeExpiresAt(Number(data.expiresAt || 0) || null);
+      setMonitoringWipeMaskedEmail(String(data.maskedEmail || user?.email || ''));
+      setMonitoringWipeOtp('');
+      setMonitoringWipeState('otp_sent');
+      setMonitoringWipeMessage('Kode OTP sudah dikirim ke email admin. Masukkan 6 digit OTP untuk menghapus semua data monitoring.');
+      notifyDesktop('OTP hapus data dikirim', 'Kode OTP hapus semua data monitoring sudah dikirim ke email admin.');
+    } catch (error) {
+      const msg = getCallableErrorMessage(error, 'Gagal meminta OTP hapus semua data monitoring.');
+      setMonitoringWipeState('error');
+      setMonitoringWipeMessage(msg);
+      notifyDesktop('Gagal meminta OTP', msg);
+    } finally {
+      setMonitoringWipeLoading(false);
+    }
+  };
+
+  const handleConfirmMonitoringWipe = async () => {
+    if (!canManageDeviceBootstrap) return;
+    if (!monitoringWipeActionId) {
+      notifyDesktop('Hapus semua data monitoring', 'Minta OTP dulu sebelum menghapus semua data monitoring.');
+      return;
+    }
+    if (!/^\d{6}$/.test(monitoringWipeOtp.trim())) {
+      notifyDesktop('Validasi OTP', 'OTP harus 6 digit angka.');
+      return;
+    }
+
+    setMonitoringWipeLoading(true);
+    try {
+      const data = await callLiveResetApi('confirm-monitoring-wipe', {
+        otp: monitoringWipeOtp.trim(),
+        actionId: monitoringWipeActionId,
+      });
+      const clearedLabel = data.clearedAt
+        ? new Date(Number(data.clearedAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+        : 'baru saja';
+
+      setMonitoringWipeActionId('');
+      setMonitoringWipeExpiresAt(null);
+      setMonitoringWipeOtp('');
+      setMonitoringWipeState('success');
+      setMonitoringWipeMessage(`Semua data monitoring berhasil dikosongkan pada ${clearedLabel} WIB, termasuk histori log.`);
+      notifyDesktop('Semua data monitoring dihapus', 'Data monitoring dan histori log berhasil dikosongkan.');
+    } catch (error) {
+      const msg = getCallableErrorMessage(error, 'Gagal menghapus semua data monitoring perangkat IoT.');
+      setMonitoringWipeState('error');
+      setMonitoringWipeMessage(msg);
+      notifyDesktop('Gagal menghapus data monitoring', msg);
+    } finally {
+      setMonitoringWipeLoading(false);
     }
   };
 
@@ -1299,13 +1338,60 @@ export function Settings({ onLogout }: SettingsProps) {
                 Reset Data Realtime IoT
               </h4>
               <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
-                Aksi ini mengosongkan data realtime sensor pada <code>/listrik</code> setelah OTP 6 digit
-                dikirim ke email admin yang sedang login.
+                Aksi ini mengosongkan data realtime sensor pada <code>/listrik</code> tanpa menghapus histori log.
               </p>
             </div>
 
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
               Histori log tidak dihapus. Jika device fisik masih online, data baru dapat muncul lagi pada heartbeat berikutnya.
+            </div>
+
+            <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+              Untuk melanjutkan, ketik persis nama project ini: <strong>{LIVE_RESET_CONFIRMATION_TEXT}</strong>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Ketik Nama Project
+                </label>
+                <input
+                  type="text"
+                  value={liveResetProjectName}
+                  onChange={(e) => setLiveResetProjectName(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                  placeholder="IoT Listrik Dashboard"
+                />
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+                <div className="font-semibold">Status verifikasi: {liveResetStatusLabel}</div>
+                <div className="mt-2">{liveResetMessage}</div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                onClick={handleConfirmLiveReset}
+                disabled={liveResetLoading || !canManageDeviceBootstrap}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+              >
+                {liveResetLoading ? 'Memproses...' : 'Kosongkan Data Realtime'}
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
+            <div className="space-y-2">
+              <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                Hapus Semua Data Monitoring
+              </h4>
+              <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+                Aksi ini mengosongkan data realtime sensor pada <code>/listrik</code> dan menghapus histori log pada <code>/logs</code>.
+              </p>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              Pengaturan sistem, data user, dan bootstrap device tidak ikut dihapus. Jika device fisik masih online, data realtime baru dapat muncul lagi pada heartbeat berikutnya.
             </div>
 
             <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
@@ -1321,21 +1407,21 @@ export function Settings({ onLogout }: SettingsProps) {
                   type="text"
                   inputMode="numeric"
                   maxLength={6}
-                  value={liveResetOtp}
-                  onChange={(e) => setLiveResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  value={monitoringWipeOtp}
+                  onChange={(e) => setMonitoringWipeOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
                   placeholder="Masukkan 6 digit OTP"
                 />
               </div>
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
-                <div className="font-semibold">Status verifikasi: {liveResetStatusLabel}</div>
-                <div className="mt-2">{liveResetMessage}</div>
-                {liveResetMaskedEmail && <div className="mt-2">Email tujuan: {liveResetMaskedEmail}</div>}
-                {liveResetActionId && <div>ID verifikasi: {liveResetActionId}</div>}
-                {liveResetExpiresAt && (
+                <div className="font-semibold">Status verifikasi: {monitoringWipeStatusLabel}</div>
+                <div className="mt-2">{monitoringWipeMessage}</div>
+                {monitoringWipeMaskedEmail && <div className="mt-2">Email tujuan: {monitoringWipeMaskedEmail}</div>}
+                {monitoringWipeActionId && <div>ID verifikasi: {monitoringWipeActionId}</div>}
+                {monitoringWipeExpiresAt && (
                   <div>
                     OTP berlaku sampai:{' '}
-                    {new Date(liveResetExpiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
+                    {new Date(monitoringWipeExpiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB
                   </div>
                 )}
               </div>
@@ -1343,18 +1429,18 @@ export function Settings({ onLogout }: SettingsProps) {
 
             <div className="mt-4 flex flex-wrap gap-3">
               <button
-                onClick={handleRequestLiveResetOtp}
-                disabled={liveResetLoading || !canManageDeviceBootstrap}
+                onClick={handleRequestMonitoringWipeOtp}
+                disabled={monitoringWipeLoading || !canManageDeviceBootstrap}
                 className="px-4 py-2 bg-transparent border border-gray-400 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 rounded-lg font-semibold transition"
               >
-                {liveResetLoading ? 'Mengirim...' : 'Kirim OTP ke Email Admin'}
+                {monitoringWipeLoading ? 'Mengirim...' : 'Kirim OTP ke Email Admin'}
               </button>
               <button
-                onClick={handleConfirmLiveReset}
-                disabled={liveResetLoading || !canManageDeviceBootstrap}
+                onClick={handleConfirmMonitoringWipe}
+                disabled={monitoringWipeLoading || !canManageDeviceBootstrap}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
               >
-                {liveResetLoading ? 'Memproses...' : 'Kosongkan Data Realtime'}
+                {monitoringWipeLoading ? 'Memproses...' : 'Hapus Semua Data Monitoring'}
               </button>
             </div>
           </div>

@@ -10,6 +10,8 @@ const RESET_OTP_TTL_MS = 10 * 60 * 1000;
 const RESET_OTP_COOLDOWN_MS = 60 * 1000;
 const RESET_OTP_MAX_ATTEMPTS = 5;
 const RESET_OTP_PATH = "/admin_secure/liveDataResetOtps";
+const MONITORING_WIPE_OTP_PATH = "/admin_secure/monitoringDataWipeOtps";
+const PROJECT_CONFIRMATION_TEXT = "IoT Listrik Dashboard";
 
 let initErrorMsg = "";
 
@@ -223,6 +225,19 @@ function buildAdminResetTelegramMessage({ email, targetPath, clearedAt }) {
   ].join("\n");
 }
 
+function buildMonitoringWipeTelegramMessage({ email, targetPath, clearedAt }) {
+  return [
+    "Notifikasi Admin - IoT Listrik Dashboard",
+    "",
+    "Semua data monitoring perangkat IoT berhasil dikosongkan.",
+    `Admin: ${email}`,
+    `Path: ${targetPath}`,
+    `Waktu: ${formatIndonesiaDateTime(clearedAt)} WIB`,
+    "Histori log ikut dihapus.",
+    "Jika perangkat fisik masih online, data realtime baru dapat muncul lagi pada heartbeat berikutnya.",
+  ].join("\n");
+}
+
 function buildAdminResetDiscordEmbed({ email, targetPath, clearedAt }) {
   return {
     title: "🧹 Data Realtime IoT Dikosongkan",
@@ -236,6 +251,23 @@ function buildAdminResetDiscordEmbed({ email, targetPath, clearedAt }) {
       { name: "Catatan", value: "Data baru bisa muncul lagi jika perangkat fisik masih online.", inline: false },
     ],
     footer: { text: "IoT Listrik Dashboard • Admin Reset Audit" },
+    timestamp: new Date(clearedAt).toISOString(),
+  };
+}
+
+function buildMonitoringWipeDiscordEmbed({ email, targetPath, clearedAt }) {
+  return {
+    title: "🧹 Semua Data Monitoring Dikosongkan",
+    description: "Admin berhasil mengosongkan data monitoring perangkat IoT dan membersihkan histori log setelah verifikasi OTP email.",
+    color: 0xF97316,
+    fields: [
+      { name: "Admin", value: email, inline: false },
+      { name: "Path", value: targetPath, inline: true },
+      { name: "Waktu", value: `${formatIndonesiaDateTime(clearedAt)} WIB`, inline: true },
+      { name: "Histori Log", value: "Ikut dihapus", inline: true },
+      { name: "Catatan", value: "Data realtime baru dapat muncul lagi jika perangkat fisik masih online.", inline: false },
+    ],
+    footer: { text: "IoT Listrik Dashboard • Monitoring Data Wipe Audit" },
     timestamp: new Date(clearedAt).toISOString(),
   };
 }
@@ -284,7 +316,51 @@ async function sendAdminResetNotifications({ email, targetPath, clearedAt }) {
   }
 }
 
-function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
+async function sendMonitoringWipeNotifications({ email, targetPath, clearedAt }) {
+  try {
+    const settingsSnap = await admin.database().ref("/settings").get();
+    const settings = settingsSnap.val() || {};
+    const discordSettings = settings.discord || {};
+
+    const telegramEnabled = settings.telegramNotifyEnabled !== false;
+    const telegramBotToken = String(settings.telegramBotToken || "").trim();
+    const telegramChatIds = getTelegramChatIds(settings);
+
+    const discordEnabled = discordSettings.enabled !== false;
+    const discordWebhook =
+      discordSettings.webhookLogs ||
+      discordSettings.webhookAlerts ||
+      discordSettings.webhookMonitoring ||
+      discordSettings.webhookRelay ||
+      "";
+
+    const telegramPromise = telegramEnabled
+      ? sendTelegramMessage(
+          telegramBotToken,
+          telegramChatIds,
+          buildMonitoringWipeTelegramMessage({ email, targetPath, clearedAt })
+        )
+      : Promise.resolve(false);
+
+    const discordPromise = discordEnabled
+      ? sendDiscordEmbed(
+          discordWebhook,
+          buildMonitoringWipeDiscordEmbed({ email, targetPath, clearedAt })
+        )
+      : Promise.resolve(false);
+
+    const [telegramResult, discordResult] = await Promise.allSettled([telegramPromise, discordPromise]);
+    return {
+      telegram: telegramResult.status === "fulfilled" ? telegramResult.value : false,
+      discord: discordResult.status === "fulfilled" ? discordResult.value : false,
+    };
+  } catch (error) {
+    console.error("Gagal menyiapkan notifikasi hapus semua data monitoring:", error);
+    return { telegram: false, discord: false };
+  }
+}
+
+function buildMonitoringWipeOtpEmailHTML({ otp, email, expiresAt }) {
   const d = new Date(expiresAt);
   const timeStr = d.toLocaleString("id-ID", {
     timeZone: "Asia/Jakarta",
@@ -306,7 +382,7 @@ function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 <meta name="x-apple-disable-message-reformatting"/>
-<title>OTP Reset Data IoT</title>
+<title>OTP Hapus Semua Data Monitoring</title>
 <!--[if mso]>
 <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
 <![endif]-->
@@ -324,7 +400,7 @@ function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
 </style>
 </head>
 <body style="margin:0;padding:0;background-color:#060c18;word-spacing:normal;">
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Kode OTP admin untuk reset data realtime sensor perangkat IoT telah dibuat. Gunakan dalam 10 menit.&#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Kode OTP admin untuk menghapus semua data monitoring perangkat IoT telah dibuat. Gunakan dalam 10 menit.&#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;</div>
 
 <!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
 <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#060c18;">
@@ -339,7 +415,7 @@ function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
           </td>
           <td style="padding-left:12px;vertical-align:middle;">
             <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:17px;font-weight:700;color:#f1f5f9;line-height:1;">IoT Listrik Dashboard</p>
-            <p style="margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#4b5563;line-height:1;">Verifikasi Reset Data Realtime</p>
+            <p style="margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#4b5563;line-height:1;">Verifikasi Hapus Semua Data Monitoring</p>
           </td>
         </tr>
       </table>
@@ -349,15 +425,15 @@ function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
       <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
         <tr>
           <td style="background-color:#3f0a0a;border:1px solid #dc2626;border-radius:100px;padding:5px 16px 5px 12px;">
-            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:700;color:#fca5a5;letter-spacing:0.3px;">&#128274;&nbsp; OTP Verifikasi Admin</p>
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:700;color:#fca5a5;letter-spacing:0.3px;">&#128274;&nbsp; OTP Hapus Semua Data</p>
           </td>
         </tr>
       </table>
 
       <h1 style="margin:0 0 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;line-height:1.15;">Kode OTP Siap Digunakan</h1>
       <p style="margin:0 0 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;color:#6b7280;line-height:1.65;">
-        Permintaan ini berasal dari akun admin <strong style="color:#e5e7eb;">${email}</strong> untuk mengosongkan data realtime sensor perangkat IoT pada node
-        <strong style="color:#93c5fd;">/listrik</strong>.
+        Permintaan ini berasal dari akun admin <strong style="color:#e5e7eb;">${email}</strong> untuk menghapus semua data monitoring perangkat IoT pada node
+        <strong style="color:#93c5fd;">/listrik</strong> dan <strong style="color:#93c5fd;">/logs</strong>.
       </p>
 
       <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
@@ -392,9 +468,9 @@ function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
           <td class="detail-card" style="background-color:#080f1f;border:1px solid #1e2d45;border-radius:14px;padding:18px 20px;">
             <p style="margin:0 0 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.5;">Yang akan terjadi setelah OTP benar</p>
             <ul style="margin:0;padding-left:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:#cbd5e1;line-height:1.9;">
-              <li>Data realtime sensor di <strong>/listrik</strong> akan direset ke nilai kosong/default.</li>
-              <li>Histori log tidak dihapus.</li>
-              <li>Jika device fisik masih online, data baru bisa muncul lagi pada heartbeat berikutnya.</li>
+              <li>Data realtime sensor di <strong>/listrik</strong> akan dikosongkan ke nilai default.</li>
+              <li>Histori log pada <strong>/logs</strong> ikut dihapus sampai kosong.</li>
+              <li>Jika device fisik masih online, data realtime baru dapat muncul lagi pada heartbeat berikutnya.</li>
             </ul>
           </td>
         </tr>
@@ -404,7 +480,7 @@ function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
         <tr>
           <td class="detail-card" style="background-color:#1c0f00;border:1px solid #78350f;border-radius:14px;padding:16px 20px;">
             <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:#fbbf24;line-height:1.8;">
-              Abaikan email ini jika Anda tidak sedang meminta reset data realtime perangkat IoT.
+              Abaikan email ini jika Anda tidak sedang meminta hapus semua data monitoring perangkat IoT.
             </p>
           </td>
         </tr>
@@ -438,7 +514,10 @@ function hashResetOtp(uid, actionId, otp) {
     .digest("hex");
 }
 
-function buildClearedListrikPayload(clearedAt = new Date().toISOString()) {
+function buildClearedListrikPayload(
+  clearedAt = new Date().toISOString(),
+  resetNote = "Data realtime dikosongkan oleh admin setelah verifikasi."
+) {
   return {
     arus: 0,
     tegangan: 0,
@@ -452,19 +531,55 @@ function buildClearedListrikPayload(clearedAt = new Date().toISOString()) {
     status: "NORMAL",
     updated_at: 0,
     reset_by_admin: true,
-    reset_note: "Data realtime dikosongkan oleh admin setelah verifikasi OTP email.",
+    reset_note: resetNote,
     reset_at: clearedAt,
   };
 }
 
 async function requestLiveResetOtp(req) {
+  await requireAdminRequest(req);
+  throw httpError(
+    410,
+    `Validasi reset realtime sekarang menggunakan nama project. Ketik persis "${PROJECT_CONFIRMATION_TEXT}".`
+  );
+}
+
+async function confirmLiveResetOtp(req) {
+  const { email } = await requireAdminRequest(req);
+  const confirmationText = String(req.body?.confirmationText || "").trim();
+  if (!confirmationText) {
+    throw httpError(400, "Ketik nama project untuk mengonfirmasi pengosongan data realtime.");
+  }
+  if (confirmationText !== PROJECT_CONFIRMATION_TEXT) {
+    throw httpError(400, `Konfirmasi salah. Ketik persis "${PROJECT_CONFIRMATION_TEXT}".`);
+  }
+
+  const now = Date.now();
+  const clearedAtIso = new Date(now).toISOString();
+  await admin.database().ref("/listrik").set(buildClearedListrikPayload(clearedAtIso));
+  const notificationResults = await sendAdminResetNotifications({
+    email,
+    targetPath: "/listrik",
+    clearedAt: clearedAtIso,
+  });
+
+  return {
+    success: true,
+    clearedAt: now,
+    targetPath: "/listrik",
+    message: "Data realtime perangkat IoT berhasil dikosongkan.",
+    notifications: notificationResults,
+  };
+}
+
+async function requestMonitoringWipeOtp(req) {
   const { uid, email } = await requireAdminRequest(req);
 
   if (!process.env.RESEND_API_KEY) {
     throw httpError(500, "RESEND_API_KEY belum dikonfigurasi di Vercel.");
   }
 
-  const otpRef = admin.database().ref(`${RESET_OTP_PATH}/${uid}`);
+  const otpRef = admin.database().ref(`${MONITORING_WIPE_OTP_PATH}/${uid}`);
   const existingSnap = await otpRef.get();
   const existing = existingSnap.val() || {};
   const now = Date.now();
@@ -475,7 +590,7 @@ async function requestLiveResetOtp(req) {
   }
 
   const otp = String(Math.floor(100000 + Math.random() * 900000));
-  const actionId = `live-reset-${Date.now()}-${randomStr(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789")}`;
+  const actionId = `monitoring-wipe-${Date.now()}-${randomStr(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789")}`;
   const expiresAt = now + RESET_OTP_TTL_MS;
 
   await otpRef.set({
@@ -487,7 +602,7 @@ async function requestLiveResetOtp(req) {
     requestedByUid: uid,
     requestedByEmail: email,
     status: "otp_sent",
-    targetPath: "/listrik",
+    targetPath: "/listrik + /logs",
   });
 
   try {
@@ -495,12 +610,12 @@ async function requestLiveResetOtp(req) {
     await resend.emails.send({
       from: "onboarding@resend.dev",
       to: email,
-      subject: "🔐 OTP Reset Data Realtime IoT",
-      html: buildResetOtpEmailHTML({ otp, email, expiresAt }),
+      subject: "🔐 OTP Hapus Semua Data Monitoring IoT",
+      html: buildMonitoringWipeOtpEmailHTML({ otp, email, expiresAt }),
     });
   } catch (error) {
     await otpRef.remove();
-    console.error("Gagal kirim OTP reset realtime:", error);
+    console.error("Gagal kirim OTP hapus semua data monitoring:", error);
     throw httpError(500, "Gagal mengirim OTP ke email admin.");
   }
 
@@ -510,11 +625,11 @@ async function requestLiveResetOtp(req) {
     maskedEmail: maskEmail(email),
     expiresAt,
     ttlMs: RESET_OTP_TTL_MS,
-    targetPath: "/listrik",
+    targetPath: "/listrik + /logs",
   };
 }
 
-async function confirmLiveResetOtp(req) {
+async function confirmMonitoringWipeOtp(req) {
   const { uid, email } = await requireAdminRequest(req);
   const otp = String(req.body?.otp || "").trim();
   const actionId = String(req.body?.actionId || "").trim();
@@ -526,7 +641,7 @@ async function confirmLiveResetOtp(req) {
     throw httpError(400, "Action ID tidak ditemukan. Minta OTP baru.");
   }
 
-  const otpRef = admin.database().ref(`${RESET_OTP_PATH}/${uid}`);
+  const otpRef = admin.database().ref(`${MONITORING_WIPE_OTP_PATH}/${uid}`);
   const otpSnap = await otpRef.get();
   const payload = otpSnap.val();
 
@@ -565,7 +680,14 @@ async function confirmLiveResetOtp(req) {
   }
 
   const clearedAtIso = new Date(now).toISOString();
-  await admin.database().ref("/listrik").set(buildClearedListrikPayload(clearedAtIso));
+  await admin.database().ref("/").update({
+    listrik: buildClearedListrikPayload(
+      clearedAtIso,
+      "Semua data monitoring dan histori log dikosongkan oleh admin setelah verifikasi OTP email."
+    ),
+    logs: null,
+    "notifications/system/latest": null,
+  });
   await otpRef.update({
     status: "completed",
     consumedAt: now,
@@ -573,17 +695,17 @@ async function confirmLiveResetOtp(req) {
     clearedByEmail: email,
     otpHash: null,
   });
-  const notificationResults = await sendAdminResetNotifications({
+  const notificationResults = await sendMonitoringWipeNotifications({
     email,
-    targetPath: "/listrik",
+    targetPath: "/listrik + /logs",
     clearedAt: clearedAtIso,
   });
 
   return {
     success: true,
     clearedAt: now,
-    targetPath: "/listrik",
-    message: "Data realtime perangkat IoT berhasil dikosongkan.",
+    targetPath: "/listrik + /logs",
+    message: "Semua data monitoring perangkat IoT berhasil dikosongkan, termasuk histori log.",
     notifications: notificationResults,
   };
 }
@@ -594,4 +716,7 @@ module.exports = {
   setCors,
   requestLiveResetOtp,
   confirmLiveResetOtp,
+  requestMonitoringWipeOtp,
+  confirmMonitoringWipeOtp,
+  PROJECT_CONFIRMATION_TEXT,
 };

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "buildDate": "2026-04-25",
+  "buildDate": "2026-04-26",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard-1.0.0.apk",
@@ -18,7 +18,7 @@
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable-1.0.0.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable-1.0.0.exe",
-        "size": "266.94 MB",
+        "size": "266.95 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
@@ -48,5 +48,5 @@
       }
     }
   },
-  "notes": "Release v1.0.0 refreshed on 2026-04-25 with synced notification updates across web, Windows, Android, and CLI."
+  "notes": "Release v1.0.0 refreshed on 2026-04-26 with settings navigation, Firebase backup email, and updated Windows desktop parity."
 }

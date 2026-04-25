@@ -28,7 +28,104 @@
         gap: 16px;
         margin-bottom: 16px;
       }
+      .settings-shell {
+        display: grid;
+        grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+      .settings-content-stack {
+        min-width: 0;
+      }
+      .settings-subnav {
+        position: sticky;
+        top: 88px;
+        align-self: start;
+      }
+      .settings-subnav-inner {
+        background: rgba(8, 14, 26, 0.9);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 14px;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        box-shadow: var(--shadow-md);
+      }
+      .settings-subnav-title {
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+      }
+      .settings-subnav-caption {
+        font-size: 11.5px;
+        line-height: 1.55;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+      }
+      .settings-subnav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .settings-subnav-link {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.35;
+        border: 1px solid rgba(255,255,255,0.04);
+        background: rgba(255,255,255,0.02);
+        transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition);
+      }
+      .settings-subnav-link:hover {
+        color: var(--text-primary);
+        border-color: rgba(59, 130, 246, 0.25);
+        background: rgba(59, 130, 246, 0.08);
+        transform: translateX(2px);
+      }
+      .settings-subnav-link.is-active {
+        color: #dbeafe;
+        border-color: rgba(59, 130, 246, 0.35);
+        background: rgba(37, 99, 235, 0.18);
+        box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.08);
+      }
+      .settings-subnav-link .material-symbols-rounded {
+        font-size: 17px;
+        opacity: 0.88;
+        flex-shrink: 0;
+      }
+      [data-settings-section] {
+        scroll-margin-top: 92px;
+      }
       @media (max-width: 900px) {
+        .settings-shell {
+          grid-template-columns: 1fr;
+        }
+        .settings-subnav {
+          position: static;
+        }
+        .settings-subnav-inner {
+          padding: 12px;
+        }
+        .settings-subnav-list {
+          flex-direction: row;
+          overflow-x: auto;
+          padding-bottom: 2px;
+          scroll-snap-type: x proximity;
+        }
+        .settings-subnav-link {
+          flex: 0 0 auto;
+          min-width: max-content;
+          scroll-snap-align: start;
+        }
         .settings-grid { grid-template-columns: 1fr; }
       }
 
@@ -355,6 +452,23 @@
           gap: 11px;
           margin-bottom: 11px;
         }
+        .settings-shell {
+          gap: 14px;
+        }
+        .settings-subnav-inner {
+          padding: 11px;
+        }
+        .settings-subnav-title {
+          font-size: 11px;
+        }
+        .settings-subnav-caption {
+          font-size: 11px;
+          margin-bottom: 10px;
+        }
+        .settings-subnav-link {
+          padding: 9px 11px;
+          font-size: 12.5px;
+        }
         .settings-section {
           padding: 14px;
         }
@@ -391,6 +505,9 @@
 
       @media (max-width: 430px) {
         .settings-section { padding: 12px; }
+        .settings-subnav-link {
+          font-size: 12px;
+        }
         .settings-section-title { font-size: 10.5px; }
         .settings-section .form-label { font-size: 11px; }
         .settings-section .form-input,
@@ -404,6 +521,7 @@
         .settings-section { padding: 11px 10px; }
         .settings-section .form-input,
         .settings-section .form-select { padding: 7px 9px; }
+        .settings-subnav-inner { padding: 10px; }
         .save-bar { padding: 10px 12px; }
       }
     </style>
@@ -465,16 +583,69 @@
         </header>
 
         <main class="page-content">
-          <!-- ── Runtime Config notice ─────────────────────────── -->
-          <div class="runtime-notice">
-            <span class="material-symbols-rounded">sync</span>
-            <span><strong>Runtime Configuration:</strong> Perubahan di halaman ini langsung disimpan ke Firebase <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa upload firmware</strong>.</span>
-          </div>
+          <div class="settings-shell">
+            <aside class="settings-subnav" aria-label="Navigasi pengaturan sistem">
+              <div class="settings-subnav-inner">
+                <div class="settings-subnav-title">Navigasi Settings</div>
+                <div class="settings-subnav-caption">
+                  Lompat langsung ke bagian yang kamu butuhkan supaya halaman admin tetap ringan dibaca.
+                </div>
+                <nav id="settingsSubnav" class="settings-subnav-list">
+                  <a class="settings-subnav-link" href="#settingsSystemSection" data-settings-nav="settingsSystemSection">
+                    <span class="material-symbols-rounded">sensors</span>
+                    <span>Umum &amp; Sensor</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#settingsCalibrationSection" data-settings-nav="settingsCalibrationSection">
+                    <span class="material-symbols-rounded">tune</span>
+                    <span>Kalibrasi</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#settingsTelegramSection" data-settings-nav="settingsTelegramSection">
+                    <span class="material-symbols-rounded">send</span>
+                    <span>Telegram</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#settingsDiscordSection" data-settings-nav="settingsDiscordSection">
+                    <span class="material-symbols-rounded">forum</span>
+                    <span>Discord</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#deviceBootstrapSection" data-settings-nav="deviceBootstrapSection">
+                    <span class="material-symbols-rounded">wifi</span>
+                    <span>Bootstrap Device</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#liveDataResetSection" data-settings-nav="liveDataResetSection">
+                    <span class="material-symbols-rounded">ink_eraser</span>
+                    <span>Reset Realtime</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#databaseBackupSection" data-settings-nav="databaseBackupSection">
+                    <span class="material-symbols-rounded">backup</span>
+                    <span>Backup Database</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#monitoringWipeSection" data-settings-nav="monitoringWipeSection">
+                    <span class="material-symbols-rounded">delete_sweep</span>
+                    <span>Hapus Monitoring</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#settingsClientSection" data-settings-nav="settingsClientSection">
+                    <span class="material-symbols-rounded">cloud_sync</span>
+                    <span>Backend Web</span>
+                  </a>
+                  <a class="settings-subnav-link" href="#settingsUsersSection" data-settings-nav="settingsUsersSection">
+                    <span class="material-symbols-rounded">manage_accounts</span>
+                    <span>Pengguna</span>
+                  </a>
+                </nav>
+              </div>
+            </aside>
 
-          <!-- ── Settings grid (2 columns) ─────────────────────── -->
-          <div class="settings-grid">
+            <div class="settings-content-stack">
+              <!-- ── Runtime Config notice ─────────────────────────── -->
+              <div class="runtime-notice">
+                <span class="material-symbols-rounded">sync</span>
+                <span><strong>Runtime Configuration:</strong> Perubahan di halaman ini langsung disimpan ke Firebase <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa upload firmware</strong>.</span>
+              </div>
+
+              <!-- ── Settings grid (2 columns) ─────────────────────── -->
+              <div class="settings-grid">
             <!-- Card 1: Sistem & Sensor ─────────────────────────── -->
-            <div class="settings-section">
+            <div id="settingsSystemSection" class="settings-section" data-settings-section>
               <div class="settings-section-title"><span class="material-symbols-rounded">sensors</span>Sistem &amp; Sensor</div>
 
               <div class="form-group">
@@ -562,7 +733,7 @@
             </div>
 
             <!-- Card 2: Kalibrasi Sensor ─────────────────────────── -->
-            <div class="settings-section">
+            <div id="settingsCalibrationSection" class="settings-section" data-settings-section>
               <div class="settings-section-title"><span class="material-symbols-rounded">tune</span>Kalibrasi Sensor</div>
               <div class="info-panel info-panel--yellow">
                 Prosedur kalibrasi: bandingkan pembacaan ESP32 dengan alat ukur referensi.<br />
@@ -649,7 +820,7 @@
             </div>
 
             <!-- Card 3: Telegram ─────────────────────────────────── -->
-            <div class="settings-section telegram-settings-section" style="grid-column: 1 / -1">
+            <div id="settingsTelegramSection" class="settings-section telegram-settings-section" style="grid-column: 1 / -1" data-settings-section>
               <div class="settings-section-title"><span class="material-symbols-rounded">send</span>Konfigurasi Telegram</div>
               <div class="info-panel info-panel--green telegram-info-panel">
                 <strong>Aman:</strong> Token dan daftar Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
@@ -729,7 +900,7 @@
             </div>
 
             <!-- Card 4: Discord Webhook ──────────────────────────── -->
-            <div class="settings-section" style="grid-column: 1 / -1">
+            <div id="settingsDiscordSection" class="settings-section" style="grid-column: 1 / -1" data-settings-section>
               <div class="settings-section-title">
                 <span class="material-symbols-rounded" style="color:#5865F2">forum</span>
                 Integrasi Discord Webhook
@@ -828,6 +999,7 @@
               id="deviceBootstrapSection"
               class="settings-section"
               style="grid-column: 1 / -1"
+              data-settings-section
               hidden
             >
               <div class="settings-section-title">
@@ -967,6 +1139,7 @@
               id="liveDataResetSection"
               class="settings-section"
               style="grid-column: 1 / -1"
+              data-settings-section
               hidden
             >
               <div class="settings-section-title">
@@ -1021,9 +1194,59 @@
             </div>
 
             <div
+              id="databaseBackupSection"
+              class="settings-section"
+              style="grid-column: 1 / -1"
+              data-settings-section
+              hidden
+            >
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded">backup</span>
+                Backup Database Firebase
+              </div>
+              <div class="info-panel info-panel--yellow" style="margin-bottom: 14px;">
+                <strong>Khusus admin utama:</strong> aksi ini membuat salinan database Realtime Database dalam format
+                JSON dan melampirkan file <code>database.rules.json</code> aktif dari project workspace ini ke email admin.
+                <br />
+                Backup ini tidak mengubah data apa pun di Firebase.
+              </div>
+
+              <div class="info-panel info-panel--blue" style="margin-bottom: 14px;">
+                <strong>Cocok dipakai sebelum reset atau hapus data monitoring.</strong> File yang dikirim berisi snapshot RTDB saat tombol dijalankan, sehingga kamu punya arsip sebelum melakukan perubahan besar.
+              </div>
+
+              <div id="adminDatabaseBackupEmail" class="form-hint" style="margin-bottom: 12px;"></div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label">Lampiran Backup</label>
+                  <div class="info-panel info-panel--green" style="margin-bottom: 0;">
+                    Email akan berisi dua lampiran: <code>default-rtdb-export.json</code> dan <code>database-rules.json</code>.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dampak Aksi</label>
+                  <div class="info-panel info-panel--green" style="margin-bottom: 0;">
+                    Hanya membuat dan mengirim backup. Data realtime, histori log, settings, dan user tidak disentuh.
+                  </div>
+                </div>
+              </div>
+
+              <div id="databaseBackupStatus" class="settings-save-status" style="margin-bottom: 6px;"></div>
+              <div id="databaseBackupMeta" class="form-hint" style="margin-bottom: 14px;"></div>
+
+              <div class="settings-btn-cluster">
+                <button id="sendDatabaseBackupBtn" class="btn btn-primary">
+                  <span class="material-symbols-rounded">mail</span> Kirim Backup Database ke Email Admin
+                </button>
+              </div>
+            </div>
+
+            <div
               id="monitoringWipeSection"
               class="settings-section"
               style="grid-column: 1 / -1"
+              data-settings-section
               hidden
             >
               <div class="settings-section-title">
@@ -1083,7 +1306,7 @@
             </div>
 
             <!-- Client: backend & failover (localStorage — per browser) -->
-            <div class="settings-section" style="grid-column: 1 / -1">
+            <div id="settingsClientSection" class="settings-section" style="grid-column: 1 / -1" data-settings-section>
               <div class="settings-section-title">
                 <span class="material-symbols-rounded">cloud_sync</span>
                 Backend &amp; Failover (klien web)
@@ -1191,7 +1414,7 @@
           <!-- /settings-grid -->
 
           <!-- ── User Management ────────────────────────────────── -->
-          <div class="settings-section" style="margin-bottom: 16px">
+          <div id="settingsUsersSection" class="settings-section" style="margin-bottom: 16px" data-settings-section>
             <div class="settings-section-title"><span class="material-symbols-rounded">manage_accounts</span>Manajemen Pengguna</div>
             <div class="user-module-header">
               <span style="font-size: 12px; color: var(--text-muted);">Kelola akses pengguna sistem</span>
@@ -1243,6 +1466,8 @@
             <button id="saveSettingsBtn" class="btn btn-primary">
               <span class="material-symbols-rounded">save</span> Simpan Semua Settings
             </button>
+          </div>
+            </div>
           </div>
         </main>
       </div>

@@ -35,6 +35,11 @@ interface DeviceBootstrapSettings {
   iotPassword?: string;
 }
 
+interface DatabaseBackupAttachment {
+  filename: string;
+  sizeLabel?: string;
+}
+
 function normalizeTelegramChatId(value: unknown): string {
   const id = String(value ?? '').trim();
   return /^-?\d+$/.test(id) ? id : '';
@@ -110,7 +115,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const { settings, users } = useDataStore();
   const { role, user, isTempAccount } = useAuthStore();
   const [tab, setTab] = useState<
-    'system' | 'calibration' | 'telegram' | 'discord' | 'device' | 'backend' | 'users'
+    'system' | 'calibration' | 'telegram' | 'discord' | 'device' | 'backup' | 'backend' | 'users'
   >('system');
   const [loading, setLoading] = useState(false);
   const [clientCfg, setClientCfg] = useState<ClientBackendConfig>(() =>
@@ -186,6 +191,11 @@ export function Settings({ onLogout }: SettingsProps) {
   const [monitoringWipeMaskedEmail, setMonitoringWipeMaskedEmail] = useState('');
   const [monitoringWipeState, setMonitoringWipeState] = useState<'idle' | 'otp_sent' | 'success' | 'error'>('idle');
   const [monitoringWipeMessage, setMonitoringWipeMessage] = useState('Aksi ini akan mengosongkan data realtime /listrik dan menghapus histori log /logs setelah OTP email diverifikasi.');
+  const [databaseBackupState, setDatabaseBackupState] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [databaseBackupMessage, setDatabaseBackupMessage] = useState('Bagian ini membuat snapshot Realtime Database saat ini dan mengirimkannya bersama file rules ke email admin yang sedang login.');
+  const [databaseBackupMaskedEmail, setDatabaseBackupMaskedEmail] = useState('');
+  const [databaseBackupAttachments, setDatabaseBackupAttachments] = useState<DatabaseBackupAttachment[]>([]);
+  const [databaseBackupTopLevelKeys, setDatabaseBackupTopLevelKeys] = useState<string[]>([]);
   const LIVE_RESET_CONFIRMATION_TEXT = 'IoT Listrik Dashboard';
 
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -201,6 +211,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showDevicePassword, setShowDevicePassword] = useState(false);
   const [liveResetLoading, setLiveResetLoading] = useState(false);
   const [monitoringWipeLoading, setMonitoringWipeLoading] = useState(false);
+  const [databaseBackupLoading, setDatabaseBackupLoading] = useState(false);
 
   const isAdmin = role === 'admin';
   const canManageDeviceBootstrap = isAdmin && !isTempAccount;
@@ -226,6 +237,12 @@ export function Settings({ onLogout }: SettingsProps) {
     success: 'Hapus berhasil',
     error: 'Perlu perhatian',
   }[monitoringWipeState];
+  const databaseBackupStatusLabel = {
+    idle: 'Siap',
+    sending: 'Sedang membuat backup',
+    success: 'Backup terkirim',
+    error: 'Perlu perhatian',
+  }[databaseBackupState];
 
   useEffect(() => {
     const next = (settings?.deviceBootstrap || {}) as DeviceBootstrapSettings;
@@ -617,6 +634,43 @@ export function Settings({ onLogout }: SettingsProps) {
     }
   };
 
+  const handleSendDatabaseBackup = async () => {
+    if (!canManageDeviceBootstrap) return;
+
+    setDatabaseBackupLoading(true);
+    setDatabaseBackupState('sending');
+    setDatabaseBackupMessage('Snapshot database sedang dibuat dan dipersiapkan untuk dikirim ke email admin.');
+
+    try {
+      const data = await callLiveResetApi('send-database-backup-email', {});
+      const sentLabel = data.sentAt
+        ? new Date(Number(data.sentAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+        : 'baru saja';
+
+      setDatabaseBackupState('success');
+      setDatabaseBackupMessage(`Backup database berhasil dikirim pada ${sentLabel} WIB.`);
+      setDatabaseBackupMaskedEmail(String(data.maskedEmail || user?.email || ''));
+      setDatabaseBackupAttachments(
+        Array.isArray(data.attachments)
+          ? (data.attachments as DatabaseBackupAttachment[])
+          : []
+      );
+      setDatabaseBackupTopLevelKeys(
+        Array.isArray(data.topLevelKeys)
+          ? data.topLevelKeys.map((item) => String(item))
+          : []
+      );
+      notifyDesktop('Backup database terkirim', 'Snapshot RTDB dan database rules berhasil dikirim ke email admin.');
+    } catch (error) {
+      const msg = getCallableErrorMessage(error, 'Gagal mengirim backup database Firebase.');
+      setDatabaseBackupState('error');
+      setDatabaseBackupMessage(msg);
+      notifyDesktop('Gagal mengirim backup database', msg);
+    } finally {
+      setDatabaseBackupLoading(false);
+    }
+  };
+
   const testDiscordWebhook = async () => {
     if (!discordAlerts.startsWith('https://discord.com/api/webhooks/')) {
       notifyDesktop('Test Discord', 'Isi Webhook #alerts terlebih dahulu untuk test.');
@@ -716,6 +770,7 @@ export function Settings({ onLogout }: SettingsProps) {
             ['telegram', 'Telegram'],
             ['discord', 'Discord'],
             ['device', 'Device'],
+            ['backup', 'Backup'],
             ['backend', 'Backend'],
             ['users', 'Users'],
           ] as const
@@ -1443,6 +1498,99 @@ export function Settings({ onLogout }: SettingsProps) {
                 {monitoringWipeLoading ? 'Memproses...' : 'Hapus Semua Data Monitoring'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Database Backup Tab */}
+      {tab === 'backup' && (
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow space-y-5">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Backup Database Firebase
+            </h3>
+            <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+              Buat snapshot Realtime Database saat ini dan kirim bersama file rules Firebase ke
+              email admin yang sedang login.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+            <strong className="font-semibold">Khusus admin utama:</strong> aksi ini hanya membuat
+            salinan backup. Database tidak diubah, histori tidak dihapus, dan device yang sedang
+            online tetap berjalan normal.
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+            <div className="font-semibold">Tujuan email backup</div>
+            <div className="mt-2">
+              File backup akan dikirim ke email admin yang sedang login:{' '}
+              <strong>{user?.email || '—'}</strong>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+              <div className="font-semibold">Lampiran email</div>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>Snapshot penuh Realtime Database dalam format JSON</li>
+                <li>File rules Firebase dari project ini</li>
+              </ul>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+              <div className="font-semibold">Dampak aksi</div>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>Tidak ada data monitoring yang diubah</li>
+                <li>Tidak mengganggu notifikasi dan koneksi device</li>
+                <li>Cocok untuk arsip, audit, atau restore manual</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+            <div className="font-semibold">Status backup: {databaseBackupStatusLabel}</div>
+            <div className="mt-2">{databaseBackupMessage}</div>
+            {databaseBackupMaskedEmail && (
+              <div className="mt-2">Email tujuan: {databaseBackupMaskedEmail}</div>
+            )}
+            {databaseBackupAttachments.length > 0 && (
+              <div className="mt-3">
+                <div className="font-semibold">Lampiran terakhir</div>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {databaseBackupAttachments.map((attachment) => (
+                    <li key={attachment.filename}>
+                      {attachment.filename}
+                      {attachment.sizeLabel ? ` (${attachment.sizeLabel})` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {databaseBackupTopLevelKeys.length > 0 && (
+              <div className="mt-3">
+                <div className="font-semibold">Node level atas yang tercakup</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {databaseBackupTopLevelKeys.map((item) => (
+                    <span
+                      key={item}
+                      className="inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-blue-900 dark:bg-white/10 dark:text-blue-100"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleSendDatabaseBackup}
+              disabled={databaseBackupLoading || !canManageDeviceBootstrap}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+            >
+              {databaseBackupLoading ? 'Menyiapkan backup...' : 'Kirim Backup Database ke Email Admin'}
+            </button>
           </div>
         </div>
       )}

@@ -780,6 +780,8 @@ module.exports = {
   ensureAdminApp,
   initErrorMsg,
   setCors,
+  httpError,
+  requireAdminRequest,
   requestLiveResetOtp,
   confirmLiveResetOtp,
   requestMonitoringWipeOtp,

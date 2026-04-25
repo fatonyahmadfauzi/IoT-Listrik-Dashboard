@@ -20,6 +20,7 @@
  * Fitur sensitif yang memakai Vercel API + Admin SDK:
  *   - Konfirmasi nama project untuk reset data realtime /listrik
  *   - OTP email untuk hapus semua data monitoring (/listrik + /logs)
+ *   - Backup snapshot RTDB + database.rules.json ke email admin
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -97,6 +98,7 @@ window.toggleReveal = (inputId, btn) => {
 // ── DOM: Controls ─────────────────────────────────────────────
 const saveBtn         = document.getElementById('saveSettingsBtn');
 const saveStatus      = document.getElementById('saveStatus');
+const settingsSubnav  = document.getElementById('settingsSubnav');
 
 // ── DOM: Device bootstrap / Wi-Fi management (admin only) ────
 const deviceBootstrapSection = document.getElementById('deviceBootstrapSection');
@@ -129,11 +131,19 @@ const confirmMonitoringWipeBtn  = document.getElementById('confirmMonitoringWipe
 const monitoringWipeStatus      = document.getElementById('monitoringWipeStatus');
 const monitoringWipeMeta        = document.getElementById('monitoringWipeMeta');
 
+const databaseBackupSection     = document.getElementById('databaseBackupSection');
+const adminDatabaseBackupEmail  = document.getElementById('adminDatabaseBackupEmail');
+const sendDatabaseBackupBtn     = document.getElementById('sendDatabaseBackupBtn');
+const databaseBackupStatus      = document.getElementById('databaseBackupStatus');
+const databaseBackupMeta        = document.getElementById('databaseBackupMeta');
+
 const LIVE_RESET_CONFIRMATION_TEXT = 'IoT Listrik Dashboard';
 
 let monitoringWipeActionId = '';
 let monitoringWipeExpiresAt = 0;
 let monitoringWipeMaskedEmail = '';
+let latestDatabaseBackupPayload = null;
+let settingsSubnavBound = false;
 
 // ── Helper: Reload config di sim-notifier setelah settings disimpan ────────
 async function reloadSimNotifierConfig() {
@@ -529,6 +539,78 @@ async function callLiveResetApi(path, body = {}) {
   return data;
 }
 
+function getVisibleSettingsSections() {
+  return Array.from(document.querySelectorAll('[data-settings-section]'))
+    .filter((section) => !section.hidden);
+}
+
+function setActiveSettingsSubnav(sectionId = '') {
+  if (!settingsSubnav) return;
+  settingsSubnav.querySelectorAll('[data-settings-nav]').forEach((link) => {
+    link.classList.toggle('is-active', link.dataset.settingsNav === sectionId && !link.hidden);
+  });
+}
+
+function syncSettingsSubnavVisibility() {
+  if (!settingsSubnav) return;
+
+  const links = Array.from(settingsSubnav.querySelectorAll('[data-settings-nav]'));
+  links.forEach((link) => {
+    const section = document.getElementById(link.dataset.settingsNav || '');
+    const visible = !!section && !section.hidden;
+    link.hidden = !visible;
+    link.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  });
+
+  const activeVisible = links.find((link) => !link.hidden && link.classList.contains('is-active'));
+  if (!activeVisible) {
+    const firstVisible = links.find((link) => !link.hidden);
+    setActiveSettingsSubnav(firstVisible?.dataset.settingsNav || '');
+  }
+}
+
+function updateSettingsSubnavOnScroll() {
+  if (!settingsSubnav) return;
+
+  const sections = getVisibleSettingsSections();
+  if (!sections.length) return;
+
+  const activationOffset = 140;
+  let activeId = sections[0].id;
+  sections.forEach((section) => {
+    const top = section.getBoundingClientRect().top;
+    if (top - activationOffset <= 0) {
+      activeId = section.id;
+    }
+  });
+  setActiveSettingsSubnav(activeId);
+}
+
+function refreshSettingsSubnav() {
+  syncSettingsSubnavVisibility();
+  updateSettingsSubnavOnScroll();
+}
+
+function initSettingsSubnav() {
+  if (!settingsSubnav || settingsSubnavBound) return;
+
+  settingsSubnav.addEventListener('click', (event) => {
+    const link = event.target.closest('[data-settings-nav]');
+    if (!link || link.hidden) return;
+
+    const target = document.getElementById(link.dataset.settingsNav || '');
+    if (!target) return;
+
+    event.preventDefault();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSettingsSubnav(target.id);
+  });
+
+  window.addEventListener('scroll', updateSettingsSubnavOnScroll, { passive: true });
+  window.addEventListener('resize', updateSettingsSubnavOnScroll);
+  settingsSubnavBound = true;
+}
+
 function setDeviceBootstrapVisibility() {
   if (!deviceBootstrapSection) return;
   deviceBootstrapSection.hidden = !isRealAdminSettingsSession();
@@ -551,6 +633,17 @@ function setMonitoringWipeVisibility() {
     adminMonitoringWipeEmail.textContent = currentUser?.email
       ? `OTP akan dikirim ke email admin yang sedang login: ${currentUser.email}`
       : 'OTP akan dikirim ke email admin yang sedang login.';
+  }
+}
+
+function setDatabaseBackupVisibility() {
+  if (!databaseBackupSection) return;
+  databaseBackupSection.hidden = !isRealAdminSettingsSession();
+  if (adminDatabaseBackupEmail) {
+    const currentUser = getCurrentUser();
+    adminDatabaseBackupEmail.textContent = currentUser?.email
+      ? `Backup akan dikirim ke email admin yang sedang login: ${currentUser.email}`
+      : 'Backup akan dikirim ke email admin yang sedang login.';
   }
 }
 
@@ -637,6 +730,36 @@ function renderMonitoringWipeState({ type = 'idle', message = '' } = {}) {
     parts.push('Aksi ini akan mengosongkan data realtime /listrik dan menghapus histori log /logs setelah OTP email diverifikasi.');
   }
   monitoringWipeMeta.innerHTML = parts.join('<br>');
+}
+
+function renderDatabaseBackupState({ type = 'idle', message = '', details = null } = {}) {
+  if (!databaseBackupStatus || !databaseBackupMeta) return;
+
+  if (details) latestDatabaseBackupPayload = details;
+  const payload = details || latestDatabaseBackupPayload || {};
+
+  const statusMap = {
+    idle: 'Siap',
+    sending: 'Sedang membuat backup',
+    success: 'Backup terkirim',
+    error: 'Perlu perhatian',
+  };
+
+  databaseBackupStatus.textContent = statusMap[type] || 'Siap';
+
+  const parts = [];
+  if (message) parts.push(message);
+  if (payload.maskedEmail) parts.push(`Email tujuan: ${payload.maskedEmail}`);
+  if (Array.isArray(payload.attachments) && payload.attachments.length) {
+    parts.push(`Lampiran: ${payload.attachments.map((item) => `${item.filename} (${item.sizeLabel || 'ukuran tidak tersedia'})`).join(' • ')}`);
+  }
+  if (Array.isArray(payload.topLevelKeys) && payload.topLevelKeys.length) {
+    parts.push(`Node utama RTDB: ${payload.topLevelKeys.join(', ')}`);
+  }
+  if (!parts.length) {
+    parts.push('Bagian ini membuat snapshot Realtime Database saat ini dan mengirimkannya bersama file rules ke email admin yang sedang login.');
+  }
+  databaseBackupMeta.innerHTML = parts.join('<br>');
 }
 
 function validateDeviceBootstrapPayload() {
@@ -913,6 +1036,48 @@ async function confirmMonitoringWipe() {
     if (confirmMonitoringWipeBtn) {
       confirmMonitoringWipeBtn.disabled = false;
       confirmMonitoringWipeBtn.innerHTML = '<span class="material-symbols-rounded">delete_sweep</span> Hapus Semua Data Monitoring';
+    }
+  }
+}
+
+async function sendDatabaseBackupEmail() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Fitur backup database hanya untuk admin utama.', 'error');
+    return;
+  }
+
+  try {
+    if (sendDatabaseBackupBtn) {
+      sendDatabaseBackupBtn.disabled = true;
+      sendDatabaseBackupBtn.innerHTML = '<span class="material-symbols-rounded">backup</span> Menyiapkan backup...';
+    }
+
+    renderDatabaseBackupState({
+      type: 'sending',
+      message: 'Snapshot database sedang dibuat dan dipersiapkan untuk dikirim ke email admin.',
+    });
+
+    const data = await callLiveResetApi('send-database-backup-email', {});
+    const sentLabel = data.sentAt
+      ? new Date(Number(data.sentAt)).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })
+      : 'baru saja';
+
+    renderDatabaseBackupState({
+      type: 'success',
+      message: `Backup database berhasil dikirim pada ${sentLabel} WIB.`,
+      details: data,
+    });
+    showToast('Backup database Firebase berhasil dikirim ke email admin.', 'success');
+  } catch (err) {
+    renderDatabaseBackupState({
+      type: 'error',
+      message: getCallableErrorMessage(err, 'Gagal mengirim backup database Firebase.'),
+    });
+    showToast(getCallableErrorMessage(err, 'Gagal mengirim backup database Firebase.'), 'error');
+  } finally {
+    if (sendDatabaseBackupBtn) {
+      sendDatabaseBackupBtn.disabled = false;
+      sendDatabaseBackupBtn.innerHTML = '<span class="material-symbols-rounded">mail</span> Kirim Backup Database ke Email Admin';
     }
   }
 }
@@ -1319,11 +1484,15 @@ initPage({
   onAuthed: (user, role) => {
     populateSidebar(user, role);
     initSidebarToggle();
+    initSettingsSubnav();
     setDeviceBootstrapVisibility();
     setLiveDataResetVisibility();
+    setDatabaseBackupVisibility();
     setMonitoringWipeVisibility();
     renderLiveDataResetState();
+    renderDatabaseBackupState();
     renderMonitoringWipeState();
+    refreshSettingsSubnav();
     initTelegramChatManager();
     loadSettings();
     loadClientConfigUi();
@@ -1335,6 +1504,7 @@ initPage({
     saveDeviceBootstrapBtn?.addEventListener('click', saveDeviceBootstrapSettings);
     clearDeviceBootstrapBtn?.addEventListener('click', clearDeviceBootstrapSettings);
     confirmLiveResetBtn?.addEventListener('click', confirmLiveDataReset);
+    sendDatabaseBackupBtn?.addEventListener('click', sendDatabaseBackupEmail);
     sendMonitoringWipeOtpBtn?.addEventListener('click', requestMonitoringWipeOtp);
     confirmMonitoringWipeBtn?.addEventListener('click', confirmMonitoringWipe);
     testDiscordBtn?.addEventListener('click', testDiscordWebhook);

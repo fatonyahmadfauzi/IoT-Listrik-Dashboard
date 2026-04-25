@@ -285,107 +285,148 @@ async function sendAdminResetNotifications({ email, targetPath, clearedAt }) {
 }
 
 function buildResetOtpEmailHTML({ otp, email, expiresAt }) {
-  const expiresStr = new Date(expiresAt).toLocaleString("id-ID", {
+  const d = new Date(expiresAt);
+  const timeStr = d.toLocaleString("id-ID", {
     timeZone: "Asia/Jakarta",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    day: "2-digit",
+  });
+  const dateStr = d.toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    day: "numeric",
     month: "long",
     year: "numeric",
   });
 
   return `<!DOCTYPE html>
-<html lang="id">
+<html lang="id" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta name="x-apple-disable-message-reformatting"/>
 <title>OTP Reset Data IoT</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<![endif]-->
 <style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; }
   @media only screen and (max-width:600px) {
-    .container { width: 100% !important; }
-    .outer-shell { padding: 18px 14px 22px !important; border-radius: 26px !important; }
-    .otp-panel,
-    .info-panel,
-    .warning-panel { padding: 22px 18px !important; }
-    .otp-code {
-      font-size: 30px !important;
-      letter-spacing: 8px !important;
-      padding: 18px 20px !important;
-    }
+    .container { width: 100% !important; padding: 0 12px !important; }
+    .card-pad { padding: 28px 20px !important; }
+    .otp-value { font-size: 26px !important; letter-spacing: 5px !important; }
+    .detail-card { padding: 16px 18px !important; }
+    .footer-text { font-size: 12px !important; }
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;">
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Kode OTP admin untuk reset data realtime sensor perangkat IoT telah dibuat. Gunakan dalam 10 menit.</div>
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
-  <tr>
-    <td align="center" style="padding:24px 12px 28px;">
-      <table class="container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<body style="margin:0;padding:0;background-color:#060c18;word-spacing:normal;">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Kode OTP admin untuk reset data realtime sensor perangkat IoT telah dibuat. Gunakan dalam 10 menit.&#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;</div>
+
+<!--[if mso | IE]><table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#060c18;">
+<tr><td align="center" style="padding:48px 16px 40px;">
+  <table class="container" role="presentation" border="0" cellpadding="0" cellspacing="0" width="560" style="max-width:560px;width:100%;">
+
+    <tr><td align="center" style="padding-bottom:32px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0">
         <tr>
-          <td class="outer-shell" style="background:#eef0ff;border:1px solid #d9ddfb;border-radius:30px;padding:22px 20px 26px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="padding-bottom:18px;">
-                  <table width="100%" cellpadding="0" cellspacing="0" class="otp-panel" style="background:#f8e8ee;border:1.5px solid #e6b3bf;border-radius:28px;padding:24px 20px;">
-                    <tr>
-                      <td align="center">
-                        <p style="margin:0 0 18px;font-size:14px;font-weight:500;letter-spacing:4px;color:#ab6e79;">KODE OTP</p>
-                        <div class="otp-code" style="display:inline-block;background:#efe7ee;border-radius:18px;padding:20px 28px;font-family:'Courier New',Courier,monospace;font-size:36px;font-weight:700;letter-spacing:10px;color:#2f3441;line-height:1;">
-                          ${otp}
-                        </div>
-                        <p style="margin:20px 0 0;font-size:16px;color:#8b6d20;line-height:1.5;">
-                          Berlaku sampai ${expiresStr} WIB
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
+          <td style="background-color:#1d4ed8;width:44px;height:44px;border-radius:12px;text-align:center;vertical-align:middle;font-size:22px;line-height:44px;">
+            &#128274;
+          </td>
+          <td style="padding-left:12px;vertical-align:middle;">
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:17px;font-weight:700;color:#f1f5f9;line-height:1;">IoT Listrik Dashboard</p>
+            <p style="margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#4b5563;line-height:1;">Verifikasi Reset Data Realtime</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
 
-              <tr>
-                <td style="padding-bottom:18px;">
-                  <table width="100%" cellpadding="0" cellspacing="0" class="info-panel" style="background:#edf3ff;border:1.5px solid #bfd2fb;border-radius:28px;padding:24px 22px;">
-                    <tr>
-                      <td>
-                        <p style="margin:0 0 14px;font-size:16px;font-weight:700;color:#42526e;line-height:1.5;">Yang akan terjadi setelah OTP benar:</p>
-                        <ul style="margin:0;padding-left:26px;font-size:16px;color:#5f6674;line-height:1.9;">
-                          <li>Data realtime sensor di <strong>/listrik</strong> akan direset ke nilai kosong/default.</li>
-                          <li>Histori log tidak dihapus.</li>
-                          <li>Jika device fisik masih online, data baru bisa muncul lagi pada heartbeat berikutnya.</li>
-                        </ul>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
+    <tr><td class="card-pad" style="background-color:#0f1729;border:1px solid #1e2d45;border-radius:20px;padding:36px 32px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+        <tr>
+          <td style="background-color:#3f0a0a;border:1px solid #dc2626;border-radius:100px;padding:5px 16px 5px 12px;">
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;font-weight:700;color:#fca5a5;letter-spacing:0.3px;">&#128274;&nbsp; OTP Verifikasi Admin</p>
+          </td>
+        </tr>
+      </table>
 
+      <h1 style="margin:0 0 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;line-height:1.15;">Kode OTP Siap Digunakan</h1>
+      <p style="margin:0 0 32px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;color:#6b7280;line-height:1.65;">
+        Permintaan ini berasal dari akun admin <strong style="color:#e5e7eb;">${email}</strong> untuk mengosongkan data realtime sensor perangkat IoT pada node
+        <strong style="color:#93c5fd;">/listrik</strong>.
+      </p>
+
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
+        <tr>
+          <td style="background-color:#030d1f;border:1px solid #1e3a5f;border-left:3px solid #f43f5e;border-radius:14px;padding:18px 20px;">
+            <p style="margin:0 0 7px;font-family:'Courier New',Courier,monospace;font-size:10px;font-weight:700;color:#fb7185;text-transform:uppercase;letter-spacing:1px;">KODE OTP</p>
+            <p class="otp-value" style="margin:0;font-family:'Courier New',Courier,monospace;font-size:32px;font-weight:800;color:#f8fafc;letter-spacing:8px;line-height:1.2;">${otp}</p>
+          </td>
+        </tr>
+      </table>
+
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:20px;">
+        <tr>
+          <td style="background-color:#1c0f00;border:1px solid #78350f;border-radius:14px;padding:14px 20px;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
               <tr>
-                <td>
-                  <table width="100%" cellpadding="0" cellspacing="0" class="warning-panel" style="background:#f5efe8;border:1.5px solid #d8c5a8;border-radius:28px;padding:22px 22px;">
-                    <tr>
-                      <td>
-                        <p style="margin:0;font-size:16px;color:#6e5a2b;line-height:1.8;">
-                          Abaikan email ini jika Anda tidak sedang meminta reset data realtime perangkat IoT.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
+                <td style="vertical-align:middle;">
+                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;">&#9201;&nbsp; Kadaluarsa</p>
+                  <p style="margin:4px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;color:#fbbf24;line-height:1.3;">${timeStr} WIB &mdash; ${dateStr}</p>
+                </td>
+                <td align="right" style="vertical-align:middle;white-space:nowrap;padding-left:12px;">
+                  <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:800;color:#f59e0b;background-color:#292001;border-radius:8px;padding:6px 12px;">10 MENIT</p>
                 </td>
               </tr>
             </table>
           </td>
         </tr>
+      </table>
 
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
         <tr>
-          <td align="center" style="padding:22px 16px 0;">
-            <p style="margin:0;font-size:12px;color:#c7ccd7;line-height:1.7;">&copy; 2026 IoT Listrik Dashboard</p>
+          <td class="detail-card" style="background-color:#080f1f;border:1px solid #1e2d45;border-radius:14px;padding:18px 20px;">
+            <p style="margin:0 0 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;color:#f1f5f9;line-height:1.5;">Yang akan terjadi setelah OTP benar</p>
+            <ul style="margin:0;padding-left:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:#cbd5e1;line-height:1.9;">
+              <li>Data realtime sensor di <strong>/listrik</strong> akan direset ke nilai kosong/default.</li>
+              <li>Histori log tidak dihapus.</li>
+              <li>Jika device fisik masih online, data baru bisa muncul lagi pada heartbeat berikutnya.</li>
+            </ul>
           </td>
         </tr>
       </table>
-    </td>
-  </tr>
+
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td class="detail-card" style="background-color:#1c0f00;border:1px solid #78350f;border-radius:14px;padding:16px 20px;">
+            <p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;color:#fbbf24;line-height:1.8;">
+              Abaikan email ini jika Anda tidak sedang meminta reset data realtime perangkat IoT.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+
+    <tr><td style="height:32px;"></td></tr>
+
+    <tr><td align="center">
+      <p class="footer-text" style="margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#374151;line-height:1.7;">
+        Email ini dikirim otomatis. Jangan balas email ini.
+      </p>
+      <p class="footer-text" style="margin:8px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#6b7280;line-height:1.7;">
+        &copy; 2025 <strong style="color:#9ca3af;font-weight:600;">IoT Listrik Dashboard</strong><br>
+        <span style="color:#4b5563;font-size:11px;">Sistem Deteksi Kebocoran Arus &nbsp;&middot;&nbsp; Built by Fatony Ahmad Fauzi</span>
+      </p>
+    </td></tr>
+
+  </table>
+</td></tr>
 </table>
+<!--[if mso | IE]></td></tr></table><![endif]-->
 </body>
 </html>`;
 }

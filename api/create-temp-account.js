@@ -210,8 +210,7 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
     <!-- ━━━ E. FOOTER ━━━ -->
     <tr><td align="center">
       <p style="margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#374151;line-height:1.7;">
-        Email ini dikirim otomatis. Jangan balas email ini.<br>
-        Data akun dan sesi akan dihapus otomatis setelah <strong style="color:#4b5563;">15 menit</strong>.
+        Email ini dikirim otomatis. Jangan balas email ini.
       </p>
       <p style="margin:8px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:12px;color:#6b7280;line-height:1.7;">
         &copy; 2025 <strong style="color:#9ca3af;font-weight:600;">IoT Listrik Dashboard</strong><br>

@@ -99,6 +99,7 @@ window.toggleReveal = (inputId, btn) => {
 const saveBtn         = document.getElementById('saveSettingsBtn');
 const saveStatus      = document.getElementById('saveStatus');
 const settingsSubnav  = document.getElementById('settingsSubnav');
+const settingsSidebarNav = document.getElementById('settingsSidebarNav');
 
 // ── DOM: Device bootstrap / Wi-Fi management (admin only) ────
 const deviceBootstrapSection = document.getElementById('deviceBootstrapSection');
@@ -562,6 +563,12 @@ function syncSettingsSubnavVisibility() {
     link.setAttribute('aria-hidden', visible ? 'false' : 'true');
   });
 
+  if (settingsSidebarNav) {
+    const hasVisibleLinks = links.some((link) => !link.hidden);
+    settingsSidebarNav.hidden = !hasVisibleLinks;
+    settingsSidebarNav.setAttribute('aria-hidden', hasVisibleLinks ? 'false' : 'true');
+  }
+
   const activeVisible = links.find((link) => !link.hidden && link.classList.contains('is-active'));
   if (!activeVisible) {
     const firstVisible = links.find((link) => !link.hidden);
@@ -604,6 +611,12 @@ function initSettingsSubnav() {
     event.preventDefault();
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveSettingsSubnav(target.id);
+
+    if (window.innerWidth <= 768) {
+      document.getElementById('sidebar')?.classList.remove('open');
+      document.getElementById('sidebarOverlay')?.classList.remove('open');
+      document.body.style.overflow = '';
+    }
   });
 
   window.addEventListener('scroll', updateSettingsSubnavOnScroll, { passive: true });

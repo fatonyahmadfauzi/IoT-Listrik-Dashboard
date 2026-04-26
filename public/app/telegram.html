@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Telegram — IoT Monitoring Listrik</title>
+    <meta
+      name="description"
+      content="Kelola konfigurasi Telegram dan daftar penerima notifikasi IoT listrik."
+    />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="manifest" href="/app/manifest.json" />
+    <meta name="theme-color" content="#070c18" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
+    />
+    <style>
+      .settings-section {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 18px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .settings-section-title {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 11px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--glass-border);
+      }
+      .settings-section-title .material-symbols-rounded {
+        font-size: 16px;
+        opacity: 0.85;
+      }
+      .settings-section .form-group {
+        margin-bottom: 13px;
+      }
+      .settings-section .form-group:last-of-type {
+        margin-bottom: 4px;
+      }
+      .settings-section .form-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.025em;
+        color: var(--text-secondary);
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .settings-section .form-input,
+      .settings-section .form-select {
+        padding: 9px 12px;
+        font-size: 13.5px;
+      }
+      .field-sensitive .form-input {
+        font-family: "JetBrains Mono", monospace;
+        letter-spacing: 0.4px;
+        font-size: 12.5px;
+      }
+      .input-reveal-wrap {
+        position: relative;
+      }
+      .input-reveal-wrap .form-input {
+        padding-right: 42px;
+      }
+      .reveal-btn {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        border-left: 1px solid var(--glass-border);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: color var(--transition), background var(--transition);
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      }
+      .reveal-btn:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .reveal-btn .material-symbols-rounded {
+        font-size: 17px;
+      }
+      .validation-msg {
+        font-size: 11px;
+        min-height: 14px;
+        margin-top: 3px;
+        transition: color 0.2s;
+      }
+      .validation-msg.ok { color: var(--green-light); }
+      .validation-msg.error { color: var(--red-light); }
+      .runtime-notice {
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.22);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        color: var(--primary-light);
+        line-height: 1.55;
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+      }
+      .runtime-notice .material-symbols-rounded {
+        font-size: 16px;
+        flex-shrink: 0;
+        margin-top: 1px;
+        opacity: 0.8;
+      }
+      .settings-save-status {
+        font-size: 12px;
+        color: var(--green-light);
+        min-height: 14px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .save-bar {
+        position: static;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        background: rgba(7, 12, 24, 0.93);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: var(--shadow-lg);
+        margin-top: 20px;
+        width: 100%;
+      }
+      .save-bar .btn-primary {
+        min-width: 220px;
+        height: 42px;
+        min-height: 42px;
+        font-size: 14px;
+      }
+      .save-bar .btn-primary .material-symbols-rounded {
+        font-size: 17px;
+      }
+      @media (max-width: 768px) {
+        .settings-section {
+          padding: 14px;
+        }
+        .settings-section-title {
+          font-size: 11px;
+          padding-bottom: 9px;
+          margin-bottom: 13px;
+        }
+        .settings-section .form-group {
+          margin-bottom: 11px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select {
+          padding: 8px 11px;
+          font-size: 13px;
+        }
+        .runtime-notice {
+          padding: 9px 13px;
+          font-size: 11.5px;
+          margin-bottom: 13px;
+        }
+        .save-bar {
+          flex-direction: column;
+          padding: 12px 14px;
+          margin-top: 14px;
+          gap: 8px;
+        }
+        .save-bar .btn-primary {
+          min-width: 100%;
+          width: 100%;
+          justify-content: center;
+        }
+      }
+      @media (max-width: 430px) {
+        .settings-section {
+          padding: 12px;
+        }
+        .settings-section-title {
+          font-size: 10.5px;
+        }
+        .settings-section .form-label {
+          font-size: 11px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select {
+          font-size: 12.5px;
+          padding: 8px 10px;
+        }
+        .field-sensitive .form-input {
+          font-size: 12px;
+        }
+        .form-hint {
+          font-size: 11px;
+        }
+      }
+      @media (max-width: 360px) {
+        .settings-section {
+          padding: 11px 10px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select {
+          padding: 7px 9px;
+        }
+        .save-bar {
+          padding: 10px 12px;
+        }
+      }
+    </style>
+  </head>
+  <body class="page-bg" data-settings-page="telegram" data-settings-page-label="Pengaturan Telegram">
+    <div class="app-layout">
+      <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+      <nav id="sidebar" class="sidebar">
+        <div class="sidebar-logo">
+          <div class="sidebar-logo-icon">
+            <span class="material-symbols-rounded">bolt</span>
+          </div>
+          <div class="sidebar-logo-text">
+            <h2>IoT Listrik</h2>
+            <span>Monitor System</span>
+          </div>
+        </div>
+
+        <div class="sidebar-nav">
+          <a href="/app/dashboard" class="nav-item">
+            <span class="material-symbols-rounded nav-icon">dashboard</span>
+            Dashboard
+          </a>
+          <a href="/app/history" class="nav-item">
+            <span class="material-symbols-rounded nav-icon">history</span>
+            Riwayat Log
+          </a>
+          <div class="nav-divider"></div>
+          <a href="/app/settings" class="nav-item hidden" style="display: none;" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">settings</span>
+            Pengaturan
+          </a>
+          <a href="/app/telegram" class="nav-item active hidden" style="display: none;" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">send</span>
+            Telegram
+          </a>
+          <a href="/app/discord" class="nav-item hidden" style="display: none;" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">forum</span>
+            Discord
+          </a>
+          <a href="/app/users" class="nav-item hidden" style="display: none;" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">manage_accounts</span>
+            Pengguna
+          </a>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="user-badge">
+            <div class="user-avatar" id="sidebarAvatar">?</div>
+            <div class="user-info">
+              <div class="user-email" id="sidebarEmail">—</div>
+              <div id="sidebarRole" class="role-pill user">Memuat...</div>
+            </div>
+          </div>
+          <button id="logoutBtn" class="btn btn-ghost w-full">
+            <span class="material-symbols-rounded">logout</span>Logout
+          </button>
+        </div>
+      </nav>
+
+      <div class="main-content">
+        <header class="topbar">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <button id="hamburgerBtn" class="hamburger">
+              <span class="material-symbols-rounded">menu</span>
+            </button>
+            <h1 class="topbar-title">Konfigurasi Telegram</h1>
+          </div>
+          <div class="topbar-actions">
+            <span class="role-pill admin">Admin Only</span>
+          </div>
+        </header>
+
+        <main class="page-content">
+          <div class="runtime-notice">
+            <span class="material-symbols-rounded">chat</span>
+            <span><strong>Halaman khusus Telegram:</strong> daftar penerima dan bot token dipisah dari pengaturan inti supaya lebih enak dipelihara saat tujuan notifikasi mulai banyak.</span>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">
+              <span class="material-symbols-rounded">send</span>
+              Konfigurasi Telegram
+            </div>
+            <div class="info-panel info-panel--green telegram-info-panel">
+              <strong>Aman:</strong> Token dan daftar Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
+            </div>
+
+            <div class="telegram-config-stack">
+              <div class="form-group field-sensitive telegram-token-group">
+                <label class="form-label" for="inpBotToken">Bot Token</label>
+                <div class="input-reveal-wrap">
+                  <input
+                    id="inpBotToken"
+                    class="form-input"
+                    type="password"
+                    placeholder="1234567890:ABCDEF..."
+                    autocomplete="off"
+                  />
+                  <button
+                    type="button"
+                    class="reveal-btn"
+                    id="revealToken"
+                    title="Tampilkan/sembunyikan token"
+                  >
+                    <span class="material-symbols-rounded">visibility</span>
+                  </button>
+                </div>
+                <div class="form-hint">
+                  Dapat dari @BotFather → /newbot → copy token.
+                </div>
+                <div id="valBotToken" class="validation-msg"></div>
+              </div>
+
+              <div class="form-group telegram-recipient-group">
+                <div class="recipient-editor-grid telegram-recipient-grid">
+                  <div>
+                    <label class="form-label" for="inpTelegramRecipientName">Nama / Label</label>
+                    <input
+                      id="inpTelegramRecipientName"
+                      class="form-input"
+                      type="text"
+                      placeholder="Contoh: Pak Budi atau Grup Lab"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <div>
+                    <label class="form-label" for="inpChatId">Chat ID / Group ID</label>
+                    <input
+                      id="inpChatId"
+                      class="form-input"
+                      type="text"
+                      placeholder="Masukkan ID lalu klik Tambah"
+                      autocomplete="off"
+                    />
+                  </div>
+                </div>
+                <div class="form-hint telegram-recipient-help">
+                  Tambahkan satu atau lebih tujuan. Untuk grup: awali dengan -100. Untuk pribadi: ID numerik positif.<br />
+                  Cara cek: kirim pesan ke <a href="https://t.me/iot_kebocoran_bot" target="_blank" style="color: var(--cyan); text-decoration: underline; font-weight: 500;">@iot_kebocoran_bot</a> → buka <a href="https://api.telegram.org/bot<TOKEN>/getUpdates" target="_blank" style="color: var(--text-muted); text-decoration: underline;">api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</a>
+                </div>
+                <div id="valChatId" class="validation-msg"></div>
+              </div>
+
+              <div class="toggle-row telegram-toggle-row">
+                <div class="toggle-info">
+                  <h4>Notifikasi Telegram</h4>
+                  <p>Kirim alert saat perubahan status perangkat atau sistem</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpTelegramNotify" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="save-bar">
+            <span id="saveStatus" class="settings-save-status"></span>
+            <button id="saveSettingsBtn" class="btn btn-primary">
+              <span class="material-symbols-rounded">save</span> Simpan Pengaturan Telegram
+            </button>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+    <script type="module" src="/js/settings.js"></script>
+  </body>
+</html>

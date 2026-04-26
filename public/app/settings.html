@@ -492,7 +492,7 @@
       }
     </style>
   </head>
-  <body class="page-bg">
+  <body class="page-bg" data-settings-page="main" data-settings-page-label="Pengaturan Inti">
     <div class="app-layout">
       <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
@@ -520,6 +520,18 @@
             <span class="material-symbols-rounded nav-icon">settings</span>
             Pengaturan
           </a>
+          <a href="/app/telegram" class="nav-item hidden" style="display: none;" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">send</span>
+            Telegram
+          </a>
+          <a href="/app/discord" class="nav-item hidden" style="display: none;" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">forum</span>
+            Discord
+          </a>
+          <a href="/app/users" class="nav-item hidden" style="display: none;" data-admin-only>
+            <span class="material-symbols-rounded nav-icon">manage_accounts</span>
+            Pengguna
+          </a>
           <div id="settingsSidebarNav" class="sidebar-settings-subnav hidden" style="display: none;" data-admin-only>
             <div class="sidebar-settings-subnav-title">Bagian Pengaturan</div>
             <nav id="settingsSubnav" class="settings-subnav-list" aria-label="Bagian pengaturan sistem">
@@ -530,14 +542,6 @@
               <a class="settings-subnav-link" href="#settingsCalibrationSection" data-settings-nav="settingsCalibrationSection">
                 <span class="material-symbols-rounded">tune</span>
                 <span>Kalibrasi</span>
-              </a>
-              <a class="settings-subnav-link" href="#settingsTelegramSection" data-settings-nav="settingsTelegramSection">
-                <span class="material-symbols-rounded">send</span>
-                <span>Telegram</span>
-              </a>
-              <a class="settings-subnav-link" href="#settingsDiscordSection" data-settings-nav="settingsDiscordSection">
-                <span class="material-symbols-rounded">forum</span>
-                <span>Discord</span>
               </a>
               <a class="settings-subnav-link" href="#deviceBootstrapSection" data-settings-nav="deviceBootstrapSection">
                 <span class="material-symbols-rounded">wifi</span>
@@ -558,10 +562,6 @@
               <a class="settings-subnav-link" href="#settingsClientSection" data-settings-nav="settingsClientSection">
                 <span class="material-symbols-rounded">cloud_sync</span>
                 <span>Backend Web</span>
-              </a>
-              <a class="settings-subnav-link" href="#settingsUsersSection" data-settings-nav="settingsUsersSection">
-                <span class="material-symbols-rounded">manage_accounts</span>
-                <span>Pengguna</span>
               </a>
             </nav>
           </div>
@@ -600,6 +600,30 @@
               <div class="runtime-notice">
                 <span class="material-symbols-rounded">sync</span>
                 <span><strong>Runtime Configuration:</strong> Perubahan di halaman ini langsung disimpan ke Firebase <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa upload firmware</strong>.</span>
+              </div>
+
+              <div class="settings-section" style="margin-bottom: 16px;">
+                <div class="settings-section-title">
+                  <span class="material-symbols-rounded">dashboard_customize</span>
+                  Halaman Admin Terpisah
+                </div>
+                <div class="info-panel info-panel--blue" style="margin-bottom: 0;">
+                  Konfigurasi Telegram, Discord, dan Manajemen Pengguna sekarang punya halaman sendiri supaya menu utama ini tetap fokus pada pengaturan inti sistem.
+                </div>
+                <div class="settings-btn-cluster">
+                  <a href="/app/telegram" class="btn btn-ghost">
+                    <span class="material-symbols-rounded">send</span>
+                    Buka Halaman Telegram
+                  </a>
+                  <a href="/app/discord" class="btn btn-ghost">
+                    <span class="material-symbols-rounded">forum</span>
+                    Buka Halaman Discord
+                  </a>
+                  <a href="/app/users" class="btn btn-ghost">
+                    <span class="material-symbols-rounded">manage_accounts</span>
+                    Buka Halaman Pengguna
+                  </a>
+                </div>
               </div>
 
               <!-- ── Settings grid (2 columns) ─────────────────────── -->
@@ -779,175 +803,19 @@
               </div>
             </div>
 
-            <!-- Card 3: Telegram ─────────────────────────────────── -->
-            <div id="settingsTelegramSection" class="settings-section telegram-settings-section" style="grid-column: 1 / -1" data-settings-section>
-              <div class="settings-section-title"><span class="material-symbols-rounded">send</span>Konfigurasi Telegram</div>
-              <div class="info-panel info-panel--green telegram-info-panel">
-                <strong>Aman:</strong> Token dan daftar Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
-              </div>
-
-              <div class="telegram-config-stack">
-                <div class="form-group field-sensitive telegram-token-group">
-                  <label class="form-label" for="inpBotToken">Bot Token</label>
-                  <div class="input-reveal-wrap">
-                    <input
-                      id="inpBotToken"
-                      class="form-input"
-                      type="password"
-                      placeholder="1234567890:ABCDEF..."
-                      autocomplete="off"
-                    />
-                    <button
-                      type="button"
-                      class="reveal-btn"
-                      id="revealToken"
-                      title="Tampilkan/sembunyikan token"
-                    >
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">
-                    Dapat dari @BotFather → /newbot → copy token.
-                  </div>
-                  <div id="valBotToken" class="validation-msg"></div>
-                </div>
-
-                <div class="form-group telegram-recipient-group">
-                  <div class="recipient-editor-grid telegram-recipient-grid">
-                    <div>
-                      <label class="form-label" for="inpTelegramRecipientName"
-                        >Nama / Label</label
-                      >
-                      <input
-                        id="inpTelegramRecipientName"
-                        class="form-input"
-                        type="text"
-                        placeholder="Contoh: Pak Budi atau Grup Lab"
-                        autocomplete="off"
-                      />
-                    </div>
-                    <div>
-                      <label class="form-label" for="inpChatId"
-                        >Chat ID / Group ID</label
-                      >
-                      <input
-                        id="inpChatId"
-                        class="form-input"
-                        type="text"
-                        placeholder="Masukkan ID lalu klik Tambah"
-                        autocomplete="off"
-                      />
-                    </div>
-                  </div>
-                  <div class="form-hint telegram-recipient-help">
-                    Tambahkan satu atau lebih tujuan. Untuk grup: awali dengan -100. Untuk pribadi: ID numerik positif.<br />
-                    Cara cek: kirim pesan ke <a href="https://t.me/iot_kebocoran_bot" target="_blank" style="color: var(--cyan); text-decoration: underline; font-weight: 500;">@iot_kebocoran_bot</a> → buka <a href="https://api.telegram.org/bot<TOKEN>/getUpdates" target="_blank" style="color: var(--text-muted); text-decoration: underline;">api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</a>
-                  </div>
-                  <div id="valChatId" class="validation-msg"></div>
-                </div>
-
-                <div class="toggle-row telegram-toggle-row">
-                  <div class="toggle-info">
-                    <h4>Notifikasi Telegram</h4>
-                    <p>Kirim alert saat perubahan status (master switch)</p>
-                  </div>
-                  <label class="toggle-switch">
-                    <input type="checkbox" id="inpTelegramNotify" checked />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Card 4: Discord Webhook ──────────────────────────── -->
-            <div id="settingsDiscordSection" class="settings-section" style="grid-column: 1 / -1" data-settings-section>
+            <!-- Card 4: Discord moved to dedicated page ────────────── -->
+            <div class="settings-section" style="grid-column: 1 / -1" data-settings-section>
               <div class="settings-section-title">
                 <span class="material-symbols-rounded" style="color:#5865F2">forum</span>
-                Integrasi Discord Webhook
+                Discord Punya Halaman Khusus
               </div>
               <div class="info-panel info-panel--discord">
-                <strong>Cara mendapatkan Webhook URL:</strong> Buka Discord → klik kanan channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL.<br/>
-                URL disimpan di Firebase RTDB <code>/settings/discord/</code> — dibaca notifier server (lokal atau via ngrok).<br/>
-                Belum punya server Discord? <a href="https://discord.gg/WszeM4FVH6" target="_blank" style="color:#7289da;">Join server IoT Listrik Dashboard</a> untuk mendapatkan channel monitoring siap pakai.
+                Konfigurasi webhook, Discord Bot, jumlah member server, daftar ban, ban user, dan unban user sekarang dipisah ke halaman khusus supaya pengaturan utama tetap ringkas.
               </div>
-
-              <div class="input-row" style="margin-bottom: 14px;">
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordAlerts">
-                    <span style="color:#ED4245;">⚡</span> Webhook #alerts (Status Bahaya)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordAlerts" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordAlerts',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Notifikasi status BAHAYA, WARNING, dan recovery NORMAL.</div>
-                </div>
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordRelay">
-                    <span style="color:#57F287;">🔌</span> Webhook #relay (Kontrol Relay)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordRelay" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordRelay',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Notifikasi setiap kali relay ON/OFF berubah.</div>
-                </div>
-              </div>
-
-              <div class="input-row" style="margin-bottom: 20px;">
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordMonitoring">
-                    <span style="color:#5865F2;">📊</span> Webhook #monitoring (Data Berkala)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordMonitoring" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordMonitoring',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Snapshot data listrik (rate-limit 1x / 5 menit).</div>
-                </div>
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordLogs">
-                    <span style="color:#99AAB5;">📋</span> Webhook #logs (Aktivitas Log)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordLogs" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordLogs',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Setiap log aktivitas baru dari /logs RTDB.</div>
-                </div>
-              </div>
-
-              <div class="toggle-row">
-                <div class="toggle-info">
-                  <h4>Aktifkan Discord Notifications</h4>
-                  <p>Master switch untuk seluruh notifikasi Discord (dibaca notifier server)</p>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="inpDiscordEnabled" checked />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div id="discordSaveStatus" class="settings-save-status"></div>
               <div class="settings-btn-cluster">
-                <button id="saveDiscordBtn" class="btn btn-primary">
-                  <span class="material-symbols-rounded">save</span> Simpan Konfigurasi Discord
-                </button>
-                <button id="testDiscordBtn" class="btn btn-ghost">
-                  <span class="material-symbols-rounded">send</span> Test Kirim Pesan
-                </button>
+                <a href="/app/discord" class="btn btn-primary">
+                  <span class="material-symbols-rounded">forum</span> Buka Halaman Discord
+                </a>
                 <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn btn-ghost" style="color:#7289da; border-color:rgba(114,137,218,0.3);">
                   <span class="material-symbols-rounded">group</span> Join Server Discord
                 </a>
@@ -1373,58 +1241,11 @@
           </div>
           <!-- /settings-grid -->
 
-          <!-- ── User Management ────────────────────────────────── -->
-          <div id="settingsUsersSection" class="settings-section" style="margin-bottom: 16px" data-settings-section>
-            <div class="settings-section-title"><span class="material-symbols-rounded">manage_accounts</span>Manajemen Pengguna</div>
-            <div class="user-module-header">
-              <span style="font-size: 12px; color: var(--text-muted);">Kelola akses pengguna sistem</span>
-              <div class="btn-group user-module-actions">
-                <button id="refreshUsersBtn" class="btn btn-ghost">
-                  <span class="material-symbols-rounded">refresh</span>Refresh
-                </button>
-                <button id="addUserBtn" class="btn btn-primary">
-                  <span class="material-symbols-rounded">person_add</span>Tambah User
-                </button>
-              </div>
-            </div>
-
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Pengguna</th>
-                    <th>Role</th>
-                    <th>Dibuat</th>
-                    <th>Ubah Role</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="usersTbody">
-                  <tr>
-                    <td
-                      colspan="5"
-                      style="
-                        text-align: center;
-                        padding: 28px;
-                        color: var(--text-secondary);
-                      "
-                    >
-                      Memuat pengguna...
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p class="user-mgmt-note">
-              Manajemen user via Firebase Functions (Admin SDK). Password dikelola aman di server.
-            </p>
-          </div>
-
           <!-- ── Global save bar ──────────────────────────────────── -->
           <div class="save-bar">
             <span id="saveStatus" class="settings-save-status"></span>
             <button id="saveSettingsBtn" class="btn btn-primary">
-              <span class="material-symbols-rounded">save</span> Simpan Semua Settings
+              <span class="material-symbols-rounded">save</span> Simpan Pengaturan Inti
             </button>
           </div>
             </div>
@@ -1492,19 +1313,6 @@
 
     <div id="toastContainer" class="toast-container"></div>
     <script type="module" src="/js/settings.js"></script>
-
-    <!-- Reveal token button -->
-    <script>
-      document.getElementById("revealToken")?.addEventListener("click", () => {
-        const inp = document.getElementById("inpBotToken");
-        if (!inp) return;
-        inp.type = inp.type === "password" ? "text" : "password";
-        document.getElementById("revealToken").innerHTML =
-          inp.type === "password"
-            ? '<span class="material-symbols-rounded">visibility</span>'
-            : '<span class="material-symbols-rounded">visibility_off</span>';
-      });
-    </script>
   </body>
 </html>
 

@@ -40,6 +40,38 @@ interface DatabaseBackupAttachment {
   sizeLabel?: string;
 }
 
+interface DiscordBotUserInfo {
+  id: string;
+  username: string;
+  globalName?: string;
+  displayName: string;
+}
+
+interface DiscordBanEntry {
+  userId: string;
+  username: string;
+  globalName?: string;
+  displayName: string;
+  discriminator?: string;
+  avatarUrl?: string;
+  reason?: string;
+}
+
+interface DiscordBotSnapshot {
+  configured?: boolean;
+  tokenConfigured?: boolean;
+  maskedToken?: string;
+  guildId?: string;
+  guildName?: string;
+  guildIcon?: string;
+  botUser?: DiscordBotUserInfo | null;
+  memberCount?: number;
+  onlineCount?: number;
+  banCount?: number;
+  bans?: DiscordBanEntry[];
+  lastCheckedAt?: number;
+}
+
 function normalizeTelegramChatId(value: unknown): string {
   const id = String(value ?? '').trim();
   return /^-?\d+$/.test(id) ? id : '';
@@ -172,8 +204,18 @@ export function Settings({ onLogout }: SettingsProps) {
   const [discordAlerts, setDiscordAlerts] = useState(dSettings.webhookAlerts || '');
   const [discordRelay, setDiscordRelay] = useState(dSettings.webhookRelay || '');
   const [discordMonitoring, setDiscordMonitoring] = useState(dSettings.webhookMonitoring || '');
+  const [discordDailyReport, setDiscordDailyReport] = useState(dSettings.webhookDailyReport || '');
   const [discordLogs, setDiscordLogs] = useState(dSettings.webhookLogs || '');
   const [discordEnabled, setDiscordEnabled] = useState(dSettings.enabled ?? true);
+  const [discordBotToken, setDiscordBotToken] = useState('');
+  const [discordGuildId, setDiscordGuildId] = useState('');
+  const [discordBotSnapshot, setDiscordBotSnapshot] = useState<DiscordBotSnapshot | null>(null);
+  const [discordBotLoading, setDiscordBotLoading] = useState(false);
+  const [discordBotStatusMessage, setDiscordBotStatusMessage] = useState(
+    'Bot belum dikonfigurasi. Simpan Bot Token dan Guild ID untuk membaca jumlah member server dan daftar ban.'
+  );
+  const [discordBanUserId, setDiscordBanUserId] = useState('');
+  const [discordBanReason, setDiscordBanReason] = useState('');
 
   const bootstrapSettings = (settings?.deviceBootstrap || {}) as DeviceBootstrapSettings;
   const [deviceWifiSsid, setDeviceWifiSsid] = useState(bootstrapSettings.wifiSsid || '');
@@ -205,7 +247,9 @@ export function Settings({ onLogout }: SettingsProps) {
   const [showDiscordAlerts, setShowDiscordAlerts] = useState(false);
   const [showDiscordRelay, setShowDiscordRelay] = useState(false);
   const [showDiscordMonitoring, setShowDiscordMonitoring] = useState(false);
+  const [showDiscordDailyReport, setShowDiscordDailyReport] = useState(false);
   const [showDiscordLogs, setShowDiscordLogs] = useState(false);
+  const [showDiscordBotToken, setShowDiscordBotToken] = useState(false);
   const [showDeviceWifiPassword, setShowDeviceWifiPassword] = useState(false);
   const [showDeviceApiKey, setShowDeviceApiKey] = useState(false);
   const [showDevicePassword, setShowDevicePassword] = useState(false);
@@ -243,6 +287,36 @@ export function Settings({ onLogout }: SettingsProps) {
     success: 'Backup terkirim',
     error: 'Perlu perhatian',
   }[databaseBackupState];
+  const totalUsers = users.length;
+  const totalAdmins = users.filter((item) => String(item?.role || 'user') === 'admin').length;
+  const totalRegularUsers = Math.max(0, totalUsers - totalAdmins);
+  const formatUserCreatedDate = (entry: Record<string, unknown>) => {
+    const raw = entry.createdAt ?? entry.created_at;
+    if (!raw) return '—';
+
+    const value = typeof raw === 'number' ? raw : Date.parse(String(raw));
+    if (!Number.isFinite(value)) return '—';
+
+    return new Date(value).toLocaleDateString('id-ID');
+  };
+  const discordBotConfigured = !!discordBotSnapshot?.configured;
+  const discordBotBadge = discordBotConfigured
+    ? {
+        label: 'Bot aktif dan terhubung',
+        className:
+          'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25',
+      }
+    : discordBotSnapshot?.tokenConfigured || discordBotSnapshot?.guildId
+      ? {
+          label: 'Konfigurasi belum lengkap',
+          className:
+            'bg-amber-500/15 text-amber-200 border border-amber-500/25',
+        }
+      : {
+          label: 'Menunggu konfigurasi',
+          className:
+            'bg-slate-500/15 text-slate-200 border border-slate-500/25',
+        };
 
   useEffect(() => {
     const next = (settings?.deviceBootstrap || {}) as DeviceBootstrapSettings;
@@ -253,6 +327,12 @@ export function Settings({ onLogout }: SettingsProps) {
     setDeviceEmail(next.iotEmail || '');
     setDevicePassword(next.iotPassword || '');
   }, [settings?.deviceBootstrap]);
+
+  useEffect(() => {
+    if (tab === 'discord' && isAdmin && !isTempAccount) {
+      loadDiscordBotStatus(true);
+    }
+  }, [tab, isAdmin, isTempAccount]);
 
   const handleSaveSystem = async () => {
     if (!isAdmin) return;
@@ -406,6 +486,7 @@ export function Settings({ onLogout }: SettingsProps) {
         webhookAlerts: discordAlerts,
         webhookRelay: discordRelay,
         webhookMonitoring: discordMonitoring,
+        webhookDailyReport: discordDailyReport,
         webhookLogs: discordLogs,
         enabled: discordEnabled,
       });
@@ -512,6 +593,58 @@ export function Settings({ onLogout }: SettingsProps) {
       .trim() || fallback;
   };
 
+  const formatAdminDateTime = (value: unknown) => {
+    const raw = Number(value || 0);
+    if (!Number.isFinite(raw) || raw <= 0) return 'Belum pernah';
+    return new Date(raw).toLocaleString('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  };
+
+  const applyDiscordBotSnapshot = (snapshot: DiscordBotSnapshot | null) => {
+    setDiscordBotSnapshot(snapshot);
+
+    if (!snapshot) {
+      setDiscordBotStatusMessage(
+        'Bot belum dikonfigurasi. Simpan Bot Token dan Guild ID untuk membaca jumlah member server dan daftar ban.'
+      );
+      return;
+    }
+
+    if (snapshot.guildId) {
+      setDiscordGuildId(snapshot.guildId);
+    }
+
+    if (snapshot.configured) {
+      const botDisplay =
+        snapshot.botUser?.displayName ||
+        snapshot.botUser?.username ||
+        'bot Discord';
+      const guildDisplay = snapshot.guildName || 'server Discord';
+      setDiscordBotStatusMessage(
+        `Bot ${botDisplay} tersambung ke ${guildDisplay}. Kamu sekarang bisa memantau jumlah member dan mengelola daftar ban dari aplikasi desktop.`
+      );
+      return;
+    }
+
+    if (snapshot.tokenConfigured || snapshot.guildId) {
+      setDiscordBotStatusMessage(
+        'Konfigurasi bot belum lengkap atau masih gagal diverifikasi. Pastikan Guild ID benar dan bot memiliki izin yang cukup di server.'
+      );
+      return;
+    }
+
+    setDiscordBotStatusMessage(
+      'Bot belum dikonfigurasi. Simpan Bot Token dan Guild ID untuk membaca jumlah member server dan daftar ban.'
+    );
+  };
+
   const notifyDesktop = (title: string, body: string) => {
     showNotification(title, body);
   };
@@ -538,6 +671,125 @@ export function Settings({ onLogout }: SettingsProps) {
       throw new Error(data?.error || `HTTP ${response.status}`);
     }
     return data as Record<string, unknown>;
+  };
+
+  const loadDiscordBotStatus = async (silent = false) => {
+    if (!isAdmin || isTempAccount) return;
+    setDiscordBotLoading(true);
+    if (!silent) {
+      setDiscordBotStatusMessage('Memuat ringkasan Discord Bot...');
+    }
+    try {
+      const data = await callLiveResetApi('get-discord-bot-status', {});
+      applyDiscordBotSnapshot(data as DiscordBotSnapshot);
+    } catch (error) {
+      const msg = getCallableErrorMessage(
+        error,
+        'Gagal memuat status Discord Bot.'
+      );
+      setDiscordBotStatusMessage(msg);
+      if (!silent) notifyDesktop('Discord Bot', msg);
+    } finally {
+      setDiscordBotLoading(false);
+    }
+  };
+
+  const handleSaveDiscordBot = async () => {
+    if (!isAdmin || isTempAccount) return;
+
+    if (!discordGuildId.trim()) {
+      notifyDesktop('Discord Bot', 'Guild / Server ID wajib diisi.');
+      return;
+    }
+    if (!discordBotToken.trim() && !discordBotSnapshot?.tokenConfigured) {
+      notifyDesktop(
+        'Discord Bot',
+        'Discord Bot Token wajib diisi pada penyimpanan pertama.'
+      );
+      return;
+    }
+
+    setDiscordBotLoading(true);
+    setDiscordBotStatusMessage('Menguji koneksi bot ke server Discord...');
+    try {
+      const data = await callLiveResetApi('save-discord-bot-config', {
+        guildId: discordGuildId.trim(),
+        token: discordBotToken.trim(),
+      });
+      applyDiscordBotSnapshot(data as DiscordBotSnapshot);
+      setDiscordBotToken('');
+      notifyDesktop(
+        'Discord Bot tersimpan',
+        'Konfigurasi bot berhasil diverifikasi dan disimpan.'
+      );
+    } catch (error) {
+      const msg = getCallableErrorMessage(
+        error,
+        'Gagal menyimpan konfigurasi Discord Bot.'
+      );
+      setDiscordBotStatusMessage(msg);
+      notifyDesktop('Gagal menyimpan Discord Bot', msg);
+    } finally {
+      setDiscordBotLoading(false);
+    }
+  };
+
+  const handleBanDiscordUser = async () => {
+    if (!isAdmin || isTempAccount) return;
+    const userId = discordBanUserId.trim();
+    if (!/^\d{5,}$/.test(userId)) {
+      notifyDesktop('Discord Bot', 'Discord User ID tidak valid.');
+      return;
+    }
+    if (!window.confirm(`Ban user Discord dengan ID "${userId}" dari server sekarang?`)) {
+      return;
+    }
+
+    setDiscordBotLoading(true);
+    setDiscordBotStatusMessage('Mengirim permintaan ban ke server Discord...');
+    try {
+      const data = await callLiveResetApi('ban-discord-user', {
+        userId,
+        reason: discordBanReason.trim(),
+      });
+      applyDiscordBotSnapshot(data as DiscordBotSnapshot);
+      setDiscordBanUserId('');
+      setDiscordBanReason('');
+      notifyDesktop('Discord Bot', `User ${userId} berhasil diban.`);
+    } catch (error) {
+      const msg = getCallableErrorMessage(
+        error,
+        'Gagal melakukan ban user Discord.'
+      );
+      setDiscordBotStatusMessage(msg);
+      notifyDesktop('Gagal ban user Discord', msg);
+    } finally {
+      setDiscordBotLoading(false);
+    }
+  };
+
+  const handleUnbanDiscordUser = async (userId: string) => {
+    if (!isAdmin || isTempAccount) return;
+    if (!window.confirm(`Unban user Discord dengan ID "${userId}" dari server ini?`)) {
+      return;
+    }
+
+    setDiscordBotLoading(true);
+    setDiscordBotStatusMessage('Mengirim permintaan unban ke server Discord...');
+    try {
+      const data = await callLiveResetApi('unban-discord-user', { userId });
+      applyDiscordBotSnapshot(data as DiscordBotSnapshot);
+      notifyDesktop('Discord Bot', `User ${userId} berhasil di-unban.`);
+    } catch (error) {
+      const msg = getCallableErrorMessage(
+        error,
+        'Gagal melakukan unban user Discord.'
+      );
+      setDiscordBotStatusMessage(msg);
+      notifyDesktop('Gagal unban user Discord', msg);
+    } finally {
+      setDiscordBotLoading(false);
+    }
   };
 
   const handleConfirmLiveReset = async () => {
@@ -1109,116 +1361,415 @@ export function Settings({ onLogout }: SettingsProps) {
 
       {/* Discord Tab */}
       {tab === 'discord' && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Discord Integration
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Konfigurasi koneksi webhook untuk log dan peringatan ke Discord.
-          </p>
-
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Webhook #alerts (Peringatan Bahaya)
-              </label>
-              <div className="relative">
-                <input
-                  type={showDiscordAlerts ? "text" : "password"}
-                  value={discordAlerts}
-                  onChange={(e) => setDiscordAlerts(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
-                  placeholder="https://discord.com/api/webhooks/..."
-                />
-                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordAlerts(!showDiscordAlerts)}>
-                  {showDiscordAlerts ? <EyeOff size={20}/> : <Eye size={20}/>}
-                </button>
-              </div>
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Discord Integration
+              </h3>
+              <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+                Webhook dipakai untuk notifikasi monitoring, sedangkan Discord Bot dipakai
+                untuk membaca jumlah member server dan mengelola daftar ban.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Webhook #relay (Status Relay Aktif/Mati)
-              </label>
-              <div className="relative">
-                <input
-                  type={showDiscordRelay ? "text" : "password"}
-                  value={discordRelay}
-                  onChange={(e) => setDiscordRelay(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
-                  placeholder="https://discord.com/api/webhooks/..."
-                />
-                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordRelay(!showDiscordRelay)}>
-                  {showDiscordRelay ? <EyeOff size={20}/> : <Eye size={20}/>}
-                </button>
-              </div>
-            </div>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
+              <div className="space-y-4">
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm leading-6 text-indigo-800 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200">
+                  <strong className="font-semibold">Webhook aktif:</strong> gunakan untuk #alerts, #relay, #monitoring, #daily-report, dan #logs tanpa memenuhi halaman pengaturan utama.
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Webhook #monitoring (Data Realtime)
-              </label>
-              <div className="relative">
-                <input
-                  type={showDiscordMonitoring ? "text" : "password"}
-                  value={discordMonitoring}
-                  onChange={(e) => setDiscordMonitoring(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
-                  placeholder="https://discord.com/api/webhooks/..."
-                />
-                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordMonitoring(!showDiscordMonitoring)}>
-                  {showDiscordMonitoring ? <EyeOff size={20}/> : <Eye size={20}/>}
-                </button>
-              </div>
-            </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Webhook #alerts (Peringatan Bahaya)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showDiscordAlerts ? "text" : "password"}
+                        value={discordAlerts}
+                        onChange={(e) => setDiscordAlerts(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                        placeholder="https://discord.com/api/webhooks/..."
+                      />
+                      <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordAlerts(!showDiscordAlerts)}>
+                        {showDiscordAlerts ? <EyeOff size={20}/> : <Eye size={20}/>}
+                      </button>
+                    </div>
+                  </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Webhook #logs (Aktivitas Sistem)
-              </label>
-              <div className="relative">
-                <input
-                  type={showDiscordLogs ? "text" : "password"}
-                  value={discordLogs}
-                  onChange={(e) => setDiscordLogs(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
-                  placeholder="https://discord.com/api/webhooks/..."
-                />
-                <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordLogs(!showDiscordLogs)}>
-                  {showDiscordLogs ? <EyeOff size={20}/> : <Eye size={20}/>}
-                </button>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Webhook #relay (Status Relay Aktif/Mati)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showDiscordRelay ? "text" : "password"}
+                        value={discordRelay}
+                        onChange={(e) => setDiscordRelay(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                        placeholder="https://discord.com/api/webhooks/..."
+                      />
+                      <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordRelay(!showDiscordRelay)}>
+                        {showDiscordRelay ? <EyeOff size={20}/> : <Eye size={20}/>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Webhook #monitoring (Data Realtime)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showDiscordMonitoring ? "text" : "password"}
+                        value={discordMonitoring}
+                        onChange={(e) => setDiscordMonitoring(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                        placeholder="https://discord.com/api/webhooks/..."
+                      />
+                      <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordMonitoring(!showDiscordMonitoring)}>
+                        {showDiscordMonitoring ? <EyeOff size={20}/> : <Eye size={20}/>}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Webhook #daily-report
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showDiscordDailyReport ? "text" : "password"}
+                          value={discordDailyReport}
+                          onChange={(e) => setDiscordDailyReport(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                          placeholder="https://discord.com/api/webhooks/..."
+                        />
+                        <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordDailyReport(!showDiscordDailyReport)}>
+                          {showDiscordDailyReport ? <EyeOff size={20}/> : <Eye size={20}/>}
+                        </button>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Laporan Excel harian 24 jam akan dikirim jika ada data baru.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Webhook #logs
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showDiscordLogs ? "text" : "password"}
+                          value={discordLogs}
+                          onChange={(e) => setDiscordLogs(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                          placeholder="https://discord.com/api/webhooks/..."
+                        />
+                        <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordLogs(!showDiscordLogs)}>
+                          {showDiscordLogs ? <EyeOff size={20}/> : <Eye size={20}/>}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+                  <label htmlFor="discordEnabled" className="min-w-0">
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-white">
+                      Aktifkan Integrasi Discord
+                    </span>
+                    <span className="block text-sm leading-6 text-gray-500 dark:text-gray-400">
+                      Master switch untuk seluruh notifikasi Discord dari backend.
+                    </span>
+                  </label>
+                  <label
+                    htmlFor="discordEnabled"
+                    className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center"
+                    aria-label="Aktifkan integrasi Discord"
+                  >
+                    <input
+                      type="checkbox"
+                      id="discordEnabled"
+                      checked={discordEnabled}
+                      onChange={(e) => setDiscordEnabled(e.target.checked)}
+                      className="peer sr-only"
+                    />
+                    <span className="absolute inset-0 rounded-full border border-gray-300 bg-gray-200 transition peer-checked:border-indigo-500 peer-checked:bg-indigo-500/25 dark:border-gray-700 dark:bg-gray-800" />
+                    <span className="absolute left-1 top-1 h-5 w-5 rounded-full bg-gray-500 transition peer-checked:translate-x-5 peer-checked:bg-indigo-500" />
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleSaveDiscord}
+                    disabled={loading}
+                    className="flex-1 min-w-[220px] px-4 py-2 bg-[#5865F2] hover:bg-[#4752C4] disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+                  >
+                    {loading ? 'Saving...' : 'Simpan Konfigurasi Webhook'}
+                  </button>
+                  <button
+                    onClick={testDiscordWebhook}
+                    disabled={loading || !discordAlerts.startsWith('https://discord.com/api/webhooks/')}
+                    className="px-4 py-2 bg-transparent border border-[#5865F2] text-[#5865F2] hover:bg-[#5865F2] hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
+                  >
+                    Test Kirim Ke #alerts
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                        Discord Bot Management
+                      </h4>
+                      <p className="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                        Bot ini dipakai untuk membaca jumlah member server, daftar ban, dan melakukan ban atau unban.
+                      </p>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${discordBotBadge.className}`}>
+                      {discordBotBadge.label}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Discord Bot Token
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showDiscordBotToken ? 'text' : 'password'}
+                          value={discordBotToken}
+                          onChange={(e) => setDiscordBotToken(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-white p-3 pr-10"
+                          placeholder={
+                            discordBotSnapshot?.maskedToken
+                              ? `${discordBotSnapshot.maskedToken} (tersimpan)`
+                              : 'Tempel Bot Token dari Discord Developer Portal'
+                          }
+                        />
+                        <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordBotToken(!showDiscordBotToken)}>
+                          {showDiscordBotToken ? <EyeOff size={20}/> : <Eye size={20}/>}
+                        </button>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Token tidak ditampilkan lagi setelah tersimpan. Biarkan kosong saat refresh jika ingin memakai token yang sudah ada.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Guild / Server ID
+                      </label>
+                      <input
+                        type="text"
+                        value={discordGuildId}
+                        onChange={(e) => setDiscordGuildId(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 text-gray-900 dark:text-white p-3"
+                        placeholder="123456789012345678"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        onClick={handleSaveDiscordBot}
+                        disabled={discordBotLoading}
+                        className="flex-1 min-w-[180px] px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+                      >
+                        {discordBotLoading ? 'Memeriksa...' : 'Simpan Bot Discord'}
+                      </button>
+                      <button
+                        onClick={() => loadDiscordBotStatus()}
+                        disabled={discordBotLoading}
+                        className="px-4 py-2 border border-blue-500 text-blue-600 dark:text-blue-300 rounded-lg font-semibold transition hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-50"
+                      >
+                        Refresh Ringkasan
+                      </button>
+                    </div>
+
+                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm leading-6 text-indigo-900 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-100">
+                      {discordBotStatusMessage}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-950">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                          Bot Account
+                        </div>
+                        <div className="mt-2 text-base font-semibold text-gray-900 dark:text-white">
+                          {discordBotSnapshot?.botUser?.displayName || discordBotSnapshot?.botUser?.username || 'Belum ada bot'}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 break-all">
+                          {discordBotSnapshot?.maskedToken || 'Token belum tersimpan'}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-950">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                          Server / Guild
+                        </div>
+                        <div className="mt-2 text-base font-semibold text-gray-900 dark:text-white">
+                          {discordBotSnapshot?.guildName || 'Belum terhubung'}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 break-all">
+                          {discordBotSnapshot?.guildId || 'Guild ID belum tersimpan'}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-950">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                          Total Member
+                        </div>
+                        <div className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white">
+                          {Number(discordBotSnapshot?.memberCount || 0)}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          Online: {Number(discordBotSnapshot?.onlineCount || 0)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-950">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                          Daftar Ban
+                        </div>
+                        <div className="mt-2 text-3xl font-extrabold text-gray-900 dark:text-white">
+                          {Number(discordBotSnapshot?.banCount || 0)}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          Dicek: {formatAdminDateTime(discordBotSnapshot?.lastCheckedAt)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 mt-4">
-            <input
-              type="checkbox"
-              id="discordEnabled"
-              checked={discordEnabled}
-              onChange={(e) => setDiscordEnabled(e.target.checked)}
-              className="rounded"
-            />
-            <label htmlFor="discordEnabled" className="text-gray-700 dark:text-gray-300">
-              Aktifkan Integrasi Discord
-            </label>
-          </div>
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Ban / Unban User Server
+              </h3>
+              <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+                Gunakan Discord User ID untuk melakukan ban dari server. User yang diban tidak akan bisa join kembali sampai di-unban.
+              </p>
+            </div>
 
-          <div className="flex space-x-4 mt-6">
-            <button
-              onClick={handleSaveDiscord}
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-[#5865F2] hover:bg-[#4752C4] disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
-            >
-              {loading ? 'Saving...' : 'Simpan Konfigurasi'}
-            </button>
-            <button
-              onClick={testDiscordWebhook}
-              disabled={loading || !discordAlerts.startsWith('https://discord.com/api/webhooks/')}
-              className="px-4 py-2 bg-transparent border border-[#5865F2] text-[#5865F2] hover:bg-[#5865F2] hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
-            >
-              Test Kirim Ke #alerts
-            </button>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)_auto] lg:items-end">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Discord User ID
+                </label>
+                <input
+                  type="text"
+                  value={discordBanUserId}
+                  onChange={(e) => setDiscordBanUserId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                  placeholder="123456789012345678"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Alasan Ban
+                </label>
+                <input
+                  type="text"
+                  value={discordBanReason}
+                  onChange={(e) => setDiscordBanReason(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+                  placeholder="Contoh: spam, penyalahgunaan server, akses tidak diizinkan"
+                />
+              </div>
+              <button
+                onClick={handleBanDiscordUser}
+                disabled={discordBotLoading}
+                className="min-h-[46px] px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+              >
+                {discordBotLoading ? 'Memproses...' : 'Ban User'}
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                      Pengguna
+                    </th>
+                    <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                      User ID
+                    </th>
+                    <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                      Alasan
+                    </th>
+                    <th className="text-right py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                      Aksi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {discordBotSnapshot?.bans?.length ? (
+                    discordBotSnapshot.bans.map((entry) => (
+                      <tr
+                        key={entry.userId}
+                        className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-3">
+                            {entry.avatarUrl ? (
+                              <img
+                                src={entry.avatarUrl}
+                                alt={entry.displayName}
+                                className="h-9 w-9 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                              />
+                            ) : (
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200">
+                                {(entry.displayName || entry.username || 'U').slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                                {entry.displayName || entry.username || 'User Discord'}
+                              </div>
+                              <div className="truncate text-xs text-gray-500 dark:text-gray-400">
+                                {entry.username || '—'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 text-sm font-mono text-gray-700 dark:text-gray-300">
+                          {entry.userId}
+                        </td>
+                        <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400">
+                          {entry.reason || 'Tidak ada alasan tersimpan'}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <button
+                            onClick={() => handleUnbanDiscordUser(entry.userId)}
+                            disabled={discordBotLoading}
+                            className="rounded-lg border border-blue-500 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-950/30 disabled:opacity-50"
+                          >
+                            Unban
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="py-8 px-2 text-center text-sm text-gray-500 dark:text-gray-400"
+                      >
+                        Belum ada user yang diban pada server Discord ini.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1765,6 +2316,42 @@ export function Settings({ onLogout }: SettingsProps) {
             User Management
           </h3>
 
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-blue-700 dark:text-blue-200">
+                Total User
+              </div>
+              <div className="mt-2 text-3xl font-extrabold text-blue-950 dark:text-blue-50">
+                {totalUsers}
+              </div>
+              <div className="mt-1 text-xs text-blue-800/80 dark:text-blue-200/80">
+                Semua akun yang sudah tercatat di sistem.
+              </div>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-700 dark:text-amber-200">
+                Total Admin
+              </div>
+              <div className="mt-2 text-3xl font-extrabold text-amber-950 dark:text-amber-50">
+                {totalAdmins}
+              </div>
+              <div className="mt-1 text-xs text-amber-800/80 dark:text-amber-200/80">
+                User dengan akses penuh ke pengaturan dan monitoring.
+              </div>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-700 dark:text-emerald-200">
+                User Biasa
+              </div>
+              <div className="mt-2 text-3xl font-extrabold text-emerald-950 dark:text-emerald-50">
+                {totalRegularUsers}
+              </div>
+              <div className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-200/80">
+                Akses pengguna biasa untuk memantau dashboard.
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Add New User
@@ -1826,7 +2413,7 @@ export function Settings({ onLogout }: SettingsProps) {
                       </select>
                     </td>
                     <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(u.created_at).toLocaleDateString('id-ID')}
+                      {formatUserCreatedDate(u as Record<string, unknown>)}
                     </td>
                     <td className="py-2 px-2 text-right">
                       <button

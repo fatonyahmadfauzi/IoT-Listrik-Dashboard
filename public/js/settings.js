@@ -79,11 +79,31 @@ let cancelChatIdEditBtn = null;
 const inpDiscordAlerts     = document.getElementById('inpDiscordAlerts');
 const inpDiscordRelay      = document.getElementById('inpDiscordRelay');
 const inpDiscordMonitoring = document.getElementById('inpDiscordMonitoring');
+const inpDiscordDailyReport = document.getElementById('inpDiscordDailyReport');
 const inpDiscordLogs       = document.getElementById('inpDiscordLogs');
 const inpDiscordEnabled    = document.getElementById('inpDiscordEnabled');
 const discordSaveStatus    = document.getElementById('discordSaveStatus');
 const saveDiscordBtn       = document.getElementById('saveDiscordBtn');
 const testDiscordBtn       = document.getElementById('testDiscordBtn');
+const inpDiscordBotToken   = document.getElementById('inpDiscordBotToken');
+const inpDiscordGuildId    = document.getElementById('inpDiscordGuildId');
+const discordBotStatusBadge = document.getElementById('discordBotStatusBadge');
+const discordBotStatusMessage = document.getElementById('discordBotStatusMessage');
+const discordBotMaskedToken = document.getElementById('discordBotMaskedToken');
+const discordBotAccount    = document.getElementById('discordBotAccount');
+const discordBotGuildName  = document.getElementById('discordBotGuildName');
+const discordBotLastChecked = document.getElementById('discordBotLastChecked');
+const discordBotMemberCount = document.getElementById('discordBotMemberCount');
+const discordBotOnlineCount = document.getElementById('discordBotOnlineCount');
+const discordBotBanCount   = document.getElementById('discordBotBanCount');
+const discordBotGuildIdLabel = document.getElementById('discordBotGuildIdLabel');
+const saveDiscordBotBtn    = document.getElementById('saveDiscordBotBtn');
+const refreshDiscordBotBtn = document.getElementById('refreshDiscordBotBtn');
+const refreshDiscordBotSummaryBtn = document.getElementById('refreshDiscordBotSummaryBtn');
+const inpDiscordBanUserId  = document.getElementById('inpDiscordBanUserId');
+const inpDiscordBanReason  = document.getElementById('inpDiscordBanReason');
+const banDiscordUserBtn    = document.getElementById('banDiscordUserBtn');
+const discordBanListTbody  = document.getElementById('discordBanListTbody');
 
 // ── reveal webhook fields ──────────────────────────────────────
 window.toggleReveal = (inputId, btn) => {
@@ -100,6 +120,13 @@ const saveBtn         = document.getElementById('saveSettingsBtn');
 const saveStatus      = document.getElementById('saveStatus');
 const settingsSubnav  = document.getElementById('settingsSubnav');
 const settingsSidebarNav = document.getElementById('settingsSidebarNav');
+const revealTokenBtn  = document.getElementById('revealToken');
+
+const settingsPageMode = document.body?.dataset.settingsPage || 'main';
+const settingsPageLabel = document.body?.dataset.settingsPageLabel || 'Pengaturan';
+if (saveBtn && !saveBtn.dataset.defaultHtml) {
+  saveBtn.dataset.defaultHtml = saveBtn.innerHTML;
+}
 
 // ── DOM: Device bootstrap / Wi-Fi management (admin only) ────
 const deviceBootstrapSection = document.getElementById('deviceBootstrapSection');
@@ -179,6 +206,11 @@ const formRole        = document.getElementById('newRole');
 const modalSubmit     = document.getElementById('modalSubmitBtn');
 const modalCancel     = document.getElementById('modalCancelBtn');
 const modalClose      = document.getElementById('modalClose');
+const userCountTotalEl = document.getElementById('userCountTotal');
+const userCountAdminEl = document.getElementById('userCountAdmin');
+const userCountRegularEl = document.getElementById('userCountRegular');
+
+let latestDiscordBotSnapshot = null;
 
 // ═══════════════════════════════════════════════════════════════
 // VALIDATION
@@ -436,47 +468,61 @@ function validateAll() {
   let valid = true;
   clearValidations();
 
-  const threshold = parseFloat(inpThreshold?.value);
-  if (isNaN(threshold) || threshold <= 0 || threshold > 200) {
-    setValidation('valThreshold', 'Threshold harus antara 0.1 – 200 A', false);
-    valid = false;
-  } else { setValidation('valThreshold', 'Valid', true); }
+  if (inpThreshold) {
+    const threshold = parseFloat(inpThreshold.value);
+    if (isNaN(threshold) || threshold <= 0 || threshold > 200) {
+      setValidation('valThreshold', 'Threshold harus antara 0.1 – 200 A', false);
+      valid = false;
+    } else { setValidation('valThreshold', 'Valid', true); }
+  }
 
-  const wp = parseFloat(inpWarningPct?.value);
-  if (isNaN(wp) || wp < 50 || wp > 99) {
-    setValidation('valWarningPercent', 'Antara 50 – 99 %', false);
-    valid = false;
-  } else { setValidation('valWarningPercent', 'Valid', true); }
+  if (inpWarningPct) {
+    const wp = parseFloat(inpWarningPct.value);
+    if (isNaN(wp) || wp < 50 || wp > 99) {
+      setValidation('valWarningPercent', 'Antara 50 – 99 %', false);
+      valid = false;
+    } else { setValidation('valWarningPercent', 'Valid', true); }
+  }
 
-  const interval = parseInt(inpSendInterval?.value);
-  if (isNaN(interval) || interval < 500 || interval > 60000) {
-    setValidation('valSendInterval', 'Interval harus antara 500 – 60000 ms', false);
-    valid = false;
-  } else { setValidation('valSendInterval', 'Valid', true); }
+  if (inpSendInterval) {
+    const interval = parseInt(inpSendInterval.value);
+    if (isNaN(interval) || interval < 500 || interval > 60000) {
+      setValidation('valSendInterval', 'Interval harus antara 500 – 60000 ms', false);
+      valid = false;
+    } else { setValidation('valSendInterval', 'Valid', true); }
+  }
 
-  const arusCal = parseFloat(inpArusCal?.value);
-  if (isNaN(arusCal) || arusCal <= 0 || arusCal > 10) {
-    setValidation('valArusCal', 'Harus antara 0.01 – 10', false);
-    valid = false;
-  } else { setValidation('valArusCal', 'Valid', true); }
+  if (inpArusCal) {
+    const arusCal = parseFloat(inpArusCal.value);
+    if (isNaN(arusCal) || arusCal <= 0 || arusCal > 10) {
+      setValidation('valArusCal', 'Harus antara 0.01 – 10', false);
+      valid = false;
+    } else { setValidation('valArusCal', 'Valid', true); }
+  }
 
-  const tegCal = parseFloat(inpTeganganCal?.value);
-  if (isNaN(tegCal) || tegCal <= 0 || tegCal > 2000) {
-    setValidation('valTeganganCal', 'Harus antara 0.01 – 2000', false);
-    valid = false;
-  } else { setValidation('valTeganganCal', 'Valid', true); }
+  if (inpTeganganCal) {
+    const tegCal = parseFloat(inpTeganganCal.value);
+    if (isNaN(tegCal) || tegCal <= 0 || tegCal > 2000) {
+      setValidation('valTeganganCal', 'Harus antara 0.01 – 2000', false);
+      valid = false;
+    } else { setValidation('valTeganganCal', 'Valid', true); }
+  }
 
-  const pf = parseFloat(inpPowerFactor?.value);
-  if (isNaN(pf) || pf < 0.5 || pf > 1) {
-    setValidation('valPowerFactor', 'PF antara 0.5 – 1', false);
-    valid = false;
-  } else { setValidation('valPowerFactor', 'Valid', true); }
+  if (inpPowerFactor) {
+    const pf = parseFloat(inpPowerFactor.value);
+    if (isNaN(pf) || pf < 0.5 || pf > 1) {
+      setValidation('valPowerFactor', 'PF antara 0.5 – 1', false);
+      valid = false;
+    } else { setValidation('valPowerFactor', 'Valid', true); }
+  }
 
-  const fq = parseFloat(inpFrequency?.value);
-  if (isNaN(fq) || fq < 45 || fq > 65) {
-    setValidation('valFrequency', '45 – 65 Hz', false);
-    valid = false;
-  } else { setValidation('valFrequency', 'Valid', true); }
+  if (inpFrequency) {
+    const fq = parseFloat(inpFrequency.value);
+    if (isNaN(fq) || fq < 45 || fq > 65) {
+      setValidation('valFrequency', '45 – 65 Hz', false);
+      valid = false;
+    } else { setValidation('valFrequency', 'Valid', true); }
+  }
 
   const token = inpBotToken?.value.trim();
   if (token && !/^\d+:[A-Za-z0-9_-]{35,}$/.test(token)) {
@@ -491,6 +537,20 @@ function validateAll() {
   }
 
   return valid;
+}
+
+function initRevealTokenToggle() {
+  if (!revealTokenBtn || revealTokenBtn.dataset.bound === '1') return;
+  revealTokenBtn.dataset.bound = '1';
+  revealTokenBtn.addEventListener('click', () => {
+    const inp = document.getElementById('inpBotToken');
+    if (!inp) return;
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    revealTokenBtn.innerHTML =
+      inp.type === 'password'
+        ? '<span class="material-symbols-rounded">visibility</span>'
+        : '<span class="material-symbols-rounded">visibility_off</span>';
+  });
 }
 
 function isRealAdminSettingsSession() {
@@ -509,6 +569,15 @@ function getCallableErrorMessage(err, fallback = 'Terjadi kesalahan.') {
     .replace(/^unauthenticated\s*/i, '')
     .trim();
   return message || fallback;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function getLiveResetApiBase() {
@@ -539,6 +608,256 @@ async function callLiveResetApi(path, body = {}) {
   }
   return data;
 }
+
+function formatAdminDateTime(value) {
+  const raw = Number(value || 0);
+  if (!Number.isFinite(raw) || raw <= 0) return 'Belum pernah';
+  return new Date(raw).toLocaleString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function setDiscordBotStatus(type = 'idle', label = 'Menunggu konfigurasi') {
+  if (!discordBotStatusBadge) return;
+
+  const styleMap = {
+    idle: {
+      background: 'rgba(17, 24, 39, 0.55)',
+      color: '#e0e7ff',
+      icon: 'pending',
+    },
+    success: {
+      background: 'rgba(34, 197, 94, 0.16)',
+      color: '#bbf7d0',
+      icon: 'check_circle',
+    },
+    warning: {
+      background: 'rgba(245, 158, 11, 0.16)',
+      color: '#fde68a',
+      icon: 'warning',
+    },
+    error: {
+      background: 'rgba(239, 68, 68, 0.18)',
+      color: '#fecaca',
+      icon: 'error',
+    },
+  };
+
+  const selected = styleMap[type] || styleMap.idle;
+  discordBotStatusBadge.style.background = selected.background;
+  discordBotStatusBadge.style.color = selected.color;
+  discordBotStatusBadge.innerHTML = `<span class="material-symbols-rounded">${selected.icon}</span>${escapeHtml(label)}`;
+}
+
+function renderDiscordBanList(bans = []) {
+  if (!discordBanListTbody) return;
+
+  if (!Array.isArray(bans) || bans.length === 0) {
+    discordBanListTbody.innerHTML = `
+      <tr>
+        <td colspan="4" class="discord-ban-empty">Belum ada user yang diban pada server Discord ini.</td>
+      </tr>`;
+    return;
+  }
+
+  discordBanListTbody.innerHTML = bans.map((entry) => {
+    const displayName = entry.displayName || entry.username || 'User Discord';
+    const userId = entry.userId || '—';
+    const reason = entry.reason || 'Tidak ada alasan tersimpan';
+    const avatar = entry.avatarUrl
+      ? `<img src="${escapeHtml(entry.avatarUrl)}" alt="${escapeHtml(displayName)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.12);" />`
+      : `<div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(88,101,242,0.18);color:#c7d2fe;font-weight:700;">${escapeHtml(displayName.slice(0, 1).toUpperCase())}</div>`;
+
+    return `
+      <tr>
+        <td data-label="Pengguna">
+          <div style="display:flex;align-items:center;gap:10px;">
+            ${avatar}
+            <div>
+              <div style="font-weight:700;color:var(--text-primary);">${escapeHtml(displayName)}</div>
+              <div style="font-size:12px;color:var(--text-secondary);">${escapeHtml(entry.username || '')}</div>
+            </div>
+          </div>
+        </td>
+        <td data-label="User ID"><span class="font-mono text-sm">${escapeHtml(userId)}</span></td>
+        <td data-label="Alasan"><span class="text-sm text-muted">${escapeHtml(reason)}</span></td>
+        <td data-label="Aksi">
+          <button class="btn btn-ghost btn-sm" onclick="unbanDiscordUser('${escapeHtml(userId)}')">
+            <span class="material-symbols-rounded">undo</span>Unban
+          </button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function renderDiscordBotSnapshot(snapshot = {}) {
+  latestDiscordBotSnapshot = snapshot || {};
+
+  if (inpDiscordGuildId && snapshot.guildId) {
+    inpDiscordGuildId.value = snapshot.guildId;
+  }
+  if (inpDiscordBotToken && snapshot.maskedToken && !inpDiscordBotToken.value.trim()) {
+    inpDiscordBotToken.placeholder = `${snapshot.maskedToken} (tersimpan)`;
+  }
+
+  const configured = !!snapshot.configured;
+  const guildName = snapshot.guildName || 'Belum terhubung ke server';
+  const botDisplay = snapshot.botUser?.displayName || snapshot.botUser?.username || 'Belum ada akun bot';
+  const tokenLabel = snapshot.tokenConfigured
+    ? (snapshot.maskedToken || 'Token tersimpan')
+    : 'Belum ada token tersimpan';
+
+  if (discordBotMaskedToken) discordBotMaskedToken.textContent = tokenLabel;
+  if (discordBotAccount) discordBotAccount.textContent = botDisplay;
+  if (discordBotGuildName) discordBotGuildName.textContent = guildName;
+  if (discordBotLastChecked) discordBotLastChecked.textContent = formatAdminDateTime(snapshot.lastCheckedAt);
+  if (discordBotMemberCount) discordBotMemberCount.textContent = String(Number(snapshot.memberCount || 0));
+  if (discordBotOnlineCount) discordBotOnlineCount.textContent = String(Number(snapshot.onlineCount || 0));
+  if (discordBotBanCount) discordBotBanCount.textContent = String(Number(snapshot.banCount || 0));
+  if (discordBotGuildIdLabel) discordBotGuildIdLabel.textContent = snapshot.guildId || '—';
+
+  if (configured) {
+    setDiscordBotStatus('success', 'Bot aktif dan terhubung');
+    if (discordBotStatusMessage) {
+      discordBotStatusMessage.textContent = `Bot ${botDisplay} tersambung ke server ${guildName}. Kamu sekarang bisa melihat jumlah member dan mengelola daftar ban dari dashboard admin.`;
+    }
+  } else if (snapshot.tokenConfigured || snapshot.guildId) {
+    setDiscordBotStatus('warning', 'Konfigurasi belum lengkap');
+    if (discordBotStatusMessage) {
+      discordBotStatusMessage.textContent = 'Isi Guild ID yang benar dan pastikan Bot Token aktif. Jika token lama masih dipakai, kamu boleh membiarkan field token kosong lalu refresh ringkasan.';
+    }
+  } else {
+    setDiscordBotStatus('idle', 'Menunggu konfigurasi');
+    if (discordBotStatusMessage) {
+      discordBotStatusMessage.textContent = 'Bot belum dikonfigurasi. Simpan Bot Token dan Guild ID untuk mulai membaca jumlah member dan daftar ban.';
+    }
+  }
+
+  renderDiscordBanList(snapshot.bans || []);
+}
+
+function setDiscordBotError(message) {
+  setDiscordBotStatus('error', 'Bot perlu perhatian');
+  if (discordBotStatusMessage) {
+    discordBotStatusMessage.textContent = message || 'Terjadi kendala saat memuat status Discord Bot.';
+  }
+}
+
+async function loadDiscordBotStatus({ silent = false } = {}) {
+  const hasDiscordBotUi = inpDiscordBotToken || inpDiscordGuildId || discordBanListTbody;
+  if (!hasDiscordBotUi || !isRealAdminSettingsSession()) return;
+
+  try {
+    if (!silent) setDiscordBotStatus('idle', 'Memuat ringkasan bot...');
+    const snapshot = await callLiveResetApi('get-discord-bot-status');
+    renderDiscordBotSnapshot(snapshot);
+  } catch (err) {
+    const message = getCallableErrorMessage(err, 'Gagal memuat status Discord Bot.');
+    setDiscordBotError(message);
+    if (!silent) showToast(message, 'error');
+  }
+}
+
+async function saveDiscordBotConfig() {
+  if (!isRealAdminSettingsSession()) return;
+
+  const guildId = String(inpDiscordGuildId?.value || '').trim();
+  const token = String(inpDiscordBotToken?.value || '').trim();
+
+  if (!guildId) {
+    const message = 'Guild / Server ID Discord wajib diisi.';
+    setDiscordBotError(message);
+    showToast(message, 'error');
+    return;
+  }
+
+  if (!token && !latestDiscordBotSnapshot?.tokenConfigured) {
+    const message = 'Discord Bot Token wajib diisi pada penyimpanan pertama.';
+    setDiscordBotError(message);
+    showToast(message, 'error');
+    return;
+  }
+
+  const buttons = [saveDiscordBotBtn, refreshDiscordBotSummaryBtn, refreshDiscordBotBtn].filter(Boolean);
+  buttons.forEach((btn) => { btn.disabled = true; });
+  setDiscordBotStatus('idle', 'Menguji dan menyimpan bot...');
+
+  try {
+    const snapshot = await callLiveResetApi('save-discord-bot-config', { guildId, token });
+    renderDiscordBotSnapshot(snapshot);
+    if (inpDiscordBotToken) inpDiscordBotToken.value = '';
+    showToast('Discord Bot berhasil disimpan dan diuji ke server.', 'success');
+  } catch (err) {
+    const message = getCallableErrorMessage(err, 'Gagal menyimpan konfigurasi Discord Bot.');
+    setDiscordBotError(message);
+    showToast(message, 'error');
+  } finally {
+    buttons.forEach((btn) => { btn.disabled = false; });
+  }
+}
+
+async function banDiscordUser() {
+  if (!isRealAdminSettingsSession()) return;
+
+  const userId = String(inpDiscordBanUserId?.value || '').trim();
+  const reason = String(inpDiscordBanReason?.value || '').trim();
+  if (!/^\d{5,}$/.test(userId)) {
+    showToast('Discord User ID tidak valid.', 'error');
+    return;
+  }
+
+  if (!confirm(`Ban user Discord dengan ID "${userId}" dari server sekarang?`)) return;
+
+  const buttons = [banDiscordUserBtn, refreshDiscordBotBtn, refreshDiscordBotSummaryBtn, saveDiscordBotBtn].filter(Boolean);
+  buttons.forEach((btn) => { btn.disabled = true; });
+  setDiscordBotStatus('idle', 'Mengirim permintaan ban...');
+
+  try {
+    const snapshot = await callLiveResetApi('ban-discord-user', { userId, reason });
+    renderDiscordBotSnapshot(snapshot);
+    if (inpDiscordBanUserId) inpDiscordBanUserId.value = '';
+    if (inpDiscordBanReason) inpDiscordBanReason.value = '';
+    showToast(`User Discord ${userId} berhasil diban.`, 'success');
+  } catch (err) {
+    const message = getCallableErrorMessage(err, 'Gagal melakukan ban user Discord.');
+    setDiscordBotError(message);
+    showToast(message, 'error');
+  } finally {
+    buttons.forEach((btn) => { btn.disabled = false; });
+  }
+}
+
+window.unbanDiscordUser = async (userId) => {
+  if (!isRealAdminSettingsSession()) return;
+  const normalized = String(userId || '').trim();
+  if (!/^\d{5,}$/.test(normalized)) {
+    showToast('Discord User ID tidak valid.', 'error');
+    return;
+  }
+  if (!confirm(`Unban user Discord dengan ID "${normalized}" dari server ini?`)) return;
+
+  const buttons = [banDiscordUserBtn, refreshDiscordBotBtn, refreshDiscordBotSummaryBtn, saveDiscordBotBtn].filter(Boolean);
+  buttons.forEach((btn) => { btn.disabled = true; });
+  setDiscordBotStatus('idle', 'Mengirim permintaan unban...');
+
+  try {
+    const snapshot = await callLiveResetApi('unban-discord-user', { userId: normalized });
+    renderDiscordBotSnapshot(snapshot);
+    showToast(`User Discord ${normalized} berhasil di-unban.`, 'success');
+  } catch (err) {
+    const message = getCallableErrorMessage(err, 'Gagal melakukan unban user Discord.');
+    setDiscordBotError(message);
+    showToast(message, 'error');
+  } finally {
+    buttons.forEach((btn) => { btn.disabled = false; });
+  }
+};
 
 function getVisibleSettingsSections() {
   return Array.from(document.querySelectorAll('[data-settings-section]'))
@@ -1129,7 +1448,20 @@ function loadSettings() {
 }
 
 async function saveSettings() {
-  if (!commitChatIdInput()) {
+  const hasTelegramControls = Boolean(inpBotToken || inpChatId || inpRecipientName || inpTelegramNotify);
+  const hasGeneralControls = Boolean(
+    inpThreshold ||
+    inpWarningPct ||
+    inpSendInterval ||
+    inpBuzzer ||
+    inpAutoCutoff ||
+    inpArusCal ||
+    inpTeganganCal ||
+    inpPowerFactor ||
+    inpFrequency
+  );
+
+  if (hasTelegramControls && !commitChatIdInput()) {
     showToast('Periksa kembali Chat ID Telegram', 'error');
     return;
   }
@@ -1138,31 +1470,62 @@ async function saveSettings() {
     showToast('Periksa kembali nilai yang tidak valid', 'error');
     return;
   }
-  const payload = {
-    thresholdArus:       parseFloat(inpThreshold?.value    || 10),
-    warningPercent:      parseFloat(inpWarningPct?.value    || 80),
-    sendIntervalMs:      parseInt(inpSendInterval?.value   || 2000),
-    buzzerEnabled:       inpBuzzer?.checked      ?? true,
-    autoCutoffEnabled:   inpAutoCutoff?.checked  ?? true,
-    arusCalibration:     parseFloat(inpArusCal?.value      || 1),
-    teganganCalibration: parseFloat(inpTeganganCal?.value  || 1),
-    powerFactorEstimate: parseFloat(inpPowerFactor?.value   || 0.85),
-    frequencyHz:         parseFloat(inpFrequency?.value     || 50),
-    telegramNotifyEnabled: inpTelegramNotify?.checked ?? true,
-  };
-  const token  = inpBotToken?.value.trim();
-  if (token)  payload.telegramBotToken = token;
-  const telegramChatIds = telegramRecipients.map((recipient) => recipient.chatId);
-  payload.telegramRecipients = telegramRecipients;
-  payload.telegramChatIds = telegramChatIds;
-  payload.telegramChatId = telegramChatIds.join(',');
+  const payload = {};
+
+  if (inpThreshold) {
+    payload.thresholdArus = parseFloat(inpThreshold.value || 10);
+  }
+  if (inpWarningPct) {
+    payload.warningPercent = parseFloat(inpWarningPct.value || 80);
+  }
+  if (inpSendInterval) {
+    payload.sendIntervalMs = parseInt(inpSendInterval.value || 2000);
+  }
+  if (inpBuzzer) {
+    payload.buzzerEnabled = inpBuzzer.checked;
+  }
+  if (inpAutoCutoff) {
+    payload.autoCutoffEnabled = inpAutoCutoff.checked;
+  }
+  if (inpArusCal) {
+    payload.arusCalibration = parseFloat(inpArusCal.value || 1);
+  }
+  if (inpTeganganCal) {
+    payload.teganganCalibration = parseFloat(inpTeganganCal.value || 1);
+  }
+  if (inpPowerFactor) {
+    payload.powerFactorEstimate = parseFloat(inpPowerFactor.value || 0.85);
+  }
+  if (inpFrequency) {
+    payload.frequencyHz = parseFloat(inpFrequency.value || 50);
+  }
+  if (inpTelegramNotify) {
+    payload.telegramNotifyEnabled = inpTelegramNotify.checked;
+  }
+  if (inpBotToken) {
+    const token = inpBotToken.value.trim();
+    if (token) payload.telegramBotToken = token;
+  }
+  if (hasTelegramControls) {
+    const telegramChatIds = telegramRecipients.map((recipient) => recipient.chatId);
+    payload.telegramRecipients = telegramRecipients;
+    payload.telegramChatIds = telegramChatIds;
+    payload.telegramChatId = telegramChatIds.join(',');
+  }
+
+  if (!hasGeneralControls && !hasTelegramControls) {
+    showToast(`Tidak ada ${settingsPageLabel.toLowerCase()} yang bisa disimpan di halaman ini.`, 'warning');
+    return;
+  }
 
   try {
-    saveBtn.disabled    = true;
-    saveBtn.textContent = 'Menyimpan...';
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="material-symbols-rounded">save</span> Menyimpan...';
+    }
     // Gunakan update() bukan set() agar /settings/discord subpath TIDAK TERHAPUS
     await update(ref(db, getDbPrefix() + '/settings'), payload);
-    showToast('Settings tersimpan — ESP32 sinkron dalam ~10 detik', 'success');
+    showToast(`${settingsPageLabel} tersimpan — ESP32 sinkron dalam ~10 detik`, 'success');
     if (saveStatus) saveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
     // Reload config di sim-notifier agar notifikasi langsung sinkron
     reloadSimNotifierConfig().catch(() => {});
@@ -1170,8 +1533,10 @@ async function saveSettings() {
     showToast('Gagal simpan: ' + err.message, 'error');
     if (saveStatus) saveStatus.textContent = 'Gagal';
   } finally {
-    saveBtn.disabled    = false;
-    saveBtn.textContent = 'Simpan Semua Settings';
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = saveBtn.dataset.defaultHtml || '<span class="material-symbols-rounded">save</span> Simpan';
+    }
   }
 }
 
@@ -1185,10 +1550,11 @@ function loadDiscordSettings() {
     if (inpDiscordAlerts)     inpDiscordAlerts.value     = d.webhookAlerts     || '';
     if (inpDiscordRelay)      inpDiscordRelay.value      = d.webhookRelay      || '';
     if (inpDiscordMonitoring) inpDiscordMonitoring.value = d.webhookMonitoring || '';
+    if (inpDiscordDailyReport) inpDiscordDailyReport.value = d.webhookDailyReport || '';
     if (inpDiscordLogs)       inpDiscordLogs.value       = d.webhookLogs       || '';
     if (inpDiscordEnabled)    inpDiscordEnabled.checked  = d.enabled !== false;
     // Placeholder hint untuk yang sudah tersimpan
-    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordLogs]
+    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordDailyReport, inpDiscordLogs]
       .forEach(el => { if (el && el.value) el.placeholder = '••• (tersimpan)'; });
   });
 }
@@ -1197,8 +1563,9 @@ async function saveDiscordSettings() {
   const hasAlerts     = inpDiscordAlerts?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const hasRelay      = inpDiscordRelay?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const hasMonitoring = inpDiscordMonitoring?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const hasDailyReport = inpDiscordDailyReport?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const hasLogs       = inpDiscordLogs?.value.trim().startsWith('https://discord.com/api/webhooks/');
-  const hasAnyWebhook = hasAlerts || hasRelay || hasMonitoring || hasLogs;
+  const hasAnyWebhook = hasAlerts || hasRelay || hasMonitoring || hasDailyReport || hasLogs;
 
   // Jika ada webhook valid → otomatis enabled=true (jangan biarkan user lupa toggle)
   const enabledValue = hasAnyWebhook ? true : (inpDiscordEnabled?.checked ?? false);
@@ -1207,6 +1574,7 @@ async function saveDiscordSettings() {
     webhookAlerts:     inpDiscordAlerts?.value.trim()     || '',
     webhookRelay:      inpDiscordRelay?.value.trim()      || '',
     webhookMonitoring: inpDiscordMonitoring?.value.trim() || '',
+    webhookDailyReport: inpDiscordDailyReport?.value.trim() || '',
     webhookLogs:       inpDiscordLogs?.value.trim()       || '',
     enabled:           enabledValue,
   };
@@ -1328,11 +1696,13 @@ function loadUsers() {
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <div class="spinner"></div>Memuat pengguna...
     </div></td></tr>`;
+  renderUserSummary([]);
 
   if (usersUnsubscribe) usersUnsubscribe();
 
   usersUnsubscribe = onValue(ref(db, '/users'), (snap) => {
     if (!snap.exists()) {
+      renderUserSummary([]);
       usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
         Belum ada pengguna</td></tr>`;
       return;
@@ -1345,7 +1715,20 @@ function loadUsers() {
   });
 }
 
+function renderUserSummary(users = []) {
+  const total = Array.isArray(users) ? users.length : 0;
+  const adminCount = Array.isArray(users)
+    ? users.filter((item) => String(item?.role || 'user') === 'admin').length
+    : 0;
+  const regularCount = Math.max(0, total - adminCount);
+
+  if (userCountTotalEl) userCountTotalEl.textContent = String(total);
+  if (userCountAdminEl) userCountAdminEl.textContent = String(adminCount);
+  if (userCountRegularEl) userCountRegularEl.textContent = String(regularCount);
+}
+
 function renderUsers(users) {
+  renderUserSummary(users);
   const currentUid = auth.currentUser?.uid;
   usersTbody.innerHTML = users.map(u => {
     const isMe  = u.uid === currentUid;
@@ -1497,7 +1880,12 @@ initPage({
   onAuthed: (user, role) => {
     populateSidebar(user, role);
     initSidebarToggle();
-    initSettingsSubnav();
+    if (settingsPageMode === 'main') {
+      initSettingsSubnav();
+    } else if (settingsSidebarNav) {
+      settingsSidebarNav.classList.add('hidden');
+      settingsSidebarNav.style.display = 'none';
+    }
     setDeviceBootstrapVisibility();
     setLiveDataResetVisibility();
     setDatabaseBackupVisibility();
@@ -1506,14 +1894,17 @@ initPage({
     renderDatabaseBackupState();
     renderMonitoringWipeState();
     refreshSettingsSubnav();
+    initRevealTokenToggle();
     initTelegramChatManager();
     loadSettings();
     loadClientConfigUi();
     loadDiscordSettings();
+    loadDiscordBotStatus({ silent: true });
     loadDeviceBootstrapSettings();
     loadUsers();
     saveBtn?.addEventListener('click', saveSettings);
     saveDiscordBtn?.addEventListener('click', saveDiscordSettings);
+    saveDiscordBotBtn?.addEventListener('click', saveDiscordBotConfig);
     saveDeviceBootstrapBtn?.addEventListener('click', saveDeviceBootstrapSettings);
     clearDeviceBootstrapBtn?.addEventListener('click', clearDeviceBootstrapSettings);
     confirmLiveResetBtn?.addEventListener('click', confirmLiveDataReset);
@@ -1521,6 +1912,9 @@ initPage({
     sendMonitoringWipeOtpBtn?.addEventListener('click', requestMonitoringWipeOtp);
     confirmMonitoringWipeBtn?.addEventListener('click', confirmMonitoringWipe);
     testDiscordBtn?.addEventListener('click', testDiscordWebhook);
+    refreshDiscordBotBtn?.addEventListener('click', () => loadDiscordBotStatus());
+    refreshDiscordBotSummaryBtn?.addEventListener('click', () => loadDiscordBotStatus());
+    banDiscordUserBtn?.addEventListener('click', banDiscordUser);
     saveClientBtn?.addEventListener('click', saveClientConfigFromForm);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
     document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);

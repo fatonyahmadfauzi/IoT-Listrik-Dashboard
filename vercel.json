@@ -37,11 +37,17 @@
     { "source": "/app/dashboard", "destination": "/app/dashboard.html" },
     { "source": "/app/history",   "destination": "/app/history.html" },
     { "source": "/app/settings",  "destination": "/app/settings.html" },
+    { "source": "/app/telegram",  "destination": "/app/telegram.html" },
+    { "source": "/app/discord",   "destination": "/app/discord.html" },
+    { "source": "/app/users",     "destination": "/app/users.html" },
 
     { "source": "/login",         "destination": "/app/login.html" },
     { "source": "/dashboard",     "destination": "/app/dashboard.html" },
     { "source": "/history",       "destination": "/app/history.html" },
     { "source": "/settings",      "destination": "/app/settings.html" },
+    { "source": "/telegram",      "destination": "/app/telegram.html" },
+    { "source": "/discord",       "destination": "/app/discord.html" },
+    { "source": "/users",         "destination": "/app/users.html" },
 
     { "source": "/simulator/app",  "destination": "/simulator/app.html" },
     { "source": "/simulator",      "destination": "/simulator/index.html" },

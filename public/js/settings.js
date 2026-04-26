@@ -1588,7 +1588,18 @@ function loadDiscordSettings() {
     // Placeholder hint untuk yang sudah tersimpan
     [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordDailyReport, inpDiscordLogs]
       .forEach(el => { if (el && el.value) el.placeholder = '••• (tersimpan)'; });
+    syncDiscordTestButtonState();
   });
+}
+
+function syncDiscordTestButtonState() {
+  if (!testDiscordBtn) return;
+  const hasWebhook = inpDiscordAlerts?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const enabled = !!inpDiscordEnabled?.checked;
+  testDiscordBtn.disabled = !enabled || !hasWebhook;
+  testDiscordBtn.title = enabled
+    ? (hasWebhook ? '' : 'Isi Webhook #alerts terlebih dahulu')
+    : 'Master Switch Discord sedang dimatikan';
 }
 
 async function saveDiscordSettings() {
@@ -1598,9 +1609,7 @@ async function saveDiscordSettings() {
   const hasDailyReport = inpDiscordDailyReport?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const hasLogs       = inpDiscordLogs?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const hasAnyWebhook = hasAlerts || hasRelay || hasMonitoring || hasDailyReport || hasLogs;
-
-  // Jika ada webhook valid → otomatis enabled=true (jangan biarkan user lupa toggle)
-  const enabledValue = hasAnyWebhook ? true : (inpDiscordEnabled?.checked ?? false);
+  const enabledValue = !!(inpDiscordEnabled?.checked);
 
   const payload = {
     webhookAlerts:     inpDiscordAlerts?.value.trim()     || '',
@@ -1633,6 +1642,11 @@ async function saveDiscordSettings() {
 }
 
 async function testDiscordWebhook() {
+  if (!inpDiscordEnabled?.checked) {
+    showToast('Master Switch Discord sedang dimatikan. Aktifkan dulu jika ingin mengirim test.', 'error');
+    return;
+  }
+
   // Kirim test embed langsung dari browser ke webhook #alerts
   const url = inpDiscordAlerts?.value.trim();
   if (!url || !url.startsWith('https://discord.com/api/webhooks/')) {
@@ -1944,6 +1958,9 @@ initPage({
     sendMonitoringWipeOtpBtn?.addEventListener('click', requestMonitoringWipeOtp);
     confirmMonitoringWipeBtn?.addEventListener('click', confirmMonitoringWipe);
     testDiscordBtn?.addEventListener('click', testDiscordWebhook);
+    inpDiscordEnabled?.addEventListener('change', syncDiscordTestButtonState);
+    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordDailyReport, inpDiscordLogs]
+      .forEach((el) => el?.addEventListener('input', syncDiscordTestButtonState));
     refreshDiscordBotBtn?.addEventListener('click', () => loadDiscordBotStatus());
     refreshDiscordBotSummaryBtn?.addEventListener('click', () => loadDiscordBotStatus());
     banDiscordUserBtn?.addEventListener('click', banDiscordUser);

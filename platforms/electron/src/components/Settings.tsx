@@ -924,6 +924,13 @@ export function Settings({ onLogout }: SettingsProps) {
   };
 
   const testDiscordWebhook = async () => {
+    if (!discordEnabled) {
+      notifyDesktop(
+        'Discord dimatikan',
+        'Aktifkan Master Switch Discord terlebih dahulu jika ingin mengirim test.'
+      );
+      return;
+    }
     if (!discordAlerts.startsWith('https://discord.com/api/webhooks/')) {
       notifyDesktop('Test Discord', 'Isi Webhook #alerts terlebih dahulu untuk test.');
       return;
@@ -1501,7 +1508,7 @@ export function Settings({ onLogout }: SettingsProps) {
                       Aktifkan Integrasi Discord
                     </span>
                     <span className="block text-sm leading-6 text-gray-500 dark:text-gray-400">
-                      Master switch untuk seluruh notifikasi Discord dari backend.
+                      Master switch untuk seluruh notifikasi Discord. Saat dimatikan, backend dan tombol test tidak akan mengirim pesan.
                     </span>
                   </label>
                   <label
@@ -1531,7 +1538,7 @@ export function Settings({ onLogout }: SettingsProps) {
                   </button>
                   <button
                     onClick={testDiscordWebhook}
-                    disabled={loading || !discordAlerts.startsWith('https://discord.com/api/webhooks/')}
+                    disabled={loading || !discordEnabled || !discordAlerts.startsWith('https://discord.com/api/webhooks/')}
                     className="px-4 py-2 bg-transparent border border-[#5865F2] text-[#5865F2] hover:bg-[#5865F2] hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
                   >
                     Test Kirim Ke #alerts

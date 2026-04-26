@@ -11,14 +11,14 @@
       "setup": {
         "filename": "IoT-Listrik-Dashboard-Setup-1.0.0.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup-1.0.0.exe",
-        "size": "267.23 MB",
+        "size": "267.24 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable-1.0.0.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable-1.0.0.exe",
-        "size": "266.96 MB",
+        "size": "266.97 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
@@ -48,5 +48,5 @@
       }
     }
   },
-  "notes": "Release v1.0.0 refreshed on 2026-04-27 with Telegram recipient count summary on desktop, split Telegram, Discord, and Users management, Firebase backup email, daily Excel report settings, Discord Bot moderation tools, and updated Windows desktop parity."
+  "notes": "Release v1.0.0 refreshed on 2026-04-27 with Telegram bot connect/test tools on web and desktop, Telegram recipient count summary on desktop, split Telegram, Discord, and Users management, Firebase backup email, daily Excel report settings, Discord Bot moderation tools, and updated Windows desktop parity."
 }

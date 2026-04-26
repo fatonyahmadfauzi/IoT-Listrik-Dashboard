@@ -186,6 +186,10 @@ export function Settings({ onLogout }: SettingsProps) {
   const [telegramRecipientNameDraft, setTelegramRecipientNameDraft] = useState('');
   const [telegramChatIdDraft, setTelegramChatIdDraft] = useState('');
   const [editingChatIdIndex, setEditingChatIdIndex] = useState<number | null>(null);
+  const [telegramActionLoading, setTelegramActionLoading] = useState(false);
+  const [telegramActionMessage, setTelegramActionMessage] = useState(
+    'Gunakan Hubungkan Bot untuk membuka chat bot, lalu Test Kirim Pesan untuk memastikan tujuan aktif menerima pesan.'
+  );
 
   useEffect(() => {
     if (!settings) return;
@@ -425,6 +429,107 @@ export function Settings({ onLogout }: SettingsProps) {
       notifyDesktop('Gagal menyimpan Telegram', 'Konfigurasi Telegram tidak berhasil disimpan.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConnectTelegramBot = async () => {
+    if (!isAdmin) return;
+    if (!telegramBotToken.trim()) {
+      notifyDesktop('Telegram Bot', 'Isi Bot Token Telegram terlebih dahulu.');
+      return;
+    }
+
+    const popup = window.open('about:blank', '_blank', 'noopener,noreferrer');
+    setTelegramActionLoading(true);
+    try {
+      const data = await callLiveResetApi('get-telegram-bot-profile', {
+        token: telegramBotToken.trim(),
+      });
+      const username = String(data.username || '').trim();
+      const botUrl = String(data.botUrl || '').trim();
+      setTelegramActionMessage(
+        username
+          ? `Bot @${username} berhasil dikenali. Chat bot akan dibuka di browser default.`
+          : 'Bot Telegram berhasil dikenali.'
+      );
+      notifyDesktop('Telegram Bot', username ? `Bot @${username} siap dihubungkan.` : 'Bot Telegram berhasil dikenali.');
+      if (popup && botUrl) popup.location.href = botUrl;
+      else if (botUrl) window.open(botUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      if (popup) popup.close();
+      const msg = getCallableErrorMessage(error, 'Gagal membaca profil bot Telegram.');
+      setTelegramActionMessage(msg);
+      notifyDesktop('Gagal membaca bot Telegram', msg);
+    } finally {
+      setTelegramActionLoading(false);
+    }
+  };
+
+  const handleTestTelegram = async () => {
+    if (!isAdmin) return;
+    if (!telegramBotToken.trim()) {
+      notifyDesktop('Telegram Test', 'Isi Bot Token Telegram terlebih dahulu.');
+      return;
+    }
+
+    let nextRecipients = [...telegramRecipients];
+    const name = telegramRecipientNameDraft.trim();
+    const draft = telegramChatIdDraft.trim();
+    if (draft || name) {
+      if (!draft && name) {
+        notifyDesktop('Validasi Telegram', 'Chat ID wajib diisi.');
+        return;
+      }
+      const chatId = normalizeTelegramChatId(draft);
+      if (!chatId) {
+        notifyDesktop('Validasi Telegram', 'Chat ID harus angka. Untuk grup biasanya diawali -100.');
+        return;
+      }
+
+      const duplicateIndex = nextRecipients.findIndex((item) => item.chatId === chatId);
+      if (duplicateIndex !== -1 && duplicateIndex !== editingChatIdIndex) {
+        notifyDesktop('Validasi Telegram', 'Chat ID sudah ada di daftar.');
+        return;
+      }
+
+      const recipient = { name, chatId };
+      if (editingChatIdIndex !== null) {
+        nextRecipients[editingChatIdIndex] = recipient;
+      } else {
+        nextRecipients.push(recipient);
+      }
+
+      setTelegramRecipients(nextRecipients);
+      setTelegramRecipientNameDraft('');
+      setTelegramChatIdDraft('');
+      setEditingChatIdIndex(null);
+    }
+
+    if (nextRecipients.length === 0) {
+      notifyDesktop('Telegram Test', 'Tambahkan minimal satu Chat ID / Group ID sebelum test.');
+      return;
+    }
+
+    setTelegramActionLoading(true);
+    try {
+      const data = await callLiveResetApi('test-telegram-config', {
+        token: telegramBotToken.trim(),
+        recipients: nextRecipients,
+      });
+      const sentCount = Number(data.successCount || 0);
+      const totalRecipients = Number(data.totalRecipients || nextRecipients.length);
+      const username = String(data.username || '').trim();
+      const message = username
+        ? `Test Telegram berhasil dikirim ke ${sentCount}/${totalRecipients} tujuan lewat @${username}.`
+        : `Test Telegram berhasil dikirim ke ${sentCount}/${totalRecipients} tujuan.`;
+      setTelegramActionMessage(message);
+      notifyDesktop('Telegram Test', message);
+    } catch (error) {
+      const msg = getCallableErrorMessage(error, 'Gagal mengirim test Telegram.');
+      setTelegramActionMessage(msg);
+      notifyDesktop('Gagal test Telegram', msg);
+    } finally {
+      setTelegramActionLoading(false);
     }
   };
 
@@ -1201,7 +1306,7 @@ export function Settings({ onLogout }: SettingsProps) {
         <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow space-y-5">
           <div className="space-y-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Telegram Integration
+              Konfigurasi Telegram
             </h3>
             <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
               Atur token bot, daftar penerima, dan status notifikasi Telegram.
@@ -1232,6 +1337,27 @@ export function Settings({ onLogout }: SettingsProps) {
                 {showTgToken ? <EyeOff size={20}/> : <Eye size={20}/>}
               </button>
             </div>
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleConnectTelegramBot}
+                disabled={telegramActionLoading || !telegramBotToken.trim()}
+                className="min-h-[46px] rounded-lg border border-blue-500 px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 disabled:opacity-50 dark:border-blue-400 dark:text-blue-300 dark:hover:bg-blue-950/30"
+              >
+                Hubungkan Bot
+              </button>
+              <button
+                type="button"
+                onClick={handleTestTelegram}
+                disabled={telegramActionLoading || !telegramBotToken.trim()}
+                className="min-h-[46px] rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300"
+              >
+                {telegramActionLoading ? 'Memproses...' : 'Test Kirim Pesan'}
+              </button>
+            </div>
+            <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+              {telegramActionMessage}
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -1391,7 +1517,7 @@ export function Settings({ onLogout }: SettingsProps) {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Discord Integration
+                Konfigurasi Discord
               </h3>
               <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
                 Webhook dipakai untuk notifikasi monitoring, sedangkan Discord Bot dipakai

@@ -237,6 +237,23 @@
       .save-bar .btn-primary .material-symbols-rounded {
         font-size: 17px;
       }
+      .telegram-inline-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .telegram-inline-actions .btn {
+        min-height: 42px;
+        font-size: 13px;
+      }
+      .telegram-action-status {
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--text-secondary);
+        min-height: 18px;
+        margin-top: 10px;
+      }
       @media (max-width: 768px) {
         .settings-section {
           padding: 14px;
@@ -459,6 +476,15 @@
                 <div class="form-hint">
                   Dapat dari @BotFather → /newbot → copy token.
                 </div>
+                <div class="telegram-inline-actions">
+                  <button id="connectTelegramBotBtn" class="btn btn-ghost" type="button">
+                    <span class="material-symbols-rounded">link</span> Hubungkan Bot
+                  </button>
+                  <button id="testTelegramBtn" class="btn btn-secondary" type="button">
+                    <span class="material-symbols-rounded">send</span> Test Kirim Pesan
+                  </button>
+                </div>
+                <div id="telegramActionStatus" class="telegram-action-status"></div>
                 <div id="valBotToken" class="validation-msg"></div>
               </div>
 

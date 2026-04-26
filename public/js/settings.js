@@ -69,6 +69,9 @@ const inpTeganganCal  = document.getElementById('inpTeganganCal');
 const inpBotToken     = document.getElementById('inpBotToken');
 const inpRecipientName = document.getElementById('inpTelegramRecipientName');
 const inpChatId       = document.getElementById('inpChatId');
+const connectTelegramBotBtn = document.getElementById('connectTelegramBotBtn');
+const testTelegramBtn = document.getElementById('testTelegramBtn');
+const telegramActionStatus = document.getElementById('telegramActionStatus');
 let telegramRecipients = [];
 let editingChatIdIndex = -1;
 let chatIdListEl = null;
@@ -309,10 +312,28 @@ function renderTelegramRecipientSummary() {
       : 'Belum ada tujuan Telegram aktif. Tambahkan setidaknya satu Chat ID agar notifikasi dapat dikirim.';
 }
 
+function setTelegramActionStatus(message = '', kind = 'info') {
+  if (!telegramActionStatus) return;
+  telegramActionStatus.textContent = message;
+  telegramActionStatus.style.color =
+    kind === 'error'
+      ? 'var(--red-light)'
+      : kind === 'success'
+        ? 'var(--green-light)'
+        : 'var(--text-secondary)';
+}
+
+function syncTelegramActionButtons() {
+  const hasToken = !!String(inpBotToken?.value || '').trim();
+  if (connectTelegramBotBtn) connectTelegramBotBtn.disabled = !hasToken;
+  if (testTelegramBtn) testTelegramBtn.disabled = !hasToken;
+}
+
 function renderTelegramChatIds() {
   if (!chatIdListEl) return;
 
   renderTelegramRecipientSummary();
+  syncTelegramActionButtons();
   chatIdListEl.innerHTML = '';
 
   if (telegramRecipients.length === 0) {
@@ -485,6 +506,7 @@ function initTelegramChatManager() {
     inpChatId.insertAdjacentElement('afterend', manager);
   }
   renderTelegramChatIds();
+  syncTelegramActionButtons();
 }
 
 function clearValidations() {
@@ -1572,6 +1594,101 @@ async function saveSettings() {
   }
 }
 
+async function connectTelegramBot() {
+  if (!isRealAdminSettingsSession()) return;
+  const token = String(inpBotToken?.value || '').trim();
+  if (!token) {
+    const message = 'Isi Bot Token Telegram terlebih dahulu.';
+    setTelegramActionStatus(message, 'error');
+    showToast(message, 'error');
+    return;
+  }
+
+  const popup = window.open('about:blank', '_blank', 'noopener,noreferrer');
+
+  if (connectTelegramBotBtn) {
+    connectTelegramBotBtn.disabled = true;
+    connectTelegramBotBtn.innerHTML = '<span class="material-symbols-rounded">link</span> Menghubungkan...';
+  }
+
+  try {
+    const data = await callLiveResetApi('get-telegram-bot-profile', { token });
+    const link = String(data.botUrl || '').trim();
+    const username = String(data.username || '').trim();
+    setTelegramActionStatus(
+      username
+        ? `Bot @${username} berhasil dikenali. Membuka chat bot di Telegram.`
+        : 'Bot Telegram berhasil dikenali.',
+      'success'
+    );
+    showToast(username ? `Bot @${username} siap dihubungkan.` : 'Bot Telegram berhasil dikenali.', 'success');
+    if (popup && link) popup.location.href = link;
+    else if (link) window.open(link, '_blank', 'noopener,noreferrer');
+  } catch (err) {
+    if (popup) popup.close();
+    const message = getCallableErrorMessage(err, 'Gagal membaca profil bot Telegram.');
+    setTelegramActionStatus(message, 'error');
+    showToast(message, 'error');
+  } finally {
+    if (connectTelegramBotBtn) {
+      connectTelegramBotBtn.disabled = false;
+      connectTelegramBotBtn.innerHTML = '<span class="material-symbols-rounded">link</span> Hubungkan Bot';
+    }
+    syncTelegramActionButtons();
+  }
+}
+
+async function testTelegramConfigAction() {
+  if (!isRealAdminSettingsSession()) return;
+  const token = String(inpBotToken?.value || '').trim();
+  if (!token) {
+    const message = 'Isi Bot Token Telegram terlebih dahulu.';
+    setTelegramActionStatus(message, 'error');
+    showToast(message, 'error');
+    return;
+  }
+  if (!commitChatIdInput()) {
+    showToast('Periksa kembali Chat ID Telegram sebelum test.', 'error');
+    return;
+  }
+  if (telegramRecipients.length === 0) {
+    const message = 'Tambahkan minimal satu Chat ID / Group ID untuk test Telegram.';
+    setTelegramActionStatus(message, 'error');
+    showToast(message, 'error');
+    return;
+  }
+
+  if (testTelegramBtn) {
+    testTelegramBtn.disabled = true;
+    testTelegramBtn.innerHTML = '<span class="material-symbols-rounded">send</span> Mengirim...';
+  }
+
+  try {
+    const data = await callLiveResetApi('test-telegram-config', {
+      token,
+      recipients: telegramRecipients,
+    });
+    const sentCount = Number(data.successCount || 0);
+    const totalRecipients = Number(data.totalRecipients || telegramRecipients.length);
+    const username = String(data.username || '').trim();
+    const message = username
+      ? `Test Telegram berhasil dikirim ke ${sentCount}/${totalRecipients} tujuan lewat @${username}.`
+      : `Test Telegram berhasil dikirim ke ${sentCount}/${totalRecipients} tujuan.`;
+    setTelegramActionStatus(message, 'success');
+    showToast(message, 'success');
+  } catch (err) {
+    const message = getCallableErrorMessage(err, 'Gagal mengirim test Telegram.');
+    setTelegramActionStatus(message, 'error');
+    showToast(message, 'error');
+  } finally {
+    if (testTelegramBtn) {
+      testTelegramBtn.disabled = false;
+      testTelegramBtn.innerHTML = '<span class="material-symbols-rounded">send</span> Test Kirim Pesan';
+    }
+    syncTelegramActionButtons();
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // DISCORD WEBHOOK — LOAD, SAVE & TEST
 // ═══════════════════════════════════════════════════════════════
@@ -1967,9 +2084,12 @@ initPage({
     saveClientBtn?.addEventListener('click', saveClientConfigFromForm);
     document.getElementById('logoutBtn')?.addEventListener('click', logout);
     document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);
+    connectTelegramBotBtn?.addEventListener('click', connectTelegramBot);
+    testTelegramBtn?.addEventListener('click', testTelegramConfigAction);
     [inpThreshold, inpWarningPct, inpSendInterval, inpArusCal, inpTeganganCal,
      inpPowerFactor, inpFrequency, inpBotToken, inpChatId]
       .forEach(el => el?.addEventListener('input', validateAll));
+    inpBotToken?.addEventListener('input', syncTelegramActionButtons);
 
     // Alarm: tetap bunyi walau pindah menu (settings) dengan memonitor status /listrik
     requestNotificationPermission();

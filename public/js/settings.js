@@ -72,6 +72,9 @@ const inpChatId       = document.getElementById('inpChatId');
 let telegramRecipients = [];
 let editingChatIdIndex = -1;
 let chatIdListEl = null;
+let chatIdSummaryEl = null;
+let chatIdSummaryCountEl = null;
+let chatIdSummaryNoteEl = null;
 let addChatIdBtn = null;
 let cancelChatIdEditBtn = null;
 
@@ -295,9 +298,21 @@ function getTelegramRecipientsFromSettings(settings) {
   );
 }
 
+function renderTelegramRecipientSummary() {
+  if (!chatIdSummaryEl || !chatIdSummaryCountEl || !chatIdSummaryNoteEl) return;
+
+  const totalRecipients = telegramRecipients.length;
+  chatIdSummaryCountEl.textContent = String(totalRecipients);
+  chatIdSummaryNoteEl.textContent =
+    totalRecipients > 0
+      ? `Daftar penerima aktif untuk alert, backup, dan laporan Telegram (${totalRecipients} tujuan).`
+      : 'Belum ada tujuan Telegram aktif. Tambahkan setidaknya satu Chat ID agar notifikasi dapat dikirim.';
+}
+
 function renderTelegramChatIds() {
   if (!chatIdListEl) return;
 
+  renderTelegramRecipientSummary();
   chatIdListEl.innerHTML = '';
 
   if (telegramRecipients.length === 0) {
@@ -402,6 +417,23 @@ function initTelegramChatManager() {
   const actions = document.createElement('div');
   actions.className = 'chat-id-actions';
 
+  chatIdSummaryEl = document.createElement('div');
+  chatIdSummaryEl.className = 'chat-id-summary';
+  chatIdSummaryEl.innerHTML = `
+    <div class="chat-id-summary-main">
+      <div class="chat-id-summary-icon">
+        <span class="material-symbols-rounded">groups</span>
+      </div>
+      <div class="chat-id-summary-text">
+        <strong id="telegramRecipientCount" class="chat-id-summary-count">0</strong>
+        <span class="chat-id-summary-label">Chat ID / Group ID tersimpan</span>
+      </div>
+    </div>
+    <div id="telegramRecipientSummaryNote" class="chat-id-summary-note"></div>
+  `;
+  chatIdSummaryCountEl = chatIdSummaryEl.querySelector('#telegramRecipientCount');
+  chatIdSummaryNoteEl = chatIdSummaryEl.querySelector('#telegramRecipientSummaryNote');
+
   addChatIdBtn = document.createElement('button');
   addChatIdBtn.type = 'button';
   addChatIdBtn.className = 'btn btn-secondary btn-sm';
@@ -445,7 +477,7 @@ function initTelegramChatManager() {
     }
   });
 
-  manager.append(actions, chatIdListEl);
+  manager.append(chatIdSummaryEl, actions, chatIdListEl);
   const editorGrid = inpChatId.closest('.recipient-editor-grid');
   if (editorGrid) {
     editorGrid.insertAdjacentElement('afterend', manager);

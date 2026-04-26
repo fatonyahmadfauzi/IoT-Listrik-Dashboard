@@ -1282,6 +1282,25 @@ export function Settings({ onLogout }: SettingsProps) {
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               Untuk grup biasanya diawali -100. Untuk pribadi gunakan ID numerik positif.
             </p>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300">
+                    <span className="text-xl font-bold">{telegramRecipients.length}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Chat ID / Group ID tersimpan
+                    </div>
+                    <div className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+                      {telegramRecipients.length > 0
+                        ? `${telegramRecipients.length} tujuan aktif untuk alert, backup, dan laporan Telegram.`
+                        : 'Belum ada tujuan Telegram aktif. Tambahkan setidaknya satu Chat ID agar notifikasi bisa terkirim.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="space-y-2">
               {telegramRecipients.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-4 text-center text-sm leading-6 text-gray-500 dark:text-gray-400">

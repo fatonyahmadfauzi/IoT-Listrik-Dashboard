@@ -1612,7 +1612,7 @@ async function connectTelegramBot() {
   }
 
   try {
-    const data = await callLiveResetApi('get-telegram-bot-profile', { token });
+    const data = await callLiveResetApi('telegram-admin-action', { action: 'profile', token });
     const link = String(data.botUrl || '').trim();
     const username = String(data.username || '').trim();
     setTelegramActionStatus(
@@ -1664,7 +1664,8 @@ async function testTelegramConfigAction() {
   }
 
   try {
-    const data = await callLiveResetApi('test-telegram-config', {
+    const data = await callLiveResetApi('telegram-admin-action', {
+      action: 'test',
       token,
       recipients: telegramRecipients,
     });

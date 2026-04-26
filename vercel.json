@@ -33,6 +33,9 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/get-telegram-bot-profile", "destination": "/api/telegram-admin-action?action=profile" },
+    { "source": "/api/test-telegram-config",     "destination": "/api/telegram-admin-action?action=test" },
+
     { "source": "/app/login",     "destination": "/app/login.html" },
     { "source": "/app/dashboard", "destination": "/app/dashboard.html" },
     { "source": "/app/history",   "destination": "/app/history.html" },

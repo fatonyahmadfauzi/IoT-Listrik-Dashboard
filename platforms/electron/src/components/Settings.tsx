@@ -442,7 +442,8 @@ export function Settings({ onLogout }: SettingsProps) {
     const popup = window.open('about:blank', '_blank', 'noopener,noreferrer');
     setTelegramActionLoading(true);
     try {
-      const data = await callLiveResetApi('get-telegram-bot-profile', {
+      const data = await callLiveResetApi('telegram-admin-action', {
+        action: 'profile',
         token: telegramBotToken.trim(),
       });
       const username = String(data.username || '').trim();
@@ -512,7 +513,8 @@ export function Settings({ onLogout }: SettingsProps) {
 
     setTelegramActionLoading(true);
     try {
-      const data = await callLiveResetApi('test-telegram-config', {
+      const data = await callLiveResetApi('telegram-admin-action', {
+        action: 'test',
         token: telegramBotToken.trim(),
         recipients: nextRecipients,
       });

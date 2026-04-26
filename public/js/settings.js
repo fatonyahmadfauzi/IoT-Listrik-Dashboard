@@ -325,8 +325,9 @@ function setTelegramActionStatus(message = '', kind = 'info') {
 
 function syncTelegramActionButtons() {
   const hasToken = !!String(inpBotToken?.value || '').trim();
+  const telegramNotifyEnabled = inpTelegramNotify ? inpTelegramNotify.checked : true;
   if (connectTelegramBotBtn) connectTelegramBotBtn.disabled = !hasToken;
-  if (testTelegramBtn) testTelegramBtn.disabled = !hasToken;
+  if (testTelegramBtn) testTelegramBtn.disabled = !hasToken || !telegramNotifyEnabled;
 }
 
 function renderTelegramChatIds() {
@@ -1494,6 +1495,7 @@ function loadSettings() {
     telegramRecipients = getTelegramRecipientsFromSettings(d);
     resetChatIdEditor();
     renderTelegramChatIds();
+    syncTelegramActionButtons();
     if (saveStatus) {
       saveStatus.textContent = 'Settings dimuat dari Firebase';
       setTimeout(() => { if (saveStatus) saveStatus.textContent = ''; }, 3000);
@@ -1640,6 +1642,12 @@ async function connectTelegramBot() {
 
 async function testTelegramConfigAction() {
   if (!isRealAdminSettingsSession()) return;
+  if (inpTelegramNotify && !inpTelegramNotify.checked) {
+    const message = 'Notifikasi Telegram sedang dimatikan. Aktifkan dulu sebelum mengirim test.';
+    setTelegramActionStatus(message, 'error');
+    showToast(message, 'error');
+    return;
+  }
   const token = String(inpBotToken?.value || '').trim();
   if (!token) {
     const message = 'Isi Bot Token Telegram terlebih dahulu.';
@@ -2091,6 +2099,7 @@ initPage({
      inpPowerFactor, inpFrequency, inpBotToken, inpChatId]
       .forEach(el => el?.addEventListener('input', validateAll));
     inpBotToken?.addEventListener('input', syncTelegramActionButtons);
+    inpTelegramNotify?.addEventListener('change', syncTelegramActionButtons);
 
     // Alarm: tetap bunyi walau pindah menu (settings) dengan memonitor status /listrik
     requestNotificationPermission();

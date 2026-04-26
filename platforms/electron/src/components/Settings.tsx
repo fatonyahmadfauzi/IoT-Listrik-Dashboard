@@ -468,6 +468,12 @@ export function Settings({ onLogout }: SettingsProps) {
 
   const handleTestTelegram = async () => {
     if (!isAdmin) return;
+    if (!telegramNotifyEnabled) {
+      const message = 'Notifikasi Telegram sedang dimatikan. Aktifkan dulu sebelum mengirim test.';
+      setTelegramActionMessage(message);
+      notifyDesktop('Telegram Test', message);
+      return;
+    }
     if (!telegramBotToken.trim()) {
       notifyDesktop('Telegram Test', 'Isi Bot Token Telegram terlebih dahulu.');
       return;
@@ -1351,7 +1357,7 @@ export function Settings({ onLogout }: SettingsProps) {
               <button
                 type="button"
                 onClick={handleTestTelegram}
-                disabled={telegramActionLoading || !telegramBotToken.trim()}
+                disabled={telegramActionLoading || !telegramBotToken.trim() || !telegramNotifyEnabled}
                 className="min-h-[46px] rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-slate-300"
               >
                 {telegramActionLoading ? 'Memproses...' : 'Test Kirim Pesan'}

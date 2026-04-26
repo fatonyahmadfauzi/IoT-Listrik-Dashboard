@@ -100,7 +100,7 @@ async function resolveTelegramConfig(req, { requireRecipients = false } = {}) {
     throw httpError(400, "Belum ada Chat ID / Group ID Telegram yang aktif.");
   }
 
-  return { token, recipients };
+  return { token, recipients, settings };
 }
 
 async function getTelegramBotProfile(req) {
@@ -124,7 +124,10 @@ async function getTelegramBotProfile(req) {
 }
 
 async function testTelegramConfig(req) {
-  const { token, recipients } = await resolveTelegramConfig(req, { requireRecipients: true });
+  const { token, recipients, settings } = await resolveTelegramConfig(req, { requireRecipients: true });
+  if (settings?.telegramNotifyEnabled === false) {
+    throw httpError(400, "Notifikasi Telegram sedang dimatikan. Aktifkan dulu jika ingin mengirim test.");
+  }
   const profile = await callTelegram(token, "getMe");
 
   const username = String(profile?.username || "").trim();

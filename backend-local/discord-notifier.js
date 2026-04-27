@@ -1261,6 +1261,98 @@ db.ref('/settings/realtimeStreamEnabled').on('value', async (snap) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
+// LISTENER — /settings/buzzerEnabled → #alerts (Buzzer On/Off)
+// ════════════════════════════════════════════════════════════════════════
+let lastBuzzerEnabled = null;
+db.ref('/settings/buzzerEnabled').on('value', async (snap) => {
+  const enabled = snap.val();
+  if (enabled === lastBuzzerEnabled) return;
+  const prev = lastBuzzerEnabled;
+  lastBuzzerEnabled = enabled;
+  if (prev === null) return;
+
+  const isOff = enabled === false;
+  const label = isOff ? 'DIMATIKAN' : 'DIAKTIFKAN';
+  const emoji = isOff ? '🔇' : '🔔';
+  const color = isOff ? 0xFEE75C : 0x57F287;
+
+  console.log(`[Settings] Buzzer ${label}`);
+
+  const embed = {
+    title: `${emoji} Buzzer ${label}`,
+    description: isOff
+      ? 'Buzzer tidak akan berbunyi saat kondisi abnormal terdeteksi.'
+      : 'Buzzer akan berbunyi saat kondisi abnormal terdeteksi.',
+    color,
+    fields: [
+      { name: 'Status Buzzer', value: isOff ? '🔇 Nonaktif' : '🔔 Aktif', inline: true },
+      { name: 'Waktu', value: waktu(), inline: true },
+    ],
+    footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
+  };
+
+  await sendEmbed(discordConfig.webhookAlerts, embed);
+  await broadcastPhysicalSystemEvent({
+    event: isOff ? 'buzzer_disabled' : 'buzzer_enabled',
+    title: embed.title,
+    message: embed.description,
+    severity: isOff ? 'warning' : 'success',
+    telegramMessage:
+      `${emoji} <b>Buzzer ${label}</b>\n` +
+      (isOff
+        ? 'Buzzer tidak akan berbunyi saat kondisi abnormal terdeteksi.'
+        : 'Buzzer akan berbunyi saat kondisi abnormal terdeteksi.') +
+      `\n🕐 ${waktu()}`,
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
+// LISTENER — /settings/autoCutoffEnabled → #alerts (Auto-Cutoff On/Off)
+// ════════════════════════════════════════════════════════════════════════
+let lastAutoCutoffEnabled = null;
+db.ref('/settings/autoCutoffEnabled').on('value', async (snap) => {
+  const enabled = snap.val();
+  if (enabled === lastAutoCutoffEnabled) return;
+  const prev = lastAutoCutoffEnabled;
+  lastAutoCutoffEnabled = enabled;
+  if (prev === null) return;
+
+  const isOff = enabled === false;
+  const label = isOff ? 'DIMATIKAN' : 'DIAKTIFKAN';
+  const emoji = isOff ? '⚠️' : '🛡️';
+  const color = isOff ? 0xED4245 : 0x57F287;
+
+  console.log(`[Settings] Auto-Cutoff Relay ${label}`);
+
+  const embed = {
+    title: `${emoji} Auto-Cutoff Relay ${label}`,
+    description: isOff
+      ? '⚠️ **PERINGATAN:** Relay TIDAK akan dimatikan otomatis saat DANGER (arus ≥ threshold). Risiko kerusakan perangkat meningkat!'
+      : 'Relay akan dimatikan otomatis saat arus melampaui threshold DANGER. Proteksi keamanan aktif.',
+    color,
+    fields: [
+      { name: 'Status Auto-Cutoff', value: isOff ? '⚠️ Nonaktif' : '🛡️ Aktif', inline: true },
+      { name: 'Waktu', value: waktu(), inline: true },
+    ],
+    footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
+  };
+
+  await sendEmbed(discordConfig.webhookAlerts, embed);
+  await broadcastPhysicalSystemEvent({
+    event: isOff ? 'auto_cutoff_disabled' : 'auto_cutoff_enabled',
+    title: embed.title,
+    message: embed.description,
+    severity: isOff ? 'danger' : 'success',
+    telegramMessage:
+      `${emoji} <b>Auto-Cutoff Relay ${label}</b>\n` +
+      (isOff
+        ? '⚠️ PERINGATAN: Relay TIDAK akan dimatikan otomatis saat DANGER. Risiko kerusakan perangkat meningkat!'
+        : 'Relay akan dimatikan otomatis saat arus melampaui threshold DANGER. Proteksi keamanan aktif.') +
+      `\n🕐 ${waktu()}`,
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
 // LISTENER 4 — /logs → #logs (entry baru saja)
 // ════════════════════════════════════════════════════════════════════════
 let logsInitialized = false;

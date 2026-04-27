@@ -280,6 +280,18 @@
           padding-bottom: 9px;
           margin-bottom: 13px;
         }
+        .settings-section .form-group {
+          margin-bottom: 11px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select,
+        .settings-section textarea.form-input {
+          padding: 8px 11px;
+          font-size: 13px;
+        }
+        .field-sensitive .form-input {
+          letter-spacing: 1px;
+        }
         .runtime-notice {
           padding: 9px 13px;
           font-size: 11.5px;
@@ -288,6 +300,45 @@
         .input-row,
         .discord-summary-grid {
           grid-template-columns: 1fr;
+        }
+        .discord-section-actions,
+        .discord-inline-actions {
+          flex-direction: column;
+          gap: 8px;
+        }
+        .discord-section-actions .btn,
+        .discord-inline-actions .btn {
+          width: 100%;
+          justify-content: center;
+          min-height: 44px;
+          font-size: 13px;
+        }
+        .discord-stat-card {
+          padding: 12px;
+        }
+        .discord-stat-sub {
+          font-size: 11px;
+        }
+        .discord-meta-item {
+          padding: 10px 11px;
+        }
+        .discord-meta-item span {
+          font-size: 12.5px;
+        }
+        .discord-status-panel {
+          padding: 12px;
+        }
+        .discord-ban-empty {
+          padding: 14px;
+          font-size: 11.5px;
+        }
+        .page-anchor-pill {
+          font-size: 10.5px;
+          padding: 5px 9px;
+          margin-bottom: 10px;
+        }
+        .page-anchor-pill .material-symbols-rounded {
+          font-size: 14px;
         }
       }
       @media (max-width: 430px) {
@@ -308,11 +359,45 @@
         }
         .field-sensitive .form-input {
           font-size: 12px;
+          letter-spacing: 1.2px;
+        }
+        .form-hint {
+          font-size: 11px;
+        }
+        .discord-section-actions .btn,
+        .discord-inline-actions .btn {
+          min-height: 42px;
+          font-size: 12.5px;
+        }
+        .discord-stat-label {
+          font-size: 10.5px;
+        }
+        .discord-stat-sub {
+          font-size: 10.5px;
+        }
+        .discord-meta-item strong {
+          font-size: 10.5px;
+        }
+        .discord-meta-item span {
+          font-size: 12px;
+        }
+        .discord-status-badge {
+          font-size: 11px;
+          padding: 6px 9px;
         }
       }
       @media (max-width: 360px) {
         .settings-section {
           padding: 11px 10px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select {
+          padding: 7px 9px;
+        }
+        .discord-section-actions .btn,
+        .discord-inline-actions .btn {
+          min-height: 40px;
+          font-size: 12px;
         }
       }
     </style>

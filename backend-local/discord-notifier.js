@@ -18,6 +18,7 @@
 
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
+const FormData = require('form-data');
 const path  = require('path');
 const fs    = require('fs');
 
@@ -36,6 +37,14 @@ admin.initializeApp({
 
 const db = admin.database();
 console.log('[Discord Notifier] Terhubung ke Firebase RTDB ✅');
+
+const JAKARTA_TZ = 'Asia/Jakarta';
+const DAILY_ARCHIVE_ROOT = '/admin_secure/dailyTelemetry/physical';
+const DAILY_REPORT_STATE_PATH = '/admin_secure/dailyReports/physical';
+const DAILY_REPORT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const DAILY_REPORT_MINUTE_GATE = 5;
+const TELEGRAM_COMMAND_STATE_PATH = '/admin_secure/telegramCommandState/physical';
+const TELEGRAM_COMMAND_POLL_INTERVAL_MS = 4000;
 
 // ── Config cache dari RTDB ────────────────────────────────────────────────
 let settingsConfig = {};
@@ -78,11 +87,44 @@ function normalizeTelegramChatId(value) {
   return /^-?\d+$/.test(id) ? id : '';
 }
 
-function parseTelegramChatIds(...sources) {
-  const ids = [];
+function normalizeTelegramRecipient(value) {
+  if (value == null) return null;
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const chatId = normalizeTelegramChatId(value.chatId ?? value.telegramChatId ?? value.id);
+    if (!chatId) return null;
+    return {
+      name: String(value.name ?? value.label ?? '').trim(),
+      chatId,
+      paused: value.paused === true,
+      pausedAt: Number(value.pausedAt || 0) || 0,
+      resumedAt: Number(value.resumedAt || 0) || 0,
+      pauseSource: String(value.pauseSource || '').trim(),
+    };
+  }
+
+  const chatId = normalizeTelegramChatId(value);
+  return chatId
+    ? { name: '', chatId, paused: false, pausedAt: 0, resumedAt: 0, pauseSource: '' }
+    : null;
+}
+
+function parseTelegramRecipients(...sources) {
+  const recipients = [];
   const add = (value) => {
-    const id = normalizeTelegramChatId(value);
-    if (id && !ids.includes(id)) ids.push(id);
+    const recipient = normalizeTelegramRecipient(value);
+    if (!recipient) return;
+
+    const existing = recipients.find((item) => item.chatId === recipient.chatId);
+    if (existing) {
+      if (!existing.name && recipient.name) existing.name = recipient.name;
+      if (recipient.paused === true) existing.paused = true;
+      if (!existing.pausedAt && recipient.pausedAt) existing.pausedAt = recipient.pausedAt;
+      if (!existing.resumedAt && recipient.resumedAt) existing.resumedAt = recipient.resumedAt;
+      if (!existing.pauseSource && recipient.pauseSource) existing.pauseSource = recipient.pauseSource;
+      return;
+    }
+    recipients.push(recipient);
   };
 
   const visit = (source) => {
@@ -93,7 +135,7 @@ function parseTelegramChatIds(...sources) {
     }
     if (typeof source === 'object') {
       if ('chatId' in source || 'telegramChatId' in source || 'id' in source) {
-        add(source.chatId ?? source.telegramChatId ?? source.id);
+        add(source);
         return;
       }
       Object.entries(source)
@@ -101,20 +143,76 @@ function parseTelegramChatIds(...sources) {
         .forEach(([, value]) => visit(value));
       return;
     }
-    String(source).split(/[\s,;]+/).forEach(add);
+    String(source)
+      .split(/[\s,;]+/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .forEach(add);
   };
 
   sources.forEach(visit);
-  return ids;
+  return recipients;
 }
 
-function getTelegramChatIds(settings) {
-  return parseTelegramChatIds(
-    settings?.telegramRecipients,
+function parseTelegramChatIds(...sources) {
+  return parseTelegramRecipients(...sources).map((recipient) => recipient.chatId);
+}
+
+function getTelegramRecipients(settings) {
+  const structuredRecipients = parseTelegramRecipients(settings?.telegramRecipients);
+  if (structuredRecipients.length > 0) return structuredRecipients;
+
+  return parseTelegramRecipients(
     settings?.telegramChatIds,
     settings?.telegramChatId,
     settings?.telegram?.chat_id
   );
+}
+
+function getActiveTelegramRecipients(recipients = []) {
+  return Array.isArray(recipients)
+    ? recipients.filter((recipient) => recipient?.paused !== true)
+    : [];
+}
+
+function getTelegramChatIds(settings) {
+  return getActiveTelegramRecipients(getTelegramRecipients(settings)).map((recipient) => recipient.chatId);
+}
+
+function buildTelegramSettingsPayload(recipients = []) {
+  const normalizedRecipients = parseTelegramRecipients(recipients);
+  const activeChatIds = getActiveTelegramRecipients(normalizedRecipients).map((recipient) => recipient.chatId);
+
+  return {
+    telegramRecipients: normalizedRecipients.map((recipient) => ({
+      name: recipient.name || '',
+      chatId: recipient.chatId,
+      paused: recipient.paused === true,
+      pausedAt: Number(recipient.pausedAt || 0) || 0,
+      resumedAt: Number(recipient.resumedAt || 0) || 0,
+      pauseSource: String(recipient.pauseSource || '').trim(),
+    })),
+    telegramChatIds: activeChatIds,
+    telegramChatId: activeChatIds.join(','),
+  };
+}
+
+async function callTelegramApi(botToken, method, payload = null) {
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, payload == null
+    ? { method: 'GET' }
+    : {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.ok === false) {
+    const message = data?.description || `Telegram API ${method} gagal (${res.status})`;
+    throw new Error(message);
+  }
+
+  return data?.result ?? null;
 }
 
 async function sendTelegram(botToken, chatIds, message) {
@@ -139,6 +237,516 @@ async function sendTelegram(botToken, chatIds, message) {
   }));
 
   return results.some((result) => result.status === 'fulfilled' && result.value);
+}
+
+async function sendTelegramDocument(botToken, chatIds, buffer, filename, caption = '') {
+  const ids = parseTelegramChatIds(chatIds);
+  if (!botToken || ids.length === 0 || !buffer?.length) return false;
+
+  const results = await Promise.allSettled(ids.map(async (chatId) => {
+    const form = new FormData();
+    form.append('chat_id', String(chatId));
+    if (caption) form.append('caption', caption);
+    if (caption) form.append('parse_mode', 'HTML');
+    form.append('document', buffer, {
+      filename,
+      contentType: 'application/vnd.ms-excel',
+      knownLength: buffer.length,
+    });
+
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
+      method: 'POST',
+      headers: form.getHeaders(),
+      body: form,
+    });
+    if (!res.ok) {
+      console.error(`[Telegram] Dokumen HTTP ${res.status} untuk ${chatId}:`, (await res.text()).slice(0, 200));
+      return false;
+    }
+    return true;
+  }));
+
+  return results.some((result) => result.status === 'fulfilled' && result.value);
+}
+
+let telegramCommandPollBusy = false;
+let telegramCommandOffset = 0;
+let telegramCommandStateReady = false;
+let telegramCommandTokenCache = '';
+
+function normalizeTelegramCommand(text = '') {
+  const firstToken = String(text || '').trim().split(/\s+/)[0] || '';
+  return firstToken.toLowerCase().replace(/@[\w_]+$/, '');
+}
+
+function isTelegramMasterEnabled() {
+  return settingsConfig.telegramNotifyEnabled !== false;
+}
+
+function buildTelegramCommandHelpText() {
+  return [
+    '🤖 <b>Perintah Notifikasi Telegram</b>',
+    '',
+    '/pause — hentikan notifikasi untuk chat ini',
+    '/resume — aktifkan lagi notifikasi untuk chat ini',
+    '/status — lihat status notifikasi chat ini',
+    '/help — tampilkan bantuan ini',
+    '',
+    'Perintah berlaku personal untuk setiap Chat ID / Group ID yang sudah terdaftar.',
+  ].join('\n');
+}
+
+function buildTelegramRegistrationText(chatId) {
+  return [
+    '⚠️ <b>Chat ini belum terdaftar</b>',
+    `Chat ID: <b>${chatId}</b>`,
+    '',
+    'Minta admin menambahkan Chat ID / Group ID ini dulu di halaman Konfigurasi Telegram agar perintah personal bisa dipakai.',
+  ].join('\n');
+}
+
+function buildTelegramStatusText(recipient, totalRecipients, activeRecipients) {
+  const personalStatus = recipient?.paused === true ? 'PAUSE' : 'AKTIF';
+  const masterStatus = isTelegramMasterEnabled() ? 'AKTIF' : 'DIMATIKAN';
+  const label = recipient?.name ? ` (${recipient.name})` : '';
+
+  return [
+    '📡 <b>Status Notifikasi Telegram</b>',
+    `Chat ID${label}: <b>${recipient?.chatId || '-'}</b>`,
+    `Status personal: <b>${personalStatus}</b>`,
+    `Master switch sistem: <b>${masterStatus}</b>`,
+    `Penerima aktif saat ini: <b>${activeRecipients}/${totalRecipients}</b>`,
+    '',
+    'Gunakan /pause atau /resume untuk mengatur chat ini secara personal.',
+  ].join('\n');
+}
+
+async function sendTelegramCommandReply(botToken, chatId, text) {
+  try {
+    await callTelegramApi(botToken, 'sendMessage', {
+      chat_id: String(chatId),
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    });
+    return true;
+  } catch (err) {
+    console.error(`[Telegram Commands] Gagal membalas ke ${chatId}:`, err.message);
+    return false;
+  }
+}
+
+async function loadTelegramCommandState(botToken) {
+  if (telegramCommandStateReady) return;
+
+  const snap = await db.ref(TELEGRAM_COMMAND_STATE_PATH).get();
+  const state = snap.val() || {};
+  const storedOffset = Number(state.offset || 0) || 0;
+  const storedBotToken = String(state.botToken || '').trim();
+
+  telegramCommandTokenCache = botToken;
+
+  if (storedOffset > 0 && (!storedBotToken || storedBotToken === botToken)) {
+    telegramCommandOffset = storedOffset;
+    telegramCommandStateReady = true;
+    return;
+  }
+
+  try {
+    const updates = await callTelegramApi(botToken, 'getUpdates', {
+      timeout: 0,
+      limit: 100,
+      allowed_updates: ['message'],
+    });
+    if (Array.isArray(updates) && updates.length > 0) {
+      const latestUpdateId = Math.max(...updates.map((item) => Number(item?.update_id || 0)).filter(Boolean));
+      telegramCommandOffset = latestUpdateId > 0 ? latestUpdateId + 1 : 0;
+    } else {
+      telegramCommandOffset = 0;
+    }
+  } catch (err) {
+    console.error('[Telegram Commands] Gagal bootstrap offset:', err.message);
+    telegramCommandOffset = 0;
+  }
+
+  telegramCommandStateReady = true;
+  await db.ref(TELEGRAM_COMMAND_STATE_PATH).update({
+    offset: telegramCommandOffset,
+    botToken,
+    updatedAt: Date.now(),
+  });
+}
+
+async function persistTelegramCommandState(botToken) {
+  await db.ref(TELEGRAM_COMMAND_STATE_PATH).update({
+    offset: telegramCommandOffset,
+    botToken,
+    updatedAt: Date.now(),
+  });
+}
+
+async function saveTelegramRecipientsFromCommand(recipients) {
+  const payload = buildTelegramSettingsPayload(recipients);
+  await db.ref('/settings').update(payload);
+  settingsConfig = { ...settingsConfig, ...payload };
+  return payload;
+}
+
+async function handleTelegramCommand(botToken, message) {
+  const chatId = normalizeTelegramChatId(message?.chat?.id);
+  const command = normalizeTelegramCommand(message?.text || '');
+  if (!chatId || !command) return;
+
+  if (!['/pause', '/resume', '/status', '/help'].includes(command)) return;
+
+  const recipients = getTelegramRecipients(settingsConfig);
+  const recipientIndex = recipients.findIndex((recipient) => recipient.chatId === chatId);
+  const recipient = recipientIndex >= 0 ? recipients[recipientIndex] : null;
+  const totalRecipients = recipients.length;
+  const activeRecipients = getActiveTelegramRecipients(recipients).length;
+
+  if (command === '/help') {
+    const helpText = [
+      buildTelegramCommandHelpText(),
+      '',
+      recipient
+        ? buildTelegramStatusText(recipient, totalRecipients, activeRecipients)
+        : buildTelegramRegistrationText(chatId),
+    ].join('\n');
+    await sendTelegramCommandReply(botToken, chatId, helpText);
+    return;
+  }
+
+  if (!recipient) {
+    await sendTelegramCommandReply(botToken, chatId, buildTelegramRegistrationText(chatId));
+    return;
+  }
+
+  if (command === '/status') {
+    await sendTelegramCommandReply(botToken, chatId, buildTelegramStatusText(recipient, totalRecipients, activeRecipients));
+    return;
+  }
+
+  if (command === '/pause') {
+    if (recipient.paused === true) {
+      await sendTelegramCommandReply(
+        botToken,
+        chatId,
+        [
+          '⏸️ <b>Notifikasi sudah dalam keadaan pause</b>',
+          '',
+          buildTelegramStatusText(recipient, totalRecipients, activeRecipients),
+        ].join('\n')
+      );
+      return;
+    }
+
+    recipients[recipientIndex] = {
+      ...recipient,
+      paused: true,
+      pausedAt: Date.now(),
+      pauseSource: 'telegram_command',
+    };
+    const payload = await saveTelegramRecipientsFromCommand(recipients);
+    const nextActiveCount = Array.isArray(payload.telegramChatIds) ? payload.telegramChatIds.length : 0;
+
+    await sendTelegramCommandReply(
+      botToken,
+      chatId,
+      [
+        '⏸️ <b>Notifikasi untuk chat ini berhasil di-pause</b>',
+        `Chat ID: <b>${chatId}</b>`,
+        `Penerima aktif sekarang: <b>${nextActiveCount}/${recipients.length}</b>`,
+        '',
+        'Gunakan /resume kapan saja untuk mengaktifkan lagi notifikasi di chat ini.',
+      ].join('\n')
+    );
+    return;
+  }
+
+  if (command === '/resume') {
+    if (recipient.paused !== true) {
+      await sendTelegramCommandReply(
+        botToken,
+        chatId,
+        [
+          '▶️ <b>Notifikasi untuk chat ini sudah aktif</b>',
+          '',
+          buildTelegramStatusText(recipient, totalRecipients, activeRecipients),
+        ].join('\n')
+      );
+      return;
+    }
+
+    recipients[recipientIndex] = {
+      ...recipient,
+      paused: false,
+      resumedAt: Date.now(),
+      pauseSource: 'telegram_command',
+    };
+    const payload = await saveTelegramRecipientsFromCommand(recipients);
+    const nextActiveCount = Array.isArray(payload.telegramChatIds) ? payload.telegramChatIds.length : 0;
+
+    await sendTelegramCommandReply(
+      botToken,
+      chatId,
+      [
+        '▶️ <b>Notifikasi untuk chat ini aktif kembali</b>',
+        `Chat ID: <b>${chatId}</b>`,
+        `Penerima aktif sekarang: <b>${nextActiveCount}/${recipients.length}</b>`,
+        '',
+        isTelegramMasterEnabled()
+          ? 'Notifikasi berikutnya akan dikirim lagi ke chat ini.'
+          : 'Catatan: master switch Telegram sistem sedang dimatikan, jadi notifikasi umum masih belum akan terkirim sampai diaktifkan lagi oleh admin.',
+      ].join('\n')
+    );
+  }
+}
+
+async function pollTelegramCommands() {
+  if (telegramCommandPollBusy) return;
+
+  const botToken = String(settingsConfig.telegramBotToken || '').trim();
+  if (!botToken) return;
+
+  telegramCommandPollBusy = true;
+  try {
+    await loadTelegramCommandState(botToken);
+
+    if (telegramCommandTokenCache !== botToken) {
+      telegramCommandOffset = 0;
+      telegramCommandTokenCache = botToken;
+      telegramCommandStateReady = false;
+      await loadTelegramCommandState(botToken);
+    }
+
+    const updates = await callTelegramApi(botToken, 'getUpdates', {
+      offset: telegramCommandOffset,
+      timeout: 0,
+      limit: 20,
+      allowed_updates: ['message'],
+    });
+
+    if (!Array.isArray(updates) || updates.length === 0) return;
+
+    for (const update of updates) {
+      const updateId = Number(update?.update_id || 0);
+      if (updateId > 0) {
+        telegramCommandOffset = Math.max(telegramCommandOffset, updateId + 1);
+      }
+      await handleTelegramCommand(botToken, update?.message);
+    }
+
+    await persistTelegramCommandState(botToken);
+  } catch (err) {
+    console.error('[Telegram Commands] Poll gagal:', err.message);
+  } finally {
+    telegramCommandPollBusy = false;
+  }
+}
+
+async function sendDiscordFile(webhookUrl, buffer, filename, content = '', embeds = []) {
+  if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) return false;
+  if (!discordConfig.enabled || !buffer?.length) return false;
+
+  const form = new FormData();
+  form.append('payload_json', JSON.stringify({ content, embeds }));
+  form.append('files[0]', buffer, {
+    filename,
+    contentType: 'application/vnd.ms-excel',
+    knownLength: buffer.length,
+  });
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: form.getHeaders(),
+      body: form,
+    });
+    if (!res.ok && res.status !== 204) {
+      const txt = await res.text();
+      console.error(`[Discord] File HTTP ${res.status}:`, txt.slice(0, 200));
+      return false;
+    }
+    console.log(`[Discord] File laporan harian terkirim → ${webhookUrl.slice(0, 60)}...`);
+    return true;
+  } catch (err) {
+    console.error('[Discord] Upload file error:', err.message);
+    return false;
+  }
+}
+
+function getJakartaParts(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: JAKARTA_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = Object.fromEntries(
+    formatter.formatToParts(date)
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+  return {
+    year: parts.year,
+    month: parts.month,
+    day: parts.day,
+    hour: Number(parts.hour || 0),
+    minute: Number(parts.minute || 0),
+    second: Number(parts.second || 0),
+    dateKey: `${parts.year}-${parts.month}-${parts.day}`,
+  };
+}
+
+function getPreviousJakartaDateKey(date = new Date()) {
+  return getJakartaParts(new Date(date.getTime() - 24 * 60 * 60 * 1000)).dateKey;
+}
+
+function formatDailyFileName(dateKey) {
+  const [year, month, day] = String(dateKey).split('-');
+  return `monitoring-listrik-${day}-${month}-${year}.xls`;
+}
+
+function formatDailyDateLabel(dateKey) {
+  const [year, month, day] = String(dateKey).split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function escapeXml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function formatMetricValue(value, digits = 2) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return num.toFixed(digits);
+}
+
+function normalizeArchiveRecord(raw = {}) {
+  const recordedAt = Number(raw.recordedAt || raw.timestamp || 0);
+  const recordedDate = Number.isFinite(recordedAt) && recordedAt > 0
+    ? new Date(recordedAt)
+    : new Date();
+
+  return {
+    recordedAt,
+    waktu: recordedDate.toLocaleString('id-ID', {
+      timeZone: JAKARTA_TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }),
+    arus: Number(raw.arus ?? 0),
+    tegangan: Number(raw.tegangan ?? 0),
+    daya: Number(raw.daya ?? 0),
+    energi_kwh: Number(raw.energi_kwh ?? 0),
+    frekuensi: Number(raw.frekuensi ?? 0),
+    power_factor: Number(raw.power_factor ?? 0),
+    relay: Number(raw.relay ?? 0) === 1 ? 1 : 0,
+    status: String(raw.status || 'NORMAL'),
+    source: String(raw.source || 'hardware'),
+  };
+}
+
+function buildDailyExcelBuffer(rows, dateKey) {
+  const totalRows = rows.length;
+  const avgArus = totalRows ? rows.reduce((sum, row) => sum + row.arus, 0) / totalRows : 0;
+  const avgTegangan = totalRows ? rows.reduce((sum, row) => sum + row.tegangan, 0) / totalRows : 0;
+  const maxArus = totalRows ? Math.max(...rows.map((row) => row.arus)) : 0;
+  const dangerCount = rows.filter((row) => row.status === 'DANGER').length;
+  const warningCount = rows.filter((row) => row.status === 'WARNING').length;
+  const normalCount = rows.filter((row) => row.status === 'NORMAL').length;
+  const lastEnergi = totalRows ? rows[rows.length - 1].energi_kwh : 0;
+
+  const summaryRows = [
+    ['Tanggal Laporan', formatDailyDateLabel(dateKey)],
+    ['Jumlah Data', totalRows],
+    ['Rata-rata Arus (A)', formatMetricValue(avgArus, 2)],
+    ['Rata-rata Tegangan (V)', formatMetricValue(avgTegangan, 1)],
+    ['Arus Maksimum (A)', formatMetricValue(maxArus, 2)],
+    ['Status NORMAL', normalCount],
+    ['Status WARNING', warningCount],
+    ['Status DANGER', dangerCount],
+    ['Energi Terakhir (kWh)', formatMetricValue(lastEnergi, 3)],
+  ];
+
+  const dataRowsXml = rows.map((row) => `
+    <Row>
+      <Cell><Data ss:Type="String">${escapeXml(row.waktu)}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.arus, 2))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.tegangan, 1))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.daya, 1))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.frekuensi, 1))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.power_factor, 2))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.energi_kwh, 3))}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(row.relay ? 'ON' : 'OFF')}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(row.status)}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(row.source)}</Data></Cell>
+    </Row>
+  `).join('');
+
+  const summaryXml = summaryRows.map(([label, value]) => `
+    <Row>
+      <Cell ss:StyleID="HeaderCell"><Data ss:Type="String">${escapeXml(label)}</Data></Cell>
+      <Cell><Data ss:Type="${typeof value === 'number' ? 'Number' : 'String'}">${escapeXml(value)}</Data></Cell>
+    </Row>
+  `).join('');
+
+  const xml = `<?xml version="1.0"?>
+  <?mso-application progid="Excel.Sheet"?>
+  <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+    xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:x="urn:schemas-microsoft-com:office:excel"
+    xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+    xmlns:html="http://www.w3.org/TR/REC-html40">
+    <Styles>
+      <Style ss:ID="HeaderCell">
+        <Font ss:Bold="1"/>
+        <Interior ss:Color="#DCEBFF" ss:Pattern="Solid"/>
+      </Style>
+      <Style ss:ID="TableHeader">
+        <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+        <Interior ss:Color="#1D4ED8" ss:Pattern="Solid"/>
+      </Style>
+    </Styles>
+    <Worksheet ss:Name="Ringkasan">
+      <Table>
+        ${summaryXml}
+      </Table>
+    </Worksheet>
+    <Worksheet ss:Name="Data 24 Jam">
+      <Table>
+        <Row>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Waktu (WIB)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Arus (A)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Tegangan (V)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Daya (W/VA)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Frekuensi (Hz)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Power Factor</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Energi (kWh)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Relay</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Status</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Sumber</Data></Cell>
+        </Row>
+        ${dataRowsXml}
+      </Table>
+    </Worksheet>
+  </Workbook>`;
+
+  return Buffer.from(xml, 'utf8');
 }
 
 // ── Helper: Warna & emoji status ─────────────────────────────────────────
@@ -170,6 +778,166 @@ function buildMonitoringSummary(d = {}) {
     `Relay ${d.relay ? 'ON' : 'OFF'}`,
     `Status ${d.status ?? 'NORMAL'}`,
   ].join(' • ');
+}
+
+async function archivePhysicalTelemetrySnapshot(d = {}) {
+  const timestamp = Date.now();
+  const dateKey = getJakartaParts(new Date(timestamp)).dateKey;
+  const payload = {
+    recordedAt: timestamp,
+    recordedAtIso: new Date(timestamp).toISOString(),
+    localDate: dateKey,
+    arus: Number(d.arus ?? 0),
+    tegangan: Number(d.tegangan ?? 0),
+    daya: Number(d.daya ?? 0),
+    energi_kwh: Number(d.energi_kwh ?? 0),
+    frekuensi: Number(d.frekuensi ?? 0),
+    power_factor: Number(d.power_factor ?? 0),
+    relay: d.relay ? 1 : 0,
+    status: String(d.status || 'NORMAL'),
+    source: 'hardware',
+  };
+  await db.ref(`${DAILY_ARCHIVE_ROOT}/${dateKey}`).push(payload);
+  return payload;
+}
+
+let dailyReportBusy = false;
+
+async function maybeSendPhysicalDailyReport() {
+  if (dailyReportBusy) return false;
+  dailyReportBusy = true;
+
+  try {
+    const now = new Date();
+    const nowJakarta = getJakartaParts(now);
+    if (nowJakarta.hour === 0 && nowJakarta.minute < DAILY_REPORT_MINUTE_GATE) {
+      return false;
+    }
+
+    const reportDateKey = getPreviousJakartaDateKey(now);
+    const stateSnap = await db.ref(DAILY_REPORT_STATE_PATH).get();
+    const state = stateSnap.val() || {};
+
+    if (state.lastSentDateKey === reportDateKey || state.lastEvaluatedDateKey === reportDateKey) {
+      return false;
+    }
+
+    const archiveSnap = await db.ref(`${DAILY_ARCHIVE_ROOT}/${reportDateKey}`).get();
+    const archiveRaw = archiveSnap.val() || {};
+    const rows = Object.values(archiveRaw)
+      .map(normalizeArchiveRecord)
+      .sort((a, b) => a.recordedAt - b.recordedAt);
+
+    if (rows.length === 0) {
+      await db.ref(DAILY_REPORT_STATE_PATH).update({
+        lastEvaluatedDateKey: reportDateKey,
+        lastResult: 'no_data',
+        lastCheckedAt: Date.now(),
+      });
+      console.log(`[Daily Report] Tidak ada data baru untuk ${reportDateKey}; laporan tidak dikirim.`);
+      return false;
+    }
+
+    const filename = formatDailyFileName(reportDateKey);
+    const buffer = buildDailyExcelBuffer(rows, reportDateKey);
+    const label = formatDailyDateLabel(reportDateKey);
+    const caption =
+      `📁 <b>Laporan Harian Monitoring Listrik</b>\n` +
+      `Tanggal: <b>${label}</b>\n` +
+      `Jumlah data: <b>${rows.length}</b>\n` +
+      `Isi file mencakup telemetri 24 jam penuh untuk tanggal tersebut.`;
+
+    const discordWebhook =
+      discordConfig.webhookDailyReport ||
+      discordConfig.webhookMonitoring ||
+      '';
+    const telegramEnabled = settingsConfig.telegramNotifyEnabled !== false;
+    const telegramBotToken = String(settingsConfig.telegramBotToken || '').trim();
+    const telegramChatIds = getTelegramChatIds(settingsConfig);
+    const hasTelegramDestination = telegramEnabled && telegramBotToken && telegramChatIds.length > 0;
+
+    if (!discordWebhook && !hasTelegramDestination) {
+      await db.ref(DAILY_REPORT_STATE_PATH).update({
+        lastEvaluatedDateKey: reportDateKey,
+        lastResult: 'missing_destination',
+        lastCheckedAt: Date.now(),
+        lastFilename: filename,
+        lastRowCount: rows.length,
+      });
+      console.warn(`[Daily Report] ${reportDateKey} dilewati karena tujuan Telegram/Discord belum dikonfigurasi.`);
+      return false;
+    }
+
+    const discordEmbed = {
+      title: '📁 Laporan Harian Monitoring Listrik',
+      description: `File Excel telemetri 24 jam untuk tanggal **${label}**.`,
+      color: 0x60A5FA,
+      fields: [
+        { name: 'Jumlah Data', value: String(rows.length), inline: true },
+        { name: 'Tanggal', value: label, inline: true },
+      ],
+      footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
+    };
+
+    const results = await Promise.allSettled([
+      sendDiscordFile(
+        discordWebhook,
+        buffer,
+        filename,
+        `📁 Laporan Excel harian untuk ${label}`,
+        [discordEmbed]
+      ),
+      hasTelegramDestination
+        ? sendTelegramDocument(telegramBotToken, telegramChatIds, buffer, filename, caption)
+        : Promise.resolve(false),
+      publishClientEvent({
+        event: 'daily_excel_report',
+        title: 'Laporan Excel harian dibuat',
+        message: `Laporan tanggal ${label} berhasil dibuat dan dikirim otomatis.`,
+        severity: 'info',
+        payload: {
+          report_date: reportDateKey,
+          filename,
+          rows: rows.length,
+        },
+      }),
+      sendInfoFCM(
+        'Laporan harian dibuat',
+        `File Excel tanggal ${label} sudah dikirim otomatis.`,
+        'daily_excel_report',
+        'info'
+      ),
+    ]);
+
+    const discordSent = results[0].status === 'fulfilled' && results[0].value;
+    const telegramSent = results[1].status === 'fulfilled' && results[1].value;
+
+    await db.ref(DAILY_REPORT_STATE_PATH).update({
+      lastSentDateKey: reportDateKey,
+      lastEvaluatedDateKey: reportDateKey,
+      lastResult: 'sent',
+      lastCheckedAt: Date.now(),
+      lastFilename: filename,
+      lastRowCount: rows.length,
+      lastDiscordSent: !!discordSent,
+      lastTelegramSent: !!telegramSent,
+    });
+
+    console.log(`[Daily Report] ${filename} terkirim. Discord=${discordSent} Telegram=${telegramSent}`);
+    return true;
+  } catch (err) {
+    console.error('[Daily Report] Gagal membuat laporan harian:', err.message);
+    try {
+      await db.ref(DAILY_REPORT_STATE_PATH).update({
+        lastResult: 'error',
+        lastError: String(err.message || err),
+        lastCheckedAt: Date.now(),
+      });
+    } catch (_) {}
+    return false;
+  } finally {
+    dailyReportBusy = false;
+  }
 }
 
 async function publishClientEvent({
@@ -324,6 +1092,7 @@ db.ref('/listrik/relay').on('value', async (snap) => {
 let lastMonitoringSent = 0;
 let lastSeenLocalTime = Date.now();
 let isOnline = true;
+let lastArchivedUpdatedAt = null;
 
 // Watchdog interval (every 10 seconds)
 setInterval(async () => {
@@ -381,11 +1150,20 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
   }
 
   if (now - lastMonitoringSent < 5 * 60 * 1000) return; // rate limit 5 mins
-  if (!discordConfig.webhookMonitoring) return;
-  lastMonitoringSent = now;
-
   const listrikSnap = await db.ref('/listrik').get();
   const d = listrikSnap.val() || {};
+  const updateMarker = String(d.updated_at ?? snap.val() ?? '');
+
+  if (updateMarker && updateMarker !== lastArchivedUpdatedAt) {
+    lastArchivedUpdatedAt = updateMarker;
+    archivePhysicalTelemetrySnapshot(d).catch((err) => {
+      console.error('[Daily Report] Gagal mengarsip snapshot telemetri:', err.message);
+    });
+  }
+
+  if (now - lastMonitoringSent < 5 * 60 * 1000) return; // rate limit 5 mins
+  if (!discordConfig.webhookMonitoring) return;
+  lastMonitoringSent = now;
 
   const embed = {
     title: '📊 Update Data Monitoring Listrik',
@@ -463,6 +1241,26 @@ db.ref('/logs').orderByKey().limitToLast(1).on('child_added', async (snap) => {
   await sendEmbed(discordConfig.webhookLogs, embed);
 });
 
+setTimeout(() => {
+  maybeSendPhysicalDailyReport().catch((err) => {
+    console.error('[Daily Report] Initial scheduler error:', err.message);
+  });
+}, 15000);
+
+setInterval(() => {
+  maybeSendPhysicalDailyReport().catch((err) => {
+    console.error('[Daily Report] Scheduler error:', err.message);
+  });
+}, DAILY_REPORT_CHECK_INTERVAL_MS);
+
+setInterval(() => {
+  pollTelegramCommands().catch((err) => {
+    console.error('[Telegram Commands] Scheduler error:', err.message);
+  });
+}, TELEGRAM_COMMAND_POLL_INTERVAL_MS);
+
 // ── Keep-alive ────────────────────────────────────────────────────────────
 console.log('[Discord Notifier] Mendengarkan perubahan RTDB... (Ctrl+C untuk berhenti)');
+console.log('[Daily Report] Scheduler aktif — cek laporan harian setiap 5 menit.');
+console.log('[Telegram Commands] Polling aktif — cek /pause, /resume, /status, /help setiap 4 detik.');
 process.on('SIGINT', () => { console.log('\n[Discord Notifier] Dihentikan.'); process.exit(0); });

@@ -13,7 +13,7 @@
  * ├──────────────────────────────────────────────────────────┤
  * │ LAYER 2 — Runtime (Firebase /settings, admin web page)  │
  * │   Threshold, buzzer, auto-cutoff, Telegram token/chatId,│
- * │   calibration factors, send interval                    │
+ * │   calibration factors, send interval, stream pause      │
  * │   → Changed from web Settings page (no reflashing)     │
  * └──────────────────────────────────────────────────────────┘
  *
@@ -677,12 +677,16 @@ void loop() {
   // ── Firebase write (rt.sendIntervalMs controls rate) ─────────
   if (now - lastSendMs >= rt.sendIntervalMs) {
     lastSendMs = now;
-    writeMonitorData(state.arus, state.tegangan, state.daya, g_energiKwh,
-                       rt.frequencyHz, rt.powerFactorEstimate,
-                       state.status, state.relay);
-    Serial.printf("[Monitor] I=%.2fA V=%.1fV S=%s R=%d\n",
-                  state.arus, state.tegangan,
-                  state.status.c_str(), state.relay);
+    if (rt.realtimeStreamEnabled) {
+      writeMonitorData(state.arus, state.tegangan, state.daya, g_energiKwh,
+                        rt.frequencyHz, rt.powerFactorEstimate,
+                        state.status, state.relay);
+      Serial.printf("[Monitor] I=%.2fA V=%.1fV S=%s R=%d\n",
+                    state.arus, state.tegangan,
+                    state.status.c_str(), state.relay);
+    } else {
+      Serial.println("[Monitor] Stream realtime ke /listrik sedang PAUSE.");
+    }
     #ifdef USE_LCD
       updateLCD();
     #endif

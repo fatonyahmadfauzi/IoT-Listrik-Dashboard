@@ -17,6 +17,10 @@ interface SettingsProps {
 interface TelegramRecipient {
   name: string;
   chatId: string;
+  paused?: boolean;
+  pausedAt?: number;
+  resumedAt?: number;
+  pauseSource?: string;
 }
 
 interface DeviceBootstrapSettings {
@@ -89,11 +93,15 @@ function normalizeTelegramRecipient(value: unknown): TelegramRecipient | null {
     return {
       name: String(item.name ?? item.label ?? '').trim(),
       chatId,
+      paused: item.paused === true,
+      pausedAt: Number(item.pausedAt || 0) || 0,
+      resumedAt: Number(item.resumedAt || 0) || 0,
+      pauseSource: String(item.pauseSource || '').trim(),
     };
   }
 
   const chatId = normalizeTelegramChatId(value);
-  return chatId ? { name: '', chatId } : null;
+  return chatId ? { name: '', chatId, paused: false, pausedAt: 0, resumedAt: 0, pauseSource: '' } : null;
 }
 
 function parseTelegramRecipients(...sources: unknown[]): TelegramRecipient[] {
@@ -105,6 +113,10 @@ function parseTelegramRecipients(...sources: unknown[]): TelegramRecipient[] {
     const existing = recipients.find((item) => item.chatId === recipient.chatId);
     if (existing) {
       if (!existing.name && recipient.name) existing.name = recipient.name;
+      if (recipient.paused === true) existing.paused = true;
+      if (!existing.pausedAt && recipient.pausedAt) existing.pausedAt = recipient.pausedAt;
+      if (!existing.resumedAt && recipient.resumedAt) existing.resumedAt = recipient.resumedAt;
+      if (!existing.pauseSource && recipient.pauseSource) existing.pauseSource = recipient.pauseSource;
       return;
     }
     recipients.push(recipient);
@@ -132,6 +144,16 @@ function parseTelegramRecipients(...sources: unknown[]): TelegramRecipient[] {
 
   sources.forEach(visit);
   return recipients;
+}
+
+function isTelegramRecipientPaused(recipient?: TelegramRecipient | null): boolean {
+  return recipient?.paused === true;
+}
+
+function getActiveTelegramRecipients(recipients: TelegramRecipient[]): TelegramRecipient[] {
+  return Array.isArray(recipients)
+    ? recipients.filter((recipient) => !isTelegramRecipientPaused(recipient))
+    : [];
 }
 
 const telegramLabelClass =
@@ -163,6 +185,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const [thresholdArus, setThresholdArus] = useState(settings?.thresholdArus ?? settings?.threshold ?? 10);
   const [warningPercent, setWarningPercent] = useState(settings?.warningPercent ?? 80);
   const [sendIntervalMs, setSendIntervalMs] = useState(settings?.sendIntervalMs ?? settings?.send_interval ?? 2000);
+  const [realtimeStreamEnabled, setRealtimeStreamEnabled] = useState(settings?.realtimeStreamEnabled ?? true);
   const [buzzerEnabled, setBuzzerEnabled] = useState(settings?.buzzerEnabled ?? settings?.buzzer_enabled ?? true);
   const [autoCutoffEnabled, setAutoCutoffEnabled] = useState(settings?.autoCutoffEnabled ?? settings?.auto_cutoff ?? true);
   const [powerFactorEstimate, setPowerFactorEstimate] = useState(settings?.powerFactorEstimate ?? 0.85);
@@ -193,6 +216,14 @@ export function Settings({ onLogout }: SettingsProps) {
 
   useEffect(() => {
     if (!settings) return;
+    setThresholdArus(settings.thresholdArus ?? settings.threshold ?? 10);
+    setWarningPercent(settings.warningPercent ?? 80);
+    setSendIntervalMs(settings.sendIntervalMs ?? settings.send_interval ?? 2000);
+    setRealtimeStreamEnabled(settings.realtimeStreamEnabled ?? true);
+    setBuzzerEnabled(settings.buzzerEnabled ?? settings.buzzer_enabled ?? true);
+    setAutoCutoffEnabled(settings.autoCutoffEnabled ?? settings.auto_cutoff ?? true);
+    setPowerFactorEstimate(settings.powerFactorEstimate ?? 0.85);
+    setFrequencyHz(settings.frequencyHz ?? 50);
     setTelegramNotifyEnabled(settings.telegramNotifyEnabled ?? true);
     setTelegramBotToken(settings.telegramBotToken ?? settings.telegram?.bot_token ?? '');
     setTelegramRecipients(parseTelegramRecipients(
@@ -346,6 +377,7 @@ export function Settings({ onLogout }: SettingsProps) {
         thresholdArus,
         warningPercent,
         sendIntervalMs,
+        realtimeStreamEnabled,
         buzzerEnabled,
         autoCutoffEnabled,
         powerFactorEstimate,
@@ -412,7 +444,7 @@ export function Settings({ onLogout }: SettingsProps) {
       setTelegramChatIdDraft('');
       setEditingChatIdIndex(null);
     }
-    const nextChatIds = nextRecipients.map((recipient) => recipient.chatId);
+    const nextChatIds = getActiveTelegramRecipients(nextRecipients).map((recipient) => recipient.chatId);
 
     setLoading(true);
     try {
@@ -512,20 +544,26 @@ export function Settings({ onLogout }: SettingsProps) {
       setEditingChatIdIndex(null);
     }
 
-    if (nextRecipients.length === 0) {
-      notifyDesktop('Telegram Test', 'Tambahkan minimal satu Chat ID / Group ID sebelum test.');
+    const activeRecipients = getActiveTelegramRecipients(nextRecipients);
+    if (activeRecipients.length === 0) {
+      notifyDesktop(
+        'Telegram Test',
+        nextRecipients.length > 0
+          ? 'Semua penerima Telegram sedang pause. Resume minimal satu chat sebelum test.'
+          : 'Tambahkan minimal satu Chat ID / Group ID sebelum test.'
+      );
       return;
     }
 
     setTelegramActionLoading(true);
     try {
-      const data = await callLiveResetApi('telegram-admin-action', {
-        action: 'test',
-        token: telegramBotToken.trim(),
-        recipients: nextRecipients,
-      });
-      const sentCount = Number(data.successCount || 0);
-      const totalRecipients = Number(data.totalRecipients || nextRecipients.length);
+        const data = await callLiveResetApi('telegram-admin-action', {
+          action: 'test',
+          token: telegramBotToken.trim(),
+          recipients: activeRecipients,
+        });
+        const sentCount = Number(data.successCount || 0);
+        const totalRecipients = Number(data.totalRecipients || activeRecipients.length);
       const username = String(data.username || '').trim();
       const message = username
         ? `Test Telegram berhasil dikirim ke ${sentCount}/${totalRecipients} tujuan lewat @${username}.`
@@ -560,7 +598,15 @@ export function Settings({ onLogout }: SettingsProps) {
       return;
     }
 
-    const recipient = { name, chatId };
+      const currentRecipient = editingChatIdIndex !== null ? telegramRecipients[editingChatIdIndex] : null;
+      const recipient = {
+        name,
+        chatId,
+        paused: currentRecipient?.paused === true,
+        pausedAt: Number(currentRecipient?.pausedAt || 0) || 0,
+        resumedAt: Number(currentRecipient?.resumedAt || 0) || 0,
+        pauseSource: String(currentRecipient?.pauseSource || '').trim(),
+      };
     if (editingChatIdIndex !== null) {
       setTelegramRecipients((items) =>
         items.map((item, index) => (index === editingChatIdIndex ? recipient : item))
@@ -1194,7 +1240,7 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Interval Pengiriman Sensor (ms)
+                Delay Stream Data ke Firebase (ms)
               </label>
               <input
                 type="number"
@@ -1226,6 +1272,19 @@ export function Settings({ onLogout }: SettingsProps) {
                 className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
               />
             </div>
+          </div>
+
+          <div className="flex items-center space-x-3 mt-4">
+            <input
+              type="checkbox"
+              id="realtimeStreamEnabled"
+              checked={realtimeStreamEnabled}
+              onChange={(e) => setRealtimeStreamEnabled(e.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="realtimeStreamEnabled" className="text-gray-700 dark:text-gray-300">
+              Stream data realtime ke Firebase (/listrik). Saat dimatikan, device tetap membaca settings dan command relay, tetapi dashboard bisa terlihat offline karena heartbeat realtime dihentikan.
+            </label>
           </div>
 
           <div className="flex items-center space-x-3 mt-4">
@@ -1433,11 +1492,11 @@ export function Settings({ onLogout }: SettingsProps) {
                     <div className="text-sm font-semibold text-gray-900 dark:text-white">
                       Chat ID / Group ID tersimpan
                     </div>
-                    <div className="text-sm leading-6 text-gray-500 dark:text-gray-400">
-                      {telegramRecipients.length > 0
-                        ? `${telegramRecipients.length} tujuan aktif untuk alert, backup, dan laporan Telegram.`
-                        : 'Belum ada tujuan Telegram aktif. Tambahkan setidaknya satu Chat ID agar notifikasi bisa terkirim.'}
-                    </div>
+                      <div className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+                        {telegramRecipients.length > 0
+                          ? `${getActiveTelegramRecipients(telegramRecipients).length} aktif • ${telegramRecipients.filter((recipient) => isTelegramRecipientPaused(recipient)).length} pause. Hanya penerima aktif yang akan menerima alert, backup, laporan, dan test Telegram.`
+                          : 'Belum ada tujuan Telegram aktif. Tambahkan setidaknya satu Chat ID agar notifikasi bisa terkirim.'}
+                      </div>
                   </div>
                 </div>
               </div>
@@ -1458,7 +1517,7 @@ export function Settings({ onLogout }: SettingsProps) {
                         {recipient.name || `Penerima ${index + 1}`}
                       </div>
                       <div className="break-all font-mono text-sm leading-6 text-gray-500 dark:text-gray-400">
-                        {recipient.chatId}
+                        {recipient.chatId} • {isTelegramRecipientPaused(recipient) ? 'PAUSE' : 'AKTIF'}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:flex">

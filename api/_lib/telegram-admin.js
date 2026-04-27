@@ -9,11 +9,36 @@ function normalizeTelegramChatId(value) {
   return /^-?\d+$/.test(id) ? id : "";
 }
 
+function normalizeTelegramRecipient(value) {
+  if (value == null) return null;
+
+  if (typeof value === "object" && !Array.isArray(value)) {
+    const chatId = normalizeTelegramChatId(value.chatId ?? value.telegramChatId ?? value.id);
+    if (!chatId) return null;
+    return {
+      name: String(value.name ?? value.label ?? "").trim(),
+      chatId,
+      paused: value.paused === true,
+    };
+  }
+
+  const chatId = normalizeTelegramChatId(value);
+  return chatId ? { name: "", chatId, paused: false } : null;
+}
+
 function parseTelegramRecipients(...sources) {
   const recipients = [];
   const add = (value) => {
-    const id = normalizeTelegramChatId(value);
-    if (id && !recipients.includes(id)) recipients.push(id);
+    const recipient = normalizeTelegramRecipient(value);
+    if (!recipient) return;
+
+    const existing = recipients.find((item) => item.chatId === recipient.chatId);
+    if (existing) {
+      if (!existing.name && recipient.name) existing.name = recipient.name;
+      if (recipient.paused === true) existing.paused = true;
+      return;
+    }
+    recipients.push(recipient);
   };
 
   const visit = (source) => {
@@ -24,7 +49,7 @@ function parseTelegramRecipients(...sources) {
     }
     if (typeof source === "object") {
       if ("chatId" in source || "telegramChatId" in source || "id" in source) {
-        add(source.chatId ?? source.telegramChatId ?? source.id);
+        add(source);
         return;
       }
       Object.entries(source)
@@ -49,6 +74,12 @@ function getRequestBody(req) {
     }
   }
   return {};
+}
+
+function getActiveTelegramRecipients(recipients) {
+  return Array.isArray(recipients)
+    ? recipients.filter((recipient) => recipient?.paused !== true)
+    : [];
 }
 
 async function callTelegram(token, method, payload = null) {
@@ -96,11 +127,13 @@ async function resolveTelegramConfig(req, { requireRecipients = false } = {}) {
     throw httpError(400, "Bot Token Telegram belum diisi.");
   }
 
-  if (requireRecipients && recipients.length === 0) {
+  const activeRecipients = getActiveTelegramRecipients(recipients);
+
+  if (requireRecipients && activeRecipients.length === 0) {
     throw httpError(400, "Belum ada Chat ID / Group ID Telegram yang aktif.");
   }
 
-  return { token, recipients, settings };
+  return { token, recipients, activeRecipients, settings };
 }
 
 async function getTelegramBotProfile(req) {
@@ -124,7 +157,7 @@ async function getTelegramBotProfile(req) {
 }
 
 async function testTelegramConfig(req) {
-  const { token, recipients, settings } = await resolveTelegramConfig(req, { requireRecipients: true });
+  const { token, activeRecipients, settings } = await resolveTelegramConfig(req, { requireRecipients: true });
   if (settings?.telegramNotifyEnabled === false) {
     throw httpError(400, "Notifikasi Telegram sedang dimatikan. Aktifkan dulu jika ingin mengirim test.");
   }
@@ -141,18 +174,18 @@ async function testTelegramConfig(req) {
   const message =
     `🔔 <b>Test Notifikasi Telegram</b>\n` +
     `Bot: <b>${displayName}</b>${username ? ` (@${username})` : ""}\n` +
-    `Tujuan aktif: <b>${recipients.length}</b>\n` +
+    `Tujuan aktif: <b>${activeRecipients.length}</b>\n` +
     `Waktu: <b>${sentAt} WIB</b>\n\n` +
     `<i>IoT Listrik Dashboard berhasil terhubung ke Telegram.</i>`;
 
   const results = await Promise.allSettled(
-    recipients.map(async (chatId) => {
+    activeRecipients.map(async (recipient) => {
       await callTelegram(token, "sendMessage", {
-        chat_id: String(chatId),
+        chat_id: String(recipient.chatId),
         text: message,
         parse_mode: "HTML",
       });
-      return chatId;
+      return recipient.chatId;
     })
   );
 
@@ -167,7 +200,7 @@ async function testTelegramConfig(req) {
     displayName,
     botUrl: username ? `https://t.me/${username}` : "",
     successCount,
-    totalRecipients: recipients.length,
+    totalRecipients: activeRecipients.length,
   };
 }
 

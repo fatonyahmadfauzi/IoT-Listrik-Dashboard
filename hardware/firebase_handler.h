@@ -186,7 +186,7 @@ bool updateRelayState(int relayVal) {
  *   thresholdArus, buzzerEnabled, autoCutoffEnabled,
  *   telegramBotToken, telegramChatId (supports comma-separated IDs),
  *   arusCalibration, teganganCalibration,
- *   sendIntervalMs
+ *   realtimeStreamEnabled, sendIntervalMs
  *
  * If /settings does not exist yet, the struct values remain at
  * their default (as declared in config.h RuntimeSettings).
@@ -232,6 +232,8 @@ bool readAllSettings(RuntimeSettings& out) {
     out.autoCutoffEnabled = (val.stringValue == "true" || val.intValue == 1);
   if (json.get(val, "telegramNotifyEnabled"))
     out.telegramNotifyEnabled = (val.stringValue == "true" || val.intValue == 1);
+  if (json.get(val, "realtimeStreamEnabled"))
+    out.realtimeStreamEnabled = (val.stringValue == "true" || val.intValue == 1);
 
   // Timing
   if (json.get(val, "sendIntervalMs") && val.intValue > 0)
@@ -245,10 +247,10 @@ bool readAllSettings(RuntimeSettings& out) {
 
   Serial.printf(
     "[Firebase] Settings synced → thr=%.1fA warn%%=%.0f PF=%.2f f=%.0fHz "
-    "cal_I=%.3f cal_V=%.2f sendMs=%lu buzzer=%d cutoff=%d TG=%s\n",
+    "cal_I=%.3f cal_V=%.2f stream=%d sendMs=%lu buzzer=%d cutoff=%d TG=%s\n",
     out.thresholdArus, out.warningPercent, out.powerFactorEstimate, out.frequencyHz,
     out.arusCalibration, out.teganganCalibration,
-    out.sendIntervalMs, out.buzzerEnabled, out.autoCutoffEnabled,
+    out.realtimeStreamEnabled, out.sendIntervalMs, out.buzzerEnabled, out.autoCutoffEnabled,
     out.telegramBotToken.isEmpty() ? "unconfigured" : "configured"
   );
   return true;

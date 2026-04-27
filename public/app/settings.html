@@ -675,7 +675,7 @@
 
               <div class="form-group">
                 <label class="form-label" for="inpSendInterval">
-                  Interval Kirim Data (ms)
+                  Delay Stream Data ke Firebase (ms)
                 </label>
                 <input
                   id="inpSendInterval"
@@ -687,10 +687,23 @@
                   value="2000"
                 />
                 <div class="form-hint">
-                  Seberapa sering ESP32 menulis data ke Firebase.<br />
+                  Mengatur jeda antar kiriman telemetri periodik ESP32 ke node <code>/listrik</code>.<br />
                   Min: 500 ms | Rekomendasi: 2000 ms.
                 </div>
                 <div id="valSendInterval" class="validation-msg"></div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <h4>Stream Data Realtime ke Firebase</h4>
+                  <p>
+                    Pause/resume kiriman telemetri periodik ke <code>/listrik</code>. Saat dipause, device tetap membaca settings dan command relay, tetapi dashboard bisa terlihat offline karena heartbeat realtime dihentikan.
+                  </p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpRealtimeStreamEnabled" checked />
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
 
               <div class="toggle-row">

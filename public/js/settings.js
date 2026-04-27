@@ -43,6 +43,7 @@ import { initializeApp, deleteApp }
 // ── DOM: System settings ──────────────────────────────────────
 const inpThreshold    = document.getElementById('inpThreshold');
 const inpSendInterval = document.getElementById('inpSendInterval');
+const inpRealtimeStreamEnabled = document.getElementById('inpRealtimeStreamEnabled');
 const inpBuzzer       = document.getElementById('inpBuzzer');
 const inpAutoCutoff   = document.getElementById('inpAutoCutoff');
 const inpWarningPct   = document.getElementById('inpWarningPercent');
@@ -244,11 +245,15 @@ function normalizeTelegramRecipient(value) {
     return {
       name: String(value.name ?? value.label ?? '').trim(),
       chatId,
+      paused: value.paused === true,
+      pausedAt: Number(value.pausedAt || 0) || 0,
+      resumedAt: Number(value.resumedAt || 0) || 0,
+      pauseSource: String(value.pauseSource || '').trim(),
     };
   }
 
   const chatId = normalizeTelegramChatId(value);
-  return chatId ? { name: '', chatId } : null;
+  return chatId ? { name: '', chatId, paused: false, pausedAt: 0, resumedAt: 0, pauseSource: '' } : null;
 }
 
 function parseTelegramRecipients(...sources) {
@@ -260,6 +265,10 @@ function parseTelegramRecipients(...sources) {
     const existing = recipients.find((item) => item.chatId === recipient.chatId);
     if (existing) {
       if (!existing.name && recipient.name) existing.name = recipient.name;
+      if (recipient.paused === true) existing.paused = true;
+      if (!existing.pausedAt && recipient.pausedAt) existing.pausedAt = recipient.pausedAt;
+      if (!existing.resumedAt && recipient.resumedAt) existing.resumedAt = recipient.resumedAt;
+      if (!existing.pauseSource && recipient.pauseSource) existing.pauseSource = recipient.pauseSource;
       return;
     }
     recipients.push(recipient);
@@ -301,14 +310,26 @@ function getTelegramRecipientsFromSettings(settings) {
   );
 }
 
+function isTelegramRecipientPaused(recipient) {
+  return recipient?.paused === true;
+}
+
+function getActiveTelegramRecipients(recipients = telegramRecipients) {
+  return Array.isArray(recipients)
+    ? recipients.filter((recipient) => !isTelegramRecipientPaused(recipient))
+    : [];
+}
+
 function renderTelegramRecipientSummary() {
   if (!chatIdSummaryEl || !chatIdSummaryCountEl || !chatIdSummaryNoteEl) return;
 
   const totalRecipients = telegramRecipients.length;
+  const pausedRecipients = telegramRecipients.filter((recipient) => isTelegramRecipientPaused(recipient)).length;
+  const activeRecipients = totalRecipients - pausedRecipients;
   chatIdSummaryCountEl.textContent = String(totalRecipients);
   chatIdSummaryNoteEl.textContent =
     totalRecipients > 0
-      ? `Daftar penerima aktif untuk alert, backup, dan laporan Telegram (${totalRecipients} tujuan).`
+      ? `${activeRecipients} aktif • ${pausedRecipients} pause. Hanya penerima aktif yang akan menerima alert, backup, laporan, dan test Telegram.`
       : 'Belum ada tujuan Telegram aktif. Tambahkan setidaknya satu Chat ID agar notifikasi dapat dikirim.';
 }
 
@@ -358,7 +379,8 @@ function renderTelegramChatIds() {
 
     const value = document.createElement('span');
     value.className = 'chat-id-value';
-    value.textContent = recipient.chatId;
+    const paused = isTelegramRecipientPaused(recipient);
+    value.textContent = `${recipient.chatId} • ${paused ? 'PAUSE' : 'AKTIF'}`;
 
     main.append(name, value);
 
@@ -415,7 +437,15 @@ function commitChatIdInput({ silent = false } = {}) {
     return false;
   }
 
-  const recipient = { name, chatId };
+  const currentRecipient = editingChatIdIndex >= 0 ? telegramRecipients[editingChatIdIndex] : null;
+  const recipient = {
+    name,
+    chatId,
+    paused: currentRecipient?.paused === true,
+    pausedAt: Number(currentRecipient?.pausedAt || 0) || 0,
+    resumedAt: Number(currentRecipient?.resumedAt || 0) || 0,
+    pauseSource: String(currentRecipient?.pauseSource || '').trim(),
+  };
   if (editingChatIdIndex >= 0) {
     telegramRecipients[editingChatIdIndex] = recipient;
   } else {
@@ -1479,6 +1509,7 @@ function loadSettings() {
     if (inpThreshold)    inpThreshold.value     = d.thresholdArus        ?? 10;
     if (inpWarningPct)   inpWarningPct.value    = d.warningPercent       ?? 80;
     if (inpSendInterval) inpSendInterval.value   = d.sendIntervalMs       ?? 2000;
+    if (inpRealtimeStreamEnabled) inpRealtimeStreamEnabled.checked = d.realtimeStreamEnabled !== false;
     if (inpBuzzer)       inpBuzzer.checked        = d.buzzerEnabled        ?? true;
     if (inpAutoCutoff)   inpAutoCutoff.checked    = d.autoCutoffEnabled    ?? true;
     if (inpArusCal)      inpArusCal.value          = d.arusCalibration     ?? 1.000;
@@ -1509,6 +1540,7 @@ async function saveSettings() {
     inpThreshold ||
     inpWarningPct ||
     inpSendInterval ||
+    inpRealtimeStreamEnabled ||
     inpBuzzer ||
     inpAutoCutoff ||
     inpArusCal ||
@@ -1537,6 +1569,9 @@ async function saveSettings() {
   if (inpSendInterval) {
     payload.sendIntervalMs = parseInt(inpSendInterval.value || 2000);
   }
+  if (inpRealtimeStreamEnabled) {
+    payload.realtimeStreamEnabled = inpRealtimeStreamEnabled.checked;
+  }
   if (inpBuzzer) {
     payload.buzzerEnabled = inpBuzzer.checked;
   }
@@ -1563,7 +1598,7 @@ async function saveSettings() {
     if (token) payload.telegramBotToken = token;
   }
   if (hasTelegramControls) {
-    const telegramChatIds = telegramRecipients.map((recipient) => recipient.chatId);
+    const telegramChatIds = getActiveTelegramRecipients(telegramRecipients).map((recipient) => recipient.chatId);
     payload.telegramRecipients = telegramRecipients;
     payload.telegramChatIds = telegramChatIds;
     payload.telegramChatId = telegramChatIds.join(',');
@@ -1659,8 +1694,11 @@ async function testTelegramConfigAction() {
     showToast('Periksa kembali Chat ID Telegram sebelum test.', 'error');
     return;
   }
-  if (telegramRecipients.length === 0) {
-    const message = 'Tambahkan minimal satu Chat ID / Group ID untuk test Telegram.';
+  const activeRecipients = getActiveTelegramRecipients(telegramRecipients);
+  if (activeRecipients.length === 0) {
+    const message = telegramRecipients.length > 0
+      ? 'Semua penerima Telegram sedang pause. Resume minimal satu chat sebelum test.'
+      : 'Tambahkan minimal satu Chat ID / Group ID untuk test Telegram.';
     setTelegramActionStatus(message, 'error');
     showToast(message, 'error');
     return;
@@ -1672,13 +1710,13 @@ async function testTelegramConfigAction() {
   }
 
   try {
-    const data = await callLiveResetApi('telegram-admin-action', {
-      action: 'test',
-      token,
-      recipients: telegramRecipients,
-    });
-    const sentCount = Number(data.successCount || 0);
-    const totalRecipients = Number(data.totalRecipients || telegramRecipients.length);
+      const data = await callLiveResetApi('telegram-admin-action', {
+        action: 'test',
+        token,
+        recipients: activeRecipients,
+      });
+      const sentCount = Number(data.successCount || 0);
+      const totalRecipients = Number(data.totalRecipients || activeRecipients.length);
     const username = String(data.username || '').trim();
     const message = username
       ? `Test Telegram berhasil dikirim ke ${sentCount}/${totalRecipients} tujuan lewat @${username}.`
@@ -2098,6 +2136,7 @@ initPage({
     [inpThreshold, inpWarningPct, inpSendInterval, inpArusCal, inpTeganganCal,
      inpPowerFactor, inpFrequency, inpBotToken, inpChatId]
       .forEach(el => el?.addEventListener('input', validateAll));
+    inpRealtimeStreamEnabled?.addEventListener('change', validateAll);
     inpBotToken?.addEventListener('input', syncTelegramActionButtons);
     inpTelegramNotify?.addEventListener('change', syncTelegramActionButtons);
 

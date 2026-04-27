@@ -25,7 +25,8 @@
  * │  Applied immediately — NO firmware re-upload required.     │
  * │                                                             │
  * │  Includes: threshold, buzzer, auto-cutoff, Telegram token  │
- * │  & chat ID, calibration factors, send interval.            │
+ * │  & chat ID, calibration factors, send interval, stream     │
+ * │  pause/resume.                                             │
  * │                                                             │
  * │  Changed by: admin editing the web Settings page.          │
  * └─────────────────────────────────────────────────────────────┘
@@ -142,6 +143,7 @@ struct RuntimeSettings {
   bool          telegramNotifyEnabled = true;
 
   // ── Timing ───────────────────────────────────────────────────
+  bool          realtimeStreamEnabled = true;   // Master switch for periodic /listrik telemetry writes
   unsigned long sendIntervalMs      = 2000;    // Firebase write interval (ms)
   unsigned long settingsSyncMs      = 10000;   // Settings refresh interval (ms)
   unsigned long telegramCooldownMs  = 30000;   // Min time between Telegram msgs

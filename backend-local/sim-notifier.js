@@ -100,11 +100,34 @@ function normalizeTelegramChatId(value) {
   return /^-?\d+$/.test(id) ? id : '';
 }
 
-function parseTelegramChatIds(...sources) {
-  const ids = [];
+function normalizeTelegramRecipient(value) {
+  if (value == null) return null;
+
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const chatId = normalizeTelegramChatId(value.chatId ?? value.telegramChatId ?? value.id);
+    if (!chatId) return null;
+    return {
+      chatId,
+      paused: value.paused === true,
+    };
+  }
+
+  const chatId = normalizeTelegramChatId(value);
+  return chatId ? { chatId, paused: false } : null;
+}
+
+function parseTelegramRecipients(...sources) {
+  const recipients = [];
   const add = (value) => {
-    const id = normalizeTelegramChatId(value);
-    if (id && !ids.includes(id)) ids.push(id);
+    const recipient = normalizeTelegramRecipient(value);
+    if (!recipient) return;
+
+    const existing = recipients.find((item) => item.chatId === recipient.chatId);
+    if (existing) {
+      if (recipient.paused === true) existing.paused = true;
+      return;
+    }
+    recipients.push(recipient);
   };
 
   const visit = (source) => {
@@ -115,7 +138,7 @@ function parseTelegramChatIds(...sources) {
     }
     if (typeof source === 'object') {
       if ('chatId' in source || 'telegramChatId' in source || 'id' in source) {
-        add(source.chatId ?? source.telegramChatId ?? source.id);
+        add(source);
         return;
       }
       Object.entries(source)
@@ -127,16 +150,22 @@ function parseTelegramChatIds(...sources) {
   };
 
   sources.forEach(visit);
-  return ids;
+  return recipients;
+}
+
+function parseTelegramChatIds(...sources) {
+  return parseTelegramRecipients(...sources).map((recipient) => recipient.chatId);
 }
 
 function getTelegramChatIds(cfg) {
-  return parseTelegramChatIds(
-    cfg?.telegramRecipients,
-    cfg?.telegramChatIds,
-    cfg?.telegramChatId,
-    cfg?.telegram?.chat_id
-  );
+  const structuredRecipients = parseTelegramRecipients(cfg?.telegramRecipients);
+  if (structuredRecipients.length > 0) {
+    return structuredRecipients
+      .filter((recipient) => recipient.paused !== true)
+      .map((recipient) => recipient.chatId);
+  }
+
+  return parseTelegramChatIds(cfg?.telegramChatIds, cfg?.telegramChatId, cfg?.telegram?.chat_id);
 }
 
 function hasTelegramConfig(cfg) {

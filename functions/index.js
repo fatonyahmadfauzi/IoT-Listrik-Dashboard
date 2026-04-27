@@ -56,6 +56,22 @@ function normalizeTelegramChatId(value) {
   return /^-?\d+$/.test(id) ? id : "";
 }
 
+function normalizeTelegramRecipient(value) {
+  if (value == null) return null;
+
+  if (typeof value === "object" && !Array.isArray(value)) {
+    const chatId = normalizeTelegramChatId(value.chatId ?? value.telegramChatId ?? value.id);
+    if (!chatId) return null;
+    return {
+      chatId,
+      paused: value.paused === true,
+    };
+  }
+
+  const chatId = normalizeTelegramChatId(value);
+  return chatId ? { chatId, paused: false } : null;
+}
+
 function parseTelegramChatIds(...sources) {
   const ids = [];
   const add = (value) => {
@@ -86,9 +102,52 @@ function parseTelegramChatIds(...sources) {
   return ids;
 }
 
+function parseTelegramRecipients(...sources) {
+  const recipients = [];
+  const add = (value) => {
+    const recipient = normalizeTelegramRecipient(value);
+    if (!recipient) return;
+
+    const existing = recipients.find((item) => item.chatId === recipient.chatId);
+    if (existing) {
+      if (recipient.paused === true) existing.paused = true;
+      return;
+    }
+    recipients.push(recipient);
+  };
+
+  const visit = (source) => {
+    if (source == null) return;
+    if (Array.isArray(source)) {
+      source.forEach(visit);
+      return;
+    }
+    if (typeof source === "object") {
+      if ("chatId" in source || "telegramChatId" in source || "id" in source) {
+        add(source);
+        return;
+      }
+      Object.entries(source)
+        .filter(([key]) => !["name", "label", "displayName", "title"].includes(key))
+        .forEach(([, value]) => visit(value));
+      return;
+    }
+    String(source).split(/[\s,;]+/).forEach(add);
+  };
+
+  sources.forEach(visit);
+  return recipients;
+}
+
 function getTelegramChatIds(settings) {
+  const structuredRecipients = parseTelegramRecipients(settings?.telegramRecipients);
+  if (structuredRecipients.length > 0) {
+    return structuredRecipients
+      .filter((recipient) => recipient.paused !== true)
+      .map((recipient) => recipient.chatId);
+  }
+
   return parseTelegramChatIds(
-    settings?.telegramRecipients,
     settings?.telegramChatIds,
     settings?.telegramChatId,
     settings?.telegram?.chat_id
@@ -800,7 +859,7 @@ exports.createTempAccount = onCall(
         discord: {
           enabled: false,
           webhookAlerts: "", webhookRelay: "",
-          webhookMonitoring: "", webhookLogs: "",
+          webhookMonitoring: "", webhookDailyReport: "", webhookLogs: "",
         },
       },
     });

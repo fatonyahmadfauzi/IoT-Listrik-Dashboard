@@ -61,15 +61,25 @@ build/Release
 # Dependency directories
 node_modules/
 
-# Android build artifacts
+# Android build artifacts & IDE metadata
 platforms/android/.gradle/
+platforms/android/.idea/
 platforms/android/app/build/
+platforms/android/build/
 
 # Electron build artifacts
 platforms/electron/dist/
+platforms/electron/dist-electron/
 platforms/electron/release/
 platforms/electron/release-build/
 platforms/electron/release-build-all/
+platforms/electron/release-build-temp/
+
+# Python CLI build artifacts
+platforms/cli-python/build/
+platforms/cli-python/dist/
+platforms/cli-python/__pycache__/
+**/__pycache__/
 
 # Optional npm cache directory
 .npm
@@ -88,6 +98,9 @@ platforms/electron/release-build-all/
 
 # dotenv environment variables file
 .env
+.env.local
+.env.*.local
+.env.vercel.local
 
 # dataconnect generated files
 .dataconnect

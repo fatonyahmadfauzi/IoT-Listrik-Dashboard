@@ -25,7 +25,7 @@ async function fix() {
     const discord = child.child('settings/discord').val();
     if (!discord) return;
 
-    const hasWebhook = !!(discord.webhookAlerts || discord.webhookRelay || discord.webhookMonitoring || discord.webhookLogs);
+    const hasWebhook = !!(discord.webhookAlerts || discord.webhookRelay || discord.webhookMonitoring || discord.webhookDailyReport || discord.webhookLogs);
     const isDisabled = discord.enabled === false;
 
     console.log(`  UID ${uid.slice(0,12)}: enabled=${discord.enabled}, hasWebhook=${hasWebhook}`);

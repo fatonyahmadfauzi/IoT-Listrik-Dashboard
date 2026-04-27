@@ -6,8 +6,12 @@
   <title>Riwayat Log — IoT Monitoring Listrik</title>
   <meta name="description" content="Riwayat event dan log sensor sistem monitoring listrik IoT" />
   <link rel="stylesheet" href="/css/style.css" />
-  <link rel="manifest"   href="/manifest.json" />
+  <link rel="manifest"   href="/app/manifest.json" />
   <meta name="theme-color" content="#070c18" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
@@ -34,8 +38,13 @@
         <span class="material-symbols-rounded nav-icon">history</span> Riwayat Log
       </a>
       <a href="/downloads" class="nav-item">
-        <span class="material-symbols-rounded nav-icon">download</span> Download App
+
+        <span class="material-symbols-rounded nav-icon">download</span>
+
+        Download App
+
       </a>
+
       <div class="nav-divider"></div>
       <a href="/settings" class="nav-item hidden" style="display: none;" data-admin-only>
         <span class="material-symbols-rounded nav-icon">settings</span> Pengaturan
@@ -55,7 +64,7 @@
         <div class="user-avatar" id="sidebarAvatar">?</div>
         <div class="user-info">
           <div class="user-email" id="sidebarEmail">—</div>
-          <div id="sidebarRole" class="role-pill user">User</div>
+          <div id="sidebarRole" class="role-pill user">Memuat...</div>
         </div>
       </div>
       <button id="logoutBtn" class="btn btn-ghost w-full"><span class="material-symbols-rounded">logout</span>Logout</button>

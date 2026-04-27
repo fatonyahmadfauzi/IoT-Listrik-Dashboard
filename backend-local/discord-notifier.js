@@ -1215,6 +1215,52 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
+// LISTENER — /settings/realtimeStreamEnabled → #alerts (Pause/Resume Stream)
+// ════════════════════════════════════════════════════════════════════════
+let lastStreamEnabled = null;
+db.ref('/settings/realtimeStreamEnabled').on('value', async (snap) => {
+  const enabled = snap.val();
+  if (enabled === lastStreamEnabled) return;
+  const prev = lastStreamEnabled;
+  lastStreamEnabled = enabled;
+  if (prev === null) return; // skip initial value on server start
+
+  const isPaused = enabled === false;
+  const label = isPaused ? 'DIPAUSE' : 'DIRESUME';
+  const emoji = isPaused ? '⏸️' : '▶️';
+  const color = isPaused ? 0xFEE75C : 0x57F287;
+
+  console.log(`[Stream] Realtime stream ${label}`);
+
+  const embed = {
+    title: `${emoji} Stream Data Realtime ${label}`,
+    description: isPaused
+      ? 'ESP32 berhenti mengirim telemetri periodik ke /listrik. Device tetap membaca settings dan command relay, tetapi dashboard bisa terlihat offline karena heartbeat dihentikan.'
+      : 'ESP32 kembali mengirim telemetri periodik ke /listrik. Dashboard akan menerima data realtime kembali.',
+    color,
+    fields: [
+      { name: 'Status Stream', value: isPaused ? '⏸️ Paused' : '▶️ Active', inline: true },
+      { name: 'Waktu', value: waktu(), inline: true },
+    ],
+    footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
+  };
+
+  await sendEmbed(discordConfig.webhookAlerts, embed);
+  await broadcastPhysicalSystemEvent({
+    event: isPaused ? 'stream_paused' : 'stream_resumed',
+    title: embed.title,
+    message: embed.description,
+    severity: isPaused ? 'warning' : 'success',
+    telegramMessage:
+      `${emoji} <b>Stream Data Realtime ${label}</b>\n` +
+      (isPaused
+        ? 'ESP32 berhenti mengirim telemetri periodik. Dashboard bisa terlihat offline karena heartbeat dihentikan.'
+        : 'ESP32 kembali mengirim telemetri periodik. Dashboard akan menerima data realtime kembali.') +
+      `\n🕐 ${waktu()}`,
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════
 // LISTENER 4 — /logs → #logs (entry baru saja)
 // ════════════════════════════════════════════════════════════════════════
 let logsInitialized = false;

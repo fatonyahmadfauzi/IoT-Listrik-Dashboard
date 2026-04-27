@@ -1,4 +1,4 @@
-﻿/* =============================================================
+/* =============================================================
    IoT Listrik Dashboard — Global Design System
    Dark Glassmorphism Premium UI
    ============================================================= */
@@ -184,7 +184,7 @@ body.page-bg {
 /* ── Sidebar ───────────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
-  min-height: 100vh;
+  height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
@@ -205,8 +205,25 @@ body.page-bg {
   box-shadow: inset -1px 0 0 rgba(255,255,255,0.025);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   transition: none;
+  /* slim premium scrollbar for dark UI */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.18);
 }
 /* A. Brand / Header Block ─────────────────────────────────── */
 .sidebar-logo {

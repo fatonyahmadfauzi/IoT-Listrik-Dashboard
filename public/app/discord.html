@@ -77,7 +77,7 @@
         position: relative;
       }
       .input-reveal-wrap .form-input {
-        padding-right: 42px;
+        padding-right: 48px;
       }
       .reveal-btn {
         position: absolute;
@@ -102,6 +102,18 @@
       }
       .reveal-btn .material-symbols-rounded {
         font-size: 17px;
+      }
+      .input-reveal-wrap::before {
+        content: '';
+        position: absolute;
+        right: 40px;
+        top: 1px;
+        bottom: 1px;
+        width: 24px;
+        background: linear-gradient(90deg, transparent, rgba(8, 10, 16, 0.92));
+        pointer-events: none;
+        z-index: 1;
+        border-radius: 0;
       }
       .form-hint {
         font-size: 11.5px;
@@ -289,6 +301,9 @@
           padding: 8px 11px;
           font-size: 13px;
         }
+        .input-reveal-wrap .form-input {
+          padding-right: 48px;
+        }
         .field-sensitive .form-input {
           letter-spacing: 1px;
         }
@@ -356,6 +371,9 @@
         .settings-section textarea.form-input {
           font-size: 12.5px;
           padding: 8px 10px;
+        }
+        .input-reveal-wrap .form-input {
+          padding-right: 48px;
         }
         .field-sensitive .form-input {
           font-size: 12px;

@@ -9,7 +9,7 @@
       content="Pengaturan sistem IoT dan manajemen pengguna (Admin only)"
     />
     <link rel="stylesheet" href="/css/style.css" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/app/manifest.json" />
     <meta name="theme-color" content="#070c18" />
     <link
       rel="stylesheet"
@@ -28,7 +28,81 @@
         gap: 16px;
         margin-bottom: 16px;
       }
+      .settings-shell {
+        display: block;
+      }
+      .settings-content-stack {
+        min-width: 0;
+      }
+      .sidebar-settings-subnav {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      }
+      .sidebar-settings-subnav-title {
+        font-size: 10.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #7f8da3;
+        margin-bottom: 10px;
+        padding: 0 2px;
+      }
+      .settings-subnav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .settings-subnav-link {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 100%;
+        padding: 11px 12px;
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: #cbd5e1;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.35;
+        border: 1px solid rgba(255,255,255,0.06);
+        background: rgba(255,255,255,0.025);
+        transition: background var(--transition), border-color var(--transition), color var(--transition), transform var(--transition);
+      }
+      .settings-subnav-link:hover {
+        color: #e2e8f0;
+        border-color: rgba(59, 130, 246, 0.22);
+        background: rgba(59, 130, 246, 0.08);
+        transform: translateX(2px);
+      }
+      .settings-subnav-link.is-active {
+        color: #dbeafe;
+        border-color: rgba(59, 130, 246, 0.35);
+        background: rgba(37, 99, 235, 0.18);
+        box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.08);
+      }
+      .settings-subnav-link .material-symbols-rounded {
+        font-size: 17px;
+        opacity: 0.88;
+        flex-shrink: 0;
+      }
+      [data-settings-section] {
+        scroll-margin-top: 92px;
+      }
       @media (max-width: 900px) {
+        .settings-shell {
+          display: block;
+        }
+        .sidebar-settings-subnav {
+          margin-top: 8px;
+          padding-top: 8px;
+        }
+        .settings-subnav-list {
+          gap: 6px;
+        }
+        .settings-subnav-link {
+          min-width: 0;
+        }
         .settings-grid { grid-template-columns: 1fr; }
       }
 
@@ -373,6 +447,13 @@
           gap: 11px;
           margin-bottom: 11px;
         }
+        .sidebar-settings-subnav-title {
+          font-size: 11px;
+        }
+        .settings-subnav-link {
+          padding: 9px 11px;
+          font-size: 12.5px;
+        }
         .settings-section {
           padding: 14px;
         }
@@ -415,6 +496,9 @@
 
       @media (max-width: 430px) {
         .settings-section { padding: 12px; }
+        .settings-subnav-link {
+          font-size: 12px;
+        }
         .settings-section-title { font-size: 10.5px; }
         .settings-section .form-label { font-size: 11px; }
         .settings-section .form-input,
@@ -433,7 +517,7 @@
       }
     </style>
   </head>
-  <body class="page-bg">
+  <body class="page-bg" data-settings-page="main" data-settings-page-label="Pengaturan Inti">
     <div class="app-layout">
       <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
@@ -461,29 +545,62 @@
             Download App
           </a>
           <div class="nav-divider"></div>
-          <a href="/settings" class="nav-item active" data-admin-only>
+          <a href="/settings" class="nav-item active hidden" style="display: none;" data-admin-only>
             <span class="material-symbols-rounded nav-icon">settings</span>
             Pengaturan
           </a>
-          <a href="/app/telegram" class="nav-item hidden" style="display: none;" data-admin-only>
+          <a href="/telegram" class="nav-item hidden" style="display: none;" data-admin-only>
             <span class="material-symbols-rounded nav-icon">send</span>
             Telegram
           </a>
-          <a href="/app/discord" class="nav-item hidden" style="display: none;" data-admin-only>
+          <a href="/discord" class="nav-item hidden" style="display: none;" data-admin-only>
             <span class="material-symbols-rounded nav-icon">forum</span>
             Discord
           </a>
-          <a href="/app/users" class="nav-item hidden" style="display: none;" data-admin-only>
+          <a href="/users" class="nav-item hidden" style="display: none;" data-admin-only>
             <span class="material-symbols-rounded nav-icon">manage_accounts</span>
             Pengguna
           </a>
+          <div id="settingsSidebarNav" class="sidebar-settings-subnav hidden" style="display: none;" data-admin-only>
+            <div class="sidebar-settings-subnav-title">Bagian Pengaturan</div>
+            <nav id="settingsSubnav" class="settings-subnav-list" aria-label="Bagian pengaturan sistem">
+              <a class="settings-subnav-link" href="#settingsSystemSection" data-settings-nav="settingsSystemSection">
+                <span class="material-symbols-rounded">sensors</span>
+                <span>Umum &amp; Sensor</span>
+              </a>
+              <a class="settings-subnav-link" href="#settingsCalibrationSection" data-settings-nav="settingsCalibrationSection">
+                <span class="material-symbols-rounded">tune</span>
+                <span>Kalibrasi</span>
+              </a>
+              <a class="settings-subnav-link" href="#deviceBootstrapSection" data-settings-nav="deviceBootstrapSection">
+                <span class="material-symbols-rounded">wifi</span>
+                <span>Bootstrap Device</span>
+              </a>
+              <a class="settings-subnav-link" href="#liveDataResetSection" data-settings-nav="liveDataResetSection">
+                <span class="material-symbols-rounded">ink_eraser</span>
+                <span>Reset Realtime</span>
+              </a>
+              <a class="settings-subnav-link" href="#databaseBackupSection" data-settings-nav="databaseBackupSection">
+                <span class="material-symbols-rounded">backup</span>
+                <span>Backup Database</span>
+              </a>
+              <a class="settings-subnav-link" href="#monitoringWipeSection" data-settings-nav="monitoringWipeSection">
+                <span class="material-symbols-rounded">delete_sweep</span>
+                <span>Hapus Monitoring</span>
+              </a>
+              <a class="settings-subnav-link" href="#settingsClientSection" data-settings-nav="settingsClientSection">
+                <span class="material-symbols-rounded">cloud_sync</span>
+                <span>Backend Web</span>
+              </a>
+            </nav>
+          </div>
         </div>
         <div class="sidebar-footer">
           <div class="user-badge">
             <div class="user-avatar" id="sidebarAvatar">?</div>
             <div class="user-info">
               <div class="user-email" id="sidebarEmail">—</div>
-              <div id="sidebarRole" class="role-pill admin">Admin</div>
+              <div id="sidebarRole" class="role-pill user">Memuat...</div>
             </div>
           </div>
           <button id="logoutBtn" class="btn btn-ghost w-full">
@@ -506,16 +623,42 @@
         </header>
 
         <main class="page-content">
-          <!-- ── Runtime Config notice ─────────────────────────── -->
-          <div class="runtime-notice">
-            <span class="material-symbols-rounded">sync</span>
-            <span><strong>Runtime Configuration:</strong> Perubahan di halaman ini langsung disimpan ke Firebase <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa upload firmware</strong>.</span>
-          </div>
+          <div class="settings-shell">
+            <div class="settings-content-stack">
+              <!-- ── Runtime Config notice ─────────────────────────── -->
+              <div class="runtime-notice">
+                <span class="material-symbols-rounded">sync</span>
+                <span><strong>Runtime Configuration:</strong> Perubahan di halaman ini langsung disimpan ke Firebase <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa upload firmware</strong>.</span>
+              </div>
 
-          <!-- ── Settings grid (2 columns) ─────────────────────── -->
-          <div class="settings-grid">
+              <div class="settings-section" style="margin-bottom: 16px;">
+                <div class="settings-section-title">
+                  <span class="material-symbols-rounded">dashboard_customize</span>
+                  Halaman Admin Terpisah
+                </div>
+                <div class="info-panel info-panel--blue" style="margin-bottom: 0;">
+                  Konfigurasi Telegram, Discord, dan Manajemen Pengguna sekarang punya halaman sendiri supaya menu utama ini tetap fokus pada pengaturan inti sistem.
+                </div>
+                <div class="settings-btn-cluster">
+                  <a href="/telegram" class="btn btn-ghost">
+                    <span class="material-symbols-rounded">send</span>
+                    Buka Halaman Telegram
+                  </a>
+                  <a href="/discord" class="btn btn-ghost">
+                    <span class="material-symbols-rounded">forum</span>
+                    Buka Halaman Discord
+                  </a>
+                  <a href="/users" class="btn btn-ghost">
+                    <span class="material-symbols-rounded">manage_accounts</span>
+                    Buka Halaman Pengguna
+                  </a>
+                </div>
+              </div>
+
+              <!-- ── Settings grid (2 columns) ─────────────────────── -->
+              <div class="settings-grid">
             <!-- Card 1: Sistem & Sensor ─────────────────────────── -->
-            <div class="settings-section">
+            <div id="settingsSystemSection" class="settings-section" data-settings-section>
               <div class="settings-section-title"><span class="material-symbols-rounded">sensors</span>Sistem &amp; Sensor</div>
 
               <div class="form-group">
@@ -532,11 +675,10 @@
                   value="10"
                 />
                 <div class="form-hint">
-                  <strong>Logika status:</strong> NORMAL berada di bawah batas
-                  peringatan. WARNING muncul saat arus mendekati threshold.
-                  DANGER aktif saat arus ≥ threshold.<br />
-                  Atur threshold sesuai kapasitas beban uji agar beban tinggi
-                  normal tidak salah dibaca sebagai indikasi arus abnormal.
+                  <strong>Logika baru:</strong> NORMAL &lt; threshold ×
+                  (peringatan%). WARNING antara peringatan% dan 100%. DANGER
+                  jika arus ≥ threshold.<br />
+                  Range rekomendasi: 1 – 100 A.
                 </div>
                 <div id="valThreshold" class="validation-msg"></div>
               </div>
@@ -556,15 +698,13 @@
                 />
                 <div class="form-hint">
                   Contoh 80 → WARNING dari 80% threshold sampai &lt; 100%.
-                  Beban tinggi yang masih di bawah batas ini tidak langsung
-                  dikategorikan DANGER.
                 </div>
                 <div id="valWarningPercent" class="validation-msg"></div>
               </div>
 
               <div class="form-group">
                 <label class="form-label" for="inpSendInterval">
-                  Interval Kirim Data (ms)
+                  Delay Stream Data ke Firebase (ms)
                 </label>
                 <input
                   id="inpSendInterval"
@@ -576,10 +716,23 @@
                   value="2000"
                 />
                 <div class="form-hint">
-                  Seberapa sering ESP32 menulis data ke Firebase.<br />
+                  Mengatur jeda antar kiriman telemetri periodik ESP32 ke node <code>/listrik</code>.<br />
                   Min: 500 ms | Rekomendasi: 2000 ms.
                 </div>
                 <div id="valSendInterval" class="validation-msg"></div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <h4>Stream Data Realtime ke Firebase</h4>
+                  <p>
+                    Pause/resume kiriman telemetri periodik ke <code>/listrik</code>. Saat dipause, device tetap membaca settings dan command relay, tetapi dashboard bisa terlihat offline karena heartbeat realtime dihentikan.
+                  </p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpRealtimeStreamEnabled" checked />
+                  <span class="toggle-slider"></span>
+                </label>
               </div>
 
               <div class="toggle-row">
@@ -596,7 +749,7 @@
               <div class="toggle-row">
                 <div class="toggle-info">
                   <h4>Auto-Cutoff Relay</h4>
-                  <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold). MCB atau ELCB tetap menjadi proteksi utama instalasi.</p>
+                  <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold)</p>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" id="inpAutoCutoff" checked />
@@ -606,7 +759,7 @@
             </div>
 
             <!-- Card 2: Kalibrasi Sensor ─────────────────────────── -->
-            <div class="settings-section">
+            <div id="settingsCalibrationSection" class="settings-section" data-settings-section>
               <div class="settings-section-title"><span class="material-symbols-rounded">tune</span>Kalibrasi Sensor</div>
               <div class="info-panel info-panel--yellow">
                 Prosedur kalibrasi: bandingkan pembacaan ESP32 dengan alat ukur referensi.<br />
@@ -692,183 +845,338 @@
               </div>
             </div>
 
-            <!-- Card 3: Telegram ─────────────────────────────────── -->
-            <div class="settings-section telegram-settings-section" style="grid-column: 1 / -1">
-              <div class="settings-section-title"><span class="material-symbols-rounded">send</span>Konfigurasi Telegram</div>
-              <div class="info-panel info-panel--green telegram-info-panel">
-                <strong>Aman:</strong> Token dan daftar Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
-              </div>
-
-              <div class="telegram-config-stack">
-                <div class="form-group field-sensitive telegram-token-group">
-                  <label class="form-label" for="inpBotToken">Bot Token</label>
-                  <div class="input-reveal-wrap">
-                    <input
-                      id="inpBotToken"
-                      class="form-input"
-                      type="password"
-                      placeholder="1234567890:ABCDEF..."
-                      autocomplete="off"
-                    />
-                    <button
-                      type="button"
-                      class="reveal-btn"
-                      id="revealToken"
-                      title="Tampilkan/sembunyikan token"
-                    >
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">
-                    Dapat dari @BotFather → /newbot → copy token.
-                  </div>
-                  <div id="valBotToken" class="validation-msg"></div>
-                </div>
-
-                <div class="form-group telegram-recipient-group">
-                  <div class="recipient-editor-grid telegram-recipient-grid">
-                    <div>
-                      <label class="form-label" for="inpTelegramRecipientName"
-                        >Nama / Label</label
-                      >
-                      <input
-                        id="inpTelegramRecipientName"
-                        class="form-input"
-                        type="text"
-                        placeholder="Contoh: Pak Budi atau Grup Lab"
-                        autocomplete="off"
-                      />
-                    </div>
-                    <div>
-                      <label class="form-label" for="inpChatId"
-                        >Chat ID / Group ID</label
-                      >
-                      <input
-                        id="inpChatId"
-                        class="form-input"
-                        type="text"
-                        placeholder="Masukkan ID lalu klik Tambah"
-                        autocomplete="off"
-                      />
-                    </div>
-                  </div>
-                  <div class="form-hint telegram-recipient-help">
-                    Tambahkan satu atau lebih tujuan. Untuk grup: awali dengan -100. Untuk pribadi: ID numerik positif.<br />
-                    Cara cek: kirim pesan ke <a href="https://t.me/iot_kebocoran_bot" target="_blank" style="color: var(--cyan); text-decoration: underline; font-weight: 500;">@iot_kebocoran_bot</a> → buka <a href="https://api.telegram.org/bot<TOKEN>/getUpdates" target="_blank" style="color: var(--text-muted); text-decoration: underline;">api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</a>
-                  </div>
-                  <div id="valChatId" class="validation-msg"></div>
-                </div>
-
-                <div class="toggle-row telegram-toggle-row">
-                  <div class="toggle-info">
-                    <h4>Notifikasi Telegram</h4>
-                    <p>Kirim alert saat perubahan status (master switch)</p>
-                  </div>
-                  <label class="toggle-switch">
-                    <input type="checkbox" id="inpTelegramNotify" checked />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Card 4: Discord Webhook ──────────────────────────── -->
-            <div class="settings-section" style="grid-column: 1 / -1">
+            <!-- Card 4: Discord moved to dedicated page ────────────── -->
+            <div class="settings-section" style="grid-column: 1 / -1" data-settings-section>
               <div class="settings-section-title">
                 <span class="material-symbols-rounded" style="color:#5865F2">forum</span>
-                Integrasi Discord Webhook
+                Discord Punya Halaman Khusus
               </div>
               <div class="info-panel info-panel--discord">
-                <strong>Cara mendapatkan Webhook URL:</strong> Buka Discord → klik kanan channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL.<br/>
-                URL disimpan di Firebase RTDB <code>/settings/discord/</code> — dibaca notifier server (lokal atau via ngrok).<br/>
-                Belum punya server Discord? <a href="https://discord.gg/WszeM4FVH6" target="_blank" style="color:#7289da;">Join server IoT Listrik Dashboard</a> untuk mendapatkan channel monitoring siap pakai.
+                Konfigurasi webhook, Discord Bot, jumlah member server, daftar ban, ban user, dan unban user sekarang dipisah ke halaman khusus supaya pengaturan utama tetap ringkas.
               </div>
-
-              <div class="input-row" style="margin-bottom: 14px;">
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordAlerts">
-                    <span style="color:#ED4245;">⚡</span> Webhook #alerts (Status Bahaya)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordAlerts" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordAlerts',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Notifikasi status BAHAYA, WARNING, dan recovery NORMAL.</div>
-                </div>
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordRelay">
-                    <span style="color:#57F287;">🔌</span> Webhook #relay (Kontrol Relay)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordRelay" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordRelay',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Notifikasi setiap kali relay ON/OFF berubah.</div>
-                </div>
-              </div>
-
-              <div class="input-row" style="margin-bottom: 20px;">
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordMonitoring">
-                    <span style="color:#5865F2;">📊</span> Webhook #monitoring (Data Berkala)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordMonitoring" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordMonitoring',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Snapshot data listrik (rate-limit 1x / 5 menit).</div>
-                </div>
-                <div class="form-group field-sensitive">
-                  <label class="form-label" for="inpDiscordLogs">
-                    <span style="color:#99AAB5;">📋</span> Webhook #logs (Aktivitas Log)
-                  </label>
-                  <div class="input-reveal-wrap">
-                    <input id="inpDiscordLogs" class="form-input" type="password"
-                      placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
-                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordLogs',this)" title="Tampilkan/sembunyikan">
-                      <span class="material-symbols-rounded">visibility</span>
-                    </button>
-                  </div>
-                  <div class="form-hint">Setiap log aktivitas baru dari /logs RTDB.</div>
-                </div>
-              </div>
-
-              <div class="toggle-row">
-                <div class="toggle-info">
-                  <h4>Aktifkan Discord Notifications</h4>
-                  <p>Master switch untuk seluruh notifikasi Discord (dibaca notifier server)</p>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="inpDiscordEnabled" checked />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div id="discordSaveStatus" class="settings-save-status"></div>
               <div class="settings-btn-cluster">
-                <button id="saveDiscordBtn" class="btn btn-primary">
-                  <span class="material-symbols-rounded">save</span> Simpan Konfigurasi Discord
-                </button>
-                <button id="testDiscordBtn" class="btn btn-ghost">
-                  <span class="material-symbols-rounded">send</span> Test Kirim Pesan
-                </button>
+                <a href="/discord" class="btn btn-primary">
+                  <span class="material-symbols-rounded">forum</span> Buka Halaman Discord
+                </a>
                 <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn btn-ghost" style="color:#7289da; border-color:rgba(114,137,218,0.3);">
                   <span class="material-symbols-rounded">group</span> Join Server Discord
                 </a>
               </div>
             </div>
 
+            <!-- Card 5: Bootstrap Device / Wi-Fi (Admin only, non-temp) -->
+            <div
+              id="deviceBootstrapSection"
+              class="settings-section"
+              style="grid-column: 1 / -1"
+              data-settings-section
+              hidden
+            >
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded">wifi</span>
+                Bootstrap Device &amp; Wi-Fi ESP32
+              </div>
+              <div class="info-panel info-panel--yellow" style="margin-bottom: 14px;">
+                <strong>Khusus admin utama:</strong> bagian ini mengirim konfigurasi bootstrap ke device fisik melalui Firebase.
+                ESP32 akan menyimpan SSID, password Wi-Fi, API Key, URL Realtime Database, dan akun IoT ke NVS lalu restart otomatis.
+                <br />
+                <strong>Akun temp simulator tidak memakai bagian ini.</strong>
+              </div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label" for="inpDeviceWifiSsid">SSID Wi-Fi</label>
+                  <input
+                    id="inpDeviceWifiSsid"
+                    class="form-input"
+                    type="text"
+                    placeholder="Nama Wi-Fi tujuan"
+                    autocomplete="off"
+                  />
+                  <div class="form-hint">
+                    Device akan mencoba SSID ini lebih dulu saat boot. Jika gagal, ESP32 akan kembali membuka captive portal.
+                  </div>
+                </div>
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDeviceWifiPassword">Password Wi-Fi</label>
+                  <div class="input-reveal-wrap">
+                    <input
+                      id="inpDeviceWifiPassword"
+                      class="form-input"
+                      type="password"
+                      placeholder="Kosongkan jika jaringan tanpa password"
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="reveal-btn"
+                      onclick="toggleReveal('inpDeviceWifiPassword',this)"
+                      title="Tampilkan/sembunyikan"
+                    >
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDeviceApiKey">Firebase API Key</label>
+                  <div class="input-reveal-wrap">
+                    <input
+                      id="inpDeviceApiKey"
+                      class="form-input"
+                      type="password"
+                      placeholder="AIza..."
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="reveal-btn"
+                      onclick="toggleReveal('inpDeviceApiKey',this)"
+                      title="Tampilkan/sembunyikan"
+                    >
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="inpDeviceDbUrl">Realtime Database URL</label>
+                  <input
+                    id="inpDeviceDbUrl"
+                    class="form-input"
+                    type="url"
+                    placeholder="https://project-id-default-rtdb.firebaseio.com/"
+                    autocomplete="off"
+                  />
+                </div>
+              </div>
+
+              <div class="input-row">
+                <div class="form-group">
+                  <label class="form-label" for="inpDeviceEmail">Email Akun IoT</label>
+                  <input
+                    id="inpDeviceEmail"
+                    class="form-input"
+                    type="email"
+                    placeholder="listrik.iot.device@gmail.com"
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDevicePassword">Password Akun IoT</label>
+                  <div class="input-reveal-wrap">
+                    <input
+                      id="inpDevicePassword"
+                      class="form-input"
+                      type="password"
+                      placeholder="Password akun device"
+                      autocomplete="off"
+                    />
+                    <button
+                      type="button"
+                      class="reveal-btn"
+                      onclick="toggleReveal('inpDevicePassword',this)"
+                      title="Tampilkan/sembunyikan"
+                    >
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-panel info-panel--blue" style="margin-top: 10px; margin-bottom: 14px;">
+                Saat menekan <strong>Simpan &amp; Terapkan</strong>, device fisik akan membaca permintaan ini, menyimpan konfigurasi baru ke NVS,
+                lalu restart otomatis. Bila menekan <strong>Hapus Wi-Fi &amp; Buka Setup</strong>, device akan menghapus bootstrap saat ini dan masuk
+                ke mode captive portal.
+              </div>
+
+              <div id="deviceBootstrapStatus" class="settings-save-status" style="margin-bottom: 6px;"></div>
+              <div id="deviceBootstrapMeta" class="form-hint" style="margin-bottom: 14px;"></div>
+
+              <div class="settings-btn-cluster">
+                <button id="saveDeviceBootstrapBtn" class="btn btn-primary">
+                  <span class="material-symbols-rounded">wifi</span> Simpan &amp; Terapkan ke Device
+                </button>
+                <button id="clearDeviceBootstrapBtn" class="btn btn-ghost">
+                  <span class="material-symbols-rounded">wifi_off</span> Hapus Wi-Fi &amp; Buka Setup
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 6: Reset live IoT data via OTP email (Admin only, non-temp) -->
+            <div
+              id="liveDataResetSection"
+              class="settings-section"
+              style="grid-column: 1 / -1"
+              data-settings-section
+              hidden
+            >
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded">ink_eraser</span>
+                Reset Data Realtime IoT
+              </div>
+              <div class="info-panel info-panel--yellow" style="margin-bottom: 14px;">
+                <strong>Khusus admin utama:</strong> aksi ini akan mengosongkan data realtime sensor pada node
+                <code>/listrik</code> tanpa menghapus histori log.
+                <br />
+                Jika device fisik masih online, data baru dapat muncul lagi pada heartbeat berikutnya.
+              </div>
+
+              <div class="info-panel info-panel--blue" style="margin-bottom: 14px;">
+                <strong>Alur verifikasi:</strong> ketik nama project secara persis untuk menyetujui pengosongan
+                data realtime perangkat IoT.
+              </div>
+
+              <div id="adminResetProjectNameHint" class="form-hint" style="margin-bottom: 12px;"></div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label" for="inpLiveResetProjectName">Ketik Nama Project</label>
+                  <input
+                    id="inpLiveResetProjectName"
+                    class="form-input"
+                    type="text"
+                    placeholder="IoT Listrik Dashboard"
+                    autocomplete="off"
+                  />
+                  <div class="form-hint">
+                    Konfirmasi harus sama persis dengan nama project agar aksi reset realtime dapat dijalankan.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dampak Reset</label>
+                  <div class="info-panel info-panel--green" style="margin-bottom: 0;">
+                    Nilai arus, tegangan, daya, energi, frekuensi, power factor, relay, dan status realtime akan direset
+                    ke nilai kosong/default pada <code>/listrik</code>.
+                  </div>
+                </div>
+              </div>
+
+              <div id="liveDataResetStatus" class="settings-save-status" style="margin-bottom: 6px;"></div>
+              <div id="liveDataResetMeta" class="form-hint" style="margin-bottom: 14px;"></div>
+
+              <div class="settings-btn-cluster">
+                <button id="confirmLiveResetBtn" class="btn btn-danger">
+                  <span class="material-symbols-rounded">ink_eraser</span> Kosongkan Data Realtime
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="databaseBackupSection"
+              class="settings-section"
+              style="grid-column: 1 / -1"
+              data-settings-section
+              hidden
+            >
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded">backup</span>
+                Backup Database Firebase
+              </div>
+              <div class="info-panel info-panel--yellow" style="margin-bottom: 14px;">
+                <strong>Khusus admin utama:</strong> aksi ini membuat salinan database Realtime Database dalam format
+                JSON dan melampirkan file <code>database.rules.json</code> aktif dari project workspace ini ke email admin.
+                <br />
+                Backup ini tidak mengubah data apa pun di Firebase.
+              </div>
+
+              <div class="info-panel info-panel--blue" style="margin-bottom: 14px;">
+                <strong>Cocok dipakai sebelum reset atau hapus data monitoring.</strong> File yang dikirim berisi snapshot RTDB saat tombol dijalankan, sehingga kamu punya arsip sebelum melakukan perubahan besar.
+              </div>
+
+              <div id="adminDatabaseBackupEmail" class="form-hint" style="margin-bottom: 12px;"></div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label">Lampiran Backup</label>
+                  <div class="info-panel info-panel--green" style="margin-bottom: 0;">
+                    Email akan berisi dua lampiran: <code>default-rtdb-export.json</code> dan <code>database-rules.json</code>.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dampak Aksi</label>
+                  <div class="info-panel info-panel--green" style="margin-bottom: 0;">
+                    Hanya membuat dan mengirim backup. Data realtime, histori log, settings, dan user tidak disentuh.
+                  </div>
+                </div>
+              </div>
+
+              <div id="databaseBackupStatus" class="settings-save-status" style="margin-bottom: 6px;"></div>
+              <div id="databaseBackupMeta" class="form-hint" style="margin-bottom: 14px;"></div>
+
+              <div class="settings-btn-cluster">
+                <button id="sendDatabaseBackupBtn" class="btn btn-primary">
+                  <span class="material-symbols-rounded">mail</span> Kirim Backup Database ke Email Admin
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="monitoringWipeSection"
+              class="settings-section"
+              style="grid-column: 1 / -1"
+              data-settings-section
+              hidden
+            >
+              <div class="settings-section-title">
+                <span class="material-symbols-rounded">delete_sweep</span>
+                Hapus Semua Data Monitoring
+              </div>
+              <div class="info-panel info-panel--yellow" style="margin-bottom: 14px;">
+                <strong>Khusus admin utama:</strong> aksi ini akan mengosongkan seluruh data monitoring perangkat IoT
+                pada <code>/listrik</code> dan menghapus histori log pada <code>/logs</code>.
+                <br />
+                Pengaturan sistem, data user, dan bootstrap device tidak ikut dihapus.
+              </div>
+
+              <div class="info-panel info-panel--blue" style="margin-bottom: 14px;">
+                <strong>Alur verifikasi:</strong> klik kirim OTP, buka email admin yang sedang login, lalu masukkan
+                6 digit kode untuk menyetujui penghapusan semua data monitoring perangkat IoT.
+              </div>
+
+              <div id="adminMonitoringWipeEmail" class="form-hint" style="margin-bottom: 12px;"></div>
+
+              <div class="input-row" style="margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label" for="inpMonitoringWipeOtp">Kode OTP Email Admin</label>
+                  <input
+                    id="inpMonitoringWipeOtp"
+                    class="form-input"
+                    type="text"
+                    inputmode="numeric"
+                    maxlength="6"
+                    placeholder="Masukkan 6 digit OTP"
+                    autocomplete="one-time-code"
+                  />
+                  <div class="form-hint">
+                    OTP hanya berlaku beberapa menit dan hanya dapat dipakai untuk satu kali hapus semua data monitoring.
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dampak Hapus Semua</label>
+                  <div class="info-panel info-panel--green" style="margin-bottom: 0;">
+                    Data realtime pada <code>/listrik</code> akan dikosongkan ke nilai default, lalu histori log pada
+                    <code>/logs</code> akan ikut dihapus sampai kosong.
+                  </div>
+                </div>
+              </div>
+
+              <div id="monitoringWipeStatus" class="settings-save-status" style="margin-bottom: 6px;"></div>
+              <div id="monitoringWipeMeta" class="form-hint" style="margin-bottom: 14px;"></div>
+
+              <div class="settings-btn-cluster">
+                <button id="sendMonitoringWipeOtpBtn" class="btn btn-ghost">
+                  <span class="material-symbols-rounded">mail</span> Kirim OTP ke Email Admin
+                </button>
+                <button id="confirmMonitoringWipeBtn" class="btn btn-danger">
+                  <span class="material-symbols-rounded">delete_sweep</span> Hapus Semua Data Monitoring
+                </button>
+              </div>
+            </div>
+
             <!-- Client: backend & failover (localStorage — per browser) -->
-            <div class="settings-section" style="grid-column: 1 / -1">
+            <div id="settingsClientSection" class="settings-section" style="grid-column: 1 / -1" data-settings-section>
               <div class="settings-section-title">
                 <span class="material-symbols-rounded">cloud_sync</span>
                 Backend &amp; Failover (klien web)
@@ -975,59 +1283,14 @@
           </div>
           <!-- /settings-grid -->
 
-          <!-- ── User Management ────────────────────────────────── -->
-          <div class="settings-section" style="margin-bottom: 16px">
-            <div class="settings-section-title"><span class="material-symbols-rounded">manage_accounts</span>Manajemen Pengguna</div>
-            <div class="user-module-header">
-              <span style="font-size: 12px; color: var(--text-muted);">Kelola akses pengguna sistem</span>
-              <div class="btn-group user-module-actions">
-                <button id="refreshUsersBtn" class="btn btn-ghost">
-                  <span class="material-symbols-rounded">refresh</span>Refresh
-                </button>
-                <button id="addUserBtn" class="btn btn-primary">
-                  <span class="material-symbols-rounded">person_add</span>Tambah User
-                </button>
-              </div>
-            </div>
-
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Pengguna</th>
-                    <th>Role</th>
-                    <th>Dibuat</th>
-                    <th>Ubah Role</th>
-                    <th>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="usersTbody">
-                  <tr>
-                    <td
-                      colspan="5"
-                      style="
-                        text-align: center;
-                        padding: 28px;
-                        color: var(--text-secondary);
-                      "
-                    >
-                      Memuat pengguna...
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p class="user-mgmt-note">
-              Manajemen user via Firebase Functions (Admin SDK). Password dikelola aman di server.
-            </p>
-          </div>
-
           <!-- ── Global save bar ──────────────────────────────────── -->
           <div class="save-bar">
             <span id="saveStatus" class="settings-save-status"></span>
             <button id="saveSettingsBtn" class="btn btn-primary">
-              <span class="material-symbols-rounded">save</span> Simpan Semua Settings
+              <span class="material-symbols-rounded">save</span> Simpan Pengaturan Inti
             </button>
+          </div>
+            </div>
           </div>
         </main>
       </div>
@@ -1092,18 +1355,6 @@
 
     <div id="toastContainer" class="toast-container"></div>
     <script type="module" src="/js/settings.js"></script>
-
-    <!-- Reveal token button -->
-    <script>
-      document.getElementById("revealToken")?.addEventListener("click", () => {
-        const inp = document.getElementById("inpBotToken");
-        if (!inp) return;
-        inp.type = inp.type === "password" ? "text" : "password";
-        document.getElementById("revealToken").innerHTML =
-          inp.type === "password"
-            ? '<span class="material-symbols-rounded">visibility</span>'
-            : '<span class="material-symbols-rounded">visibility_off</span>';
-      });
-    </script>
   </body>
 </html>
+

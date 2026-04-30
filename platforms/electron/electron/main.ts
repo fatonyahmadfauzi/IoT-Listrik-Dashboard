@@ -8,7 +8,8 @@ import {
   dialog,
   nativeImage,
 } from 'electron';
-import { join } from 'path';
+import { existsSync } from 'fs';
+import { isAbsolute, join, relative, resolve } from 'path';
 import { spawn, ChildProcess } from 'child_process';
 import Store from 'electron-store';
 import { autoUpdater } from 'electron-updater';
@@ -22,6 +23,32 @@ const store = new Store();
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let localServerChild: ChildProcess | null = null;
+
+function isPathInside(parent: string, child: string): boolean {
+  const rel = relative(parent, child);
+  return rel === '' || (!!rel && !rel.startsWith('..') && !isAbsolute(rel));
+}
+
+function resolveLocalServerCwd(inputCwd?: string): string {
+  const defaultCwd = resolve(app.getAppPath(), '..', 'backend-local');
+  const candidate = resolve(inputCwd || defaultCwd);
+  const allowedRoots = [
+    resolve(process.cwd()),
+    resolve(app.getAppPath()),
+    resolve(app.getAppPath(), '..'),
+    process.resourcesPath ? resolve(process.resourcesPath) : '',
+  ].filter(Boolean);
+
+  if (!allowedRoots.some((root) => isPathInside(root, candidate))) {
+    throw new Error('Folder local server harus berada di dalam direktori aplikasi/proyek.');
+  }
+
+  if (!existsSync(join(candidate, 'server.js'))) {
+    throw new Error('server.js tidak ditemukan di folder local server.');
+  }
+
+  return candidate;
+}
 
 // Single instance lock (prevent double app + double tray)
 const gotTheLock = app.requestSingleInstanceLock();
@@ -201,16 +228,16 @@ ipcMain.handle('set-settings', (_, settings) => {
 
 ipcMain.handle(
   'local-server:start',
-  async (_, opts: { cwd: string; command: string }) => {
+  async (_, opts: { cwd?: string }) => {
     try {
       if (localServerChild && !localServerChild.killed) {
         return { ok: true as const };
       }
-      const cwd = opts.cwd || process.cwd();
-      const command = opts.command || 'node server.js';
-      localServerChild = spawn(command, [], {
+      const cwd = resolveLocalServerCwd(opts?.cwd);
+      const nodeBin = process.env.IOT_LOCAL_SERVER_NODE || 'node';
+      localServerChild = spawn(nodeBin, ['server.js'], {
         cwd,
-        shell: true,
+        shell: false,
         windowsHide: true,
         detached: false,
       });

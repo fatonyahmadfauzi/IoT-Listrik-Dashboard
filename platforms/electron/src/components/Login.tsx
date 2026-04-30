@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { ref, set } from 'firebase/database';
+import { ref, update } from 'firebase/database';
 
 interface LoginProps {
   onLogin: () => void;
@@ -31,7 +31,7 @@ export function Login({ onLogin }: LoginProps) {
         const uid = userCredential.user.uid;
 
         // Create user profile with 'user' role by default
-        await set(ref(db, `users/${uid}`), {
+        await update(ref(db, `users/${uid}`), {
           email: email,
           role: 'user',
           created_at: new Date().getTime(),

@@ -574,11 +574,43 @@ db.ref('/sim').on('child_removed', (snap) => {
 const express = require('express');
 const app = express();
 const PORT = 3002;
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://iot-listrik-dashboard.vercel.app',
+  'https://www.iot-listrik-dashboard.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+];
+
+function getAllowedOrigins() {
+  return new Set([
+    ...DEFAULT_ALLOWED_ORIGINS,
+    ...String(process.env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ]);
+}
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (getAllowedOrigins().has(origin)) return true;
+  return /^https:\/\/iot-listrik-dashboard(?:-[a-z0-9-]+)?-fatonyahmadfauzis-projects\.vercel\.app$/i.test(origin);
+}
 
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = String(req.headers.origin || '').trim();
+  if (!isAllowedOrigin(origin)) {
+    return res.status(403).json({ error: 'Origin tidak diizinkan.' });
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', origin || DEFAULT_ALLOWED_ORIGINS[0]);
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });

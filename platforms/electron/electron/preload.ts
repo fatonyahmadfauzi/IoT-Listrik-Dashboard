@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   setSettings: (settings: any) => ipcRenderer.invoke('set-settings', settings),
 
-  startLocalServer: (opts: { cwd: string; command: string }) =>
+  startLocalServer: (opts: { cwd?: string }) =>
     ipcRenderer.invoke('local-server:start', opts),
 
   stopLocalServer: () => ipcRenderer.invoke('local-server:stop'),

@@ -79,22 +79,29 @@ function getStatusLabel(status) {
   return "Sistem stabil";
 }
 
+function normalizeStatus(status) {
+  const value = String(status || "NORMAL").toUpperCase();
+  return ["NORMAL", "WARNING", "LEAKAGE", "DANGER"].includes(value)
+    ? value
+    : "UNKNOWN";
+}
+
 function renderStatus(status) {
   if (!elStatus) return;
-  elStatus.textContent = status || "NORMAL";
-  elStatus.className = `status-badge status-${status}`;
-  if (status === "LEAKAGE") elStatus.className = "status-badge status-DANGER";
+  const safeStatus = normalizeStatus(status);
+  elStatus.textContent = safeStatus;
+  elStatus.className = `status-badge status-${safeStatus === "LEAKAGE" ? "DANGER" : safeStatus}`;
 
   const card = elStatus.closest(".metric-card");
   if (card) {
-    if (status === "DANGER" || status === "LEAKAGE") {
+    if (safeStatus === "DANGER" || safeStatus === "LEAKAGE") {
       card.classList.add("status-pulse-danger");
     } else {
       card.classList.remove("status-pulse-danger");
     }
   }
   if (elAlertPulse) {
-    if (status === "DANGER" || status === "LEAKAGE" || status === "WARNING") {
+    if (safeStatus === "DANGER" || safeStatus === "LEAKAGE" || safeStatus === "WARNING") {
       elAlertPulse.classList.remove("hidden");
     } else {
       elAlertPulse.classList.add("hidden");
@@ -207,6 +214,15 @@ function formatLogTime(raw) {
   return "—";
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function startMiniLogsListener() {
   if (stopLogs) stopLogs();
   const logsRef = query(ref(db, getDbPrefix() + "/logs"), orderByKey(), limitToLast(15));
@@ -224,11 +240,14 @@ function startMiniLogsListener() {
       .slice(0, 15);
     elMiniLogs.innerHTML = rows
       .map(
-        (r) => `<tr class="log-row log-status-${(r.status || 'NORMAL').toUpperCase()}">
-      <td class="log-time" data-label="Waktu">${formatLogTime(r.waktu ?? r.timestamp)}</td>
+        (r) => {
+          const safeStatus = normalizeStatus(r.status);
+          return `<tr class="log-row log-status-${safeStatus}">
+      <td class="log-time" data-label="Waktu">${escapeHtml(formatLogTime(r.waktu ?? r.timestamp))}</td>
       <td class="log-values" data-label="Arus / Teg."><span class="log-val-arus">${Number(r.arus || 0).toFixed(2)} A</span><span class="log-val-sep">·</span><span class="log-val-teg">${Number(r.tegangan || 0).toFixed(0)} V</span></td>
-      <td class="log-status" data-label="Status"><span class="status-badge status-${r.status || 'NORMAL'}">${r.status || 'NORMAL'}</span></td>
-    </tr>`,
+      <td class="log-status" data-label="Status"><span class="status-badge status-${safeStatus === "LEAKAGE" ? "DANGER" : safeStatus}">${safeStatus}</span></td>
+    </tr>`;
+        },
       )
       .join("");
   });
@@ -321,7 +340,7 @@ initPage({
             <span>Kredensial Demo Simulator. Monitor menunggu data dari Hardware Simulator.</span>
           </div>
           <div>
-            <a href="/simulator/app.html" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:var(--primary); color:white; padding:6px 14px; border-radius:6px; text-decoration:none; font-weight:600; font-size:0.8rem; box-shadow:0 2px 10px rgba(59,130,246,0.3);">
+            <a href="/simulator/dashboard" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:var(--primary); color:white; padding:6px 14px; border-radius:6px; text-decoration:none; font-weight:600; font-size:0.8rem; box-shadow:0 2px 10px rgba(59,130,246,0.3);">
               <span class="material-symbols-rounded" style="font-size:1rem;">tune</span> Buka Control Panel Hardware
             </a>
           </div>

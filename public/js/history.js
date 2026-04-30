@@ -60,16 +60,31 @@ function getStatusLabel(status) {
   return 'Sistem stabil';
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeStatus(status) {
+  const value = String(status || 'NORMAL').toUpperCase();
+  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'].includes(value) ? value : 'UNKNOWN';
+}
+
 // ─── Status chip ─────────────────────────────────────────────
 function statusChip(status) {
+  const safeStatus = normalizeStatus(status);
   const map = {
     NORMAL:  ['#22c55e', 'rgba(34,197,94,.15)'],
     WARNING: ['#fcd34d', 'rgba(252,211,77,.15)'],
     LEAKAGE: ['#fca5a5', 'rgba(252,165,165,.15)'],
     DANGER:  ['#ff8080', 'rgba(255,128,128,.20)'],
   };
-  const [color, bg] = map[status] || ['#94a3b8', 'rgba(148,163,184,.15)'];
-  return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">${status}</span>`;
+  const [color, bg] = map[safeStatus] || ['#94a3b8', 'rgba(148,163,184,.15)'];
+  return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">${escapeHtml(safeStatus)}</span>`;
 }
 
 // ─── Render table ─────────────────────────────────────────────
@@ -84,12 +99,12 @@ function renderTable(logs) {
 
   tbody.innerHTML = logs.map(l => `
     <tr>
-      <td data-label="Waktu" class="td-mono text-sm">${fmtTime(l.waktu)}</td>
+      <td data-label="Waktu" class="td-mono text-sm">${escapeHtml(fmtTime(l.waktu))}</td>
       <td data-label="Arus" class="td-mono">${Number(l.arus     || 0).toFixed(2)} A</td>
       <td data-label="Tegangan" class="td-mono">${Number(l.tegangan || 0).toFixed(1)} V</td>
       <td data-label="Status">${statusChip(l.status || '—')}</td>
       <td data-label="Relay" class="td-mono">${l.relay === 1 ? 'ON' : 'OFF'}</td>
-      <td data-label="Sumber" class="text-sm text-muted">${l.source || '—'}</td>
+      <td data-label="Sumber" class="text-sm text-muted">${escapeHtml(l.source || '—')}</td>
     </tr>
   `).join('');
 }

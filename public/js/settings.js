@@ -665,6 +665,13 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeJsString(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r?\n/g, ' ');
+}
+
 function getLiveResetApiBase() {
   const origin = window.location?.origin || '';
   return /^https?:\/\//i.test(origin)
@@ -1942,30 +1949,36 @@ function renderUsers(users) {
   const currentUid = auth.currentUser?.uid;
   usersTbody.innerHTML = users.map(u => {
     const isMe  = u.uid === currentUid;
-    const badge = u.role === 'admin'
+    const role = u.role === 'admin' ? 'admin' : 'user';
+    const badge = role === 'admin'
       ? `<span class="role-pill admin">Admin</span>`
       : `<span class="role-pill user">User</span>`;
+    const uidAttr = escapeJsString(u.uid);
+    const emailAttr = escapeJsString(u.email);
+    const displayName = escapeHtml(u.displayName || '—');
+    const email = escapeHtml(u.email || '—');
+    const createdAt = u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '—';
     return `<tr>
       <td data-label="Pengguna">
-        <div style="font-weight:600;">${u.displayName || '—'}${isMe ? ' <span style="font-size:10px;color:var(--primary-light);">(kamu)</span>' : ''}</div>
-        <div style="font-size:12px;color:var(--text-secondary);">${u.email}</div>
+        <div style="font-weight:600;">${displayName}${isMe ? ' <span style="font-size:10px;color:var(--primary-light);">(kamu)</span>' : ''}</div>
+        <div style="font-size:12px;color:var(--text-secondary);">${email}</div>
       </td>
       <td data-label="Role">${badge}</td>
-      <td data-label="Dibuat" class="text-sm text-muted">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '—'}</td>
+      <td data-label="Dibuat" class="text-sm text-muted">${escapeHtml(createdAt)}</td>
       <td data-label="Ubah Role">
         ${isMe ? '<span class="text-muted text-sm">—</span>' : `
         <select class="form-select" style="width:100px;padding:6px 10px;"
-                onchange="changeRole('${u.uid}', this.value)">
-          <option value="user"  ${u.role !== 'admin' ? 'selected' : ''}>User</option>
-          <option value="admin" ${u.role === 'admin'  ? 'selected' : ''}>Admin</option>
+                onchange="changeRole('${uidAttr}', this.value)">
+          <option value="user"  ${role !== 'admin' ? 'selected' : ''}>User</option>
+          <option value="admin" ${role === 'admin'  ? 'selected' : ''}>Admin</option>
         </select>`}
       </td>
       <td data-label="Aksi">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm"
-                  onclick="sendResetEmail('${u.email}')"><span class='material-symbols-rounded'>mail</span>Reset PW</button>
+                  onclick="sendResetEmail('${emailAttr}')"><span class='material-symbols-rounded'>mail</span>Reset PW</button>
           ${!isMe ? `<button class="btn btn-danger btn-sm"
-                  onclick="deleteUser('${u.uid}','${u.email}')"><span class='material-symbols-rounded'>delete</span>Hapus</button>` : ''}
+                  onclick="deleteUser('${uidAttr}','${emailAttr}')"><span class='material-symbols-rounded'>delete</span>Hapus</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -1975,6 +1988,7 @@ function renderUsers(users) {
 // ─── CHANGE ROLE ─────────────────────────────────────────────
 window.changeRole = async (uid, role) => {
   try {
+    if (!['admin', 'user'].includes(role)) throw new Error('Role tidak valid.');
     await set(ref(db, `/users/${uid}/role`), role);
     showToast(`Role diubah ke "${role}"`, 'success');
   } catch (err) {

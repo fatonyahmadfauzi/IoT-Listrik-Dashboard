@@ -13,7 +13,7 @@ android {
     compileSdk = 34
 
     val keystoreProperties = Properties()
-    // rootProject for this module is already `android-app/`, so don't double-prefix.
+    // rootProject for this module is `platforms/android`, so don't double-prefix.
     val keystorePropertiesFile = rootProject.file("keystore/keystore.properties")
     val hasReleaseSigning = keystorePropertiesFile.exists()
     if (hasReleaseSigning) {
@@ -49,7 +49,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -71,12 +72,21 @@ val renameReleaseApk by tasks.registering {
     doLast {
         val apkDir = file("$buildDir/outputs/apk/release")
         val original = apkDir.resolve("app-release.apk")
-        val renamed = apkDir.resolve("IoT Listrik Dashboard $appVersionName.apk")
+        val renamed = apkDir.resolve("IoT-Listrik-Dashboard.apk")
+        val fallback = apkDir.listFiles { file ->
+            file.extension == "apk" && file.name != renamed.name
+        }?.maxByOrNull { it.lastModified() }
 
         if (original.exists()) {
             original.copyTo(renamed, overwrite = true)
             original.delete()
             println("Renamed release APK to: ${renamed.name}")
+        } else if (fallback != null) {
+            fallback.copyTo(renamed, overwrite = true)
+            fallback.delete()
+            println("Renamed release APK to: ${renamed.name}")
+        } else if (renamed.exists()) {
+            println("Release APK already uses stable name: ${renamed.name}")
         } else {
             throw GradleException("Expected release APK not found: ${original.absolutePath}")
         }

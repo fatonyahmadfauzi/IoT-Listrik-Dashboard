@@ -3,15 +3,180 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Telegram — IoT Monitoring Listrik</title>
-    <meta
-      name="description"
-      content="Kelola konfigurasi Telegram dan daftar penerima notifikasi IoT listrik."
-    />
-    <link rel="stylesheet" href="/css/style.css" />
-    <link rel="manifest" href="/app/manifest.json" />
+    <title>Konfigurasi Telegram IoT Listrik Dashboard</title>
+    <meta name="description" content="Halaman admin untuk mengelola bot Telegram, daftar Chat ID, test pesan, pause resume notifikasi, dan penerima alert." />
+    <meta name="keywords" content="IoT Listrik Dashboard, monitoring listrik, deteksi kebocoran arus, arus abnormal, ESP32, Firebase, PWA, Android APK, Windows app, Telegram, Discord, dashboard realtime" />
+    <meta name="author" content="Fatony Ahmad Fauzi" />
+    <meta name="creator" content="Fatony Ahmad Fauzi" />
+    <meta name="publisher" content="IoT Listrik Dashboard" />
+    <meta name="robots" content="noindex, nofollow, noarchive, max-image-preview:large" />
+    <meta name="googlebot" content="noindex, nofollow, noarchive, max-image-preview:large" />
+    <meta name="bingbot" content="noindex, nofollow, noarchive, max-image-preview:large" />
+    <meta name="language" content="id-ID" />
+    <meta name="geo.region" content="ID-JB" />
+    <meta name="geo.placename" content="Bekasi, Jawa Barat" />
+    <meta name="rating" content="general" />
+    <meta name="distribution" content="global" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#070c18" />
-    <link
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070c18" />
+    <meta name="application-name" content="IoT Listrik Dashboard" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="IoT Listrik" />
+    <meta name="msapplication-TileColor" content="#070c18" />
+    <meta name="msapplication-TileImage" content="/assets/icons/icon-144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-tooltip" content="Halaman admin untuk mengelola bot Telegram, daftar Chat ID, test pesan, pause resume notifikasi, dan penerima alert." />
+    <meta name="msapplication-starturl" content="/telegram" />
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
+    <link rel="canonical" href="https://iot-listrik-dashboard.vercel.app/telegram" />
+    <link rel="alternate" hreflang="id-ID" href="https://iot-listrik-dashboard.vercel.app/telegram" />
+    <link rel="alternate" hreflang="x-default" href="https://iot-listrik-dashboard.vercel.app/telegram" />
+    <link rel="manifest" href="/app/manifest.json" />
+    <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+    <link rel="shortcut icon" href="/assets/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="72x72" href="/assets/icons/icon-72.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/icon-96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/assets/icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+    <link rel="mask-icon" href="/assets/safari-pinned-tab.svg" color="#0ea5e9" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <meta property="og:site_name" content="IoT Listrik Dashboard" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Konfigurasi Telegram IoT Listrik Dashboard" />
+    <meta property="og:description" content="Halaman admin untuk mengelola bot Telegram, daftar Chat ID, test pesan, pause resume notifikasi, dan penerima alert." />
+    <meta property="og:url" content="https://iot-listrik-dashboard.vercel.app/telegram" />
+    <meta property="og:image" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-app.png" />
+    <meta property="og:image:secure_url" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-app.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Preview konfigurasi Telegram IoT Listrik Dashboard." />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:updated_time" content="2026-04-30T00:00:00+07:00" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Konfigurasi Telegram IoT Listrik Dashboard" />
+    <meta name="twitter:description" content="Halaman admin untuk mengelola bot Telegram, daftar Chat ID, test pesan, pause resume notifikasi, dan penerima alert." />
+    <meta name="twitter:image" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-app.png" />
+    <meta name="twitter:image:alt" content="Preview konfigurasi Telegram IoT Listrik Dashboard." />
+    <meta name="twitter:url" content="https://iot-listrik-dashboard.vercel.app/telegram" />
+    <meta name="twitter:domain" content="iot-listrik-dashboard.vercel.app" />
+    <script type="application/ld+json" id="seo-jsonld">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#organization",
+            "name": "IoT Listrik Dashboard",
+            "url": "https://iot-listrik-dashboard.vercel.app",
+            "logo": "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-512.png",
+            "sameAs": [
+              "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard",
+              "https://discord.gg/WszeM4FVH6"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#website",
+            "name": "IoT Listrik Dashboard",
+            "url": "https://iot-listrik-dashboard.vercel.app",
+            "inLanguage": "id-ID",
+            "publisher": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#organization"
+            },
+            "potentialAction": {
+              "@type": "ViewAction",
+              "target": [
+                "https://iot-listrik-dashboard.vercel.app/",
+                "https://iot-listrik-dashboard.vercel.app/features",
+                "https://iot-listrik-dashboard.vercel.app/downloads"
+              ]
+            }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://iot-listrik-dashboard.vercel.app/telegram#webpage",
+            "url": "https://iot-listrik-dashboard.vercel.app/telegram",
+            "name": "Konfigurasi Telegram IoT Listrik Dashboard",
+            "headline": "Konfigurasi Telegram IoT Listrik Dashboard",
+            "description": "Halaman admin untuk mengelola bot Telegram, daftar Chat ID, test pesan, pause resume notifikasi, dan penerima alert.",
+            "inLanguage": "id-ID",
+            "isPartOf": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#website"
+            },
+            "publisher": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#organization"
+            },
+            "image": "https://iot-listrik-dashboard.vercel.app/assets/seo/og-app.png",
+            "dateModified": "2026-04-30T00:00:00+07:00"
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "https://iot-listrik-dashboard.vercel.app/telegram#breadcrumb",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Beranda",
+                "item": "https://iot-listrik-dashboard.vercel.app/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Konfigurasi Telegram IoT Listrik Dashboard",
+                "item": "https://iot-listrik-dashboard.vercel.app/telegram"
+              }
+            ]
+          },
+          {
+            "@type": "ItemList",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#sitelinks",
+            "name": "Navigasi utama IoT Listrik Dashboard",
+            "itemListElement": [
+              {
+                "@type": "SiteNavigationElement",
+                "position": 1,
+                "name": "Beranda",
+                "url": "https://iot-listrik-dashboard.vercel.app/"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 2,
+                "name": "Fitur",
+                "url": "https://iot-listrik-dashboard.vercel.app/features"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 3,
+                "name": "Download",
+                "url": "https://iot-listrik-dashboard.vercel.app/downloads"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 4,
+                "name": "PWA Simulator",
+                "url": "https://iot-listrik-dashboard.vercel.app/pwa-simulator"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 5,
+                "name": "Login Dashboard",
+                "url": "https://iot-listrik-dashboard.vercel.app/login"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+<link rel="stylesheet" href="/css/style.css?v=20260430-fullwidth" />
+<link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
     />
@@ -71,7 +236,7 @@
         position: relative;
       }
       .input-reveal-wrap .form-input {
-        padding-right: 48px;
+        padding-right: 64px;
       }
       .reveal-btn {
         position: absolute;
@@ -301,7 +466,7 @@
           font-size: 13px;
         }
         .input-reveal-wrap .form-input {
-          padding-right: 48px;
+          padding-right: 64px;
         }
         .field-sensitive .form-input {
           letter-spacing: 1px;
@@ -373,7 +538,7 @@
           padding: 8px 10px;
         }
         .input-reveal-wrap .form-input {
-          padding-right: 48px;
+          padding-right: 64px;
         }
         .field-sensitive .form-input {
           font-size: 12px;

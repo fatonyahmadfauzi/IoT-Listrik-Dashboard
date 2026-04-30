@@ -20,16 +20,21 @@ class LoginActivity : AppCompatActivity() {
         
         // Auto login check - harus setelah setContentView
         if (auth.currentUser != null) {
+            // Disable login button while checking token
+            binding.btnLogin.isEnabled = false
+
             auth.currentUser!!.getIdToken(false).addOnSuccessListener { result ->
                 val expiresAt = (result.claims["expiresAt"] as? Number)?.toLong()
                 if (expiresAt != null && expiresAt - System.currentTimeMillis() <= 0) {
                     auth.signOut()
+                    binding.btnLogin.isEnabled = true
                     Toast.makeText(this, "Sesi demo telah kedaluwarsa.", Toast.LENGTH_LONG).show()
                 } else {
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
                 }
             }.addOnFailureListener {
+                // Token check failed but user exists — proceed anyway
                 startActivity(Intent(this, MainActivity::class.java))
                 finish()
             }

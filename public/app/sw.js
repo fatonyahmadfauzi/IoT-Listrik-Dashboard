@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v1";
+const CACHE_NAME = "iot-app-v20260430-security";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
@@ -74,8 +74,10 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   // Skip Firebase & external API calls — always go to network
+  const requestUrl = new URL(url);
   if (
     url.startsWith("chrome-extension") ||
+    (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith("/api/")) ||
     url.includes("firebaseio.com") ||
     url.includes("googleapis.com/identitytoolkit") ||
     url.includes("firebase.googleapis.com") ||
@@ -105,7 +107,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets (CSS, JS, images): cache-first, refresh in background
+  const isCodeAsset =
+    request.destination === "script" ||
+    request.destination === "style" ||
+    /\.(?:js|css)(?:$|\?)/.test(requestUrl.pathname);
+
+  if (isCodeAsset) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type !== "opaque") {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Static assets (images/fonts): cache-first, refresh in background
   event.respondWith(
     caches.match(request).then((cached) => {
       const networkFetch = fetch(request)

@@ -14,8 +14,7 @@ import {
 import {
   ref,
   get,
-  set,
-  serverTimestamp,
+  update,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { stopWebSiren } from "./notifications.js";
 
@@ -64,7 +63,7 @@ async function ensureUserProfile(user, role = "user") {
   const profileRef = ref(db, `/users/${user.uid}`);
   const snap = await get(profileRef);
   if (!snap.exists()) {
-    await set(profileRef, {
+    await update(profileRef, {
       email: user.email,
       displayName: user.displayName || user.email.split("@")[0],
       role,

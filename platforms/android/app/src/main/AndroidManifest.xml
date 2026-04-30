@@ -14,7 +14,8 @@
 
     <application
         android:name=".IoTApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -46,7 +47,7 @@
         <!-- Firebase Push Notification Service -->
         <service
             android:name=".service.FCMReceiverService"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>

@@ -3,15 +3,181 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fitur Lengkap — IoT Listrik Dashboard</title>
-    <meta
-      name="description"
-      content="Detail lengkap fitur IoT Listrik Dashboard: monitoring realtime, role-based access, automasi kontrol dan lainnya."
-    />
-    <link rel="stylesheet" href="/css/style.css" />
-    <link rel="stylesheet" href="/css/features.css" />
+    <title>Fitur IoT Listrik Dashboard | Monitoring, Notifikasi, Auto Cut-off</title>
+    <meta name="description" content="Fitur lengkap IoT Listrik Dashboard: monitoring realtime, role admin dan user, auto cut-off relay, backup database, PWA simulator, Telegram, Discord, Android, Windows, dan CLI." />
+    <meta name="keywords" content="IoT Listrik Dashboard, monitoring listrik, deteksi kebocoran arus, arus abnormal, ESP32, Firebase, PWA, Android APK, Windows app, Telegram, Discord, dashboard realtime" />
+    <meta name="author" content="Fatony Ahmad Fauzi" />
+    <meta name="creator" content="Fatony Ahmad Fauzi" />
+    <meta name="publisher" content="IoT Listrik Dashboard" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="language" content="id-ID" />
+    <meta name="geo.region" content="ID-JB" />
+    <meta name="geo.placename" content="Bekasi, Jawa Barat" />
+    <meta name="rating" content="general" />
+    <meta name="distribution" content="global" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#070c18" />
-    <link
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070c18" />
+    <meta name="application-name" content="IoT Listrik Dashboard" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="IoT Listrik" />
+    <meta name="msapplication-TileColor" content="#070c18" />
+    <meta name="msapplication-TileImage" content="/assets/icons/icon-144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-tooltip" content="Fitur lengkap IoT Listrik Dashboard: monitoring realtime, role admin dan user, auto cut-off relay, backup database, PWA simulator, Telegram, Discord, Android, Windows, dan CLI." />
+    <meta name="msapplication-starturl" content="/features" />
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="MobileOptimized" content="width" />
+    <link rel="canonical" href="https://iot-listrik-dashboard.vercel.app/features" />
+    <link rel="alternate" hreflang="id-ID" href="https://iot-listrik-dashboard.vercel.app/features" />
+    <link rel="alternate" hreflang="x-default" href="https://iot-listrik-dashboard.vercel.app/features" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+    <link rel="shortcut icon" href="/assets/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="72x72" href="/assets/icons/icon-72.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/icon-96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/assets/icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+    <link rel="mask-icon" href="/assets/safari-pinned-tab.svg" color="#0ea5e9" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <meta property="og:site_name" content="IoT Listrik Dashboard" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Fitur IoT Listrik Dashboard | Monitoring, Notifikasi, Auto Cut-off" />
+    <meta property="og:description" content="Fitur lengkap IoT Listrik Dashboard: monitoring realtime, role admin dan user, auto cut-off relay, backup database, PWA simulator, Telegram, Discord, Android, Windows, dan CLI." />
+    <meta property="og:url" content="https://iot-listrik-dashboard.vercel.app/features" />
+    <meta property="og:image" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-features.png" />
+    <meta property="og:image:secure_url" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-features.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Preview fitur IoT Listrik Dashboard untuk monitoring dan auto cut-off." />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:updated_time" content="2026-04-30T00:00:00+07:00" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Fitur IoT Listrik Dashboard | Monitoring, Notifikasi, Auto Cut-off" />
+    <meta name="twitter:description" content="Fitur lengkap IoT Listrik Dashboard: monitoring realtime, role admin dan user, auto cut-off relay, backup database, PWA simulator, Telegram, Discord, Android, Windows, dan CLI." />
+    <meta name="twitter:image" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-features.png" />
+    <meta name="twitter:image:alt" content="Preview fitur IoT Listrik Dashboard untuk monitoring dan auto cut-off." />
+    <meta name="twitter:url" content="https://iot-listrik-dashboard.vercel.app/features" />
+    <meta name="twitter:domain" content="iot-listrik-dashboard.vercel.app" />
+    <script type="application/ld+json" id="seo-jsonld">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#organization",
+            "name": "IoT Listrik Dashboard",
+            "url": "https://iot-listrik-dashboard.vercel.app",
+            "logo": "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-512.png",
+            "sameAs": [
+              "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard",
+              "https://discord.gg/WszeM4FVH6"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#website",
+            "name": "IoT Listrik Dashboard",
+            "url": "https://iot-listrik-dashboard.vercel.app",
+            "inLanguage": "id-ID",
+            "publisher": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#organization"
+            },
+            "potentialAction": {
+              "@type": "ViewAction",
+              "target": [
+                "https://iot-listrik-dashboard.vercel.app/",
+                "https://iot-listrik-dashboard.vercel.app/features",
+                "https://iot-listrik-dashboard.vercel.app/downloads"
+              ]
+            }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://iot-listrik-dashboard.vercel.app/features#webpage",
+            "url": "https://iot-listrik-dashboard.vercel.app/features",
+            "name": "Fitur IoT Listrik Dashboard | Monitoring, Notifikasi, Auto Cut-off",
+            "headline": "Fitur IoT Listrik Dashboard | Monitoring, Notifikasi, Auto Cut-off",
+            "description": "Fitur lengkap IoT Listrik Dashboard: monitoring realtime, role admin dan user, auto cut-off relay, backup database, PWA simulator, Telegram, Discord, Android, Windows, dan CLI.",
+            "inLanguage": "id-ID",
+            "isPartOf": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#website"
+            },
+            "publisher": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#organization"
+            },
+            "image": "https://iot-listrik-dashboard.vercel.app/assets/seo/og-features.png",
+            "dateModified": "2026-04-30T00:00:00+07:00"
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "https://iot-listrik-dashboard.vercel.app/features#breadcrumb",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Beranda",
+                "item": "https://iot-listrik-dashboard.vercel.app/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Fitur IoT Listrik Dashboard",
+                "item": "https://iot-listrik-dashboard.vercel.app/features"
+              }
+            ]
+          },
+          {
+            "@type": "ItemList",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#sitelinks",
+            "name": "Navigasi utama IoT Listrik Dashboard",
+            "itemListElement": [
+              {
+                "@type": "SiteNavigationElement",
+                "position": 1,
+                "name": "Beranda",
+                "url": "https://iot-listrik-dashboard.vercel.app/"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 2,
+                "name": "Fitur",
+                "url": "https://iot-listrik-dashboard.vercel.app/features"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 3,
+                "name": "Download",
+                "url": "https://iot-listrik-dashboard.vercel.app/downloads"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 4,
+                "name": "PWA Simulator",
+                "url": "https://iot-listrik-dashboard.vercel.app/pwa-simulator"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 5,
+                "name": "Login Dashboard",
+                "url": "https://iot-listrik-dashboard.vercel.app/login"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+<link rel="stylesheet" href="/css/style.css?v=20260430-fullwidth" />
+    <link rel="stylesheet" href="/css/features.css?v=20260429-padding" />
+<link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0"
     />
@@ -21,13 +187,13 @@
 
     <main class="feat-page-main">
       <!-- HERO -->
-      <section class="feat-hero text-center" style="text-align: center;">
+      <section class="feat-hero text-center" style="text-align: center;" data-reveal>
         <h1>Fitur Lengkap</h1>
         <p>Eksplorasi seluruh kemampuan Dashboard IoT Listrik. Halaman ini merangkum fitur monitoring, notifikasi, auto-cutoff, serta cara sistem membedakan beban normal, indikasi arus abnormal, dan kondisi bahaya.</p>
       </section>
 
       <!-- FEAT GRID -->
-      <section class="feat-grid">
+      <section class="feat-grid" data-reveal-stagger>
         
         <!-- 1 -->
         <div class="feat-clean-card">
@@ -35,7 +201,7 @@
             <span class="material-symbols-rounded">monitoring</span>
           </div>
           <h3>Realtime Monitoring</h3>
-          <p>Dapatkan data arus, tegangan, daya semu, serta indikasi arus bocor atau arus abnormal secara langsung (real-time) dengan latensi sub-detik melalui Firebase RTDB.</p>
+          <p>Dapatkan data arus, tegangan, daya semu, serta indikasi arus bocor atau arus abnormal secara realtime melalui Firebase RTDB, dengan interval kirim data yang dapat diatur dari admin panel.</p>
         </div>
 
         <!-- 2 -->
@@ -71,7 +237,7 @@
             <span class="material-symbols-rounded">devices</span>
           </div>
           <h3>Lintas Platform</h3>
-          <p>Nikmati pengalaman yang sama di berbagai perangkat: Desktop Windows/Mac (via Electron App), Android Native (Kotlin), dan Web PWA.</p>
+          <p>Nikmati pengalaman lintas platform melalui Web PWA, Android Native (Kotlin), Windows Desktop berbasis Electron, dan CLI portabel.</p>
         </div>
 
         <!-- 6 -->
@@ -80,12 +246,12 @@
             <span class="material-symbols-rounded">robot_2</span>
           </div>
           <h3>Notifikasi Multi-Channel</h3>
-          <p>Alert dikirim secara real-time ke <strong>Telegram</strong> dan <strong>Discord</strong> (4 channel terpisah: alerts, relay, monitoring, logs). Dikonfigurasi langsung dari admin panel tanpa menyentuh kode.</p>
+          <p>Alert dikirim secara real-time ke <strong>Telegram</strong> dan <strong>Discord</strong> untuk alerts, relay, monitoring, laporan harian, dan logs. Dikonfigurasi langsung dari admin panel tanpa menyentuh kode.</p>
         </div>
 
       </section>
 
-      <section class="feat-logic-section">
+      <section class="feat-logic-section" data-reveal>
         <div class="feat-logic-header">
           <h2>Bagaimana Sistem Membaca Risiko</h2>
           <p>Status pada dashboard mengikuti pembacaan arus beban, ambang yang diatur admin, serta auto-cutoff relay. Penjelasan ini membantu membedakan kondisi listrik yang terlihat mirip tetapi maknanya berbeda.</p>
@@ -119,39 +285,39 @@
       </section>
 
       <!-- NOTIFICATION INTEGRATIONS -->
-      <section class="feat-notif-grid">
+      <section class="feat-notif-grid" data-reveal-stagger>
 
         <!-- Telegram -->
-        <div style="background: rgba(0, 136, 204, 0.07); border: 1px solid rgba(0, 136, 204, 0.25); border-radius: var(--radius-lg); padding: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; overflow: hidden;">
-          <div style="position: absolute; top: -40%; left: 50%; transform: translateX(-50%); width: 220px; height: 220px; background: rgba(0,136,204,0.18); filter: blur(60px); border-radius: 50%; z-index: 0;"></div>
-          <div style="position: relative; z-index: 1;">
-            <span class="material-symbols-rounded" style="font-size: 44px; color: #38bdf8; margin-bottom: 12px;">smart_toy</span>
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;">Bot Telegram</h2>
-            <p style="color: var(--text-secondary); margin: 0 auto 20px auto; font-size: 0.95rem; line-height: 1.6;">
+        <div class="feat-integration-card feat-integration-telegram">
+          <div class="feat-integration-glow"></div>
+          <div class="feat-integration-content">
+            <span class="material-symbols-rounded feat-integration-icon">smart_toy</span>
+            <h2>Bot Telegram</h2>
+            <p>
               Gunakan <strong>@iot_kebocoran_bot</strong> untuk menerima alert kebocoran/overload langsung ke HP Anda tanpa membuka aplikasi.
             </p>
-            <a href="https://t.me/iot_kebocoran_bot" target="_blank" class="btn" style="background: #0088cc; color: white; border: none; padding: 10px 24px; font-size: 15px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,136,204,0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
-              <span class="material-symbols-rounded" style="font-size: 18px;">send</span>
+            <a href="https://t.me/iot_kebocoran_bot" target="_blank" class="btn feat-integration-btn feat-telegram-btn">
+              <span class="material-symbols-rounded">send</span>
               Hubungkan Bot
             </a>
           </div>
         </div>
 
         <!-- Discord -->
-        <div style="background: rgba(88,101,242,0.07); border: 1px solid rgba(88,101,242,0.25); border-radius: var(--radius-lg); padding: 36px; display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; overflow: hidden;">
-          <div style="position: absolute; top: -40%; left: 50%; transform: translateX(-50%); width: 220px; height: 220px; background: rgba(88,101,242,0.18); filter: blur(60px); border-radius: 50%; z-index: 0;"></div>
-          <div style="position: relative; z-index: 1;">
-            <span class="material-symbols-rounded" style="font-size: 44px; color: #7289da; margin-bottom: 12px;">forum</span>
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 10px;">Discord Webhook</h2>
-            <p style="color: var(--text-secondary); margin: 0 auto 20px auto; font-size: 0.95rem; line-height: 1.6;">
-              Notifikasi ke <strong>4 channel Discord</strong> berbeda: <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#alerts</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#relay</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#monitoring</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#logs</code>. Dikonfigurasi via admin settings, tanpa Firebase Billing.
+        <div class="feat-integration-card feat-integration-discord">
+          <div class="feat-integration-glow"></div>
+          <div class="feat-integration-content">
+            <span class="material-symbols-rounded feat-integration-icon">forum</span>
+            <h2>Discord Webhook</h2>
+            <p>
+              Notifikasi ke <strong>5 tujuan Discord</strong> berbeda: <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#alerts</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#relay</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#monitoring</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#daily-report</code> <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">#logs</code>. Dikonfigurasi via admin settings tanpa mengubah firmware.
             </p>
-            <a href="/settings" class="btn" style="background: linear-gradient(135deg,#5865F2,#7289da); color: white; border: none; padding: 10px 24px; font-size: 15px; border-radius: 999px; box-shadow: 0 4px 14px rgba(88,101,242,0.4); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
-              <span class="material-symbols-rounded" style="font-size: 18px;">settings</span>
+            <a href="/settings" class="btn feat-integration-btn feat-discord-btn">
+              <span class="material-symbols-rounded">settings</span>
               Konfigurasi Webhook
             </a>
-            <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn" style="background: transparent; color: #7289da; border: 1px solid rgba(114,137,218,0.4); padding: 10px 24px; font-size: 15px; border-radius: 999px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; margin-top: 10px;">
-              <span class="material-symbols-rounded" style="font-size: 18px;">group</span>
+            <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn feat-integration-btn feat-discord-outline-btn">
+              <span class="material-symbols-rounded">group</span>
               Join Server Discord
             </a>
           </div>
@@ -160,13 +326,13 @@
       </section>
 
       <!-- CTA -->
-      <section class="feat-cta-section">
+      <section class="feat-cta-section" data-reveal>
         <h2>Siap memantau sistem Anda?</h2>
         <div class="feat-cta-actions">
-          <a href="/login" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Buka Dashboard</a>
-          <a href="/downloads" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px;">Download App</a>
-          <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn" style="padding: 14px 28px; font-size: 16px; background: linear-gradient(135deg,#5865F2,#7289da); color:white; border:none; border-radius: 999px; box-shadow: 0 4px 14px rgba(88,101,242,0.35); text-decoration:none; display:inline-flex; align-items:center; gap:8px; font-weight:600;">
-            <span class="material-symbols-rounded" style="font-size:18px;">forum</span> Join Discord
+          <a href="/login" class="btn btn-primary">Buka Dashboard</a>
+          <a href="/downloads" class="btn btn-secondary">Download App</a>
+          <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn feat-discord-btn">
+            <span class="material-symbols-rounded">forum</span> Join Discord
           </a>
         </div>
       </section>
@@ -177,6 +343,7 @@
 
     <script src="/js/components/navbar.js"></script>
     <script src="/js/components/footer.js"></script>
+    <script src="/js/scroll-reveal.js"></script>
   </body>
 </html>
 

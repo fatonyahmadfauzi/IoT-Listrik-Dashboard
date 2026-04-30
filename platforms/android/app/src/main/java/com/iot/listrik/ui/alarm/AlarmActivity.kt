@@ -73,23 +73,26 @@ class AlarmActivity : AppCompatActivity() {
                     setAudioAttributes(audioAttributes)
                     setDataSource(this@AlarmActivity, uri)
                     isLooping = true
-                    prepare()
                     
                     setVolume(0f, 0f)
-                    start()
                     
-                    // Fade In Audio Drama (over 6 seconds)
-                    fadeAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f)
-                    fadeAnimator?.duration = 6000
-                    fadeAnimator?.addUpdateListener { animator ->
-                        val v = animator.animatedValue as Float
-                        try {
-                            setVolume(v, v)
-                        } catch (e: Exception) {
-                            // Ignore if released
+                    setOnPreparedListener {
+                        it.start()
+
+                        // Fade In Audio Drama (over 6 seconds)
+                        fadeAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f)
+                        fadeAnimator?.duration = 6000
+                        fadeAnimator?.addUpdateListener { animator ->
+                            val v = animator.animatedValue as Float
+                            try {
+                                setVolume(v, v)
+                            } catch (e: Exception) {
+                                // Ignore if released
+                            }
                         }
+                        fadeAnimator?.start()
                     }
-                    fadeAnimator?.start()
+                    prepareAsync()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

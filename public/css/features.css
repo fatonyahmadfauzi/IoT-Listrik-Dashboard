@@ -629,3 +629,422 @@
   }
 }
 
+/* =============================================================
+   Public features consistency pass
+   ============================================================= */
+
+.feat-page-main {
+  width: 100%;
+  max-width: var(--public-max-width, 1160px);
+  padding: 56px var(--public-gutter, 20px) 72px;
+  overflow-x: hidden;
+}
+
+.feat-hero {
+  width: 100%;
+  margin-bottom: 32px;
+  padding: 24px 0 10px;
+}
+
+.feat-hero h1 {
+  width: 100%;
+  font-size: 42px;
+  line-height: 1.15;
+  letter-spacing: 0;
+  margin-bottom: 14px;
+  overflow-wrap: break-word;
+}
+
+.feat-hero p {
+  width: 100%;
+  max-width: 760px;
+  font-size: 16px;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+}
+
+.feat-grid,
+.feat-logic-grid,
+.feat-notif-grid {
+  width: 100%;
+  gap: var(--public-grid-gap, 20px);
+}
+
+.feat-clean-card,
+.feat-logic-card,
+.feat-integration-card {
+  min-width: 0;
+  border-radius: var(--public-card-radius, 8px);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.feat-clean-card {
+  padding: 26px 24px;
+}
+
+.feat-clean-card:hover,
+.feat-integration-card:hover {
+  transform: translateY(-2px);
+}
+
+.feat-clean-card h3 {
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.feat-clean-card p {
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+}
+
+.feat-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--public-card-radius, 8px);
+  margin-bottom: 18px;
+}
+
+.feat-icon-wrap .material-symbols-rounded {
+  font-size: 24px;
+}
+
+.feat-logic-section {
+  margin-top: 56px;
+  scroll-margin-top: calc(var(--public-nav-height, 72px) + 16px);
+}
+
+.feat-logic-header {
+  max-width: 780px;
+  margin-bottom: 26px;
+}
+
+.feat-logic-header h2 {
+  font-size: 34px;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+
+.feat-logic-header p {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.feat-logic-card {
+  padding: 24px;
+  min-height: 0;
+}
+
+.feat-logic-card h3 {
+  font-size: 18px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.feat-logic-card p,
+.feat-logic-note {
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+}
+
+.feat-logic-note {
+  margin-top: 18px;
+}
+
+.feat-integration-card {
+  position: relative;
+  overflow: hidden;
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.feat-integration-telegram {
+  background: rgba(0, 136, 204, 0.07);
+  border-color: rgba(0, 136, 204, 0.25);
+}
+
+.feat-integration-discord {
+  background: rgba(88, 101, 242, 0.07);
+  border-color: rgba(88, 101, 242, 0.25);
+}
+
+.feat-integration-glow {
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  border-radius: 999px;
+  filter: blur(56px);
+  z-index: 0;
+}
+
+.feat-integration-telegram .feat-integration-glow {
+  background: rgba(0, 136, 204, 0.16);
+}
+
+.feat-integration-discord .feat-integration-glow {
+  background: rgba(88, 101, 242, 0.16);
+}
+
+.feat-integration-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.feat-integration-icon {
+  font-size: 38px;
+  margin-bottom: 12px;
+}
+
+.feat-integration-telegram .feat-integration-icon {
+  color: #38bdf8;
+}
+
+.feat-integration-discord .feat-integration-icon {
+  color: #7289da;
+}
+
+.feat-integration-card h2 {
+  font-size: 22px;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+
+.feat-integration-card p {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0 auto 18px;
+  max-width: 520px;
+  overflow-wrap: break-word;
+}
+
+.feat-integration-btn,
+.feat-cta-actions .btn {
+  min-height: 46px;
+  padding: 12px 26px;
+  border-radius: 9999px;
+  font-size: 15px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: filter 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s ease;
+}
+
+/* Icon transition base */
+.feat-integration-btn .material-symbols-rounded,
+.feat-cta-actions .btn .material-symbols-rounded {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-block;
+}
+
+.feat-integration-btn .material-symbols-rounded,
+.feat-cta-actions .btn .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.feat-telegram-btn {
+  background: #0088cc;
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 136, 204, 0.3);
+}
+
+.feat-telegram-btn:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 8px 24px rgba(0, 136, 204, 0.4);
+}
+
+/* send icon → slides diagonally */
+.feat-telegram-btn:hover .material-symbols-rounded {
+  transform: translate(3px, -3px);
+}
+
+.feat-discord-btn {
+  background: linear-gradient(135deg, #5865f2, #7289da);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 14px rgba(88, 101, 242, 0.3);
+}
+
+.feat-discord-btn:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 8px 24px rgba(88, 101, 242, 0.4);
+}
+
+/* settings icon → rotates */
+.feat-discord-btn:hover .material-symbols-rounded {
+  transform: rotate(60deg);
+}
+
+.feat-discord-outline-btn:hover {
+  filter: brightness(1.15);
+}
+
+/* group icon → subtle wiggle */
+.feat-discord-outline-btn:hover .material-symbols-rounded {
+  transform: rotate(-8deg) scale(1.1);
+}
+
+.feat-discord-outline-btn {
+  margin-top: 10px;
+  background: transparent;
+  color: #7289da;
+  border: 1px solid rgba(114, 137, 218, 0.4);
+}
+
+.feat-cta-section {
+  margin-top: 64px;
+}
+
+.feat-cta-section h2 {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.feat-cta-actions {
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .feat-page-main {
+    padding-top: 48px;
+  }
+
+  .feat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .feat-page-main {
+    padding: 38px var(--public-gutter, 16px) 54px;
+  }
+
+  .feat-hero {
+    padding: 18px 0 4px;
+    margin-bottom: 26px;
+  }
+
+  .feat-hero h1 {
+    font-size: 32px;
+  }
+
+  .feat-hero p {
+    font-size: 15px;
+  }
+
+  .feat-grid,
+  .feat-logic-grid,
+  .feat-notif-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feat-clean-card,
+  .feat-logic-card,
+  .feat-integration-card {
+    padding: 20px;
+    border-radius: var(--public-card-radius, 8px);
+  }
+
+  .feat-clean-card:hover,
+  .feat-integration-card:hover {
+    transform: none;
+  }
+
+  .feat-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--public-card-radius, 8px);
+    margin-bottom: 14px;
+  }
+
+  .feat-clean-card h3,
+  .feat-logic-card h3 {
+    font-size: 17px;
+  }
+
+  .feat-clean-card p,
+  .feat-logic-card p,
+  .feat-logic-note {
+    font-size: 14.5px;
+  }
+
+  .feat-logic-section {
+    margin-top: 42px;
+  }
+
+  .feat-logic-header h2 {
+    font-size: 28px;
+  }
+
+  .feat-logic-header p {
+    font-size: 15px;
+  }
+
+  .feat-notif-grid {
+    margin-top: 42px;
+  }
+
+  .feat-integration-card h2 {
+    font-size: 20px;
+  }
+
+  .feat-integration-card p {
+    font-size: 14.5px;
+  }
+
+  .feat-integration-btn,
+  .feat-cta-actions .btn {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .feat-cta-section {
+    margin-top: 48px;
+  }
+
+  .feat-cta-section h2 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 430px) {
+  .feat-page-main {
+    padding: 30px var(--public-gutter, 14px) 46px;
+  }
+
+  .feat-hero h1 {
+    font-size: 29px;
+  }
+
+  .feat-clean-card,
+  .feat-logic-card,
+  .feat-integration-card {
+    padding: 18px 16px;
+  }
+
+  .feat-logic-header h2 {
+    font-size: 25px;
+  }
+
+  .feat-cta-section h2 {
+    font-size: 22px;
+  }
+}
+

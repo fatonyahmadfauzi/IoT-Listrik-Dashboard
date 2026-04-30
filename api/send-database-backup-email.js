@@ -263,7 +263,9 @@ async function sendDatabaseBackupEmail(req) {
 }
 
 export default async function handler(req, res) {
-  setCors(res);
+  if (!setCors(req, res)) {
+    return res.status(403).json({ error: "Origin tidak diizinkan." });
+  }
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();

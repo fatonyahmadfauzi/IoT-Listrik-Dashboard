@@ -57,13 +57,15 @@ class MainActivity : AppCompatActivity() {
     private var pathPrefix = ""
     private var sessionTimer: android.os.CountDownTimer? = null
     private val deviceStaleMs = 15000L
-    private val presenceHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val presenceCheckRunnable = object : Runnable {
         override fun run() {
             refreshPresenceUi()
-            presenceHandler.postDelayed(this, 3000)
+            uiHandler.postDelayed(this, 3000)
         }
     }
+    // Debounce renderHistory so rapid onChildAdded bursts (initial load) collapse into one render.
+    private val renderHistoryRunnable = Runnable { doRenderHistory() }
     private var firebaseConnected = true
     private var lastDeviceHeartbeatAt = 0L
     private var lastUpdatedMarker: Long? = null
@@ -120,8 +122,8 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         initializeSession()
-        presenceHandler.removeCallbacks(presenceCheckRunnable)
-        presenceHandler.post(presenceCheckRunnable)
+        uiHandler.removeCallbacks(presenceCheckRunnable)
+        uiHandler.post(presenceCheckRunnable)
     }
 
     override fun onStop() {
@@ -131,7 +133,8 @@ class MainActivity : AppCompatActivity() {
             listenersAttached = false
         }
         sessionTimer?.cancel()
-        presenceHandler.removeCallbacks(presenceCheckRunnable)
+        uiHandler.removeCallbacks(presenceCheckRunnable)
+        uiHandler.removeCallbacks(renderHistoryRunnable)
     }
 
     private fun detachListeners() {
@@ -570,25 +573,23 @@ class MainActivity : AppCompatActivity() {
         historyChildListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
                 upsertHistory(snapshot)
-                renderHistory()
+                scheduleRenderHistory()
             }
 
             override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
                 upsertHistory(snapshot)
-                renderHistory()
+                scheduleRenderHistory()
             }
 
             override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
-                // We don't rely on ordering shifts for this UI (history is rebuilt from keys),
-                // but we must implement the callback to satisfy ChildEventListener contract.
                 upsertHistory(snapshot)
-                renderHistory()
+                scheduleRenderHistory()
             }
 
             override fun onChildRemoved(snapshot: DataSnapshot) {
                 val key = snapshot.key
                 if (key != null) historyByKey.remove(key)
-                renderHistory()
+                scheduleRenderHistory()
             }
 
             override fun onCancelled(error: DatabaseError) { }
@@ -602,7 +603,16 @@ class MainActivity : AppCompatActivity() {
         historyByKey[key] = log.copy(key = key)
     }
 
-    private fun renderHistory() {
+    /**
+     * Debounce: schedule a single renderHistory pass 150ms from now.
+     * Rapid-fire onChildAdded callbacks (initial Firebase load) collapse into one render.
+     */
+    private fun scheduleRenderHistory() {
+        uiHandler.removeCallbacks(renderHistoryRunnable)
+        uiHandler.postDelayed(renderHistoryRunnable, 150)
+    }
+
+    private fun doRenderHistory() {
         historyList.clear()
         val keysDesc = historyByKey.keys.sortedDescending()
         for (k in keysDesc) {
@@ -620,17 +630,21 @@ class MainActivity : AppCompatActivity() {
             historyAdapter.updateData(historyList)
             if (wasEmpty) binding.rvHistory.smoothScrollToPosition(0)
         }
-        
-        // Populasikan data logs ke grafik jika grafik masih kosong (baru dibuka)
+
+        // Batch-populate chart only once (when chart has no data yet)
         val chart = binding.lineChart
         if (chart.data == null && historyList.isNotEmpty()) {
-            // Ambil maksimal 20 data terakhir, di-urutkan kronologis (terlama ke terbaru)
             val toPlot = historyList.take(maxDataPoints).reversed()
             for (log in toPlot) {
                 val arus = (log.arus as? Number)?.toFloat() ?: 0f
                 val teg = (log.tegangan as? Number)?.toFloat() ?: 0f
-                addChartEntry(arus, teg)
+                addChartEntryBatch(arus, teg)
             }
+            // Single chart redraw after all entries added
+            chart.data?.notifyDataChanged()
+            chart.notifyDataSetChanged()
+            chart.setVisibleXRangeMaximum(maxDataPoints.toFloat())
+            chart.moveViewToX(chart.data?.entryCount?.toFloat() ?: 0f)
         }
     }
 
@@ -720,14 +734,16 @@ class MainActivity : AppCompatActivity() {
         dangerPulseAnimator?.start()
     }
 
-    private fun addChartEntry(arus: Float, tegangan: Float) {
+    /**
+     * Ensures chart DataSets exist; returns (setArus, setTeg).
+     */
+    private fun ensureChartSets(): Pair<LineDataSet, LineDataSet> {
         val chart = binding.lineChart
         var data = chart.data
         if (data == null) {
             data = LineData()
             chart.data = data
         }
-        
         binding.tvChartLoading.visibility = View.GONE
 
         var setArus = data.getDataSetByIndex(0) as LineDataSet?
@@ -738,28 +754,31 @@ class MainActivity : AppCompatActivity() {
             data.addDataSet(setArus)
         }
         if (setTeg == null) {
-            // Tegangan scale is much higher, normally requires a second Y-Axis
-            // But we will map it on the same axis for simplicity, user can see the shape.
-            // Or ideally scale it.
             setTeg = createSet("Tegangan (V)", Color.parseColor("#f59e0b"))
-            // Disable tegangan plot if not requested, but let's just plot it
             setTeg.axisDependency = com.github.mikephil.charting.components.YAxis.AxisDependency.RIGHT
             chart.axisRight.isEnabled = true
             chart.axisRight.textColor = Color.LTGRAY
             chart.axisRight.setDrawGridLines(false)
             data.addDataSet(setTeg)
         }
+        return Pair(setArus, setTeg)
+    }
+
+    /**
+     * Add a chart entry AND immediately redraw. Used for real-time streaming updates.
+     */
+    private fun addChartEntry(arus: Float, tegangan: Float) {
+        val chart = binding.lineChart
+        val (setArus, setTeg) = ensureChartSets()
+        val data = chart.data!!
 
         data.addEntry(Entry(chartTimeIndex, arus), 0)
         data.addEntry(Entry(chartTimeIndex, tegangan), 1)
-        
         chartTimeIndex++
-        
-        // Remove old entries to keep window to last maxDataPoints
+
         if (setArus.entryCount > maxDataPoints) {
             setArus.removeFirst()
             setTeg.removeFirst()
-            // Re-adjust X bounds
             chart.xAxis.axisMinimum = setArus.getEntryForIndex(0).x
         }
 
@@ -768,7 +787,32 @@ class MainActivity : AppCompatActivity() {
         chart.setVisibleXRangeMaximum(maxDataPoints.toFloat())
         chart.moveViewToX(data.entryCount.toFloat())
 
-        // Calculate and Update Stats
+        updateChartStats(arus, tegangan)
+    }
+
+    /**
+     * Add a chart entry WITHOUT redrawing. Used during batch population.
+     * Caller must call chart.notifyDataSetChanged() after all entries are added.
+     */
+    private fun addChartEntryBatch(arus: Float, tegangan: Float) {
+        val chart = binding.lineChart
+        val (setArus, setTeg) = ensureChartSets()
+        val data = chart.data!!
+
+        data.addEntry(Entry(chartTimeIndex, arus), 0)
+        data.addEntry(Entry(chartTimeIndex, tegangan), 1)
+        chartTimeIndex++
+
+        if (setArus.entryCount > maxDataPoints) {
+            setArus.removeFirst()
+            setTeg.removeFirst()
+            chart.xAxis.axisMinimum = setArus.getEntryForIndex(0).x
+        }
+
+        updateChartStats(arus, tegangan)
+    }
+
+    private fun updateChartStats(arus: Float, tegangan: Float) {
         arusHistory.add(arus)
         tegHistory.add(tegangan)
         if (arusHistory.size > maxDataPoints) arusHistory.removeAt(0)

@@ -10,10 +10,7 @@ declare global {
         startMinimized: boolean;
       }>;
       setSettings: (settings: Record<string, unknown>) => Promise<void>;
-      startLocalServer: (opts: {
-        cwd: string;
-        command: string;
-      }) => Promise<{ ok: boolean; error?: string }>;
+      startLocalServer: (opts: { cwd?: string }) => Promise<{ ok: boolean; error?: string }>;
       stopLocalServer: () => Promise<{ ok: boolean }>;
       localServerStatus: () => Promise<{ running: boolean }>;
       onNotificationClick: (callback: () => void) => void;

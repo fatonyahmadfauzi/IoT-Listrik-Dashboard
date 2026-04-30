@@ -23,7 +23,10 @@ public/downloads/**/*.apk
 public/downloads/**/*.aab
 public/downloads/**/*.7z
 public/downloads/cli/iot-listrik-dashboard-cli-linux
-public/downloads/cli/node-source/
+public/downloads/cli/node-source/node_modules/
+public/downloads/cli/node-source/*.exe
+public/downloads/cli/node-source/iot-listrik-dashboard-cli-linux
+public/downloads/cli/node-source/package-lock.json
 
 # Firebase redirect (bukan bagian web app utama)
 firebase-redirect/
@@ -47,3 +50,7 @@ android-app/keystore/
 /*.ppt
 /*.pptx
 /*.pdf
+
+# Script sampah dan temporary files
+/*.py
+/temp_*.html

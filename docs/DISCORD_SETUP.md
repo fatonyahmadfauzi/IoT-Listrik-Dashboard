@@ -1,128 +1,96 @@
 # Panduan Setup Discord Notification
 
-> 🔗 **Discord Server IoT Listrik Dashboard**: [discord.gg/WszeM4FVH6](https://discord.gg/WszeM4FVH6)  
-> Join server untuk mendapatkan channel monitoring (alerts, relay, monitoring, logs) yang siap pakai.
+> Discord Server IoT Listrik Dashboard: [discord.gg/WszeM4FVH6](https://discord.gg/WszeM4FVH6)
 
-Sistem notifikasi real-time IoT Listrik Dashboard diintegrasikan dengan Discord
-melalui **4 channel terpisah** via Webhook URL.
+Integrasi Discord sekarang memakai dua jalur:
 
----
+- **Discord Webhook** untuk mengirim notifikasi monitoring, relay, alert, laporan harian, dan log.
+- **Discord Bot** untuk membaca status server, jumlah member/online/ban, serta ban/unban user dari admin UI.
 
-## Struktur Channel Discord
-
-| Channel | Trigger | Isi Notifikasi |
-|---------|---------|----------------|
-| `#⚡-alerts` | Status `BAHAYA` / `WARNING` / Recovery | Embed merah/kuning/hijau + data lengkap |
-| `#🔌-relay` | Relay ON/OFF berubah | Status relay lama vs baru |
-| `#📊-monitoring` | Update data (max 1x/5 menit) | Snapshot semua data listrik |
-| `#📋-logs` | Log aktivitas baru (`/logs`) | Pesan log + pengguna + tipe |
+Konfigurasi utama dilakukan dari halaman admin `/discord` atau `/app/discord` dan disimpan di Firebase Realtime Database pada `/settings/discord`.
 
 ---
 
-## Langkah 1 — Buat Discord Server & Channel
+## Struktur Channel Webhook
 
-1. Buat Server Discord (atau pakai yang sudah ada).
-2. Buat 4 channel teks dengan nama bebas (contoh: `alerts`, `relay`, `monitoring`, `logs`).
-
----
-
-## Langkah 2 — Buat Webhook per Channel
-
-Untuk setiap channel:
-1. Klik kanan channel → **Edit Channel** → **Integrations** → **Webhooks**
-2. Klik **New Webhook** → beri nama (misal: "IoT Alerts Bot")
-3. Klik **Copy Webhook URL**
-4. Simpan URL tersebut (format: `https://discord.com/api/webhooks/xxxx/yyyy`)
+| Tujuan | Trigger | Isi Notifikasi |
+|--------|---------|----------------|
+| `alerts` | `DANGER`, `WARNING`, pulih `NORMAL`, device `ONLINE/OFFLINE` | Embed status kelistrikan dan kondisi perangkat |
+| `relay` | Relay ON/OFF berubah | Status relay lama dan baru |
+| `monitoring` | Snapshot data monitoring berkala | Arus, tegangan, daya, relay, frekuensi, power factor, energi, status |
+| `daily-report` | Laporan harian tersedia | File Excel data monitoring 24 jam |
+| `logs` | Entry baru pada `/logs` | Aktivitas sistem dan pengguna |
 
 ---
 
-## Langkah 3 — Simpan Webhook ke Firebase Secrets
+## Setup Webhook
 
-> ⚠️ **JANGAN hardcode URL webhook di kode!** Gunakan Firebase Secrets agar aman.
+1. Buka Discord Server.
+2. Buat channel teks, misalnya `alerts`, `relay`, `monitoring`, `daily-report`, dan `logs`.
+3. Untuk setiap channel: **Edit Channel** -> **Integrations** -> **Webhooks** -> **New Webhook**.
+4. Salin Webhook URL.
+5. Buka admin UI:
 
-Jalankan perintah berikut satu per satu (paste URL webhook saat diminta input):
+```text
+https://iot-listrik-dashboard.vercel.app/discord
+```
+
+6. Isi URL webhook sesuai tujuan channel.
+7. Aktifkan **Master Switch Notifikasi**.
+8. Klik **Test Kirim Pesan** untuk memastikan webhook valid.
+
+Webhook tidak perlu disimpan di source code. Semua URL dikelola dari Firebase melalui admin UI.
+
+---
+
+## Setup Discord Bot
+
+Discord Bot diperlukan untuk fitur status server dan moderasi.
+
+1. Buka [Discord Developer Portal](https://discord.com/developers/applications).
+2. Buat aplikasi baru, lalu buka menu **Bot**.
+3. Salin bot token.
+4. Aktifkan intent yang dibutuhkan:
+   - Server Members Intent
+   - Presence Intent, jika ingin membaca jumlah online
+5. Invite bot ke server dengan permission minimal:
+   - View Channels
+   - Send Messages
+   - Read Message History
+   - Ban Members, jika fitur ban/unban digunakan
+6. Buka `/discord`, isi Bot Token dan Guild ID, lalu simpan.
+7. Gunakan panel status untuk memeriksa koneksi bot, jumlah member, online, dan ban.
+
+Fitur ban/unban memakai endpoint Vercel API:
+
+- `/api/get-discord-bot-status`
+- `/api/save-discord-bot-config`
+- `/api/ban-discord-user`
+- `/api/unban-discord-user`
+
+---
+
+## Jalankan Local Notifier
+
+Notifier lokal membaca konfigurasi Discord dan Telegram dari RTDB secara real-time.
 
 ```bash
-firebase functions:secrets:set DISCORD_WEBHOOK_ALERTS
-# paste URL webhook channel #alerts
+cd backend-local
+npm install
 
-firebase functions:secrets:set DISCORD_WEBHOOK_RELAY
-# paste URL webhook channel #relay
+# Hardware utama ESP32
+npm run discord
 
-firebase functions:secrets:set DISCORD_WEBHOOK_MONITORING
-# paste URL webhook channel #monitoring
-
-firebase functions:secrets:set DISCORD_WEBHOOK_LOGS
-# paste URL webhook channel #logs
+# Simulator virtual PWA
+npm run sim-notify
 ```
 
-Verifikasi secret tersimpan:
-```bash
-firebase functions:secrets:list
-```
+Fungsi notifier:
 
----
-
-## Langkah 4 — Deploy Cloud Functions
-
-```bash
-firebase deploy --only functions
-```
-
-Atau hanya function tertentu:
-```bash
-firebase deploy --only functions:onStatusChanged
-firebase deploy --only functions:onRelayChanged
-firebase deploy --only functions:onListrikUpdated
-firebase deploy --only functions:onNewLog
-```
-
----
-
-## Langkah 5 — Verifikasi
-
-1. Simulasikan perubahan data di RTDB (misal ubah `/listrik/status` → `DANGER`)
-2. Periksa channel Discord yang sesuai — embed notifikasi seharusnya muncul dalam 5-10 detik
-3. Cek log function: `firebase functions:log`
-
----
-
-## Contoh Tampilan Notifikasi Discord
-
-### Channel `#⚡-alerts` (Status BAHAYA)
-```
-🔴 Status Kelistrikan: DANGER
-⚠️ KEBOCORAN ARUS TERDETEKSI! Relay sedang diputuskan otomatis.
-
-⚡ Arus        🔋 Tegangan   💡 Daya
-15.2 A         220 V         3.344 W
-
-🔌 Relay       📡 Frekuensi  📊 PF
-OFF (Mati)     50 Hz         0.92
-
-IoT Listrik Dashboard • 11/04/2026, 16.30.00
-```
-
-### Channel `#🔌-relay`
-```
-🪫 Relay DIMATIKAN
-Relay listrik baru saja diubah ke posisi OFF.
-
-Status Sebelumnya    Status Sekarang
-ON                   OFF
-```
-
----
-
-## Update / Ubah Webhook URL
-
-Jika Anda perlu mengganti URL webhook (misal server Discord ganti), cukup jalankan:
-```bash
-firebase functions:secrets:set DISCORD_WEBHOOK_ALERTS
-# (input URL baru)
-
-firebase deploy --only functions
-```
+- Mengirim alert status, relay, monitoring, log, dan laporan harian ke Discord.
+- Mengirim notifikasi yang sama ke Telegram jika Telegram aktif.
+- Membaca command Telegram `/pause` dan `/resume` per Chat ID.
+- Membuat laporan harian Excel dan mengirimnya hanya jika ada data baru pada hari tersebut.
 
 ---
 
@@ -130,8 +98,9 @@ firebase deploy --only functions
 
 | Masalah | Solusi |
 |---------|--------|
-| Notifikasi tidak muncul | Cek `firebase functions:log` untuk error |
-| Error "Secret not found" | Jalankan ulang `firebase functions:secrets:set` |
-| Discord menolak (401/403) | Webhook URL kadaluarsa, buat webhook baru |
-| Monitoring terlalu jarang | Rate limit 5 menit aktif, normal |
-| Monitoring terlalu sering | Tingkatkan threshold di `index.js` (default: 5 menit) |
+| Test webhook gagal | Pastikan URL webhook lengkap dan masih aktif |
+| Master switch mati tapi notifikasi masih muncul | Restart `backend-local/discord-notifier.js` agar konfigurasi terbaru terbaca |
+| Bot status error JSON | Pastikan Bot Token di env/admin UI satu baris, tanpa kutip tambahan atau karakter `{}` |
+| Jumlah member/online tidak muncul | Aktifkan Server Members Intent dan Presence Intent di Developer Portal |
+| Ban/unban gagal | Pastikan bot punya permission **Ban Members** dan role bot lebih tinggi dari user target |
+| Laporan harian tidak terkirim | Pastikan webhook daily report/Telegram aktif dan ada data monitoring pada tanggal tersebut |

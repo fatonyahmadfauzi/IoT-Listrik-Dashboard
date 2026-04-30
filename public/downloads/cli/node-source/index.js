@@ -9,7 +9,7 @@ const { getAuth, signInWithEmailAndPassword, signOut } = require("firebase/auth"
 const { getDatabase, ref, onValue, set, get, query, limitToLast, orderByKey, off } = require("firebase/database");
 const os = require("os");
 
-const SESSION_FILE = path.join(os.homedir(), ".iot-listrik-session.json");
+const LEGACY_SESSION_FILE = path.join(os.homedir(), ".iot-listrik-session.json");
 
 const firebaseConfig = {
   apiKey: "AIzaSyD99N-FQdkTPNnNGY-fof6ijskxg0bzARc",
@@ -192,8 +192,8 @@ function handleSessionExpired() {
   console.log(chalk.yellow("Durasi sesi akun sementara (Demo) Anda telah habis (15 menit)."));
   console.log(chalk.gray("Anda akan di-logout secara otomatis.\n"));
   
-  if (fs.existsSync(SESSION_FILE)) {
-    fs.unlinkSync(SESSION_FILE);
+  if (fs.existsSync(LEGACY_SESSION_FILE)) {
+    fs.unlinkSync(LEGACY_SESSION_FILE);
   }
   process.exit(0);
 }
@@ -301,18 +301,13 @@ async function enforceLogin() {
   console.log(chalk.cyan.bold("\nIoT Listrik Dashboard CLI"));
   console.log(chalk.gray("Otentikasi Diperlukan\n"));
 
-  // Auto Login via session file
-  if (fs.existsSync(SESSION_FILE)) {
+  // Hapus session lama yang menyimpan password plaintext.
+  if (fs.existsSync(LEGACY_SESSION_FILE)) {
     try {
-      const session = JSON.parse(fs.readFileSync(SESSION_FILE, "utf-8"));
-      await signInWithEmailAndPassword(auth, session.email, session.password);
-      await processUserClaims();
-      startPresenceWatch();
-      console.log(chalk.green(`Meresume sesi login untuk: ${session.email}...\n`));
-      return true;
+      fs.unlinkSync(LEGACY_SESSION_FILE);
+      console.log(chalk.yellow("Session lama dihapus karena menyimpan password plaintext. Silakan login manual.\n"));
     } catch (e) {
-      console.log(chalk.red("Sesi login otomatis tidak valid atau kedaluwarsa. Silakan login manual.\n"));
-      fs.unlinkSync(SESSION_FILE);
+      console.log(chalk.red("Gagal menghapus session lama. Hapus manual file ~/.iot-listrik-session.json.\n"));
     }
   }
 
@@ -329,8 +324,6 @@ async function enforceLogin() {
       await processUserClaims();
       startPresenceWatch();
       console.log(chalk.green("\nLogin berhasil!\n"));
-      // Save session credentials permanently until manual Logout
-      fs.writeFileSync(SESSION_FILE, JSON.stringify({ email, password }));
       loggedIn = true;
     } catch (e) {
       console.log(chalk.red("\nLogin gagal:"), e.message, "\n");
@@ -370,8 +363,8 @@ async function handleLogout() {
     { type: "confirm", name: "logoutConfirm", message: "Anda yakin ingin Keluar (Log out)?", default: false }
   ]);
   if (logoutConfirm) {
-    if (fs.existsSync(SESSION_FILE)) {
-      fs.unlinkSync(SESSION_FILE); // Hapus session agar tidak auto-login
+    if (fs.existsSync(LEGACY_SESSION_FILE)) {
+      fs.unlinkSync(LEGACY_SESSION_FILE);
     }
     stopPresenceWatch();
     await signOut(auth);

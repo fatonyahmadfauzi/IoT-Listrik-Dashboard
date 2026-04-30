@@ -91,7 +91,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 #define AP_SSID               "IoT-Listrik-Setup"  // AP name shown to phone
-#define AP_PASSWORD           "listrik123"          // Portal password (min 8 chars)
+#define AP_PASSWORD           "CHANGE_ME_SETUP"     // Portal password (min 8 chars)
 #define AP_TIMEOUT_SECONDS    180                   // Auto-restart if no action
 #define NVS_NAMESPACE         "iot_cfg"             // Preferences NVS namespace
 

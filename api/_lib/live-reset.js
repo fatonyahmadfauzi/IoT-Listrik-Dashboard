@@ -12,6 +12,14 @@ const RESET_OTP_MAX_ATTEMPTS = 5;
 const RESET_OTP_PATH = "/admin_secure/liveDataResetOtps";
 const MONITORING_WIPE_OTP_PATH = "/admin_secure/monitoringDataWipeOtps";
 const PROJECT_CONFIRMATION_TEXT = "IoT Listrik Dashboard";
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://iot-listrik-dashboard.vercel.app",
+  "https://www.iot-listrik-dashboard.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
 
 let initErrorMsg = "";
 
@@ -36,11 +44,34 @@ function ensureAdminApp() {
   return admin;
 }
 
-function setCors(res) {
-  res.setHeader("Access-Control-Allow-Credentials", true);
-  res.setHeader("Access-Control-Allow-Origin", "*");
+function getAllowedOrigins() {
+  const extra = String(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return new Set([...DEFAULT_ALLOWED_ORIGINS, ...extra]);
+}
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (getAllowedOrigins().has(origin)) return true;
+  return /^https:\/\/iot-listrik-dashboard(?:-[a-z0-9-]+)?-fatonyahmadfauzis-projects\.vercel\.app$/i.test(origin);
+}
+
+function setCors(req, res) {
+  const origin = String(req?.headers?.origin || "").trim();
+  if (!isAllowedOrigin(origin)) {
+    return false;
+  }
+
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Origin", origin || DEFAULT_ALLOWED_ORIGINS[0]);
+  res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  return true;
 }
 
 function httpError(statusCode, message) {

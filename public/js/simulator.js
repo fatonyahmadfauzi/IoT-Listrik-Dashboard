@@ -631,3 +631,15 @@ window.addEventListener('load', () => {
     }
   }, 1000);
 });
+
+window.toggleReveal = (inputId, btn) => {
+  const inp = document.getElementById(inputId);
+  if(!inp) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.innerHTML = '<span class="material-symbols-rounded">visibility_off</span>';
+  } else {
+    inp.type = 'password';
+    btn.innerHTML = '<span class="material-symbols-rounded">visibility</span>';
+  }
+};

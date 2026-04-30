@@ -1,6 +1,6 @@
 param(
   [string]$Alias = "fatony",
-  [string]$KeystoreDir = "android-app/keystore",
+  [string]$KeystoreDir = "platforms/android/keystore",
   [string]$KeystoreFile = "release-keystore.jks",
   # If provided, store/key passwords will use this value (free self-signed).
   [Alias("Password")]
@@ -109,4 +109,3 @@ Write-Host "Selesai."
 Write-Host "Keystore: $keystorePath"
 Write-Host "Keystore properties: $propsPath"
 Write-Host "Jangan commit file properties ini ke git (sudah di-ignore)."
-

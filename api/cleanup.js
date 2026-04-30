@@ -35,9 +35,7 @@ function getProvidedSecret(req) {
 
   const headerSecret = getHeader(req, "x-cron-secret");
   if (headerSecret) return String(headerSecret).trim();
-
-  const querySecret = req.query?.secret;
-  return Array.isArray(querySecret) ? querySecret[0] : querySecret;
+  return "";
 }
 
 function validateCleanupSecret(req) {
@@ -63,9 +61,12 @@ function validateCleanupSecret(req) {
 }
 
 export default async function handler(req, res) {
-  if (!["GET", "POST"].includes(req.method)) {
-    res.setHeader("Allow", "GET, POST");
-    return res.status(405).json({ error: "Method not allowed" });
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
 
   const secretCheck = validateCleanupSecret(req);

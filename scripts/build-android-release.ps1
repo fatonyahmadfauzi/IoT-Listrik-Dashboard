@@ -16,7 +16,7 @@ Push-Location $androidDir
 Pop-Location
 
 # Find the newest APK produced by Gradle and normalize it to the
-# legacy public release name so download links stay stable.
+# stable public release name so download links stay stable.
 $apkDir = Join-Path $androidDir "app/build/outputs/apk/release"
 $apkFiles = Get-ChildItem -Path $apkDir -Filter "*.apk" | Sort-Object LastWriteTime -Descending
 if ($apkFiles.Count -eq 0) {
@@ -25,11 +25,7 @@ if ($apkFiles.Count -eq 0) {
 
 $apkPath = $apkFiles[0].FullName
 $apkName = $apkFiles[0].Name
-$legacyApkName = if ($apkName -match '^IoT Listrik Dashboard ([0-9]+\.[0-9]+\.[0-9]+)\.apk$') {
-  "IoT-Listrik-Dashboard-$($Matches[1]).apk"
-} else {
-  "IoT-Listrik-Dashboard-1.0.0.apk"
-}
+$publicApkName = "IoT-Listrik-Dashboard.apk"
 
 $webDownloadsDir = Join-Path $repoRoot "public/downloads/android"
 New-Item -ItemType Directory -Force -Path $webDownloadsDir | Out-Null
@@ -38,8 +34,8 @@ New-Item -ItemType Directory -Force -Path $webDownloadsDir | Out-Null
 Get-ChildItem -Path $webDownloadsDir -Filter "*.apk" | Remove-Item -Force
 
 # Copy new APK using the stable public filename
-Copy-Item $apkPath (Join-Path $webDownloadsDir $legacyApkName) -Force
+Copy-Item $apkPath (Join-Path $webDownloadsDir $publicApkName) -Force
 
 Write-Host ""
 Write-Host "APK siap untuk web download:"
-Write-Host (Join-Path $webDownloadsDir $legacyApkName)
+Write-Host (Join-Path $webDownloadsDir $publicApkName)

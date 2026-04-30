@@ -18,10 +18,10 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
 }
 
 $FilePaths = @(
-    "public\downloads\android\IoT-Listrik-Dashboard-1.0.0.apk",
-    "public\downloads\windows\IoT-Listrik-Dashboard-Setup-1.0.0.exe",
-    "public\downloads\windows\IoT-Listrik-Dashboard-Portable-1.0.0.exe",
-    "public\downloads\windows\IoT-Listrik-Dashboard-1.0.0.msi",
+    "public\downloads\android\IoT-Listrik-Dashboard.apk",
+    "public\downloads\windows\IoT-Listrik-Dashboard-Setup.exe",
+    "public\downloads\windows\IoT-Listrik-Dashboard-Portable.exe",
+    "public\downloads\windows\IoT-Listrik-Dashboard.msi",
     "public\downloads\cli\iot-listrik-cli-node.exe",
     "public\downloads\cli\iot-listrik-cli-python.exe",
     "public\downloads\cli\iot-listrik-dashboard-cli-linux",

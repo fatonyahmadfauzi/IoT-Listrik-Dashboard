@@ -419,10 +419,20 @@ function showToast(message, type = 'success', duration = 4000) {
     document.body.appendChild(container);
   }
 
-  const icons = { success: '<span class="material-symbols-rounded">check_circle</span>', error: '<span class="material-symbols-rounded">error</span>', warning: '<span class="material-symbols-rounded">warning</span>', info: '<span class="material-symbols-rounded">info</span>' };
+  const icons = { success: 'check_circle', error: 'error', warning: 'warning', info: 'info' };
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  toast.innerHTML = `<span>${icons[type] ?? '<span class="material-symbols-rounded">info</span>'}</span><span>${message}</span>`;
+
+  const iconWrap = document.createElement('span');
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-rounded';
+  icon.textContent = icons[type] || 'info';
+  iconWrap.appendChild(icon);
+
+  const text = document.createElement('span');
+  text.textContent = String(message ?? '');
+
+  toast.append(iconWrap, text);
   container.appendChild(toast);
 
   setTimeout(() => {

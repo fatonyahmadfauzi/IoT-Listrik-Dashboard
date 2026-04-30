@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
-import { db } from '../lib/firebase';
+import { app as mainApp, db, auth as mainAuth, firebaseConfig } from '../lib/firebase';
 import { ref, update, remove, set } from 'firebase/database';
+import { initializeApp, deleteApp } from 'firebase/app';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+  updateProfile,
+} from 'firebase/auth';
 import { showNotification } from '../lib/notifikasi';
 import {
   loadClientConfig,
@@ -276,6 +284,11 @@ export function Settings({ onLogout }: SettingsProps) {
   const LIVE_RESET_CONFIRMATION_TEXT = 'IoT Listrik Dashboard';
 
   const [newUserEmail, setNewUserEmail] = useState('');
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserDisplayName, setNewUserDisplayName] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'user' | 'admin'>('user');
+  const [addUserLoading, setAddUserLoading] = useState(false);
   
   // Visibility toggles
   const [showTgToken, setShowTgToken] = useState(false);
@@ -1140,12 +1153,99 @@ export function Settings({ onLogout }: SettingsProps) {
 
   const handleDeleteUser = async (uid: string) => {
     if (!isAdmin || uid === user?.uid) return; // Prevent self-delete
-    if (!confirm('Are you sure?')) return;
+    if (!confirm('Hapus profile user ini dari sistem?\n\nAkun Firebase Auth-nya tetap ada (bisa login ulang).\nUntuk hapus permanen, gunakan Firebase Console → Authentication.')) return;
     setLoading(true);
     try {
       await remove(ref(db, `users/${uid}`));
+      notifyDesktop('User dihapus', 'Profile user berhasil dihapus dari RTDB.');
     } catch (error) {
       console.error('Error deleting user:', error);
+      notifyDesktop('Gagal hapus user', String(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddUser = async () => {
+    if (!isAdmin) return;
+    const email = newUserEmail.trim();
+    const password = newUserPassword;
+    const displayName = newUserDisplayName.trim();
+    const userRole = newUserRole;
+
+    if (!email || !password) {
+      notifyDesktop('Tambah User', 'Email dan password wajib diisi.');
+      return;
+    }
+    if (password.length < 8) {
+      notifyDesktop('Tambah User', 'Password minimal 8 karakter.');
+      return;
+    }
+
+    setAddUserLoading(true);
+
+    // Use secondary app so admin doesn't get logged out
+    let secondaryApp = null;
+    try {
+      secondaryApp = initializeApp(firebaseConfig, 'secondary-' + Date.now());
+      const secondaryAuth = getAuth(secondaryApp);
+
+      // Create account in Firebase Auth
+      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+      const newUid = cred.user.uid;
+
+      // Set display name
+      if (displayName) {
+        await updateProfile(cred.user, { displayName });
+      }
+
+      // Logout from secondary app before deleting it
+      await signOut(secondaryAuth);
+
+      // Write profile to RTDB (using main admin session)
+      await set(ref(db, `/users/${newUid}`), {
+        email,
+        displayName: displayName || '',
+        role: userRole,
+        createdAt: new Date().toISOString(),
+      });
+
+      notifyDesktop('User dibuat', `Akun "${email}" berhasil dibuat sebagai ${userRole}.`);
+      setShowAddUserModal(false);
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserDisplayName('');
+      setNewUserRole('user');
+    } catch (error: any) {
+      const msgs: Record<string, string> = {
+        'auth/email-already-in-use': 'Email sudah terdaftar.',
+        'auth/weak-password': 'Password terlalu lemah.',
+        'auth/invalid-email': 'Format email tidak valid.',
+      };
+      const msg = msgs[error?.code] || error?.message || 'Gagal membuat user.';
+      notifyDesktop('Gagal membuat user', msg);
+    } finally {
+      if (secondaryApp) {
+        try { await deleteApp(secondaryApp); } catch (_) {}
+      }
+      setAddUserLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (email: string) => {
+    if (!isAdmin) return;
+    if (!confirm(`Kirim email reset password ke "${email}"?`)) return;
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(mainAuth, email);
+      notifyDesktop('Reset Password', `Email reset password terkirim ke "${email}".`);
+    } catch (error: any) {
+      const msgs: Record<string, string> = {
+        'auth/user-not-found': 'Email tidak terdaftar di Firebase Auth.',
+        'auth/too-many-requests': 'Terlalu banyak percobaan, coba lagi nanti.',
+      };
+      const msg = msgs[error?.code] || error?.message || 'Gagal mengirim email reset.';
+      notifyDesktop('Gagal reset password', msg);
     } finally {
       setLoading(false);
     }
@@ -2468,18 +2568,9 @@ export function Settings({ onLogout }: SettingsProps) {
                 placeholder="E:\...\backend-local"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Start command
-              </label>
-              <input
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-2"
-                value={clientCfg.localStartCmd}
-                onChange={(e) =>
-                  setClientCfg({ ...clientCfg, localStartCmd: e.target.value })
-                }
-                placeholder="node server.js"
-              />
+            <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-200">
+              Local server desktop hanya menjalankan <code>node server.js</code> dari folder yang dipilih.
+              Command bebas dinonaktifkan untuk mencegah eksekusi shell dari renderer.
             </div>
           </div>
 
@@ -2501,7 +2592,6 @@ export function Settings({ onLogout }: SettingsProps) {
                   onClick={async () => {
                     const r = await window.electronAPI!.startLocalServer({
                       cwd: clientCfg.localServerPath || '.',
-                      command: clientCfg.localStartCmd || 'node server.js',
                     });
                     setLocalSrvMsg(r.ok ? 'Server start dipanggil.' : r.error || 'Gagal');
                   }}
@@ -2528,12 +2618,19 @@ export function Settings({ onLogout }: SettingsProps) {
         </div>
       )}
 
-      {/* Users Tab */}
       {tab === 'users' && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            User Management
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              User Management
+            </h3>
+            <button
+              onClick={() => setShowAddUserModal(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition text-sm flex items-center gap-2"
+            >
+              <span>＋</span> Tambah User
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-blue-950/30">
@@ -2571,82 +2668,186 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Add New User
-            </label>
-            <div className="flex space-x-2">
-              <input
-                type="email"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-                placeholder="user@example.com"
-                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
-              />
-              <button
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
-                disabled
-              >
-                Invite
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Users can register themselves. Admin will upgrade as needed.
-            </p>
-          </div>
-
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
-                    Email
+                    Pengguna
                   </th>
                   <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
                     Role
                   </th>
                   <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
-                    Created
+                    Dibuat
+                  </th>
+                  <th className="py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
+                    Ubah Role
                   </th>
                   <th className="text-right py-2 px-2 text-xs font-semibold text-gray-900 dark:text-white">
-                    Action
+                    Aksi
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.uid} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-2 px-2 text-sm text-gray-700 dark:text-gray-300">
-                      {u.email}
-                      {u.uid === user?.uid && <span className="ml-2 text-xs text-blue-600">(You)</span>}
+                    <td className="py-2 px-2">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {u.displayName || '—'}
+                        {u.uid === user?.uid && <span className="ml-2 text-xs text-blue-600">(kamu)</span>}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {u.email}
+                      </div>
                     </td>
                     <td className="py-2 px-2">
-                      <select
-                        value={u.role || 'user'}
-                        onChange={(e) => handleChangeRole(u.uid, e.target.value as 'admin' | 'user')}
-                        disabled={loading || u.uid === user?.uid}
-                        className="text-sm rounded px-2 py-1 border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white disabled:opacity-50"
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded ${
+                        (u.role || 'user') === 'admin'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      }`}>
+                        {(u.role || 'user') === 'admin' ? 'Admin' : 'User'}
+                      </span>
                     </td>
                     <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
                       {formatUserCreatedDate(u as Record<string, unknown>)}
                     </td>
+                    <td className="py-2 px-2">
+                      {u.uid === user?.uid ? (
+                        <span className="text-xs text-gray-400">—</span>
+                      ) : (
+                        <select
+                          value={u.role || 'user'}
+                          onChange={(e) => handleChangeRole(u.uid, e.target.value as 'admin' | 'user')}
+                          disabled={loading}
+                          className="text-sm rounded px-2 py-1 border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white disabled:opacity-50"
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      )}
+                    </td>
                     <td className="py-2 px-2 text-right">
-                      <button
-                        onClick={() => handleDeleteUser(u.uid)}
-                        disabled={loading || u.uid === user?.uid}
-                        className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded transition"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex items-center justify-end gap-2 flex-wrap">
+                        <button
+                          onClick={() => handleResetPassword(u.email)}
+                          disabled={loading}
+                          className="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded transition"
+                          title="Kirim email reset password"
+                        >
+                          Reset PW
+                        </button>
+                        {u.uid !== user?.uid && (
+                          <button
+                            onClick={() => handleDeleteUser(u.uid)}
+                            disabled={loading}
+                            className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded transition"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            Manajemen user memakai Firebase Authentication dan RTDB. Role disimpan di database, sementara reset password dikirim aman melalui email.
+          </p>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddUserModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddUserModal(false); }}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span>👤</span> Tambah Pengguna
+              </h3>
+              <button
+                onClick={() => setShowAddUserModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Nama Lengkap
+              </label>
+              <input
+                type="text"
+                value={newUserDisplayName}
+                onChange={(e) => setNewUserDisplayName(e.target.value)}
+                placeholder="Nama pengguna"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="email@contoh.com"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Password <span className="text-red-500">*</span> <span className="text-xs text-gray-400">(min 8 karakter)</span>
+              </label>
+              <input
+                type="password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Role
+              </label>
+              <select
+                value={newUserRole}
+                onChange={(e) => setNewUserRole(e.target.value as 'user' | 'admin')}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              >
+                <option value="user">User (Monitoring only)</option>
+                <option value="admin">Admin (Full access)</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowAddUserModal(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-semibold transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleAddUser}
+                disabled={addUserLoading}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+              >
+                {addUserLoading ? 'Membuat...' : 'Buat Akun'}
+              </button>
+            </div>
           </div>
         </div>
       )}

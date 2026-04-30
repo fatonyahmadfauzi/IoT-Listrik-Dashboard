@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-simulator-v3";
+const CACHE_NAME = "iot-simulator-v20260430-security";
 
 // Simulator app shell
 const CACHE_URLS = [
@@ -59,8 +59,10 @@ self.addEventListener("fetch", (event) => {
 
   if (request.method !== "GET") return;
 
+  const requestUrl = new URL(url);
   if (
     url.startsWith("chrome-extension") ||
+    (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith("/api/")) ||
     url.includes("firebaseio.com") ||
     url.includes("googleapis.com/identitytoolkit") ||
     url.includes("firebase.googleapis.com") ||
@@ -84,6 +86,26 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches.match(request).then((cached) => cached || caches.match("/simulator/login"))
         )
+    );
+    return;
+  }
+
+  const isCodeAsset =
+    request.destination === "script" ||
+    request.destination === "style" ||
+    /\.(?:js|css)(?:$|\?)/.test(requestUrl.pathname);
+
+  if (isCodeAsset) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200 && response.type !== "opaque") {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

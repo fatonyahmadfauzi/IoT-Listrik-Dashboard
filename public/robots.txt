@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /css/
+Allow: /js/
+Disallow: /api/
+Disallow: /app/
+Disallow: /dashboard
+Disallow: /history
+Disallow: /settings
+Disallow: /telegram
+Disallow: /discord
+Disallow: /users
+Disallow: /login
+Disallow: /simulator/app
+Disallow: /simulator/dashboard
+Disallow: /simulator/login
+Disallow: /simulator/settings
+
+Sitemap: https://iot-listrik-dashboard.vercel.app/sitemap.xml

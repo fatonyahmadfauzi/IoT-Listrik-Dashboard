@@ -1,8 +1,8 @@
 /* Downloads layout matched to Homepage styling with elegant vivid colors */
 .dl-page-main {
-  max-width: 1200px;
+  max-width: var(--public-max-width, 1200px);
   margin: 0 auto;
-  padding: 120px var(--page-gutter) 80px;
+  padding: 120px var(--public-gutter, clamp(10px, 2.2vw, 18px)) 80px;
 }
 
 .dl-hero {
@@ -17,19 +17,23 @@
 
 /* Glassmorphism clean cards */
 .dl-clean-card {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  min-width: 0;
+  padding: 26px 24px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-lg);
-  padding: 40px 32px;
   display: flex;
   flex-direction: column;
-  transition: all var(--transition);
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s ease,
+              border-color 0.35s ease;
 }
 
 .dl-clean-card:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hi);
   transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .dl-clean-card h3 {
@@ -90,6 +94,168 @@
   justify-content: center;
 }
 
+/* ── Capsule Button Base — matches landing page CTA ────────── */
+.dl-page-main .btn,
+.dl-pwa-btn {
+  min-height: 46px;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: filter 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.3s ease;
+}
+
+/* No bounce/popup on buttons — only brightness glow */
+.dl-page-main .btn:hover,
+.dl-pwa-btn:hover {
+  filter: brightness(1.12);
+}
+
+/* Icon transition base for download buttons */
+.dl-page-main .btn .material-symbols-rounded,
+.dl-pwa-btn .material-symbols-rounded {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-block;
+}
+
+/* open_in_browser → scale up */
+.dl-pwa-btn:hover .material-symbols-rounded {
+  transform: scale(1.2);
+}
+
+/* ── Option row & muted link ─────────────────────────────────── */
+.dl-option-row {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dl-muted-link {
+  color: rgba(56, 189, 248, 0.7);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.dl-muted-link:hover {
+  color: #38bdf8;
+}
+
+/* ── Dark/Light/Cyan/Green button styles ─────────────────────── */
+.dl-btn-dark {
+  background: #1a1d21;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.dl-btn-light {
+  background: #e2e8f0;
+  color: #0f172a;
+  border: 1px solid transparent;
+}
+
+.dl-btn-cyan {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.dl-btn-green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* ── CLI Card specific styles ────────────────────────────────── */
+.dl-cli-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 24px;
+  margin-bottom: 18px;
+}
+
+.dl-command-section {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 14px;
+}
+
+.dl-command-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.dl-code-row-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dl-inline-code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.82rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dl-inline-code-node { color: #38bdf8; }
+.dl-inline-code-python { color: #a78bfa; }
+
+.dl-install-section {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.65;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+.dl-install-row {
+  margin-top: 10px;
+}
+
+.dl-command-code {
+  color: #10B981;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dl-install-support {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.6;
+}
+
+.dl-install-note {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.dl-install-alias {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.38);
+}
+
 /* Vivid Buttons */
 .btn-android {
   background: #3DDC84;
@@ -99,8 +265,7 @@
   font-weight: 600;
 }
 .btn-android:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
+  filter: brightness(1.12);
 }
 
 .btn-windows {
@@ -111,8 +276,7 @@
   font-weight: 600;
 }
 .btn-windows:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
+  filter: brightness(1.12);
 }
 
 /* Terminal Area */
@@ -226,7 +390,7 @@
 
 @media (max-width: 480px) {
   .dl-page-main {
-    padding: 100px var(--page-gutter) 60px;
+    padding: 100px var(--public-gutter, 14px) 60px;
   }
   .dl-hero {
     margin-bottom: 40px;
@@ -836,26 +1000,7 @@
   margin-bottom: 0;
 }
 
-/* Both buttons inherit equal vibe */
-.dl-pwa-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 11px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  min-height: 46px;
-  border-radius: var(--radius-md);
-  flex: 1 1 140px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.dl-pwa-btn .material-symbols-rounded {
-  font-size: 18px;
-  flex-shrink: 0;
-}
+/* Both buttons inherit capsule pill style from .dl-page-main .btn base */
 
 /* ── Install PWA button — yellow/accent, always visible ────────── */
 .btn-pwa-install {
@@ -868,13 +1013,21 @@
 }
 
 .btn-pwa-install:hover {
-  filter: brightness(1.08);
-  transform: translateY(-2px);
+  filter: brightness(1.1);
   box-shadow: 0 6px 20px rgba(255, 179, 0, 0.42);
 }
 
+/* install_mobile icon → bounces down (download motion) */
+.btn-pwa-install:hover .material-symbols-rounded {
+  transform: translateY(3px);
+}
+
+.btn-pwa-install .material-symbols-rounded {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .btn-pwa-install:active {
-  transform: scale(0.98) translateY(0);
+  transform: scale(0.98);
 }
 
 /* State: prompt is available — subtle pulse ring */

@@ -34,6 +34,73 @@ const RESET_OTP_TTL_MS = 10 * 60 * 1000;
 const RESET_OTP_COOLDOWN_MS = 60 * 1000;
 const RESET_OTP_MAX_ATTEMPTS = 5;
 const RESET_OTP_PATH = "/admin_secure/liveDataResetOtps";
+const TEMP_ACCOUNT_RATE_LIMIT_PATH = "/rate_limits/create_temp_account";
+const TEMP_ACCOUNT_ONE_HOUR_MS = 60 * 60 * 1000;
+const TEMP_ACCOUNT_ONE_DAY_MS = 24 * TEMP_ACCOUNT_ONE_HOUR_MS;
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function hashRateLimitKey(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function getCallableClientIp(request) {
+  const headers = request.rawRequest?.headers || {};
+  const forwarded = String(headers["x-forwarded-for"] || "");
+  return (
+    forwarded.split(",")[0].trim() ||
+    String(headers["x-real-ip"] || "").trim() ||
+    request.rawRequest?.ip ||
+    "unknown"
+  );
+}
+
+async function consumeTempAccountRateLimit(key, max, windowMs) {
+  const now = Date.now();
+  const limitRef = admin.database().ref(`${TEMP_ACCOUNT_RATE_LIMIT_PATH}/${key}`);
+  const result = await limitRef.transaction(
+    (current) => {
+      if (!current || typeof current !== "object" || Number(current.resetAt || 0) <= now) {
+        return { count: 1, resetAt: now + windowMs, updatedAt: now };
+      }
+
+      const count = Number(current.count || 0);
+      if (count >= max) return undefined;
+      return { ...current, count: count + 1, updatedAt: now };
+    },
+    undefined,
+    false
+  );
+
+  if (!result.committed) {
+    const current = result.snapshot?.val() || {};
+    return {
+      allowed: false,
+      retryAfterMs: Math.max(0, Number(current.resetAt || now + windowMs) - now),
+    };
+  }
+
+  return { allowed: true, retryAfterMs: 0 };
+}
+
+async function enforceCallableTempAccountRateLimit(request, email) {
+  const ipHash = hashRateLimitKey(`ip:${getCallableClientIp(request)}`);
+  const emailHash = hashRateLimitKey(`email:${email}`);
+  const checks = [
+    ["ip-hour", ipHash, 10, TEMP_ACCOUNT_ONE_HOUR_MS],
+    ["ip-day", ipHash, 30, TEMP_ACCOUNT_ONE_DAY_MS],
+    ["email-hour", emailHash, 3, TEMP_ACCOUNT_ONE_HOUR_MS],
+  ];
+
+  for (const [scope, hash, max, windowMs] of checks) {
+    const result = await consumeTempAccountRateLimit(`${scope}/${hash}`, max, windowMs);
+    if (!result.allowed) return result;
+  }
+
+  return { allowed: true, retryAfterMs: 0 };
+}
 
 
 // ─── Helper: Discord embed ─────────────────────────────────────
@@ -801,10 +868,18 @@ exports.onNewLog = onValueCreated(
 exports.createTempAccount = onCall(
   { region: "asia-southeast1" },
   async (request) => {
-    const { realEmail } = request.data;
+    const realEmail = normalizeEmail(request.data?.realEmail);
 
     if (!realEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(realEmail)) {
       throw new HttpsError("invalid-argument", "Email tidak valid.");
+    }
+
+    const rateLimit = await enforceCallableTempAccountRateLimit(request, realEmail);
+    if (!rateLimit.allowed) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(rateLimit.retryAfterMs / 1000)} detik.`
+      );
     }
 
     const randomId = randomStr(8);
@@ -835,7 +910,9 @@ exports.createTempAccount = onCall(
     });
 
     // Simpan session di RTDB
-    await admin.database().ref(`/temp_sessions/${userRecord.uid}`).set({
+    const db = admin.database();
+
+    await db.ref(`/temp_sessions/${userRecord.uid}`).set({
       realEmail,
       tempEmail,
       createdAt: Date.now(),
@@ -843,7 +920,7 @@ exports.createTempAccount = onCall(
     });
 
     // Init data simulator
-    await admin.database().ref(`/sim/${userRecord.uid}`).set({
+    await db.ref(`/sim/${userRecord.uid}`).set({
       listrik: {
         arus: 0, tegangan: 220, daya: 0, energi_kwh: 0,
         frekuensi: 50, power_factor: 0.85,
@@ -865,6 +942,7 @@ exports.createTempAccount = onCall(
     });
 
     // Kirim email via Resend
+    let emailSent = false;
     try {
       const resend = new Resend(RESEND_API_KEY);
       await resend.emails.send({
@@ -873,13 +951,19 @@ exports.createTempAccount = onCall(
         subject: "⚡ Akun Demo IoT Listrik Siap Digunakan",
         html: buildEmailHTML({ tempEmail, password, expiresAt }),
       });
+      emailSent = true;
       console.log("Email terkirim ke:", realEmail);
     } catch (err) {
       console.error("Gagal kirim email:", err);
       // Lanjutkan walau email gagal — credentials tetap dikembalikan
     }
 
-    return { tempEmail, password, expiresAt, uid: userRecord.uid };
+    const response = { success: true, expiresAt, uid: userRecord.uid, emailSent };
+    if (!emailSent) {
+      response.tempEmail = tempEmail;
+      response.password = password;
+    }
+    return response;
   }
 );
 

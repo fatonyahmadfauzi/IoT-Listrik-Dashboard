@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const drawableDir = path.join(__dirname, 'android-app', 'app', 'src', 'main', 'res', 'drawable');
+const drawableDir = path.join(__dirname, '..', 'platforms', 'android', 'app', 'src', 'main', 'res', 'drawable');
 if (!fs.existsSync(drawableDir)) fs.mkdirSync(drawableDir, { recursive: true });
 
 const vectors = {

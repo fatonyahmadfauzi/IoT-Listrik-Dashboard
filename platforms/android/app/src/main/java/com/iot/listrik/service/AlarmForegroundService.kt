@@ -67,8 +67,8 @@ class AlarmForegroundService : Service() {
                     setAudioAttributes(attrs)
                     setDataSource(this@AlarmForegroundService, uri)
                     isLooping = true
-                    prepare()
-                    start()
+                    setOnPreparedListener { it.start() }
+                    prepareAsync()
                 }
             } catch (_: Exception) {
                 // ignore

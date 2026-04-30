@@ -16,6 +16,7 @@ firebase-seed.json
 # Android signing (do not commit secrets)
 platforms/android/keystore/*.jks
 platforms/android/keystore/keystore.properties
+/android-app/
 android-app/keystore/
 
 # Windows/Electron signing (do not commit secrets)
@@ -26,6 +27,7 @@ platforms/electron/signing/*.env
 
 # Local Firmware config (contains raw password)
 hardware/config.h
+hardware/config.local.h
 # Uncomment this if you'd like others to create their own Firebase project.
 # For a team working on the same Firebase project(s), it is recommended to leave
 # it commented so all members can deploy to the same project(s) in .firebaserc.

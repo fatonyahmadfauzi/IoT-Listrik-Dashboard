@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const { Resend } = require("resend");
+const crypto = require("crypto");
 
 let initErrorMsg = "";
 // Initialize Firebase Admin lazily to avoid multiple init errors in Serverless
@@ -20,6 +21,119 @@ if (!admin.apps.length) {
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://iot-listrik-dashboard.vercel.app",
+  "https://www.iot-listrik-dashboard.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function getAllowedOrigins() {
+  const extra = String(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  return new Set([...DEFAULT_ALLOWED_ORIGINS, ...extra]);
+}
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (getAllowedOrigins().has(origin)) return true;
+  return /^https:\/\/iot-listrik-dashboard(?:-[a-z0-9-]+)?-fatonyahmadfauzis-projects\.vercel\.app$/i.test(origin);
+}
+
+function applyCors(req, res) {
+  const origin = req.headers.origin || "";
+  if (!isAllowedOrigin(origin)) return false;
+
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", DEFAULT_ALLOWED_ORIGINS[0]);
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, X-Requested-With, X-Api-Version"
+  );
+  return true;
+}
+
+function hashKey(value) {
+  return crypto.createHash("sha256").update(String(value)).digest("hex");
+}
+
+function getClientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "");
+  return (
+    forwarded.split(",")[0].trim() ||
+    String(req.headers["x-real-ip"] || "").trim() ||
+    req.socket?.remoteAddress ||
+    "unknown"
+  );
+}
+
+async function consumeRateLimit(db, key, max, windowMs) {
+  const now = Date.now();
+  const ref = db.ref(`/rate_limits/create_temp_account/${key}`);
+  const result = await ref.transaction(
+    (current) => {
+      if (!current || typeof current !== "object" || Number(current.resetAt || 0) <= now) {
+        return { count: 1, resetAt: now + windowMs, updatedAt: now };
+      }
+
+      const count = Number(current.count || 0);
+      if (count >= max) return undefined;
+      return {
+        ...current,
+        count: count + 1,
+        updatedAt: now,
+      };
+    },
+    undefined,
+    false
+  );
+
+  if (!result.committed) {
+    const current = result.snapshot?.val() || {};
+    const resetAt = Number(current.resetAt || now + windowMs);
+    return {
+      allowed: false,
+      retryAfterMs: Math.max(0, resetAt - now),
+    };
+  }
+
+  return { allowed: true, retryAfterMs: 0 };
+}
+
+async function enforceTempAccountRateLimit(db, req, email) {
+  const ipHash = hashKey(`ip:${getClientIp(req)}`);
+  const emailHash = hashKey(`email:${email}`);
+  const checks = [
+    ["ip-hour", ipHash, 10, ONE_HOUR_MS],
+    ["ip-day", ipHash, 30, ONE_DAY_MS],
+    ["email-hour", emailHash, 3, ONE_HOUR_MS],
+  ];
+
+  for (const [scope, hash, max, windowMs] of checks) {
+    const result = await consumeRateLimit(db, `${scope}/${hash}`, max, windowMs);
+    if (!result.allowed) {
+      return result;
+    }
+  }
+
+  return { allowed: true, retryAfterMs: 0 };
+}
 
 function randomStr(len, chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789") {
   let r = "";
@@ -232,24 +346,20 @@ function buildEmailHTML({ tempEmail, password, expiresAt }) {
 }
 
 export default async function handler(req, res) {
-  // CORS Configuration
-  res.setHeader("Access-Control-Allow-Credentials", true);
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,PATCH,DELETE,POST,PUT");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
-  );
+  const corsAllowed = applyCors(req, res);
+  if (!corsAllowed) {
+    return res.status(403).json({ error: "Origin tidak diizinkan." });
+  }
 
   if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    return res.status(204).end();
   }
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed. Use POST." });
   }
 
-  const { realEmail } = req.body;
+  const realEmail = normalizeEmail(req.body?.realEmail);
 
   if (!realEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(realEmail)) {
     return res.status(400).json({ error: "Email tidak valid." });
@@ -269,6 +379,17 @@ export default async function handler(req, res) {
   const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
   try {
+    const db = admin.database();
+    const rateLimit = await enforceTempAccountRateLimit(db, req, realEmail);
+    if (!rateLimit.allowed) {
+      const retryAfterSeconds = Math.ceil(rateLimit.retryAfterMs / 1000);
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      return res.status(429).json({
+        error: "Terlalu banyak percobaan. Coba lagi nanti.",
+        retryAfterSeconds,
+      });
+    }
+
     // 1. Create Firebase Auth user
     const userRecord = await admin.auth().createUser({
       email: tempEmail,
@@ -284,8 +405,6 @@ export default async function handler(req, res) {
     });
 
     // 3. Set Session & Initial Data in RTDB
-    const db = admin.database();
-    
     // Create Temporary Session Marker
     await db.ref(`/temp_sessions/${userRecord.uid}`).set({
       realEmail,
@@ -360,14 +479,18 @@ export default async function handler(req, res) {
       console.error("Gagal Auto-cleanup pasif", err);
     }
 
-    return res.status(200).json({ 
+    const responseBody = {
       success: true, 
-      tempEmail, 
-      password, 
       expiresAt, 
       uid: userRecord.uid,
       emailSent
-    });
+    };
+    if (!emailSent) {
+      responseBody.tempEmail = tempEmail;
+      responseBody.password = password;
+    }
+
+    return res.status(200).json(responseBody);
 
   } catch (error) {
     console.error("API Error:", error);

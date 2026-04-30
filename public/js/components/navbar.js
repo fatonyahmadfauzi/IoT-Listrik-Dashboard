@@ -52,7 +52,7 @@ class AppNavbar extends HTMLElement {
             </button>
             <div id="navLinks" class="landing-links">
               <a href="/">Beranda</a>
-              <a href="/features.html">Fitur</a>
+              <a href="/features">Fitur</a>
               <a href="/downloads">Download</a>
               <a href="/login" class="btn btn-primary btn-sm">
                 <span class="material-symbols-rounded">login</span>Get Started
@@ -69,26 +69,66 @@ class AppNavbar extends HTMLElement {
     const navWrap = this.querySelector(".landing-nav-wrap");
 
     if (menuBtn && navLinks) {
+      menuBtn.setAttribute("aria-expanded", "false");
+
       menuBtn.addEventListener("click", () => {
         navLinks.classList.toggle("open");
+        const menuOpen = navLinks.classList.contains("open");
+
+        navWrap?.classList.toggle("menu-open", menuOpen);
+        navWrap?.classList.remove("nav-hidden");
+        menuBtn.setAttribute("aria-expanded", String(menuOpen));
+
+        const menuIcon = menuBtn.querySelector(".material-symbols-rounded");
+        if (menuIcon) {
+          menuIcon.textContent = menuOpen ? "close" : "menu";
+        }
       });
 
       // Close menu when a link is clicked (mobile UX)
       navLinks.querySelectorAll("a").forEach((link) => {
         link.addEventListener("click", () => {
           navLinks.classList.remove("open");
+          navWrap?.classList.remove("menu-open");
+          menuBtn.setAttribute("aria-expanded", "false");
+
+          const menuIcon = menuBtn.querySelector(".material-symbols-rounded");
+          if (menuIcon) {
+            menuIcon.textContent = "menu";
+          }
         });
       });
     }
 
+    let lastScrollY = Math.max(window.scrollY || 0, 0);
+    let ticking = false;
+
     const syncNavbarState = () => {
       if (!navWrap) return;
-      if (window.scrollY > 8) navWrap.classList.add("scrolled");
-      else navWrap.classList.remove("scrolled");
+
+      const currentScrollY = Math.max(window.scrollY || 0, 0);
+      const menuOpen = navLinks?.classList.contains("open");
+      const scrollingDown = currentScrollY > lastScrollY + 4;
+      const scrollingUp = currentScrollY < lastScrollY - 4;
+
+      if (menuOpen || scrollingUp || currentScrollY <= 120) {
+        navWrap.classList.remove("nav-hidden");
+      } else if (scrollingDown) {
+        navWrap.classList.add("nav-hidden");
+      }
+
+      lastScrollY = currentScrollY;
+      ticking = false;
+    };
+
+    const requestNavbarSync = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(syncNavbarState);
     };
 
     syncNavbarState();
-    window.addEventListener("scroll", syncNavbarState, { passive: true });
+    window.addEventListener("scroll", requestNavbarSync, { passive: true });
   }
 }
 

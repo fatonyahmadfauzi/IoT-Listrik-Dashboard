@@ -26,11 +26,16 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 - **Premium UI & Dark Mode**: Tampilan dasbor modern *(Glassmorphism)* yang responsif serta mendukung integrasi *Global Dark Mode* bawaan sistem operasi.
 - **Device Presence Detection (Watchdog)**: Deteksi otomatis status koneksi perangkat (**Online/Offline**) ketika aliran data terputus, bekerja secara *real-time* di seluruh platform tanpa modifikasi firmware ESP32.
 - Role-based access: aksi kritikal (relay/settings) hanya untuk admin.
-- Histori kejadian dan notifikasi multi-channel (Web push + Telegram + **Discord Webhook**).
+- Histori kejadian, export CSV, dan notifikasi multi-channel (Web push + Telegram + **Discord Webhook** + Discord Bot tools).
 - Auto-cutoff relay saat arus melewati ambang bahaya yang ditentukan.
+- Kontrol stream realtime perangkat: admin dapat pause/resume pengiriman data IoT dan mengatur delay stream.
+- Bootstrap device dari dashboard: WiFi, Firebase API key, dan RTDB URL perangkat dapat dikelola tanpa upload ulang firmware.
+- Reset realtime `/listrik`, hapus seluruh data monitoring (`/listrik` + `/logs`) dengan OTP email, serta backup database Firebase + rules ke email admin.
+- Laporan harian Excel otomatis: data monitoring 24 jam dikirim ke Telegram dan Discord jika ada data baru pada hari tersebut.
 - Terminal UI (Hacker Mode) portabel untuk eksekusi tanpa GUI (Mendukung CLI Node.js & Python).
-- Build pipeline untuk Android APK dan Windows installer.
-- **Discord Webhook**: notifikasi real-time ke 4 channel Discord berbeda (alerts, relay, monitoring, logs) — dikonfigurasi via admin UI tanpa Firebase Billing.
+- Build pipeline untuk Android APK, Windows MSI/Setup/Portable, dan CLI binaries.
+- **Telegram Admin Tools**: multi Chat ID/Group ID, jumlah penerima aktif, test pesan, hubungkan bot, serta command `/pause` dan `/resume` per chat.
+- **Discord Admin Tools**: 5 tujuan webhook (alerts, relay, monitoring, daily report, logs), status bot, ringkasan server, jumlah member/online/ban, ban/unban user.
 
 ## Catatan Logika Deteksi
 
@@ -44,12 +49,16 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 
 ```text
 ESP32 + SCT-013 + ZMPT101B + Relay/Kontaktor
-  -> Firebase Realtime Database (/listrik, /logs, /settings, /users)
+  -> Firebase Realtime Database
+     (/listrik, /logs, /settings, /settings/discord, /settings/telegramRecipients, /users)
   -> Client apps:
      - Web dashboard (public/js/*.js, public/css/*.css, PWA)
      - Android native app (Kotlin)   → platforms/android/
      - Windows desktop app (Electron) → platforms/electron/
      - Terminal OS (Bash/CMD)         → platforms/cli-node/ & cli-python/
+  -> Backend/API:
+     - Vercel Serverless Functions (/api/*.js)
+     - Local notifier backend (backend-local/discord-notifier.js)
 ```
 
 ## Struktur Project
@@ -57,8 +66,6 @@ ESP32 + SCT-013 + ZMPT101B + Relay/Kontaktor
 ```text
 .
 ├── .github/
-│   ├── workflows/
-│   │   └── ci.yml                 # GitHub Actions CI (validate assets)
 │   └── copilot-instructions.md    # Panduan AI coding assistant
 │
 ├── docs/                          # Dokumentasi teknis
@@ -84,6 +91,9 @@ ESP32 + SCT-013 + ZMPT101B + Relay/Kontaktor
 │   │   ├── dashboard.html
 │   │   ├── history.html
 │   │   ├── settings.html
+│   │   ├── telegram.html
+│   │   ├── discord.html
+│   │   ├── users.html
 │   │   ├── manifest.json          # PWA manifest untuk /app/ scope
 │   │   └── sw.js                  # Service worker scope /app/
 │   ├── assets/icons/              # App icons (PWA & favicon)
@@ -110,11 +120,15 @@ ESP32 + SCT-013 + ZMPT101B + Relay/Kontaktor
 │   ├── index.html                 # Landing page
 │   ├── features.html
 │   ├── downloads.html
+│   ├── telegram.html              # Konfigurasi Telegram admin
+│   ├── discord.html               # Konfigurasi Discord admin
+│   ├── users.html                 # Manajemen pengguna admin
 │   ├── pwa-simulator.html
 │   ├── manifest.json              # PWA manifest untuk scope /
 │   └── service-worker.js          # Service worker scope /
 │
-├── backend-local/                 # Local Node.js Notifier (discord-notifier.js & sim-notifier.js) & REST API
+├── api/                           # Vercel Serverless API (OTP, backup, Discord bot, Telegram action)
+├── backend-local/                 # Local Node.js Notifier (discord-notifier.js & sim-notifier.js)
 ├── firebase-redirect/             # Firebase Hosting fallback → redirect ke Vercel
 ├── functions/                     # Firebase Cloud Functions (Node.js)
 ├── scripts/                       # Automation scripts (lihat scripts/README.md)
@@ -139,7 +153,7 @@ ESP32 + SCT-013 + ZMPT101B + Relay/Kontaktor
 | Desktop | Electron + React / TypeScript + electron-builder |
 | Terminal | Node.js (Inquirer+Chalk) / Python (Questionary+Rich) |
 | Deploy Web | Vercel |
-| Notifikasi | Telegram Bot API + **Discord Webhook** (4 channel) |
+| Notifikasi | Telegram Bot API + **Discord Webhook** + Discord Bot REST |
 
 ## Auto-Update System
 
@@ -149,7 +163,7 @@ Sistem otomatis untuk mendeteksi dan download versi terbaru aplikasi.
 
 Tombol download di `/downloads` otomatis mengarah ke versi terbaru berdasarkan `app-version.json`.
 
-### CLI Auto-Download (Versi Distribusi Lama)
+### CLI Auto-Download
 
 ```bash
 # Download untuk platform saat ini
@@ -185,14 +199,14 @@ Untuk membuat release versi baru:
 .\scripts\sync-app-version.ps1
 
 # 3. Build semua platform dengan versi baru
-.\scripts\build-all-release.ps1 -NewVersion 1.0.2
+.\scripts\build-all-release.ps1 -NewVersion 1.0.0
 
 # Atau build terpisah
 .\scripts\build-android-release.ps1
 .\scripts\build-release-for-web.ps1 -Secret <SECRET>
 
 # 4. Upload ke GitHub Releases
-.\scripts\upload-release.ps1 -Version 1.0.2
+.\scripts\upload-release.ps1 -Version v1.0.0
 ```
 
 ## Setup Awal
@@ -241,14 +255,27 @@ npx -y firebase-tools@latest deploy --only database
     "arusCalibration": 1.0,
     "teganganCalibration": 1.0,
     "sendIntervalMs": 2000,
+    "realtimeStreamEnabled": true,
     "telegramBotToken": "",
-    "telegramChatId": "",
+    "telegramNotifyEnabled": true,
+    "telegramRecipients": [],
     "discord": {
       "enabled": false,
       "webhookAlerts": "",
       "webhookRelay": "",
       "webhookMonitoring": "",
+      "webhookDailyReport": "",
       "webhookLogs": ""
+    },
+    "discordBot": {
+      "guildId": "",
+      "tokenConfigured": false
+    },
+    "deviceBootstrap": {
+      "wifiSsid": "",
+      "wifiPassword": "",
+      "firebaseApiKey": "",
+      "databaseUrl": ""
     }
   }
 }
@@ -277,6 +304,25 @@ Library penting:
 - WiFiManager (tzapu)
 
 Firmware ada di `hardware/`.
+
+## Admin UI dan Operasional
+
+Halaman admin dipisah agar pengaturan tidak menumpuk di satu halaman:
+
+- `/settings` dan `/app/settings`: umum, sensor, kalibrasi, bootstrap device, reset realtime, backup database, hapus monitoring, backend web.
+- `/telegram` dan `/app/telegram`: bot token, daftar Chat ID/Group ID, jumlah penerima, test pesan, hubungkan bot, serta `/pause` dan `/resume` per chat.
+- `/discord` dan `/app/discord`: webhook per channel, master switch, test pesan, status bot, ringkasan server, daftar ban, ban/unban user.
+- `/users` dan `/app/users`: manajemen pengguna dan role.
+
+### Reset, Hapus, dan Backup Database
+
+- **Reset Data Realtime IoT** mengosongkan node `/listrik` saja. Histori `/logs` tetap ada. Validasi dilakukan dengan mengetik nama project.
+- **Hapus Semua Data Monitoring** mengosongkan `/listrik` dan `/logs`. Aksi ini memakai OTP email admin.
+- **Backup Database Firebase** mengirim file JSON snapshot RTDB dan `database.rules.json` ke email admin.
+
+### Laporan Harian Excel
+
+Backend notifier dapat membuat laporan Excel harian berdasarkan data monitoring 24 jam. File dikirim ke Telegram dan webhook Discord laporan harian hanya jika ada data baru pada tanggal tersebut.
 
 ## Build dan Signing
 
@@ -314,9 +360,34 @@ Output Windows:
 powershell -ExecutionPolicy Bypass -File "scripts\build-release-for-web.ps1" -Secret "<SECRET>"
 ```
 
-## Integrasi Discord Webhook
+## Validasi Lokal Gratis
 
-Notifikasi real-time dikirim ke 4 channel Discord terpisah. **Tidak memerlukan Firebase Billing.**
+GitHub Actions CI dihapus supaya tidak terkena blokir billing GitHub. Sebagai pengganti, validasi project dijalankan lokal dan tetap gratis.
+
+```powershell
+npm run validate
+```
+
+Validasi ini mengecek:
+
+- struktur dasar HTML di `public/`;
+- referensi JS/CSS/link lokal yang hilang;
+- pasangan halaman admin root dan `/app`;
+- `vercel.json`, `database.rules.json`, `firebase.json`, `app-version.json`, dan manifest PWA;
+- destination rewrite Vercel;
+- syntax `functions/index.js` dan file API serverless di `api/`.
+
+Untuk deploy aman:
+
+```powershell
+npm run deploy:safe
+```
+
+Command tersebut menjalankan validasi lebih dulu, lalu deploy ke Vercel hanya jika validasi lolos.
+
+## Integrasi Telegram dan Discord
+
+Notifikasi real-time dikirim ke Telegram dan Discord. Konfigurasi disimpan di Realtime Database sehingga bot token, penerima Telegram, webhook Discord, dan pengaturan channel dapat diubah dari admin UI.
 
 > 🔗 **Discord Server**: [discord.gg/WszeM4FVH6](https://discord.gg/WszeM4FVH6) — Join untuk mendapatkan channel monitoring siap pakai.
 
@@ -325,18 +396,29 @@ Notifikasi real-time dikirim ke 4 channel Discord terpisah. **Tidak memerlukan F
 | `#alerts` | Status BAHAYA / WARNING / pulih NORMAL, beserta notifikasi perangkat terputus (**OFFLINE 🔴**) / pulih (**ONLINE 🟢**) |
 | `#relay` | Relay ON↔OFF berubah |
 | `#monitoring` | Snapshot data listrik (max 1x / 5 menit) |
+| `#daily-report` | File Excel laporan monitoring harian ketika ada data baru |
 | `#logs` | Entry log aktivitas baru `/logs` |
 
 ### Cara Setup
 
 **1. Set webhook via Admin UI** (disimpan ke `/settings/discord/` di RTDB):
 ```
-https://iot-listrik-dashboard.vercel.app/settings
-→ Scroll ke "Integrasi Discord Webhook"
+https://iot-listrik-dashboard.vercel.app/discord
 → Isi URL webhook per channel → Simpan
+→ Gunakan Test Kirim Pesan untuk verifikasi
 ```
 
-**2. Jalankan local notifier:**
+**2. Set Telegram via Admin UI**:
+```
+https://iot-listrik-dashboard.vercel.app/telegram
+→ Isi Bot Token
+→ Tambahkan Chat ID / Group ID
+→ Gunakan Hubungkan Bot atau Test Kirim Pesan
+```
+
+Setiap Chat ID dapat melakukan `/pause` dan `/resume` untuk menghentikan atau mengaktifkan notifikasi miliknya sendiri.
+
+**3. Jalankan local notifier:**
 ```bash
 cd backend-local
 npm install
@@ -349,7 +431,7 @@ npm run sim-notify
 # ATAU manual: node sim-notifier.js
 ```
 
-Notifier membaca webhook URL dari RTDB secara real-time — ganti URL kapanpun dari admin UI tanpa restart.
+Notifier membaca konfigurasi Telegram dan Discord dari RTDB secara real-time. Discord Bot untuk status server dan ban/unban user memakai endpoint Vercel API di folder `api/`.
 
 Panduan lengkap: [`docs/DISCORD_SETUP.md`](docs/DISCORD_SETUP.md)
 
@@ -358,7 +440,7 @@ Panduan lengkap: [`docs/DISCORD_SETUP.md`](docs/DISCORD_SETUP.md)
 ```bash
 npx -y vercel login
 npx -y vercel link
-npx -y vercel --prod
+npm run deploy:safe
 ```
 
 Catatan:
@@ -378,11 +460,14 @@ Catatan:
 
 ## Security Notes
 
-- Rules membatasi aksi admin untuk relay/settings.
-- Role escalation pada path user dibatasi oleh rules.
-- Credential sensitif (keystore/pfx/env) di-ignore dari git.
-- Jangan commit file `.jks`, `.pfx`, `.env`, private key, dan artifacts build.
+- Rules membatasi aksi admin untuk relay/settings dan menolak akses client ke `/admin_secure` serta `/rate_limits`.
+- Endpoint admin Vercel memakai Firebase ID token, role admin dari RTDB, CORS allowlist, dan response `no-store`.
+- Header Vercel memakai CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, dan HSTS dari platform.
+- Route cleanup hanya menerima secret lewat header `Authorization: Bearer ...` atau `x-cron-secret`; jangan kirim secret melalui query URL.
+- Credential sensitif (keystore/pfx/env/private key) di-ignore dari git dan `.vercelignore`.
+- Jangan commit file `.jks`, `.pfx`, `.env`, private key, service account, atau artifacts build.
 - `backend-local/serviceAccountKey.json` ada di `.gitignore` — **jangan pernah di-commit**.
+- Batasi Firebase Web API key di Google Cloud Console berdasarkan domain web, dan batasi Android key berdasarkan package name + SHA certificate.
 
 ## Troubleshooting
 

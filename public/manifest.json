@@ -2,7 +2,7 @@
   "name": "IoT Monitoring Listrik",
   "short_name": "Listrik IoT",
   "description": "Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time",
-  "start_url": "/app.html",
+  "start_url": "/app/login",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#070c18",
@@ -53,7 +53,7 @@
       "name": "Login",
       "short_name": "Login",
       "description": "Masuk ke akun Anda",
-      "url": "/app.html",
+      "url": "/app/login",
       "icons": [{ "src": "/assets/icons/icon-96.png", "sizes": "96x96" }]
     },
     {

@@ -1,31 +1,31 @@
 {
   "version": "1.0.0",
-  "buildDate": "2026-04-27",
+  "buildDate": "2026-04-30",
   "downloads": {
     "android": {
-      "filename": "IoT-Listrik-Dashboard-1.0.0.apk",
-      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.apk",
-      "size": "6.80 MB"
+      "filename": "IoT-Listrik-Dashboard.apk",
+      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.apk",
+      "size": "3.27 MB"
     },
     "windows": {
       "setup": {
-        "filename": "IoT-Listrik-Dashboard-Setup-1.0.0.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup-1.0.0.exe",
-        "size": "267.24 MB",
+        "filename": "IoT-Listrik-Dashboard-Setup.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup.exe",
+        "size": "334.40 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
       "portable": {
-        "filename": "IoT-Listrik-Dashboard-Portable-1.0.0.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable-1.0.0.exe",
-        "size": "266.97 MB",
+        "filename": "IoT-Listrik-Dashboard-Portable.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable.exe",
+        "size": "334.13 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
       "msi": {
-        "filename": "IoT-Listrik-Dashboard-1.0.0.msi",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-1.0.0.msi",
-        "size": "94.71 MB",
+        "filename": "IoT-Listrik-Dashboard.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.msi",
+        "size": "124.86 MB",
         "architectures": ["x64"],
         "type": "installer"
       }
@@ -34,7 +34,7 @@
       "node": {
         "filename": "iot-listrik-cli-node.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-node.exe",
-        "size": "159.15 MB"
+        "size": "189.28 MB"
       },
       "python": {
         "filename": "iot-listrik-cli-python.exe",
@@ -44,9 +44,9 @@
       "linux": {
         "filename": "iot-listrik-dashboard-cli-linux",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-dashboard-cli-linux",
-        "size": "167.21 MB"
+        "size": "197.35 MB"
       }
     }
   },
-  "notes": "Release v1.0.0 refreshed on 2026-04-27 with Telegram bot connect/test tools on web and desktop, Telegram recipient count summary on desktop, split Telegram, Discord, and Users management, Firebase backup email, daily Excel report settings, Discord Bot moderation tools, and updated Windows desktop parity."
+  "notes": "Release v1.0.0 refreshed on 2026-04-30 with versionless download filenames, updated security dependencies, rebuilt Android APK, Windows Setup/Portable/MSI, Node CLI, Python CLI, and Linux CLI assets."
 }

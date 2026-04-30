@@ -78,10 +78,10 @@ function normalizeStatus(status) {
 function statusChip(status) {
   const safeStatus = normalizeStatus(status);
   const map = {
-    NORMAL:  ['#22c55e', 'rgba(34,197,94,.15)'],
-    WARNING: ['#fcd34d', 'rgba(252,211,77,.15)'],
-    LEAKAGE: ['#fca5a5', 'rgba(252,165,165,.15)'],
-    DANGER:  ['#ff8080', 'rgba(255,128,128,.20)'],
+    NORMAL:  ['#86efac', 'rgba(22,163,74,.14)'],
+    WARNING: ['#fde68a', 'rgba(245,158,11,.14)'],
+    LEAKAGE: ['#fed7aa', 'rgba(249,115,22,.16)'],
+    DANGER:  ['#fecaca', 'rgba(220,38,38,.24)'],
   };
   const [color, bg] = map[safeStatus] || ['#94a3b8', 'rgba(148,163,184,.15)'];
   return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">${escapeHtml(safeStatus)}</span>`;

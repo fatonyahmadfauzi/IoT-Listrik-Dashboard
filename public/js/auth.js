@@ -199,10 +199,12 @@ function initSidebarToggle() {
   function open() {
     sidebar?.classList.add("open");
     overlay?.classList.add("open");
+    document.body.classList.add("sidebar-open");
   }
   function close() {
     sidebar?.classList.remove("open");
     overlay?.classList.remove("open");
+    document.body.classList.remove("sidebar-open");
   }
 
   function isMobile() {
@@ -215,6 +217,9 @@ function initSidebarToggle() {
     }
   });
   overlay?.addEventListener("click", close);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
 
   navItems.forEach((item) => {
     item.addEventListener("click", () => {

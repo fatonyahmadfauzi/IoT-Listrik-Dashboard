@@ -1048,3 +1048,188 @@
   }
 }
 
+/* =============================================================
+   Responsive DKV Final Layer - Features
+   ============================================================= */
+
+.feat-page-main,
+.feat-grid,
+.feat-logic-grid,
+.feat-notif-grid,
+.feat-clean-card,
+.feat-logic-card,
+.feat-integration-card {
+  min-width: 0;
+}
+
+.feat-clean-card p,
+.feat-logic-card p,
+.feat-logic-note,
+.feat-integration-card p {
+  overflow-wrap: break-word;
+}
+
+.feat-integration-btn,
+.feat-cta-actions .btn {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+@media (min-width: 761px) and (max-width: 1024px) {
+  .feat-page-main {
+    padding: 52px var(--public-gutter, 18px) 64px;
+  }
+
+  .feat-grid,
+  .feat-logic-grid,
+  .feat-notif-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .feat-clean-card,
+  .feat-logic-card,
+  .feat-integration-card {
+    padding: 22px;
+  }
+
+  .feat-hero h1 {
+    font-size: 38px;
+  }
+
+  .feat-logic-header h2 {
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 760px) {
+  .feat-page-main {
+    padding: 38px var(--public-gutter, 16px) 52px;
+  }
+
+  .feat-hero {
+    margin-bottom: 28px;
+    text-align: left;
+  }
+
+  .feat-hero h1 {
+    font-size: 32px !important;
+    line-height: 1.14;
+    letter-spacing: 0;
+  }
+
+  .feat-hero p {
+    max-width: none;
+    margin-inline: 0;
+    font-size: 15px !important;
+    line-height: 1.65;
+  }
+
+  .feat-grid,
+  .feat-logic-grid,
+  .feat-notif-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+
+  .feat-clean-card,
+  .feat-logic-card,
+  .feat-integration-card {
+    padding: 20px !important;
+  }
+
+  .feat-clean-card:hover,
+  .feat-integration-card:hover,
+  .feat-logic-card:hover {
+    transform: none;
+  }
+
+  .feat-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+  }
+
+  .feat-clean-card h3,
+  .feat-logic-card h3 {
+    font-size: 17px !important;
+    line-height: 1.35;
+  }
+
+  .feat-clean-card p,
+  .feat-logic-card p,
+  .feat-logic-note,
+  .feat-integration-card p {
+    font-size: 14.5px !important;
+    line-height: 1.65;
+  }
+
+  .feat-logic-section {
+    margin-top: 38px;
+  }
+
+  .feat-logic-header {
+    text-align: left;
+    margin-bottom: 18px;
+  }
+
+  .feat-logic-header h2,
+  .feat-cta-section h2 {
+    font-size: 26px !important;
+    line-height: 1.2;
+  }
+
+  .feat-logic-header p {
+    font-size: 15px !important;
+  }
+
+  .feat-cta-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .feat-cta-actions .btn,
+  .feat-integration-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 430px) {
+  .feat-page-main {
+    padding: 30px var(--public-gutter, 14px) 44px;
+  }
+
+  .feat-hero h1 {
+    font-size: 29px !important;
+  }
+
+  .feat-clean-card,
+  .feat-logic-card,
+  .feat-integration-card {
+    padding: 18px 16px !important;
+  }
+
+  .feat-logic-header h2,
+  .feat-cta-section h2 {
+    font-size: 24px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .feat-page-main {
+    padding-inline: 12px;
+  }
+
+  .feat-hero h1 {
+    font-size: 26px !important;
+  }
+
+  .feat-clean-card,
+  .feat-logic-card,
+  .feat-integration-card {
+    padding: 16px 14px !important;
+  }
+}
+

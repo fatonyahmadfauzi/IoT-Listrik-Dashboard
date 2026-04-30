@@ -1126,3 +1126,207 @@
     font-size: 0.75rem;
   }
 }
+
+/* =============================================================
+   Responsive DKV Final Layer - Downloads
+   Keeps the download page adaptive instead of only shrinking.
+   ============================================================= */
+.dl-page-main,
+.dl-grid,
+.dl-clean-card,
+.dl-terminal-wrap,
+.dl-terminal-grid,
+.dl-install-section,
+.dl-install-row,
+.dl-code-row,
+.dl-code-row-wrap {
+  min-width: 0;
+}
+
+.dl-clean-card p,
+.dl-card-req,
+.dl-install-support,
+.dl-install-note,
+.dl-install-alias,
+.dl-term-box,
+.dl-command-code,
+.dl-inline-code {
+  overflow-wrap: anywhere;
+}
+
+.dl-page-main .btn,
+.dl-pwa-btn,
+.cmd-copy-btn {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+.dl-command-code,
+.dl-inline-code,
+.dl-code-row code {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+@media (min-width: 761px) and (max-width: 1024px) {
+  .dl-page-main {
+    padding: 64px var(--public-gutter, 18px) 64px;
+  }
+
+  .dl-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .dl-windows-card,
+  .dl-cli-card {
+    grid-column: 1 / -1;
+  }
+
+  .dl-clean-card {
+    padding: 22px;
+  }
+
+  .dl-hero .landing-title {
+    font-size: 38px;
+    line-height: 1.15;
+  }
+}
+
+@media (max-width: 760px) {
+  .dl-page-main {
+    padding: 38px var(--public-gutter, 16px) 52px;
+  }
+
+  .dl-hero {
+    text-align: left;
+    margin-bottom: 28px;
+  }
+
+  .dl-hero .landing-title {
+    font-size: 32px !important;
+    line-height: 1.15;
+    letter-spacing: 0;
+  }
+
+  .dl-hero .landing-subtitle {
+    max-width: none;
+    margin-inline: 0;
+    font-size: 15px !important;
+    line-height: 1.65;
+  }
+
+  .dl-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+
+  .dl-clean-card {
+    padding: 20px !important;
+  }
+
+  .dl-clean-card:hover {
+    transform: none;
+  }
+
+  .dl-card-actions,
+  .dl-pwa-actions,
+  .dl-windows-btn-row,
+  .dl-cli-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 16px;
+  }
+
+  .dl-card-actions .btn,
+  .dl-pwa-actions .btn,
+  .dl-windows-btn-row .btn,
+  .dl-cli-actions .btn,
+  .dl-pwa-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  .dl-option-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .dl-terminal-wrap {
+    margin-top: 28px;
+    padding: 20px;
+  }
+
+  .dl-terminal-header {
+    align-items: flex-start;
+  }
+
+  .dl-terminal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dl-install-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: stretch;
+  }
+
+  .cmd-copy-btn {
+    width: 44px;
+    min-width: 44px;
+  }
+
+  .dl-install-section {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 430px) {
+  .dl-page-main {
+    padding: 30px var(--public-gutter, 14px) 44px;
+  }
+
+  .dl-hero .landing-title {
+    font-size: 29px !important;
+  }
+
+  .dl-clean-card {
+    padding: 18px 16px !important;
+  }
+
+  .dl-terminal-wrap {
+    padding: 18px 14px;
+  }
+
+  .dl-install-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cmd-copy-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .dl-page-main {
+    padding-inline: 12px;
+  }
+
+  .dl-hero .landing-title {
+    font-size: 26px !important;
+  }
+
+  .dl-clean-card {
+    padding: 16px 14px !important;
+  }
+
+  .dl-command-code,
+  .dl-inline-code,
+  .dl-code-row code {
+    font-size: 12px !important;
+  }
+}

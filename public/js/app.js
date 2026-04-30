@@ -43,9 +43,13 @@ const elFreq = document.getElementById("valFreq");
 const elRelay = document.getElementById("valRelay");
 const elRelayDot = document.getElementById("relayDot");
 const elStatus = document.getElementById("statusBadge");
+const elSafetyPanel = document.getElementById("safetyStatusPanel");
+const elStatusSummary = document.getElementById("statusSummary");
+const elStatusHint = document.getElementById("statusHint");
 const elUpdated = document.getElementById("lastUpdated");
 const elRelayOn = document.getElementById("relayOnBtn");
 const elRelayOff = document.getElementById("relayOffBtn");
+const elRelayHint = document.getElementById("relayControlHint");
 const elResetZoom = document.getElementById("resetZoomBtn");
 const elRelaySection = document.getElementById("relaySection");
 const canvas = document.getElementById("monitorChart");
@@ -73,10 +77,27 @@ function formatSeenTime(value) {
 }
 
 function getStatusLabel(status) {
-  if (status === "DANGER" || status === "LEAKAGE")
-    return "Bahaya — arus abnormal melewati ambang";
+  if (status === "DANGER") return "Bahaya — gangguan ekstrem";
+  if (status === "LEAKAGE") return "Indikasi kebocoran arus";
   if (status === "WARNING") return "Peringatan — mendekati batas";
+  if (status === "UNKNOWN") return "Status belum dikenali";
   return "Sistem stabil";
+}
+
+function getStatusHint(status) {
+  if (status === "DANGER") {
+    return "Auto-cutoff dan notifikasi bahaya diprioritaskan. Periksa beban, kabel, dan kondisi perangkat sebelum menyalakan relay kembali.";
+  }
+  if (status === "LEAKAGE") {
+    return "Sistem membaca indikasi arus bocor atau arus abnormal. Periksa isolasi, sambungan, dan kondisi beban sebelum relay dinyalakan kembali.";
+  }
+  if (status === "WARNING") {
+    return "Arus mendekati ambang batas. Pantau perubahan beban dan pastikan konsumsi masih sesuai kapasitas uji.";
+  }
+  if (status === "UNKNOWN") {
+    return "Status belum dikenali. Tunggu data berikutnya atau periksa koneksi perangkat.";
+  }
+  return "Data realtime dibaca dari perangkat dan dievaluasi berdasarkan ambang sistem.";
 }
 
 function normalizeStatus(status) {
@@ -90,14 +111,25 @@ function renderStatus(status) {
   if (!elStatus) return;
   const safeStatus = normalizeStatus(status);
   elStatus.textContent = safeStatus;
-  elStatus.className = `status-badge status-${safeStatus === "LEAKAGE" ? "DANGER" : safeStatus}`;
+  elStatus.className = `status-badge status-${safeStatus}`;
+  if (elStatusSummary) elStatusSummary.textContent = getStatusLabel(safeStatus);
+  if (elStatusHint) elStatusHint.textContent = getStatusHint(safeStatus);
 
-  const card = elStatus.closest(".metric-card");
-  if (card) {
+  const statusSurface = elSafetyPanel || elStatus.closest(".metric-card");
+  if (statusSurface) {
+    statusSurface.classList.remove(
+      "status-NORMAL",
+      "status-WARNING",
+      "status-LEAKAGE",
+      "status-DANGER",
+      "status-UNKNOWN",
+      "status-pulse-danger",
+    );
+    statusSurface.classList.add(`status-${safeStatus}`);
     if (safeStatus === "DANGER" || safeStatus === "LEAKAGE") {
-      card.classList.add("status-pulse-danger");
+      statusSurface.classList.add("status-pulse-danger");
     } else {
-      card.classList.remove("status-pulse-danger");
+      statusSurface.classList.remove("status-pulse-danger");
     }
   }
   if (elAlertPulse) {
@@ -143,6 +175,11 @@ function renderConnectionMeta(m) {
   if (elRelayOff) {
     elRelayOff.disabled = !relayControlAllowed;
     elRelayOff.title = relayControlAllowed ? "Matikan relay" : relayControlReason;
+  }
+  if (elRelayHint) {
+    elRelayHint.textContent = relayControlAllowed
+      ? "Perangkat terhubung. Auto-cutoff tetap aktif dan perintah ON akan ditolak jika status masih berbahaya."
+      : relayControlReason;
   }
   if (elUpdated) {
     const seenLabel = formatSeenTime(m.lastDeviceSeenAt);
@@ -245,7 +282,7 @@ function startMiniLogsListener() {
           return `<tr class="log-row log-status-${safeStatus}">
       <td class="log-time" data-label="Waktu">${escapeHtml(formatLogTime(r.waktu ?? r.timestamp))}</td>
       <td class="log-values" data-label="Arus / Teg."><span class="log-val-arus">${Number(r.arus || 0).toFixed(2)} A</span><span class="log-val-sep">·</span><span class="log-val-teg">${Number(r.tegangan || 0).toFixed(0)} V</span></td>
-      <td class="log-status" data-label="Status"><span class="status-badge status-${safeStatus === "LEAKAGE" ? "DANGER" : safeStatus}">${safeStatus}</span></td>
+      <td class="log-status" data-label="Status"><span class="status-badge status-${safeStatus}">${safeStatus}</span></td>
     </tr>`;
         },
       )

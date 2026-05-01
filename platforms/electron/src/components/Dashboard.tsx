@@ -119,7 +119,7 @@ export function Dashboard() {
 
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Daya (est. W)
+            Daya Aktif (W)
           </h3>
           <p className="text-3xl font-bold text-purple-600">
             {currentData?.daya?.toFixed(0) || '0'}{' '}

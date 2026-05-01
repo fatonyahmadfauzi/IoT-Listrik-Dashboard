@@ -51,6 +51,15 @@ const inpPowerFactor  = document.getElementById('inpPowerFactor');
 const inpFrequency    = document.getElementById('inpFrequency');
 const inpTelegramNotify = document.getElementById('inpTelegramNotify');
 
+// ── DOM: Auto Learning Beban Normal ───────────────────────────
+const inpLearningDuration = document.getElementById('inpLearningDuration');
+const inpLearningMargin   = document.getElementById('inpLearningMargin');
+const inpLearningApplyThreshold = document.getElementById('inpLearningApplyThreshold');
+const autoLearningStatus  = document.getElementById('autoLearningStatus');
+const autoLearningMeta    = document.getElementById('autoLearningMeta');
+const startAutoLearningBtn = document.getElementById('startAutoLearningBtn');
+const stopAutoLearningBtn  = document.getElementById('stopAutoLearningBtn');
+
 // ── DOM: Client backend (localStorage) ────────────────────────
 const inpPublicApiBase = document.getElementById('inpPublicApiBase');
 const inpLocalApiBase  = document.getElementById('inpLocalApiBase');
@@ -542,7 +551,8 @@ function initTelegramChatManager() {
 
 function clearValidations() {
   ['valThreshold','valWarningPercent','valSendInterval','valArusCal',
-   'valTeganganCal','valPowerFactor','valFrequency','valBotToken','valChatId']
+   'valTeganganCal','valPowerFactor','valFrequency','valLearningDuration',
+   'valLearningMargin','valBotToken','valChatId']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.textContent = ''; el.className = 'validation-msg'; }
@@ -607,6 +617,22 @@ function validateAll() {
       setValidation('valFrequency', '45 – 65 Hz', false);
       valid = false;
     } else { setValidation('valFrequency', 'Valid', true); }
+  }
+
+  if (inpLearningDuration) {
+    const duration = parseInt(inpLearningDuration.value, 10);
+    if (isNaN(duration) || duration < 30 || duration > 600) {
+      setValidation('valLearningDuration', 'Durasi 30 – 600 detik', false);
+      valid = false;
+    } else { setValidation('valLearningDuration', 'Valid', true); }
+  }
+
+  if (inpLearningMargin) {
+    const margin = parseFloat(inpLearningMargin.value);
+    if (isNaN(margin) || margin < 5 || margin > 100) {
+      setValidation('valLearningMargin', 'Margin 5 – 100 %', false);
+      valid = false;
+    } else { setValidation('valLearningMargin', 'Valid', true); }
   }
 
   const token = inpBotToken?.value.trim();
@@ -1186,6 +1212,133 @@ function renderDatabaseBackupState({ type = 'idle', message = '', details = null
   databaseBackupMeta.innerHTML = parts.join('<br>');
 }
 
+function formatLearningNumber(value, suffix = '') {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return `0${suffix}`;
+  return `${numeric.toFixed(2)}${suffix}`;
+}
+
+function renderAutoLearningState(data = {}) {
+  if (!autoLearningStatus && !autoLearningMeta) return;
+
+  const learning = data.autoLearning || {};
+  const status = learning.status || (learning.active ? 'running' : 'idle');
+  const statusLabel = {
+    idle: 'Siap',
+    running: 'Sedang learning',
+    complete: 'Selesai',
+    stopped: 'Dihentikan',
+    error: 'Error',
+  }[status] || status;
+  const isRunning = learning.active === true || status === 'running';
+
+  if (inpLearningDuration && learning.durationMs) {
+    inpLearningDuration.value = Math.round(Number(learning.durationMs) / 1000);
+  }
+  if (inpLearningMargin && learning.marginPercent !== undefined) {
+    inpLearningMargin.value = Number(learning.marginPercent);
+  }
+  if (inpLearningApplyThreshold && learning.applyToThreshold !== undefined) {
+    inpLearningApplyThreshold.checked = learning.applyToThreshold !== false;
+  }
+
+  if (autoLearningStatus) {
+    const message = learning.message ? ` ${escapeHtml(learning.message)}` : '';
+    autoLearningStatus.innerHTML = `<strong>Status:</strong> ${escapeHtml(statusLabel)}.${message}`;
+  }
+
+  if (autoLearningMeta) {
+    const lines = [
+      `Sampel: ${Number(learning.sampleCount || 0)} pembacaan`,
+      `Arus minimum: ${formatLearningNumber(learning.minCurrent, ' A')}`,
+      `Arus maksimum normal: ${formatLearningNumber(learning.maxCurrent, ' A')}`,
+      `Rata-rata arus: ${formatLearningNumber(learning.avgCurrent, ' A')}`,
+      `Daya maksimum: ${formatLearningNumber(learning.maxPowerW, ' W')}`,
+      `Threshold hasil learning: ${formatLearningNumber(learning.learnedThresholdArus, ' A')}`,
+    ];
+    autoLearningMeta.innerHTML = lines.map(escapeHtml).join('<br>');
+  }
+
+  if (startAutoLearningBtn) startAutoLearningBtn.disabled = isRunning;
+  if (stopAutoLearningBtn) stopAutoLearningBtn.disabled = !isRunning;
+}
+
+function getAutoLearningFormValues() {
+  const durationSec = parseInt(inpLearningDuration?.value || '120', 10);
+  const marginPercent = parseFloat(inpLearningMargin?.value || '25');
+  return {
+    durationMs: Math.max(30000, Math.min(600000, durationSec * 1000)),
+    marginPercent: Math.max(5, Math.min(100, marginPercent)),
+    applyToThreshold: inpLearningApplyThreshold?.checked !== false,
+  };
+}
+
+async function startAutoLearning() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Auto Learning hanya tersedia untuk akun admin utama dan device fisik.', 'error');
+    return;
+  }
+  if (!validateAll()) {
+    showToast('Periksa durasi dan margin auto learning.', 'error');
+    return;
+  }
+
+  const currentUser = getCurrentUser();
+  const requestId = `learn-${Date.now()}`;
+  const values = getAutoLearningFormValues();
+  const payload = {
+    active: true,
+    status: 'running',
+    requestId,
+    durationMs: values.durationMs,
+    marginPercent: values.marginPercent,
+    applyToThreshold: values.applyToThreshold,
+    startedAt: Date.now(),
+    startedBy: currentUser?.email || 'admin',
+    sampleCount: 0,
+    minCurrent: 0,
+    maxCurrent: 0,
+    avgCurrent: 0,
+    maxPowerW: 0,
+    avgPowerW: 0,
+    learnedThresholdArus: 0,
+    message: 'Menunggu ESP32 membaca perintah auto learning.',
+  };
+
+  try {
+    if (startAutoLearningBtn) startAutoLearningBtn.disabled = true;
+    await update(ref(db, getDbPrefix() + '/settings/autoLearning'), payload);
+    showToast('Auto Learning dimulai. ESP32 akan memproses pada sync berikutnya.', 'success');
+  } catch (err) {
+    showToast('Gagal memulai Auto Learning: ' + err.message, 'error');
+  } finally {
+    if (startAutoLearningBtn) startAutoLearningBtn.disabled = false;
+  }
+}
+
+async function stopAutoLearning() {
+  if (!isRealAdminSettingsSession()) {
+    showToast('Auto Learning hanya tersedia untuk akun admin utama.', 'error');
+    return;
+  }
+  const currentUser = getCurrentUser();
+  try {
+    if (stopAutoLearningBtn) stopAutoLearningBtn.disabled = true;
+    await update(ref(db, getDbPrefix() + '/settings/autoLearning'), {
+      active: false,
+      status: 'stopped',
+      stoppedAt: Date.now(),
+      stoppedBy: currentUser?.email || 'admin',
+      message: 'Learning dihentikan oleh admin.',
+    });
+    showToast('Auto Learning dihentikan.', 'success');
+  } catch (err) {
+    showToast('Gagal menghentikan Auto Learning: ' + err.message, 'error');
+  } finally {
+    if (stopAutoLearningBtn) stopAutoLearningBtn.disabled = false;
+  }
+}
+
 function validateDeviceBootstrapPayload() {
   if (!inpDeviceWifiSsid || !inpDeviceApiKey || !inpDeviceDbUrl || !inpDeviceEmail || !inpDevicePassword) {
     return 'Form bootstrap device tidak tersedia.';
@@ -1524,6 +1677,7 @@ function loadSettings() {
     if (inpPowerFactor)  inpPowerFactor.value      = d.powerFactorEstimate ?? 0.85;
     if (inpFrequency)    inpFrequency.value        = d.frequencyHz         ?? 50;
     if (inpTelegramNotify) inpTelegramNotify.checked = d.telegramNotifyEnabled !== false;
+    renderAutoLearningState(d);
     if (inpBotToken) {
       inpBotToken.value       = d.telegramBotToken ?? '';
       inpBotToken.placeholder = d.telegramBotToken
@@ -2147,10 +2301,14 @@ initPage({
     document.getElementById('refreshUsersBtn')?.addEventListener('click', loadUsers);
     connectTelegramBotBtn?.addEventListener('click', connectTelegramBot);
     testTelegramBtn?.addEventListener('click', testTelegramConfigAction);
+    startAutoLearningBtn?.addEventListener('click', startAutoLearning);
+    stopAutoLearningBtn?.addEventListener('click', stopAutoLearning);
     [inpThreshold, inpWarningPct, inpSendInterval, inpArusCal, inpTeganganCal,
-     inpPowerFactor, inpFrequency, inpBotToken, inpChatId]
+     inpPowerFactor, inpFrequency, inpLearningDuration, inpLearningMargin,
+     inpBotToken, inpChatId]
       .forEach(el => el?.addEventListener('input', validateAll));
     inpRealtimeStreamEnabled?.addEventListener('change', validateAll);
+    inpLearningApplyThreshold?.addEventListener('change', validateAll);
     inpBotToken?.addEventListener('input', syncTelegramActionButtons);
     inpTelegramNotify?.addEventListener('change', syncTelegramActionButtons);
 

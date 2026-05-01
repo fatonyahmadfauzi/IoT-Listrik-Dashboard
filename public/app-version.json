@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "buildDate": "2026-04-30",
+  "buildDate": "2026-05-01",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard.apk",
@@ -48,5 +48,5 @@
       }
     }
   },
-  "notes": "Release v1.0.0 refreshed on 2026-04-30 with versionless download filenames, updated security dependencies, rebuilt Android APK, Windows Setup/Portable/MSI, Node CLI, Python CLI, and Linux CLI assets."
+  "notes": "Release v1.0.0 refreshed on 2026-05-01 with PZEM-only firmware terminology, versionless download filenames, rebuilt Android APK, Windows Setup/Portable/MSI, Node CLI, Python CLI, and Linux CLI assets."
 }

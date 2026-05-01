@@ -90,13 +90,21 @@ app.get('/api/listrik', async (req, res) => {
     try {
         const snap = await db.ref('/listrik').once('value');
         const val = snap.val() || {};
+        const arus = Number(val.arus ?? 0);
+        const tegangan = Number(val.tegangan ?? 0);
+        const pf = Number(val.power_factor ?? 0.85);
+        const apparentPower = Number(val.apparent_power ?? val.daya ?? arus * tegangan);
+        const activePower = Number(val.daya_w ?? apparentPower * pf);
         res.json({
-            arus: Number(val.arus ?? 0),
-            tegangan: Number(val.tegangan ?? 0),
-            daya: Number(val.daya ?? (val.arus ?? 0) * (val.tegangan ?? 0)),
+            arus,
+            tegangan,
+            daya: apparentPower,
+            daya_w: activePower,
+            apparent_power: apparentPower,
             energi_kwh: Number(val.energi_kwh ?? 0),
             frekuensi: Number(val.frekuensi ?? 50),
-            power_factor: Number(val.power_factor ?? 0.85),
+            power_factor: pf,
+            sensor_source: val.sensor_source ? String(val.sensor_source) : '',
             status: val.status || 'NORMAL',
             relay: val.relay === true || Number(val.relay) === 1 ? 1 : 0,
             updated_at: val.updated_at != null ? Number(val.updated_at) : null,

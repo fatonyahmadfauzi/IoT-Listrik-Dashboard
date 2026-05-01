@@ -62,9 +62,12 @@
 // Only change if you rewire the hardware.
 // ═══════════════════════════════════════════════════════════════
 
-// ADC pin assignments (must be ADC1 pins — NOT ADC2 when using WiFi)
-#define PIN_ARUS              36    // GPIO36 (VP) — SCT-013 current sensor
-#define PIN_TEGANGAN          39    // GPIO39 (VN) — ZMPT101B voltage sensor
+// PZEM-004T v3 is the metering source.
+// Wiring: PZEM TX -> ESP32 RX2, PZEM RX -> ESP32 TX2, common GND.
+// Use a logic-level shifter on PZEM RX when the module TX/RX side is 5 V.
+#define PZEM_RX_PIN           16    // ESP32 RX2  <- PZEM TX
+#define PZEM_TX_PIN           17    // ESP32 TX2  -> PZEM RX
+#define PZEM_BAUD             9600
 
 // Output pins
 #define PIN_RELAY1            26    // Relay channel 1 — main load / contactor
@@ -73,18 +76,6 @@
 
 // Factory reset button (hold on boot to erase NVS and re-enter portal)
 #define PIN_FACTORY_RESET     0     // GPIO0 = BOOT button on most ESP32 boards
-
-// ADC constants
-#define ADC_RESOLUTION        4096  // 12-bit: values 0..4095
-#define ADC_VREF              3.3f  // Volts
-#define ADC_MIDPOINT          2048  // Vcc/2 — bias point for AC signals
-#define ADC_SAMPLES           1000  // RMS sample count per reading
-
-// SCT-013 sensor hardware constants (depends on physical sensor model)
-// SCT-013-000 (0–100A, 50mA output): burden = 22Ω, ratio = 2000
-// SCT-013-030 (0–30A, built-in burden): burden set in module, ratio = 1000
-#define SCT_BURDEN_R          22.0f
-#define SCT_RATIO             2000.0f
 
 // ═══════════════════════════════════════════════════════════════
 // LAYER 1C — CAPTIVE PORTAL (WiFiManager) SETTINGS
@@ -125,6 +116,7 @@ struct RuntimeSettings {
   bool          buzzerEnabled       = true;
   bool          autoCutoffEnabled   = true;
 
+  // Used only when PZEM-004T does not return valid PF/frequency data.
   float         powerFactorEstimate = 0.85f;
   float         frequencyHz         = 50.0f;
 
@@ -147,6 +139,15 @@ struct RuntimeSettings {
   unsigned long sendIntervalMs      = 2000;    // Firebase write interval (ms)
   unsigned long settingsSyncMs      = 10000;   // Settings refresh interval (ms)
   unsigned long telegramCooldownMs  = 30000;   // Min time between Telegram msgs
+
+  // ── Auto Learning Beban Normal ───────────────────────────────
+  // Admin starts this from Settings. Device samples normal load for
+  // a short window and can apply the learned max-current threshold.
+  bool          autoLearningActive  = false;
+  String        autoLearningRequestId = "";
+  unsigned long autoLearningDurationMs = 120000;
+  float         autoLearningMarginPercent = 25.0f;
+  bool          autoLearningApplyToThreshold = true;
 };
 
 // ═══════════════════════════════════════════════════════════════

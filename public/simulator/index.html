@@ -206,9 +206,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Iconify -->
-  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
 
   <!-- Global Styles -->
   <link rel="stylesheet" href="/css/style.css?v=20260430-fullwidth">
@@ -259,6 +257,29 @@
       color: white;
       margin: 0 auto 1.75rem;
       box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .simulator-hero .material-symbols-rounded {
+      font-family: "Material Symbols Rounded";
+      font-weight: normal;
+      font-style: normal;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      direction: ltr;
+      -webkit-font-feature-settings: "liga";
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "liga";
+      font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+    }
+    .sim-badge .material-symbols-rounded {
+      font-size: 15px;
+    }
+    .sim-icon .material-symbols-rounded {
+      font-size: 36px;
     }
     .sim-badge {
       display: inline-flex;
@@ -362,7 +383,10 @@
       border-top-color: white;
       animation: spin 0.8s linear infinite;
     }
-    .btn-generate.loading .btn-text, .btn-generate.loading iconify-icon { display: none; }
+    .btn-generate .material-symbols-rounded {
+      font-size: 20px;
+    }
+    .btn-generate.loading .btn-text, .btn-generate.loading .material-symbols-rounded { display: none; }
     .btn-generate.loading .spinner { display: block; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
 
@@ -390,6 +414,9 @@
       border: 1px solid rgba(16, 185, 129, 0.3);
       box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
       animation: bounceIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .success-icon .material-symbols-rounded {
+      font-size: 42px;
     }
     @keyframes bounceIn {
       0% { transform: scale(0); opacity: 0; }
@@ -468,6 +495,9 @@
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.05);
     }
+    .ac-icon .material-symbols-rounded {
+      font-size: 24px;
+    }
     .acc-primary .ac-icon {
       background: rgba(59, 130, 246, 0.08);
       color: rgba(59, 130, 246, 0.85);
@@ -505,6 +535,10 @@
       font-size: 1.25rem;
       transition: all 0.3s;
       transform: translateX(0);
+    }
+    .ac-chevron.material-symbols-rounded {
+      font-size: 20px;
+      flex-shrink: 0;
     }
     .action-card:hover .ac-chevron {
       color: white;
@@ -581,6 +615,9 @@
       justify-content: center;
       font-size: 20px;
     }
+    .ql-icon .material-symbols-rounded {
+      font-size: 22px;
+    }
     .ql-login  .ql-icon { background: rgba(16,185,129,0.08); color: rgba(16,185,129,0.85); }
     .ql-install .ql-icon{ background: rgba(59,130,246,0.08); color: rgba(59,130,246,0.85); }
 
@@ -615,10 +652,10 @@
       <!-- DEFAULT STATE -->
       <div id="inputState" class="input-state">
         <div class="sim-badge">
-          <iconify-icon icon="solar:stopwatch-bold"></iconify-icon> Akses 15 Menit
+          <span class="material-symbols-rounded" aria-hidden="true">timer</span> Akses 15 Menit
         </div>
         <div class="sim-icon">
-          <iconify-icon icon="solar:test-tube-bold-duotone"></iconify-icon>
+          <span class="material-symbols-rounded" aria-hidden="true">science</span>
         </div>
         
         <h1 class="sim-title">PWA Simulator</h1>
@@ -632,7 +669,7 @@
 
           <button type="submit" class="btn-generate" id="generateBtn">
             <span class="btn-text">Generate Akun Demo</span>
-            <iconify-icon icon="solar:magic-stick-3-bold"></iconify-icon>
+            <span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span>
             <div class="spinner"></div>
           </button>
         </form>
@@ -645,7 +682,7 @@
           <!-- Sudah Punya Akun -->
           <a href="/simulator/login" class="quick-link ql-login">
             <div class="ql-icon">
-              <iconify-icon icon="solar:login-bold-duotone"></iconify-icon>
+              <span class="material-symbols-rounded" aria-hidden="true">login</span>
             </div>
             <div class="ql-text">
               <strong>Sudah Punya Akun</strong>
@@ -656,7 +693,7 @@
           <!-- Install PWA -->
           <a href="/simulator/login?install=1" class="quick-link ql-install">
             <div class="ql-icon">
-              <iconify-icon icon="solar:smartphone-update-bold-duotone"></iconify-icon>
+              <span class="material-symbols-rounded" aria-hidden="true">install_mobile</span>
             </div>
             <div class="ql-text">
               <strong>Install PWA</strong>
@@ -673,7 +710,7 @@
       <!-- SUCCESS STATE -->
       <div id="successState" class="success-state">
         <div class="success-icon">
-          <iconify-icon icon="solar:check-read-bold-duotone"></iconify-icon>
+          <span class="material-symbols-rounded" aria-hidden="true">task_alt</span>
         </div>
         <h2 class="sim-title" style="font-size: 1.6rem;">Kredensial Siap!</h2>
         <p class="sim-desc" style="margin-bottom: 1.25rem;">
@@ -683,7 +720,7 @@
         
         <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); padding: 0.85rem; border-radius: 14px; margin-bottom: 2rem;">
           <p style="color: var(--warning); font-size: 0.85rem; font-weight: 600; margin: 0; display:flex; align-items:center; justify-content:center; gap:0.5rem;">
-            <iconify-icon icon="solar:history-bold-duotone" style="font-size: 1.2rem;"></iconify-icon>
+            <span class="material-symbols-rounded" aria-hidden="true" style="font-size: 1.2rem;">history</span>
             Akun otomatis dihapus dalam 15 Menit
           </p>
         </div>
@@ -695,32 +732,32 @@
           
           <!-- Opsi 1: Simulator (PRIMARY) -->
           <a href="/simulator/login?install=1" class="action-card acc-primary">
-             <div class="ac-icon"><iconify-icon icon="solar:cpu-bolt-bold-duotone"></iconify-icon></div>
+             <div class="ac-icon"><span class="material-symbols-rounded" aria-hidden="true">memory_alt</span></div>
              <div class="ac-content">
                 <span class="ac-title">Buka Simulator PWA <span class="badge-mandatory">Wajib</span></span>
                 <span class="ac-desc">Gunakan ini sebagai pengganti Hardware fisik untuk menginjeksi tegangan dan memicu alarm.</span>
              </div>
-             <iconify-icon icon="solar:alt-arrow-right-line-duotone" class="ac-chevron"></iconify-icon>
+             <span class="material-symbols-rounded ac-chevron" aria-hidden="true">chevron_right</span>
           </a>
 
           <!-- Opsi 2: Dashboard Monitor (SECONDARY) -->
           <a href="/app/login?install=1" class="action-card acc-secondary">
-             <div class="ac-icon"><iconify-icon icon="solar:laptop-minimalistic-bold-duotone"></iconify-icon></div>
+             <div class="ac-icon"><span class="material-symbols-rounded" aria-hidden="true">monitoring</span></div>
              <div class="ac-content">
                 <span class="ac-title">Akses Dashboard</span>
                 <span class="ac-desc">Login sebagai penonton layar pemantau grafik & notifikasi.</span>
              </div>
-             <iconify-icon icon="solar:alt-arrow-right-line-duotone" class="ac-chevron"></iconify-icon>
+             <span class="material-symbols-rounded ac-chevron" aria-hidden="true">chevron_right</span>
           </a>
 
           <!-- Opsi 3: Download (TERTIARY) -->
           <a href="/downloads" class="action-card acc-tertiary">
-             <div class="ac-icon"><iconify-icon icon="solar:cloud-download-bold-duotone"></iconify-icon></div>
+             <div class="ac-icon"><span class="material-symbols-rounded" aria-hidden="true">download</span></div>
              <div class="ac-content">
                 <span class="ac-title">Download Aplikasi Asli</span>
                 <span class="ac-desc">Unduh installer Android (APK) atau Native Windows (EXE).</span>
              </div>
-             <iconify-icon icon="solar:alt-arrow-right-line-duotone" class="ac-chevron"></iconify-icon>
+             <span class="material-symbols-rounded ac-chevron" aria-hidden="true">chevron_right</span>
           </a>
 
         </div>

@@ -683,6 +683,7 @@ function buildClearedListrikPayload(
     energi_kwh: 0,
     frekuensi: 0,
     power_factor: 0,
+    sensor_source: "PZEM-004T",
     relay: 0,
     status: "NORMAL",
     updated_at: 0,

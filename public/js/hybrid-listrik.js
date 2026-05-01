@@ -31,17 +31,19 @@ export function normalizeListrikPayload(d) {
   const arus = Number(d?.arus ?? 0);
   const teg = Number(d?.tegangan ?? 0);
   const pf = Number(d?.power_factor ?? d?.powerFactor ?? 0.85);
-  const apparent = Number(d?.daya ?? arus * teg);
+  const apparent = Number(d?.apparent_power ?? d?.daya ?? arus * teg);
+  const activeW = Number(d?.daya_w ?? d?.active_power ?? apparent * pf);
   const relayRaw = d?.relay;
   const relay = relayRaw === true || Number(relayRaw) === 1 ? 1 : 0;
   return {
     arus,
     tegangan: teg,
     daya: apparent,
-    daya_w: apparent * pf,
+    daya_w: activeW,
     energi_kwh: Number(d?.energi_kwh ?? 0),
     frekuensi: Number(d?.frekuensi ?? 50),
     power_factor: pf,
+    sensor_source: d?.sensor_source ? String(d.sensor_source) : '',
     status: d?.status || 'NORMAL',
     relay,
     updated_at: d?.updated_at != null ? Number(d.updated_at) : null,
@@ -59,7 +61,8 @@ function buildSensorSignature(d) {
   return [
     Number(d?.arus ?? 0).toFixed(3),
     Number(d?.tegangan ?? 0).toFixed(1),
-    Number(d?.daya ?? 0).toFixed(1),
+    Number(d?.daya_w ?? 0).toFixed(1),
+    Number(d?.apparent_power ?? d?.daya ?? 0).toFixed(1),
     Number(d?.energi_kwh ?? 0).toFixed(4),
     Number(d?.frekuensi ?? 0).toFixed(2),
     Number(d?.power_factor ?? 0).toFixed(3),

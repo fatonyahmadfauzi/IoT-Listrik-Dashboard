@@ -518,7 +518,7 @@ class MainActivity : AppCompatActivity() {
                 val apparent = snapshot.child("apparent_power").getValue(Double::class.java)
                     ?: snapshot.child("daya").getValue(Double::class.java)
                     ?: (arus * tegangan)
-                // Prefer daya_w written by simulator; fall back to V*I*PF
+                // Prefer daya_w from PZEM/firmware; fall back to V*I*PF.
                 val dayaW = snapshot.child("daya_w").getValue(Double::class.java)
                     ?: (apparent * pf)
                 val energi = snapshot.child("energi_kwh").getValue(Double::class.java) ?: 0.0

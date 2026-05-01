@@ -149,7 +149,7 @@ function createRealtimeChart(canvas) {
  * @param {string} label  - time label (HH:MM:SS)
  * @param {number} arus   - current (A)
  * @param {number} tegangan - voltage (V)
- * @param {number} dayaW    - real power estimate (W)
+ * @param {number} dayaW    - active power (W)
  */
 function pushRealtimeData(chart, label, arus, tegangan, dayaW) {
   const data = chart.data;
@@ -183,7 +183,7 @@ function loadHistoryIntoChart(chart, logs) {
     const a = Number(l.arus);
     const v = Number(l.tegangan);
     const pf = Number(l.power_factor ?? 0.85);
-    return a * v * pf;
+    return Number(l.daya_w ?? l.active_power ?? a * v * pf);
   });
   chart.update();
 }

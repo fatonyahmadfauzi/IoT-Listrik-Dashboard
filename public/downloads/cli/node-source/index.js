@@ -46,7 +46,8 @@ function buildSensorSignature(d = {}) {
   return [
     Number(d?.arus ?? 0).toFixed(3),
     Number(d?.tegangan ?? 0).toFixed(1),
-    Number(d?.daya ?? d?.apparent_power ?? 0).toFixed(1),
+    Number(d?.daya_w ?? 0).toFixed(1),
+    Number(d?.apparent_power ?? d?.daya ?? 0).toFixed(1),
     Number(d?.energi_kwh ?? 0).toFixed(4),
     Number(d?.frekuensi ?? 0).toFixed(2),
     Number(d?.power_factor ?? 0).toFixed(3),
@@ -175,7 +176,12 @@ function renderLiveMonitoring(data) {
   console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
   console.log(`${chalk.blue("Arus (A)   :")} ${chalk.white(data.arus || "0")}`);
   console.log(`${chalk.blue("Tegangan(V):")} ${chalk.white(data.tegangan || "0")}`);
-  console.log(`${chalk.blue("Daya (VA)  :")} ${chalk.white(data.apparent_power || data.daya || "0")}`);
+  const pf = Number(data.power_factor ?? 0.85);
+  const apparentPower = Number(data.apparent_power ?? data.daya ?? 0);
+  const activePower = Number(data.daya_w ?? apparentPower * pf);
+  console.log(`${chalk.blue("Daya Aktif :")} ${chalk.white(activePower.toFixed(1))} W`);
+  console.log(`${chalk.blue("Daya Semu  :")} ${chalk.white(apparentPower.toFixed(1))} VA`);
+  console.log(`${chalk.blue("PF / Freq  :")} ${chalk.white(pf.toFixed(2))} / ${chalk.white(Number(data.frekuensi ?? 50).toFixed(1))} Hz`);
 
   let statusColor = chalk.green;
   if (data.status === "WARNING") statusColor = chalk.yellow;

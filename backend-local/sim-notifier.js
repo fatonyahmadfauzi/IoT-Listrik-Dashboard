@@ -72,6 +72,23 @@ function statusEmoji(s) {
   }
 }
 
+function derivePowerMetrics(raw = {}) {
+  const arus = Number(raw.arus ?? 0);
+  const tegangan = Number(raw.tegangan ?? 0);
+  const pf = Number(raw.power_factor ?? 0.85);
+  const apparentPower = Number(raw.apparent_power ?? raw.daya ?? arus * tegangan);
+  const activePower = Number(raw.daya_w ?? raw.active_power ?? apparentPower * pf);
+  return {
+    activePower: Number.isFinite(activePower) ? activePower : 0,
+    apparentPower: Number.isFinite(apparentPower) ? apparentPower : 0,
+  };
+}
+
+function formatPowerLabel(raw = {}) {
+  const { activePower, apparentPower } = derivePowerMetrics(raw);
+  return `${activePower.toFixed(1)} W / ${apparentPower.toFixed(1)} VA`;
+}
+
 // ── Helper: Kirim Discord Embed ────────────────────────────────────────────
 async function sendDiscordEmbed(webhookUrl, embed) {
   if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) return false;
@@ -262,6 +279,7 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
   }
 
   const d = listrikData || {};
+  const power = derivePowerMetrics(d);
 
   console.log(`\n[Sim] [${uid.slice(0,8)}] Status: ${prevStatus} → ${currentStatus}`);
   console.log(`  Config: telegram=${!!(cfg.telegramBotToken)}, discord.enabled=${cfg.discord?.enabled}, discord.webhookAlerts=${!!(cfg.discord?.webhookAlerts)}`);
@@ -284,7 +302,8 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
       fields: [
         { name: '⚡ Arus',         value: `${d.arus         ?? '-'} A`,   inline: true },
         { name: '🔋 Tegangan',     value: `${d.tegangan     ?? '-'} V`,   inline: true },
-        { name: '💡 Daya',         value: `${d.daya         ?? '-'} W`,   inline: true },
+        { name: '💡 Daya Aktif',   value: `${power.activePower.toFixed(1)} W`, inline: true },
+        { name: '🔌 Daya Semu',    value: `${power.apparentPower.toFixed(1)} VA`, inline: true },
         { name: '🔌 Relay',        value: d.relay ? 'ON' : 'OFF',         inline: true },
         { name: '📡 Frekuensi',    value: `${d.frekuensi    ?? '-'} Hz`,  inline: true },
         { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`,     inline: true },
@@ -469,7 +488,7 @@ function setupListenersForUid(uid) {
           fields: [
             { name: '⚡ Arus',         value: `${d.arus         ?? '-'} A`,   inline: true },
             { name: '🔋 Tegangan',     value: `${d.tegangan     ?? '-'} V`,   inline: true },
-            { name: '💡 Daya',         value: `${d.daya         ?? '-'} W`,   inline: true },
+            { name: '💡 Daya Aktif',   value: `${formatPowerLabel(d)}`, inline: true },
             { name: '🔌 Relay',        value: d.relay ? 'ON' : 'OFF',         inline: true },
             { name: '📡 Frekuensi',    value: `${d.frekuensi    ?? '-'} Hz`,  inline: true },
             { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`,     inline: true },
@@ -490,7 +509,7 @@ function setupListenersForUid(uid) {
         const msg = `📊 <b>[SIM] Data Telemetri</b>\n` +
           `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
           `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
-          `💡 Daya: ${d.daya ?? '-'} W\n` +
+          `💡 Daya: ${formatPowerLabel(d)}\n` +
           `${statusEmoji(currentStatus)} Status: <b>${currentStatus}</b>\n` +
           `🕐 ${waktuId()}\n` +
           `<i>Session: ${uid.slice(0,12)}...</i>`;

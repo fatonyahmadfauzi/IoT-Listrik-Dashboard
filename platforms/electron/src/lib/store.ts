@@ -212,8 +212,8 @@ export const useDataStore = create<DataStore>((set) => {
 
                   // Your analytics/chart expects `apparent_power`.
                   const pf = Number(raw?.power_factor ?? 0.85);
-                  const apparent_power = arus * tegangan;
-                  const daya = apparent_power * pf;
+                  const apparent_power = Number(raw?.apparent_power ?? raw?.daya ?? arus * tegangan);
+                  const daya = Number(raw?.daya_w ?? apparent_power * pf);
 
                   return {
                     id: key,

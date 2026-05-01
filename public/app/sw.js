@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260430-security";
+const CACHE_NAME = "iot-app-v20260501-auto-learning";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
@@ -32,6 +32,9 @@ const CACHE_URLS = [
   "/js/notifications.js",
   "/js/client-config.js",
   "/js/hybrid-listrik.js",
+  "/vendor/chart.umd.min.js",
+  "/vendor/hammer.min.js",
+  "/vendor/chartjs-plugin-zoom.min.js",
   "/assets/icons/icon-192.png",
   "/assets/icons/icon-512.png",
 ];

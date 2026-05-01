@@ -412,6 +412,20 @@
         text-decoration: underline;
         text-underline-offset: 2px;
       }
+      .form-grid.two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .settings-action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      .settings-action-row .btn {
+        justify-content: center;
+      }
 
       /* ── J. Validation message ───────────────────────────── */
       .validation-msg {
@@ -630,6 +644,13 @@
         .settings-section .form-group {
           margin-bottom: 11px;
         }
+        .form-grid.two {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+        .settings-action-row .btn {
+          width: 100%;
+        }
         .input-row { gap: 9px; }
         .settings-section .form-input,
         .settings-section .form-select {
@@ -737,6 +758,10 @@
                 <span class="material-symbols-rounded">tune</span>
                 <span>Kalibrasi</span>
               </a>
+              <a class="settings-subnav-link" href="#autoLearningSection" data-settings-nav="autoLearningSection">
+                <span class="material-symbols-rounded">model_training</span>
+                <span>Auto Learning</span>
+              </a>
               <a class="settings-subnav-link" href="#deviceBootstrapSection" data-settings-nav="deviceBootstrapSection">
                 <span class="material-symbols-rounded">wifi</span>
                 <span>Bootstrap Device</span>
@@ -794,30 +819,6 @@
               <div class="runtime-notice">
                 <span class="material-symbols-rounded">sync</span>
                 <span><strong>Runtime Configuration:</strong> Perubahan di halaman ini langsung disimpan ke Firebase <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa upload firmware</strong>.</span>
-              </div>
-
-              <div class="settings-section" style="margin-bottom: 16px;">
-                <div class="settings-section-title">
-                  <span class="material-symbols-rounded">dashboard_customize</span>
-                  Halaman Admin Terpisah
-                </div>
-                <div class="info-panel info-panel--blue" style="margin-bottom: 0;">
-                  Konfigurasi Telegram, Discord, dan Manajemen Pengguna sekarang punya halaman sendiri supaya menu utama ini tetap fokus pada pengaturan inti sistem.
-                </div>
-                <div class="settings-btn-cluster">
-                  <a href="/telegram" class="btn btn-ghost">
-                    <span class="material-symbols-rounded">send</span>
-                    Buka Halaman Telegram
-                  </a>
-                  <a href="/discord" class="btn btn-ghost">
-                    <span class="material-symbols-rounded">forum</span>
-                    Buka Halaman Discord
-                  </a>
-                  <a href="/users" class="btn btn-ghost">
-                    <span class="material-symbols-rounded">manage_accounts</span>
-                    Buka Halaman Pengguna
-                  </a>
-                </div>
               </div>
 
               <!-- ── Settings grid (2 columns) ─────────────────────── -->
@@ -923,7 +924,74 @@
               </div>
             </div>
 
-            <!-- Card 2: Kalibrasi Sensor ─────────────────────────── -->
+            <!-- Card 2: Auto Learning Beban Normal ───────────────── -->
+            <div id="autoLearningSection" class="settings-section" data-settings-section>
+              <div class="settings-section-title"><span class="material-symbols-rounded">model_training</span>Auto Learning Beban Normal</div>
+              <div class="info-panel info-panel--blue">
+                Jalankan saat beban normal sudah dinyalakan. ESP32 akan membaca data PZEM-004T selama durasi tertentu, menghitung arus maksimum normal, lalu memberi margin aman sebelum threshold diterapkan.
+              </div>
+
+              <div class="form-grid two">
+                <div class="form-group">
+                  <label class="form-label" for="inpLearningDuration">Durasi Learning (detik)</label>
+                  <input
+                    id="inpLearningDuration"
+                    class="form-input"
+                    type="number"
+                    min="30"
+                    max="600"
+                    step="10"
+                    value="120"
+                  />
+                  <div class="form-hint">Rekomendasi 120 detik. Rentang valid 30–600 detik.</div>
+                  <div id="valLearningDuration" class="validation-msg"></div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="inpLearningMargin">Margin Keamanan (%)</label>
+                  <input
+                    id="inpLearningMargin"
+                    class="form-input"
+                    type="number"
+                    min="5"
+                    max="100"
+                    step="1"
+                    value="25"
+                  />
+                  <div class="form-hint">Contoh: arus maksimum 4 A + margin 25% → threshold 5 A.</div>
+                  <div id="valLearningMargin" class="validation-msg"></div>
+                </div>
+              </div>
+
+              <div class="toggle-row">
+                <div class="toggle-info">
+                  <h4>Terapkan Threshold Otomatis</h4>
+                  <p>Jika aktif, hasil learning akan mengganti nilai Threshold Arus Maksimal setelah proses selesai.</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="inpLearningApplyThreshold" checked />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+
+              <div id="autoLearningStatus" class="info-panel">
+                Status: siap. Nyalakan kombinasi beban normal, lalu mulai learning.
+              </div>
+              <div id="autoLearningMeta" class="form-hint">
+                Belum ada hasil learning tersimpan.
+              </div>
+
+              <div class="settings-action-row">
+                <button id="startAutoLearningBtn" class="btn btn-primary" type="button">
+                  <span class="material-symbols-rounded">play_arrow</span> Mulai Auto Learning
+                </button>
+                <button id="stopAutoLearningBtn" class="btn btn-ghost" type="button">
+                  <span class="material-symbols-rounded">stop</span> Stop
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 3: Kalibrasi Sensor ─────────────────────────── -->
             <div id="settingsCalibrationSection" class="settings-section" data-settings-section>
               <div class="settings-section-title"><span class="material-symbols-rounded">tune</span>Kalibrasi Sensor</div>
               <div class="info-panel info-panel--yellow">
@@ -975,7 +1043,7 @@
 
               <div class="form-group">
                 <label class="form-label" for="inpPowerFactor"
-                  >Power factor (estimasi)</label
+                  >Power factor fallback</label
                 >
                 <input
                   id="inpPowerFactor"
@@ -987,15 +1055,15 @@
                   value="0.85"
                 />
                 <div class="form-hint">
-                  Untuk hitung daya (W) dan kWh di firmware — bukan pengukuran
-                  PF sejati.
+                  Dipakai hanya jika PZEM-004T tidak mengirim nilai PF valid.
+                  Saat PZEM normal, dashboard memakai PF hasil meter.
                 </div>
                 <div id="valPowerFactor" class="validation-msg"></div>
               </div>
 
               <div class="form-group">
                 <label class="form-label" for="inpFrequency"
-                  >Frekuensi nominal (Hz)</label
+                  >Frekuensi fallback (Hz)</label
                 >
                 <input
                   id="inpFrequency"
@@ -1007,25 +1075,6 @@
                   value="50"
                 />
                 <div id="valFrequency" class="validation-msg"></div>
-              </div>
-            </div>
-
-            <!-- Card 4: Discord moved to dedicated page ────────────── -->
-            <div class="settings-section" style="grid-column: 1 / -1" data-settings-section>
-              <div class="settings-section-title">
-                <span class="material-symbols-rounded" style="color:#5865F2">forum</span>
-                Discord Punya Halaman Khusus
-              </div>
-              <div class="info-panel info-panel--discord">
-                Konfigurasi webhook, Discord Bot, jumlah member server, daftar ban, ban user, dan unban user sekarang dipisah ke halaman khusus supaya pengaturan utama tetap ringkas.
-              </div>
-              <div class="settings-btn-cluster">
-                <a href="/discord" class="btn btn-primary">
-                  <span class="material-symbols-rounded">forum</span> Buka Halaman Discord
-                </a>
-                <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn btn-ghost" style="color:#7289da; border-color:rgba(114,137,218,0.3);">
-                  <span class="material-symbols-rounded">group</span> Join Server Discord
-                </a>
               </div>
             </div>
 

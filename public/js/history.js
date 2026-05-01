@@ -74,6 +74,15 @@ function normalizeStatus(status) {
   return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'].includes(value) ? value : 'UNKNOWN';
 }
 
+function derivePower(log = {}) {
+  const arus = Number(log.arus ?? 0);
+  const tegangan = Number(log.tegangan ?? 0);
+  const pf = Number(log.power_factor ?? 0.85);
+  const apparent = Number(log.apparent_power ?? log.daya ?? arus * tegangan);
+  const active = Number(log.daya_w ?? apparent * pf);
+  return { active, apparent };
+}
+
 // ─── Status chip ─────────────────────────────────────────────
 function statusChip(status) {
   const safeStatus = normalizeStatus(status);
@@ -146,15 +155,22 @@ function loadLogs() {
 function exportCSV() {
   if (allLogs.length === 0) { showToast('Tidak ada data untuk diekspor', 'warning'); return; }
 
-  const header = ['Waktu', 'Arus (A)', 'Tegangan (V)', 'Status', 'Relay', 'Sumber'];
-  const rows   = allLogs.map(l => [
-    fmtTime(l.waktu),
-    Number(l.arus || 0).toFixed(2),
-    Number(l.tegangan || 0).toFixed(1),
-    l.status || '',
-    l.relay === 1 ? 'ON' : 'OFF',
-    l.source || '',
-  ]);
+  const header = ['Waktu', 'Arus (A)', 'Tegangan (V)', 'Daya Aktif (W)', 'Daya Semu (VA)', 'PF', 'Frekuensi (Hz)', 'Status', 'Relay', 'Sumber'];
+  const rows   = allLogs.map(l => {
+    const power = derivePower(l);
+    return [
+      fmtTime(l.waktu),
+      Number(l.arus || 0).toFixed(2),
+      Number(l.tegangan || 0).toFixed(1),
+      power.active.toFixed(1),
+      power.apparent.toFixed(1),
+      Number(l.power_factor ?? 0).toFixed(2),
+      Number(l.frekuensi ?? 0).toFixed(1),
+      l.status || '',
+      l.relay === 1 ? 'ON' : 'OFF',
+      l.source || '',
+    ];
+  });
 
   const csv = [header, ...rows].map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });

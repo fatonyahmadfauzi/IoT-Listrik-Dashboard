@@ -22,6 +22,7 @@
  *   ✅ ArduinoJson           by Benoit Blanchon  (Firebase dependency)
  *   ✅ WiFiManager           by tzapu            (captive portal)
  *   ✅ URLEncode             by Masoud K         (Telegram URL encoding)
+ *   ✅ PZEM004Tv30           by Mandulaj         (PZEM-004T v3 meter)
  *   ✅ HTTPClient            built-in ESP32 core
  *   ✅ Preferences           built-in ESP32 core (NVS)
  *   (Optional) LiquidCrystal I2C by Frank de Brabander
@@ -58,14 +59,33 @@ RuntimeSettings rt;             // Layer 2: loaded from Firebase /settings
 
 // Current measurement state
 struct DeviceState {
-  float  arus      = 0.0f;
-  float  tegangan  = 0.0f;
-  float  daya      = 0.0f;
-  String status    = "NORMAL";
-  int    relay     = 1;         // physical relay state
+  float  arus            = 0.0f;
+  float  tegangan        = 0.0f;
+  float  dayaW           = 0.0f;
+  float  apparentPowerVa = 0.0f;
+  float  energiKwh       = 0.0f;
+  float  frekuensi       = 50.0f;
+  float  powerFactor     = 0.85f;
+  String sensorSource    = "PZEM-004T";
+  String status          = "NORMAL";
+  int    relay           = 1;         // physical relay state
 };
 DeviceState state;
 String lastStatus = "NORMAL";  // previous iteration status for change detection
+
+struct AutoLearningState {
+  bool running = false;
+  String requestId = "";
+  unsigned long startedMs = 0;
+  unsigned long lastSampleMs = 0;
+  unsigned long sampleCount = 0;
+  float minCurrent = 999999.0f;
+  float maxCurrent = 0.0f;
+  float sumCurrent = 0.0f;
+  float maxPowerW = 0.0f;
+  float sumPowerW = 0.0f;
+};
+AutoLearningState autoLearning;
 
 // Accumulated energy (kWh) — persisted in NVS namespace "iot_energy"
 static float         g_energiKwh       = 0.0f;
@@ -93,6 +113,7 @@ unsigned long lastBootstrapCheckMs = 0;
 
 static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000UL;
 static const unsigned long REMOTE_BOOTSTRAP_POLL_MS = 5000UL;
+static const unsigned long AUTO_LEARNING_SAMPLE_MS = 500UL;
 
 struct RemoteBootstrapRequest {
   bool   pending = false;
@@ -487,6 +508,126 @@ void connectWithPortal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// AUTO LEARNING BEBAN NORMAL
+// ═══════════════════════════════════════════════════════════════
+
+void resetAutoLearningRuntime() {
+  autoLearning.running = false;
+  autoLearning.requestId = "";
+  autoLearning.startedMs = 0;
+  autoLearning.lastSampleMs = 0;
+  autoLearning.sampleCount = 0;
+  autoLearning.minCurrent = 999999.0f;
+  autoLearning.maxCurrent = 0.0f;
+  autoLearning.sumCurrent = 0.0f;
+  autoLearning.maxPowerW = 0.0f;
+  autoLearning.sumPowerW = 0.0f;
+}
+
+void beginAutoLearning(unsigned long now) {
+  resetAutoLearningRuntime();
+  autoLearning.running = true;
+  autoLearning.requestId = rt.autoLearningRequestId.isEmpty()
+    ? String("device-") + String(now)
+    : rt.autoLearningRequestId;
+  autoLearning.startedMs = now;
+  autoLearning.lastSampleMs = 0;
+  updateAutoLearningStatus(autoLearning.requestId, "running", true,
+    "Perangkat mulai mempelajari beban normal.");
+  Serial.println("[Auto Learning] Mulai request " + autoLearning.requestId);
+}
+
+void sampleAutoLearning(unsigned long now) {
+  if (!autoLearning.running) return;
+  if (autoLearning.lastSampleMs != 0 && (now - autoLearning.lastSampleMs < AUTO_LEARNING_SAMPLE_MS)) {
+    return;
+  }
+  autoLearning.lastSampleMs = now;
+
+  float currentA = state.arus;
+  float powerW = state.dayaW;
+  if (currentA < 0.0f || isnan(currentA)) currentA = 0.0f;
+  if (powerW < 0.0f || isnan(powerW)) powerW = 0.0f;
+
+  autoLearning.sampleCount += 1;
+  if (currentA < autoLearning.minCurrent) autoLearning.minCurrent = currentA;
+  if (currentA > autoLearning.maxCurrent) autoLearning.maxCurrent = currentA;
+  if (powerW > autoLearning.maxPowerW) autoLearning.maxPowerW = powerW;
+  autoLearning.sumCurrent += currentA;
+  autoLearning.sumPowerW += powerW;
+}
+
+void finishAutoLearning() {
+  if (!autoLearning.running) return;
+
+  if (autoLearning.sampleCount < 3) {
+    updateAutoLearningStatus(autoLearning.requestId, "error", false,
+      "Learning gagal: sampel pembacaan terlalu sedikit.");
+    rt.autoLearningActive = false;
+    resetAutoLearningRuntime();
+    return;
+  }
+
+  float avgCurrent = autoLearning.sumCurrent / (float)autoLearning.sampleCount;
+  float avgPowerW = autoLearning.sumPowerW / (float)autoLearning.sampleCount;
+  float marginPercent = rt.autoLearningMarginPercent;
+  if (marginPercent < 5.0f) marginPercent = 5.0f;
+  if (marginPercent > 100.0f) marginPercent = 100.0f;
+
+  float learnedThreshold = autoLearning.maxCurrent * (1.0f + (marginPercent / 100.0f));
+  float minimumThreshold = autoLearning.maxCurrent + 0.20f;
+  if (learnedThreshold < minimumThreshold) learnedThreshold = minimumThreshold;
+  if (learnedThreshold < 0.50f) learnedThreshold = 0.50f;
+  if (learnedThreshold > 200.0f) learnedThreshold = 200.0f;
+
+  bool applyThreshold = rt.autoLearningApplyToThreshold;
+  bool ok = writeAutoLearningResult(
+    autoLearning.requestId,
+    autoLearning.sampleCount,
+    autoLearning.minCurrent == 999999.0f ? 0.0f : autoLearning.minCurrent,
+    autoLearning.maxCurrent,
+    avgCurrent,
+    autoLearning.maxPowerW,
+    avgPowerW,
+    learnedThreshold,
+    applyThreshold
+  );
+
+  if (ok && applyThreshold) {
+    rt.thresholdArus = learnedThreshold;
+    Serial.printf("[Auto Learning] Threshold baru %.2f A diterapkan.\n", learnedThreshold);
+  }
+  rt.autoLearningActive = false;
+  resetAutoLearningRuntime();
+}
+
+void handleAutoLearning(unsigned long now) {
+  if (!rt.autoLearningActive) {
+    if (autoLearning.running) {
+      updateAutoLearningStatus(autoLearning.requestId, "stopped", false,
+        "Learning dihentikan dari pengaturan admin.");
+      resetAutoLearningRuntime();
+    }
+    return;
+  }
+
+  bool requestChanged = !rt.autoLearningRequestId.isEmpty() &&
+                        autoLearning.requestId != rt.autoLearningRequestId;
+  if (!autoLearning.running || requestChanged) {
+    beginAutoLearning(now);
+  }
+
+  sampleAutoLearning(now);
+
+  unsigned long durationMs = rt.autoLearningDurationMs;
+  if (durationMs < 30000UL) durationMs = 30000UL;
+  if (durationMs > 600000UL) durationMs = 600000UL;
+  if (now - autoLearning.startedMs >= durationMs) {
+    finishAutoLearning();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // HARDWARE HELPERS
 // ═══════════════════════════════════════════════════════════════
 
@@ -628,29 +769,43 @@ void loop() {
     }
   }
 
-  // ── Read sensors using RUNTIME calibration ───────────────────
-  // calibration factors are from rt struct updated from Firebase
-  state.arus     = readArus(rt.arusCalibration);
-  state.tegangan = readTegangan(rt.teganganCalibration);
-  state.daya     = computeDaya(state.arus, state.tegangan);
+  // ── Read metering data from PZEM-004T ───────────────────────
+  ElectricalReading reading = readElectrical(rt, g_energiKwh);
+  state.arus            = reading.arus;
+  state.tegangan        = reading.tegangan;
+  state.dayaW           = reading.dayaW;
+  state.apparentPowerVa = reading.apparentPowerVa;
+  state.energiKwh       = reading.energiKwh;
+  state.frekuensi       = reading.frekuensi;
+  state.powerFactor     = reading.powerFactor;
+  state.sensorSource    = reading.sensorSource;
 
-  // ── Energy integration (estimated real power using PF from settings) ──
-  {
+  // ── Energy handling ──────────────────────────────────────────
+  // PZEM provides kWh directly. If the meter omits kWh but voltage/current
+  // are valid, estimate energy from active power until the meter reports again.
+  if (reading.energyFromMeter) {
+    g_energiKwh = reading.energiKwh;
+    g_lastEnergyMs = now;
+  } else {
     unsigned long prev = g_lastEnergyMs;
     if (prev == 0) prev = now;
     if (now >= prev) {
       float dt_h = (now - prev) / 3600000.0f;
       if (dt_h > 0.0f && dt_h < 1.0f) {
-        float pKw = (state.arus * state.tegangan * rt.powerFactorEstimate) / 1000.0f;
+        float pKw = state.dayaW / 1000.0f;
         if (pKw > 0.0f) g_energiKwh += pKw * dt_h;
       }
     }
     g_lastEnergyMs = now;
   }
+  state.energiKwh = g_energiKwh;
   if (now - g_lastKwhSaveMs >= 60000UL) {
     g_lastKwhSaveMs = now;
     saveEnergyKwhToNvs();
   }
+
+  // ── Auto Learning: sample beban normal saat admin mengaktifkan ──
+  handleAutoLearning(now);
 
   // ── Determine status using RUNTIME threshold ─────────────────
   String newStatus = determineStatus(state.arus, rt.thresholdArus,
@@ -664,7 +819,9 @@ void loop() {
     setRelay(0);
     updateRelayState(0);
     buzzerLong();
-    writeLog(state.arus, state.tegangan, newStatus, 0, "auto_cutoff");
+    writeLog(state.arus, state.tegangan, newStatus, 0, "auto_cutoff",
+             state.dayaW, state.apparentPowerVa, state.energiKwh,
+             state.frekuensi, state.powerFactor, state.sensorSource);
   }
   state.status = newStatus;
 
@@ -678,12 +835,14 @@ void loop() {
   if (now - lastSendMs >= rt.sendIntervalMs) {
     lastSendMs = now;
     if (rt.realtimeStreamEnabled) {
-      writeMonitorData(state.arus, state.tegangan, state.daya, g_energiKwh,
-                        rt.frequencyHz, rt.powerFactorEstimate,
-                        state.status, state.relay);
-      Serial.printf("[Monitor] I=%.2fA V=%.1fV S=%s R=%d\n",
-                    state.arus, state.tegangan,
-                    state.status.c_str(), state.relay);
+      writeMonitorData(state.arus, state.tegangan, state.dayaW,
+                        state.apparentPowerVa, state.energiKwh,
+                        state.frekuensi, state.powerFactor,
+                        state.status, state.relay, state.sensorSource);
+      Serial.printf("[Monitor] src=%s I=%.2fA V=%.1fV P=%.1fW S=%.1fVA PF=%.2f f=%.1fHz status=%s relay=%d\n",
+                    state.sensorSource.c_str(), state.arus, state.tegangan,
+                    state.dayaW, state.apparentPowerVa, state.powerFactor,
+                    state.frekuensi, state.status.c_str(), state.relay);
     } else {
       Serial.println("[Monitor] Stream realtime ke /listrik sedang PAUSE.");
     }
@@ -695,7 +854,9 @@ void loop() {
   // ── Log on status change ──────────────────────────────────────
   if (statusChanged && (now - lastLogMs > 2000)) {
     lastLogMs = now;
-    writeLog(state.arus, state.tegangan, newStatus, state.relay, "esp32");
+    writeLog(state.arus, state.tegangan, newStatus, state.relay, "esp32",
+             state.dayaW, state.apparentPowerVa, state.energiKwh,
+             state.frekuensi, state.powerFactor, state.sensorSource);
   }
 
   // ── Read relay command from web (every ~2.5 s) ───────────────
@@ -712,7 +873,9 @@ void loop() {
       } else {
         setRelay(cmdRelay);
         writeLog(state.arus, state.tegangan,
-                 state.status, cmdRelay, "web_command");
+                 state.status, cmdRelay, "web_command",
+                 state.dayaW, state.apparentPowerVa, state.energiKwh,
+                 state.frekuensi, state.powerFactor, state.sensorSource);
         buzzerBeep(1, 80, 0);
       }
     }

@@ -197,9 +197,9 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
     <!-- Chart.js + zoom plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="/vendor/chart.umd.min.js"></script>
+    <script src="/vendor/hammer.min.js"></script>
+    <script src="/vendor/chartjs-plugin-zoom.min.js"></script>
   </head>
   <body class="page-bg">
     <div class="app-layout">
@@ -227,14 +227,6 @@
             <span class="material-symbols-rounded nav-icon">history</span>
             Riwayat Log
           </a>
-          <a href="/downloads" class="nav-item">
-
-            <span class="material-symbols-rounded nav-icon">download</span>
-
-            Download App
-
-          </a>
-
           <div class="nav-divider"></div>
           <a href="/settings" class="nav-item hidden" style="display: none;" data-admin-only>
             <span class="material-symbols-rounded nav-icon">settings</span>
@@ -271,13 +263,13 @@
       <!-- ── Main Content ────────────────────────────────────────── -->
       <div class="main-content">
         <header class="topbar">
-          <div style="display: flex; align-items: center; gap: 12px">
+          <div class="topbar-heading">
             <button id="hamburgerBtn" class="hamburger">
               <span class="material-symbols-rounded">menu</span>
             </button>
             <h1 class="topbar-title">Dashboard Monitoring</h1>
           </div>
-          <div class="topbar-actions" style="flex-wrap: wrap; justify-content: flex-end; gap: 10px">
+          <div class="topbar-actions dashboard-topbar-actions">
             <div id="connStrip" class="conn-strip glass" title="Sumber data & koneksi">
               <span id="endpointBadge" class="ep-badge ep-cloud">CLOUD</span>
               <span id="connStateText" class="text-sm text-muted">Connected</span>
@@ -287,52 +279,81 @@
             <button id="installBtn" class="btn btn-ghost btn-sm hidden">
               <span class="material-symbols-rounded">download</span>Install App
             </button>
-            <span id="lastUpdated" class="text-sm text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">—</span>
+            <span id="lastUpdated" class="dashboard-last-updated text-sm text-muted">—</span>
           </div>
         </header>
 
         <main class="page-content">
+          <section class="dashboard-safety-grid" aria-label="Ringkasan status perangkat">
+            <article id="safetyStatusPanel" class="safety-status-panel glass status-NORMAL">
+              <div class="safety-status-copy">
+                <span class="safety-eyebrow">Status Keselamatan</span>
+                <div id="statusBadge" class="status-badge status-NORMAL">NORMAL</div>
+                <p id="statusSummary" class="safety-status-summary">Sistem stabil</p>
+                <p id="statusHint" class="safety-status-hint">
+                  Data realtime dibaca dari perangkat dan dievaluasi berdasarkan ambang sistem.
+                </p>
+              </div>
+              <div class="safety-status-icon" aria-hidden="true">
+                <span class="material-symbols-rounded">shield</span>
+              </div>
+            </article>
+
+            <article class="device-meta-panel glass">
+              <div>
+                <span class="safety-eyebrow">Koneksi Perangkat</span>
+                <h2>Realtime Heartbeat</h2>
+                <p>
+                  Perintah relay hanya aktif saat perangkat fisik terhubung dan siap menerima instruksi.
+                </p>
+              </div>
+              <div class="device-meta-list">
+                <div class="device-meta-item">
+                  <span class="material-symbols-rounded">cloud_sync</span>
+                  <span>Sumber data mengikuti mode cloud/local yang aktif.</span>
+                </div>
+                <div class="device-meta-item">
+                  <span class="material-symbols-rounded">schedule</span>
+                  <span>Update terakhir ditampilkan di kanan atas dashboard.</span>
+                </div>
+              </div>
+            </article>
+          </section>
+
           <!-- ── Metric Cards ────────────────────────────────────── -->
-          <div class="metric-grid">
+          <div class="metric-grid metric-grid-primary">
             <div class="metric-card glass green">
               <div class="metric-label">Arus</div>
               <div class="metric-value" id="valArus">— A</div>
-              <div class="metric-sub">SCT-013 Sensor</div>
+              <div class="metric-sub">PZEM-004T Meter</div>
             </div>
             <div class="metric-card glass blue">
               <div class="metric-label">Tegangan</div>
               <div class="metric-value" id="valTegangan">— V</div>
-              <div class="metric-sub">ZMPT101B Sensor</div>
+              <div class="metric-sub">PZEM-004T Meter</div>
             </div>
             <div class="metric-card glass yellow">
-              <div class="metric-label">Daya (est. W)</div>
+              <div class="metric-label">Daya Aktif (W)</div>
               <div class="metric-value" id="valDayaW">— W</div>
               <div class="metric-sub">V×I×PF (dari perangkat)</div>
             </div>
-            <div class="metric-card glass cyan">
-              <div class="metric-label">Status Sistem</div>
-              <div style="margin-top: 8px">
-                <div id="statusBadge" class="status-badge status-NORMAL">NORMAL</div>
-              </div>
-              <div class="metric-sub mt-8">Deteksi otomatis</div>
-            </div>
           </div>
 
-          <div class="metric-grid" style="margin-top: 14px">
+          <div class="metric-grid metric-grid-secondary">
             <div class="metric-card glass purple">
               <div class="metric-label">Energi (kWh)</div>
               <div class="metric-value" id="valEnergi">— kWh</div>
-              <div class="metric-sub">Akumulasi estimasi</div>
+              <div class="metric-sub">Akumulasi meter</div>
             </div>
             <div class="metric-card glass">
               <div class="metric-label">Power Factor</div>
               <div class="metric-value" id="valPF">—</div>
-              <div class="metric-sub">Estimasi (settings)</div>
+              <div class="metric-sub">Meter / fallback settings</div>
             </div>
             <div class="metric-card glass">
               <div class="metric-label">Frekuensi</div>
               <div class="metric-value" id="valFreq">— Hz</div>
-              <div class="metric-sub">Nominal grid</div>
+              <div class="metric-sub">Meter / fallback</div>
             </div>
             <div class="metric-card glass">
               <div class="metric-label">Apparent (VA)</div>
@@ -342,23 +363,26 @@
           </div>
 
           <!-- ── Relay Control (Admin only) ─────────────────────── -->
-          <div id="relaySection" class="section-card glass hidden">
+          <div id="relaySection" class="section-card glass relay-control-card hidden">
             <div class="section-header">
-              <div class="section-title">Kontrol Relay</div>
-              <div style="display: flex; align-items: center; gap: 12px">
+              <div>
+                <div class="section-title">Kontrol Relay</div>
+                <p class="relay-control-subtitle">Aksi kritikal untuk memutus atau mengaktifkan beban listrik.</p>
+              </div>
+              <div class="relay-state-pill">
                 <div id="relayDot" class="relay-indicator on"></div>
-                <span id="valRelay" class="font-mono" style="font-size: 16px; font-weight: 700">—</span>
+                <span id="valRelay" class="font-mono">—</span>
               </div>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-              <button id="relayOnBtn" class="btn btn-success" style="flex:1;min-width:140px;">
+            <div class="relay-actions">
+              <button id="relayOnBtn" class="btn btn-success relay-action-btn">
                 <span class="material-symbols-rounded">toggle_on</span>Nyalakan Relay
               </button>
-              <button id="relayOffBtn" class="btn btn-danger" style="flex:1;min-width:140px;">
+              <button id="relayOffBtn" class="btn btn-danger relay-action-btn">
                 <span class="material-symbols-rounded">toggle_off</span>Matikan Relay
               </button>
             </div>
-            <p class="text-sm text-muted mt-8">
+            <p id="relayControlHint" class="relay-control-hint">
               Auto-cutoff aktif: relay dimatikan otomatis saat terdeteksi kebocoran atau bahaya.
               Perintah ON ditolak jika kondisi masih berbahaya.
             </p>
@@ -368,7 +392,7 @@
           <div class="section-card glass">
             <div class="section-header">
               <div class="section-title">Grafik Realtime</div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <div class="section-actions">
                 <button id="resetZoomBtn" class="btn btn-ghost btn-sm">
                   <span class="material-symbols-rounded">zoom_out_map</span>Reset Zoom
                 </button>

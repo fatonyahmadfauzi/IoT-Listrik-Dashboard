@@ -130,7 +130,7 @@ async function sendTelegramFallback(botToken, chatIds, message) {
   return results.some((result) => result.status === 'fulfilled' && result.value);
 }
 
-// ── Build full sensor payload (identik dengan hardware SCT-013 + ZMPT101B) ─
+// ── Build full sensor payload (mengikuti schema PZEM-004T hardware) ─
 function buildSensorPayload(isDanger = false) {
   // Arus: NORMAL 0.5-3.5 A, DANGER 20-50 A (overcurrent di atas threshold 10A)
   const arus = isDanger ? getRandom(20, 50) : getRandom(0.5, 3.5);

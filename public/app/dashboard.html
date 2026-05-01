@@ -197,9 +197,9 @@
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
     <!-- Chart.js + zoom plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="/vendor/chart.umd.min.js"></script>
+    <script src="/vendor/hammer.min.js"></script>
+    <script src="/vendor/chartjs-plugin-zoom.min.js"></script>
   </head>
   <body class="page-bg">
     <div class="app-layout">
@@ -325,15 +325,15 @@
             <div class="metric-card glass green">
               <div class="metric-label">Arus</div>
               <div class="metric-value" id="valArus">— A</div>
-              <div class="metric-sub">SCT-013 Sensor</div>
+              <div class="metric-sub">PZEM-004T Meter</div>
             </div>
             <div class="metric-card glass blue">
               <div class="metric-label">Tegangan</div>
               <div class="metric-value" id="valTegangan">— V</div>
-              <div class="metric-sub">ZMPT101B Sensor</div>
+              <div class="metric-sub">PZEM-004T Meter</div>
             </div>
             <div class="metric-card glass yellow">
-              <div class="metric-label">Daya (est. W)</div>
+              <div class="metric-label">Daya Aktif (W)</div>
               <div class="metric-value" id="valDayaW">— W</div>
               <div class="metric-sub">V×I×PF (dari perangkat)</div>
             </div>
@@ -343,17 +343,17 @@
             <div class="metric-card glass purple">
               <div class="metric-label">Energi (kWh)</div>
               <div class="metric-value" id="valEnergi">— kWh</div>
-              <div class="metric-sub">Akumulasi estimasi</div>
+              <div class="metric-sub">Akumulasi meter</div>
             </div>
             <div class="metric-card glass">
               <div class="metric-label">Power Factor</div>
               <div class="metric-value" id="valPF">—</div>
-              <div class="metric-sub">Estimasi (settings)</div>
+              <div class="metric-sub">Meter / fallback settings</div>
             </div>
             <div class="metric-card glass">
               <div class="metric-label">Frekuensi</div>
               <div class="metric-value" id="valFreq">— Hz</div>
-              <div class="metric-sub">Nominal grid</div>
+              <div class="metric-sub">Meter / fallback</div>
             </div>
             <div class="metric-card glass">
               <div class="metric-label">Apparent (VA)</div>

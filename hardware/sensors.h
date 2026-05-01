@@ -1,18 +1,14 @@
 /**
- * sensors.h — SCT-013 (Current) + ZMPT101B (Voltage) Sensor Reading
+ * sensors.h — PZEM-004T Metering
  * ─────────────────────────────────────────────────────────────────────
  * All calibration factors are passed as PARAMETERS (not constants)
  * so they can be updated at runtime from Firebase /settings without
  * reflashing the firmware.
  *
- * Wiring assumptions:
- *  SCT-013 → PIN_ARUS  via 22Ω burden resistor + 10kΩ/10kΩ voltage
- *             divider to bias the AC signal at Vcc/2 (1.65 V).
- *  ZMPT101B → PIN_TEGANGAN. The module already provides biased AC
- *             output in the 0–3.3 V range; adjust pot until 1.65 V mid.
- *
- * IMPORTANT: Use only ADC1 pins (GPIO32-39) when Wi-Fi is active.
- *            ADC2 is disabled when Wi-Fi radio is on.
+ * Wiring:
+ *  PZEM-004T TX → ESP32 RX2 (PZEM_RX_PIN)
+ *  PZEM-004T RX → ESP32 TX2 (PZEM_TX_PIN)
+ *  PZEM VCC/GND → 5 V/common GND. Use level shifting if needed.
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -21,81 +17,30 @@
 
 #include "config.h"
 #include <Arduino.h>
+#include <math.h>
+
+#include <PZEM004Tv30.h>
+PZEM004Tv30 pzem(Serial2, PZEM_RX_PIN, PZEM_TX_PIN);
+
+struct ElectricalReading {
+  float arus = 0.0f;
+  float tegangan = 0.0f;
+  float dayaW = 0.0f;
+  float apparentPowerVa = 0.0f;
+  float energiKwh = 0.0f;
+  float frekuensi = 50.0f;
+  float powerFactor = 0.85f;
+  bool energyFromMeter = false;
+  bool valid = false;
+  const char* sensorSource = "PZEM-004T";
+};
 
 // ─── initSensors() ────────────────────────────────────────────
 /**
- * Configure ADC resolution and attenuation.
- * Must be called once in setup() BEFORE any analogRead.
+ * Start the PZEM serial bus.
  */
 void initSensors() {
-  analogReadResolution(12);          // 12-bit → values 0..4095
-  analogSetAttenuation(ADC_11db);    // 0–3.9 V input range (broadest)
-}
-
-// ─── readArus() ───────────────────────────────────────────────
-/**
- * Read AC current RMS from SCT-013.
- * Collects ADC_SAMPLES samples, computes RMS of the AC component,
- * converts to Amperes, then applies the runtime calibration factor.
- *
- * Formula:
- *   rms_ADC = sqrt( Σ(sample − midpoint)² / N )
- *   rms_V   = rms_ADC × (Vref / Resolution)      ← Volts across burden
- *   I_rms   = (rms_V / burden_R) × turns_ratio   ← Primary Amperes
- *   result  = I_rms × calibrationFactor           ← Calibrated value
- *
- * @param calibrationFactor  Runtime multiplier from RuntimeSettings.arusCalibration
- * @return float  Calibrated current RMS in Amperes (always ≥ 0)
- */
-float readArus(float calibrationFactor = 1.0f) {
-  long sumSq = 0;
-
-  for (int i = 0; i < ADC_SAMPLES; i++) {
-    int sample = analogRead(PIN_ARUS);
-    long offset = (long)sample - ADC_MIDPOINT;
-    sumSq += offset * offset;
-    delayMicroseconds(50);  // ~20 kHz sampling rate — sufficient for 50 Hz AC
-  }
-
-  float rmsADC = sqrtf((float)sumSq / ADC_SAMPLES);
-  float rmsV   = rmsADC * (ADC_VREF / (float)ADC_RESOLUTION);
-  float amps   = (rmsV / SCT_BURDEN_R) * SCT_RATIO;
-
-  return fmaxf(amps * calibrationFactor, 0.0f);
-}
-
-// ─── readTegangan() ───────────────────────────────────────────
-/**
- * Read AC voltage RMS from ZMPT101B.
- * Same RMS method as readArus(). The calibrationFactor converts
- * the raw ADC RMS voltage into the true AC voltage in Volts.
- *
- * Calibration procedure:
- *   1. Measure a known AC voltage with a reference voltmeter.
- *   2. Note the raw value printed via Serial (before calibration).
- *   3. calibrationFactor = knownVoltage / rawValue
- *   4. Enter this factor in the web Settings page → Kalibrasi Tegangan.
- *
- * Example: voltmeter reads 220 V, raw output was 0.336 V rms
- *          → calibrationFactor = 220 / 0.336 ≈ 654.8
- *
- * @param calibrationFactor  Runtime multiplier from RuntimeSettings.teganganCalibration
- * @return float  Calibrated voltage RMS in Volts (always ≥ 0)
- */
-float readTegangan(float calibrationFactor = 1.0f) {
-  long sumSq = 0;
-
-  for (int i = 0; i < ADC_SAMPLES; i++) {
-    int sample = analogRead(PIN_TEGANGAN);
-    long offset = (long)sample - ADC_MIDPOINT;
-    sumSq += offset * offset;
-    delayMicroseconds(50);
-  }
-
-  float rmsADC = sqrtf((float)sumSq / ADC_SAMPLES);
-  float rmsV   = rmsADC * (ADC_VREF / (float)ADC_RESOLUTION);
-
-  return fmaxf(rmsV * calibrationFactor, 0.0f);
+  Serial2.begin(PZEM_BAUD, SERIAL_8N1, PZEM_RX_PIN, PZEM_TX_PIN);
 }
 
 // ─── computeDaya() ────────────────────────────────────────────
@@ -109,6 +54,62 @@ float readTegangan(float calibrationFactor = 1.0f) {
  */
 float computeDaya(float arus, float tegangan) {
   return arus * tegangan;
+}
+
+bool isValidMeterValue(float value) {
+  return !isnan(value) && isfinite(value) && value >= 0.0f;
+}
+
+float clampPowerFactor(float pf, float fallback) {
+  if (!isValidMeterValue(pf) || pf <= 0.0f || pf > 1.0f) return fallback;
+  return pf;
+}
+
+ElectricalReading readElectrical(RuntimeSettings& settings,
+                                 float previousEnergyKwh = 0.0f) {
+  ElectricalReading r;
+  r.energiKwh = previousEnergyKwh;
+  r.frekuensi = settings.frequencyHz;
+  r.powerFactor = settings.powerFactorEstimate;
+
+  float pzemVoltage = pzem.voltage();
+  float pzemCurrent = pzem.current();
+
+  if (isValidMeterValue(pzemVoltage) && pzemVoltage > 1.0f &&
+      isValidMeterValue(pzemCurrent)) {
+    float pzemPower = pzem.power();
+    float pzemEnergy = pzem.energy();
+    float pzemFrequency = pzem.frequency();
+    float pzemPf = pzem.pf();
+
+    r.tegangan = fmaxf(pzemVoltage * settings.teganganCalibration, 0.0f);
+    r.arus = fmaxf(pzemCurrent * settings.arusCalibration, 0.0f);
+    r.apparentPowerVa = computeDaya(r.arus, r.tegangan);
+    r.powerFactor = clampPowerFactor(pzemPf, settings.powerFactorEstimate);
+    float powerScale = settings.arusCalibration * settings.teganganCalibration;
+    if (powerScale <= 0.0f) powerScale = 1.0f;
+    r.dayaW = isValidMeterValue(pzemPower)
+      ? fmaxf(pzemPower * powerScale, 0.0f)
+      : fmaxf(r.apparentPowerVa * r.powerFactor, 0.0f);
+    r.frekuensi = isValidMeterValue(pzemFrequency) && pzemFrequency > 0.0f
+      ? pzemFrequency
+      : settings.frequencyHz;
+    if (isValidMeterValue(pzemEnergy)) {
+      r.energiKwh = fmaxf(pzemEnergy * powerScale, 0.0f);
+      r.energyFromMeter = true;
+    }
+    r.valid = true;
+    r.sensorSource = "PZEM-004T";
+    return r;
+  }
+
+  r.arus = 0.0f;
+  r.tegangan = 0.0f;
+  r.apparentPowerVa = 0.0f;
+  r.dayaW = 0.0f;
+  r.valid = false;
+  r.sensorSource = "PZEM-004T";
+  return r;
 }
 
 // ─── determineStatus() ────────────────────────────────────────

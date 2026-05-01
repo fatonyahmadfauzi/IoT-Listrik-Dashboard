@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LogOut, Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
-import { app as mainApp, db, auth as mainAuth, firebaseConfig } from '../lib/firebase';
+import { db, auth as mainAuth, firebaseConfig } from '../lib/firebase';
 import { ref, update, remove, set } from 'firebase/database';
 import { initializeApp, deleteApp } from 'firebase/app';
 import {
@@ -45,6 +45,23 @@ interface DeviceBootstrapSettings {
   firebaseDbUrl?: string;
   iotEmail?: string;
   iotPassword?: string;
+}
+
+interface AutoLearningSettings {
+  active?: boolean;
+  status?: string;
+  requestId?: string;
+  durationMs?: number;
+  marginPercent?: number;
+  applyToThreshold?: boolean;
+  sampleCount?: number;
+  minCurrent?: number;
+  maxCurrent?: number;
+  avgCurrent?: number;
+  maxPowerW?: number;
+  avgPowerW?: number;
+  learnedThresholdArus?: number;
+  message?: string;
 }
 
 interface DatabaseBackupAttachment {
@@ -177,7 +194,7 @@ export function Settings({ onLogout }: SettingsProps) {
   const { settings, users } = useDataStore();
   const { role, user, isTempAccount } = useAuthStore();
   const [tab, setTab] = useState<
-    'system' | 'calibration' | 'telegram' | 'discord' | 'device' | 'backup' | 'backend' | 'users'
+    'system' | 'learning' | 'calibration' | 'telegram' | 'discord' | 'device' | 'backup' | 'backend' | 'users'
   >('system');
   const [loading, setLoading] = useState(false);
   const [clientCfg, setClientCfg] = useState<ClientBackendConfig>(() =>
@@ -198,6 +215,18 @@ export function Settings({ onLogout }: SettingsProps) {
   const [autoCutoffEnabled, setAutoCutoffEnabled] = useState(settings?.autoCutoffEnabled ?? settings?.auto_cutoff ?? true);
   const [powerFactorEstimate, setPowerFactorEstimate] = useState(settings?.powerFactorEstimate ?? 0.85);
   const [frequencyHz, setFrequencyHz] = useState(settings?.frequencyHz ?? 50);
+
+  // Auto Learning
+  const autoLearningSettings = (settings?.autoLearning || {}) as AutoLearningSettings;
+  const [learningDurationSec, setLearningDurationSec] = useState(
+    Math.round(Number(autoLearningSettings.durationMs || 120000) / 1000)
+  );
+  const [learningMarginPercent, setLearningMarginPercent] = useState(
+    Number(autoLearningSettings.marginPercent ?? 25)
+  );
+  const [learningApplyThreshold, setLearningApplyThreshold] = useState(
+    autoLearningSettings.applyToThreshold !== false
+  );
 
   // Calibration
   const [arusCalibration, setArusCalibration] = useState(settings?.arusCalibration ?? settings?.calibration?.arus ?? 1);
@@ -232,6 +261,16 @@ export function Settings({ onLogout }: SettingsProps) {
     setAutoCutoffEnabled(settings.autoCutoffEnabled ?? settings.auto_cutoff ?? true);
     setPowerFactorEstimate(settings.powerFactorEstimate ?? 0.85);
     setFrequencyHz(settings.frequencyHz ?? 50);
+    const nextLearning = (settings.autoLearning || {}) as AutoLearningSettings;
+    if (nextLearning.durationMs) {
+      setLearningDurationSec(Math.round(Number(nextLearning.durationMs) / 1000));
+    }
+    if (nextLearning.marginPercent !== undefined) {
+      setLearningMarginPercent(Number(nextLearning.marginPercent));
+    }
+    if (nextLearning.applyToThreshold !== undefined) {
+      setLearningApplyThreshold(nextLearning.applyToThreshold !== false);
+    }
     setTelegramNotifyEnabled(settings.telegramNotifyEnabled ?? true);
     setTelegramBotToken(settings.telegramBotToken ?? settings.telegram?.bot_token ?? '');
     setTelegramRecipients(parseTelegramRecipients(
@@ -307,6 +346,23 @@ export function Settings({ onLogout }: SettingsProps) {
 
   const isAdmin = role === 'admin';
   const canManageDeviceBootstrap = isAdmin && !isTempAccount;
+  const autoLearningStatus = String(
+    autoLearningSettings.status || (autoLearningSettings.active ? 'running' : 'idle')
+  ).toLowerCase();
+  const autoLearningIsRunning = autoLearningSettings.active === true || autoLearningStatus === 'running';
+  const autoLearningStatusLabel =
+    {
+      idle: 'Siap',
+      running: 'Sedang learning',
+      complete: 'Selesai',
+      stopped: 'Dihentikan',
+      error: 'Error',
+    }[autoLearningStatus] || autoLearningSettings.status || 'Siap';
+  const formatLearningNumber = (value: unknown, suffix = '') => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return `0${suffix}`;
+    return `${numeric.toFixed(2)}${suffix}`;
+  };
   const deviceBootstrapStatus = String(bootstrapSettings.status || 'idle').toLowerCase();
   const deviceBootstrapStatusLabel =
     {
@@ -400,6 +456,59 @@ export function Settings({ onLogout }: SettingsProps) {
     } catch (error) {
       console.error('Error saving settings:', error);
       notifyDesktop('Gagal menyimpan pengaturan', 'Konfigurasi sistem tidak berhasil diperbarui.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartAutoLearning = async () => {
+    if (!isAdmin || isTempAccount) return;
+    const durationMs = Math.max(30000, Math.min(600000, Number(learningDurationSec || 120) * 1000));
+    const marginPercent = Math.max(5, Math.min(100, Number(learningMarginPercent || 25)));
+    setLoading(true);
+    try {
+      await update(ref(db, 'settings/autoLearning'), {
+        active: true,
+        status: 'running',
+        requestId: `learn-${Date.now()}`,
+        durationMs,
+        marginPercent,
+        applyToThreshold: learningApplyThreshold,
+        startedAt: Date.now(),
+        startedBy: user?.email || 'admin',
+        sampleCount: 0,
+        minCurrent: 0,
+        maxCurrent: 0,
+        avgCurrent: 0,
+        maxPowerW: 0,
+        avgPowerW: 0,
+        learnedThresholdArus: 0,
+        message: 'Menunggu ESP32 membaca perintah auto learning.',
+      });
+      notifyDesktop('Auto Learning dimulai', 'ESP32 akan mempelajari beban normal pada sync berikutnya.');
+    } catch (error) {
+      console.error('Error starting auto learning:', error);
+      notifyDesktop('Gagal memulai Auto Learning', 'Periksa koneksi Firebase dan hak akses admin.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStopAutoLearning = async () => {
+    if (!isAdmin || isTempAccount) return;
+    setLoading(true);
+    try {
+      await update(ref(db, 'settings/autoLearning'), {
+        active: false,
+        status: 'stopped',
+        stoppedAt: Date.now(),
+        stoppedBy: user?.email || 'admin',
+        message: 'Learning dihentikan oleh admin.',
+      });
+      notifyDesktop('Auto Learning dihentikan', 'Perangkat akan berhenti mempelajari beban normal.');
+    } catch (error) {
+      console.error('Error stopping auto learning:', error);
+      notifyDesktop('Gagal menghentikan Auto Learning', 'Periksa koneksi Firebase dan hak akses admin.');
     } finally {
       setLoading(false);
     }
@@ -1284,6 +1393,7 @@ export function Settings({ onLogout }: SettingsProps) {
         {(
           [
             ['system', 'System'],
+            ['learning', 'Auto Learning'],
             ['calibration', 'Calibration'],
             ['telegram', 'Telegram'],
             ['discord', 'Discord'],
@@ -1351,7 +1461,7 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Estimasi Power Factor
+                Power Factor Fallback
               </label>
               <input
                 type="number"
@@ -1363,7 +1473,7 @@ export function Settings({ onLogout }: SettingsProps) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Frekuensi Jaringan (Hz)
+                Frekuensi Fallback (Hz)
               </label>
               <input
                 type="number"
@@ -1420,6 +1530,119 @@ export function Settings({ onLogout }: SettingsProps) {
           >
             {loading ? 'Saving...' : 'Save Configuration'}
           </button>
+        </div>
+      )}
+
+      {/* Auto Learning Tab */}
+      {tab === 'learning' && (
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-5">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Auto Learning Beban Normal
+            </h3>
+            <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+              Nyalakan kombinasi beban normal, lalu jalankan learning. ESP32 akan menghitung arus maksimum normal dan memberi margin sebelum threshold diterapkan.
+            </p>
+          </div>
+
+          {isTempAccount && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              Auto Learning hanya untuk admin utama dengan device fisik. Simulator temp tidak mengirim perintah ke ESP32.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Durasi Learning (detik)
+              </label>
+              <input
+                type="number"
+                min={30}
+                max={600}
+                step={10}
+                value={learningDurationSec}
+                onChange={(event) => setLearningDurationSec(Number(event.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Margin Keamanan (%)
+              </label>
+              <input
+                type="number"
+                min={5}
+                max={100}
+                step={1}
+                value={learningMarginPercent}
+                onChange={(event) => setLearningMarginPercent(Number(event.target.value))}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="learningApplyThreshold"
+              checked={learningApplyThreshold}
+              onChange={(event) => setLearningApplyThreshold(event.target.checked)}
+              className="rounded"
+            />
+            <label htmlFor="learningApplyThreshold" className="text-gray-700 dark:text-gray-300">
+              Terapkan hasil learning sebagai Threshold Arus Maksimal otomatis.
+            </label>
+          </div>
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
+            <div className="font-semibold">Status: {autoLearningStatusLabel}</div>
+            <div className="mt-1">{autoLearningSettings.message || 'Belum ada proses learning aktif.'}</div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <div className="text-gray-500 dark:text-gray-400">Sampel</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{autoLearningSettings.sampleCount || 0}</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <div className="text-gray-500 dark:text-gray-400">Arus Maksimum Normal</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{formatLearningNumber(autoLearningSettings.maxCurrent, ' A')}</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <div className="text-gray-500 dark:text-gray-400">Threshold Hasil Learning</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{formatLearningNumber(autoLearningSettings.learnedThresholdArus, ' A')}</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <div className="text-gray-500 dark:text-gray-400">Rata-rata Arus</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{formatLearningNumber(autoLearningSettings.avgCurrent, ' A')}</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <div className="text-gray-500 dark:text-gray-400">Daya Maksimum</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{formatLearningNumber(autoLearningSettings.maxPowerW, ' W')}</div>
+            </div>
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <div className="text-gray-500 dark:text-gray-400">Request ID</div>
+              <div className="truncate font-semibold text-gray-900 dark:text-white">{autoLearningSettings.requestId || '-'}</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleStartAutoLearning}
+              disabled={loading || autoLearningIsRunning || isTempAccount}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+            >
+              {autoLearningIsRunning ? 'Learning Berjalan...' : 'Mulai Auto Learning'}
+            </button>
+            <button
+              onClick={handleStopAutoLearning}
+              disabled={loading || !autoLearningIsRunning || isTempAccount}
+              className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
+            >
+              Stop
+            </button>
+          </div>
         </div>
       )}
 

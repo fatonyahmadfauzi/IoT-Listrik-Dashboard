@@ -222,6 +222,50 @@ function validateVercelConfig(rootDir, errors) {
       addError(errors, `vercel.json: rewrite destination missing "${rewrite.destination}"`);
     }
   }
+
+  const globalHeaders = Array.isArray(vercel.headers)
+    ? vercel.headers.find((entry) => entry && entry.source === "/(.*)")
+    : null;
+  const cspHeader = globalHeaders && Array.isArray(globalHeaders.headers)
+    ? globalHeaders.headers.find((header) => header && header.key === "Content-Security-Policy")
+    : null;
+  const csp = cspHeader && typeof cspHeader.value === "string" ? cspHeader.value : "";
+
+  for (const requiredSource of ["https://*.firebaseio.com", "https://*.firebasedatabase.app"]) {
+    if (!csp.includes(`script-src`) || !csp.includes(requiredSource)) {
+      addError(errors, `vercel.json: CSP script-src must allow Firebase RTDB long-polling source "${requiredSource}"`);
+    }
+  }
+}
+
+function validateAutoLearningCoverage(rootDir, errors) {
+  const requiredSnippets = [
+    ["public/settings.html", "autoLearningSection"],
+    ["public/settings.html", "inpLearningDuration"],
+    ["public/settings.html", "startAutoLearningBtn"],
+    ["public/app/settings.html", "autoLearningSection"],
+    ["public/app/settings.html", "inpLearningDuration"],
+    ["public/app/settings.html", "startAutoLearningBtn"],
+    ["public/js/settings.js", "startAutoLearning"],
+    ["public/js/settings.js", "settings/autoLearning"],
+    ["hardware/config.h", "autoLearningActive"],
+    ["hardware/config.example.h", "autoLearningActive"],
+    ["hardware/firebase_handler.h", "autoLearning/active"],
+    ["hardware/firebase_handler.h", "writeAutoLearningResult"],
+    ["hardware/main/main.ino", "handleAutoLearning"],
+    ["database.rules.json", "\"autoLearning\""],
+  ];
+
+  for (const [relativePath, snippet] of requiredSnippets) {
+    const filePath = path.join(rootDir, relativePath);
+    if (!pathExists(filePath)) {
+      addError(errors, `${relativePath}: required for auto-learning coverage`);
+      continue;
+    }
+    if (!readText(filePath).includes(snippet)) {
+      addError(errors, `${relativePath}: missing auto-learning snippet "${snippet}"`);
+    }
+  }
 }
 
 function validateJavaScriptSyntax(rootDir, errors) {
@@ -260,6 +304,7 @@ function validateProject(options = {}) {
   validateManifestAssets(rootDir, errors);
   validateAdminPageParity(rootDir, errors);
   validateVercelConfig(rootDir, errors);
+  validateAutoLearningCoverage(rootDir, errors);
   validateJavaScriptSyntax(rootDir, errors);
 
   if (!options.silent) {

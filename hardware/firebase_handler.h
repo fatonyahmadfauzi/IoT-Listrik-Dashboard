@@ -86,18 +86,23 @@ bool isFirebaseReady() {
  * @param relay     Relay state: 0=OFF, 1=ON
  * @return true on success
  */
-bool writeMonitorData(float arus, float tegangan, float dayaVa,
-                      float energiKwh, float freqHz, float powerFactor,
-                      const String& status, int relay) {
+bool writeMonitorData(float arus, float tegangan, float dayaW,
+                      float apparentPowerVa, float energiKwh,
+                      float freqHz, float powerFactor,
+                      const String& status, int relay,
+                      const String& sensorSource = "PZEM-004T") {
   if (!isFirebaseReady()) return false;
 
   FirebaseJson json;
   json.set("arus",          arus);
   json.set("tegangan",      tegangan);
-  json.set("daya",          dayaVa);
+  json.set("daya",          apparentPowerVa); // Backward-compatible: apparent power (VA)
+  json.set("daya_w",        dayaW);           // Active power from PZEM when available
+  json.set("apparent_power", apparentPowerVa);
   json.set("energi_kwh",    energiKwh);
   json.set("frekuensi",     freqHz);
   json.set("power_factor",  powerFactor);
+  json.set("sensor_source",  sensorSource);
   json.set("status",        status);
   json.set("relay",         relay);
   json.set("updated_at",    String(millis()));
@@ -122,16 +127,32 @@ bool writeMonitorData(float arus, float tegangan, float dayaVa,
  */
 bool writeLog(float arus, float tegangan,
               const String& status, int relay,
-              const String& source) {
+              const String& source,
+              float dayaW = 0.0f,
+              float apparentPowerVa = 0.0f,
+              float energiKwh = 0.0f,
+              float freqHz = 50.0f,
+              float powerFactor = 0.85f,
+              const String& sensorSource = "PZEM-004T") {
   if (!isFirebaseReady()) return false;
 
   FirebaseJson json;
-  json.set("arus",      arus);
-  json.set("tegangan",  tegangan);
-  json.set("status",    status);
-  json.set("relay",     relay);
-  json.set("waktu",     String(millis()));
-  json.set("source",    source);
+  if (apparentPowerVa <= 0.0f) apparentPowerVa = arus * tegangan;
+  if (dayaW <= 0.0f) dayaW = apparentPowerVa * powerFactor;
+
+  json.set("arus",           arus);
+  json.set("tegangan",       tegangan);
+  json.set("daya",           apparentPowerVa);
+  json.set("daya_w",         dayaW);
+  json.set("apparent_power", apparentPowerVa);
+  json.set("energi_kwh",     energiKwh);
+  json.set("frekuensi",      freqHz);
+  json.set("power_factor",   powerFactor);
+  json.set("sensor_source",  sensorSource);
+  json.set("status",         status);
+  json.set("relay",          relay);
+  json.set("waktu",          String(millis()));
+  json.set("source",         source);
 
   bool ok = Firebase.RTDB.pushJSON(&fbData, "/logs", &json);
   if (!ok) {
@@ -186,7 +207,8 @@ bool updateRelayState(int relayVal) {
  *   thresholdArus, buzzerEnabled, autoCutoffEnabled,
  *   telegramBotToken, telegramChatId (supports comma-separated IDs),
  *   arusCalibration, teganganCalibration,
- *   realtimeStreamEnabled, sendIntervalMs
+ *   realtimeStreamEnabled, sendIntervalMs,
+ *   autoLearning/*
  *
  * If /settings does not exist yet, the struct values remain at
  * their default (as declared in config.h RuntimeSettings).
@@ -245,15 +267,99 @@ bool readAllSettings(RuntimeSettings& out) {
   if (json.get(val, "telegramChatId")   && !val.stringValue.isEmpty())
     out.telegramChatId = val.stringValue;
 
+  // Auto Learning Beban Normal
+  if (json.get(val, "autoLearning/active"))
+    out.autoLearningActive = (val.stringValue == "true" || val.intValue == 1);
+  if (json.get(val, "autoLearning/requestId"))
+    out.autoLearningRequestId = val.stringValue;
+  if (json.get(val, "autoLearning/durationMs")) {
+    if (val.typeNum == FirebaseJson::JSON_INT && val.intValue > 0)
+      out.autoLearningDurationMs = (unsigned long)val.intValue;
+    else if (val.typeNum == FirebaseJson::JSON_FLOAT && val.floatValue > 0)
+      out.autoLearningDurationMs = (unsigned long)val.floatValue;
+  }
+  if (json.get(val, "autoLearning/marginPercent")) {
+    if (val.typeNum == FirebaseJson::JSON_FLOAT) out.autoLearningMarginPercent = val.floatValue;
+    else if (val.typeNum == FirebaseJson::JSON_INT) out.autoLearningMarginPercent = (float)val.intValue;
+  }
+  if (json.get(val, "autoLearning/applyToThreshold"))
+    out.autoLearningApplyToThreshold = (val.stringValue == "true" || val.intValue == 1);
+
   Serial.printf(
     "[Firebase] Settings synced → thr=%.1fA warn%%=%.0f PF=%.2f f=%.0fHz "
-    "cal_I=%.3f cal_V=%.2f stream=%d sendMs=%lu buzzer=%d cutoff=%d TG=%s\n",
+    "cal_I=%.3f cal_V=%.2f stream=%d sendMs=%lu buzzer=%d cutoff=%d TG=%s learn=%d\n",
     out.thresholdArus, out.warningPercent, out.powerFactorEstimate, out.frequencyHz,
     out.arusCalibration, out.teganganCalibration,
     out.realtimeStreamEnabled, out.sendIntervalMs, out.buzzerEnabled, out.autoCutoffEnabled,
-    out.telegramBotToken.isEmpty() ? "unconfigured" : "configured"
+    out.telegramBotToken.isEmpty() ? "unconfigured" : "configured",
+    out.autoLearningActive
   );
   return true;
+}
+
+bool updateAutoLearningStatus(const String& requestId,
+                              const String& status,
+                              bool active,
+                              const String& message = "") {
+  if (!isFirebaseReady()) return false;
+
+  FirebaseJson json;
+  json.set("requestId", requestId);
+  json.set("status", status);
+  json.set("active", active);
+  json.set("deviceUpdatedAt", String(millis()));
+  if (!message.isEmpty()) json.set("message", message);
+
+  bool ok = Firebase.RTDB.updateNode(&fbData, "/settings/autoLearning", &json);
+  if (!ok) {
+    Serial.println("[Firebase] updateAutoLearningStatus gagal: " + fbData.errorReason());
+  }
+  return ok;
+}
+
+bool writeAutoLearningResult(const String& requestId,
+                             unsigned long sampleCount,
+                             float minCurrent,
+                             float maxCurrent,
+                             float avgCurrent,
+                             float maxPowerW,
+                             float avgPowerW,
+                             float learnedThresholdArus,
+                             bool applyToThreshold) {
+  if (!isFirebaseReady()) return false;
+
+  FirebaseJson json;
+  json.set("requestId", requestId);
+  json.set("active", false);
+  json.set("status", "complete");
+  json.set("sampleCount", (int)sampleCount);
+  json.set("minCurrent", minCurrent);
+  json.set("maxCurrent", maxCurrent);
+  json.set("avgCurrent", avgCurrent);
+  json.set("maxPowerW", maxPowerW);
+  json.set("avgPowerW", avgPowerW);
+  json.set("learnedThresholdArus", learnedThresholdArus);
+  json.set("applyToThreshold", applyToThreshold);
+  json.set("finishedAt", String(millis()));
+  json.set("message", applyToThreshold
+    ? "Learning selesai. Threshold arus diperbarui oleh perangkat."
+    : "Learning selesai. Threshold arus tidak diubah otomatis.");
+
+  bool resultOk = Firebase.RTDB.updateNode(&fbData, "/settings/autoLearning", &json);
+  if (!resultOk) {
+    Serial.println("[Firebase] writeAutoLearningResult gagal: " + fbData.errorReason());
+  }
+
+  bool thresholdOk = true;
+  if (applyToThreshold) {
+    thresholdOk = Firebase.RTDB.setFloat(&fbData, "/settings/thresholdArus", learnedThresholdArus);
+    if (!thresholdOk) {
+      Serial.println("[Firebase] apply learned threshold gagal: " + fbData.errorReason());
+      updateAutoLearningStatus(requestId, "complete", false,
+        "Learning selesai, tetapi threshold gagal diperbarui.");
+    }
+  }
+  return resultOk && thresholdOk;
 }
 
 #endif // FIREBASE_HANDLER_H

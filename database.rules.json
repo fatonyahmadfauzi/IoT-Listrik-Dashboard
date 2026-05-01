@@ -24,6 +24,14 @@
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
         ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60000"
       },
+      "daya_w": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60000"
+      },
+      "apparent_power": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60000"
+      },
       "energi_kwh": {
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
         ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
@@ -36,9 +44,13 @@
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
         ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1.2"
       },
+      "sensor_source": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isString() && newData.val().length <= 80"
+      },
       "status": {
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
-        ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'DANGER')"
+        ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'LEAKAGE' || newData.val() === 'DANGER')"
       },
       "updated_at": {
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
@@ -60,8 +72,29 @@
         "tegangan": {
           ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 300"
         },
+        "daya": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60000"
+        },
+        "daya_w": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60000"
+        },
+        "apparent_power": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60000"
+        },
+        "energi_kwh": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+        },
+        "frekuensi": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 70"
+        },
+        "power_factor": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1.2"
+        },
+        "sensor_source": {
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
         "status": {
-          ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'DANGER')"
+          ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'LEAKAGE' || newData.val() === 'DANGER')"
         },
         "relay": {
           ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)"
@@ -88,6 +121,55 @@
     "settings": {
       ".read":  "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
       ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "thresholdArus": {
+        ".write": "auth != null && auth.token.isTempAccount !== true && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.token.email === 'listrik.iot.device@gmail.com' && root.child('settings').child('autoLearning').child('applyToThreshold').val() === true))",
+        ".validate": "newData.isNumber() && newData.val() >= 0.1 && newData.val() <= 200"
+      },
+      "autoLearning": {
+        ".write": "auth != null && auth.token.isTempAccount !== true && (root.child('users').child(auth.uid).child('role').val() === 'admin' || auth.token.email === 'listrik.iot.device@gmail.com')",
+        "active": {
+          ".validate": "newData.isBoolean()"
+        },
+        "status": {
+          ".validate": "newData.isString() && (newData.val() === 'idle' || newData.val() === 'running' || newData.val() === 'complete' || newData.val() === 'stopped' || newData.val() === 'error')"
+        },
+        "requestId": {
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "durationMs": {
+          ".validate": "newData.isNumber() && newData.val() >= 30000 && newData.val() <= 600000"
+        },
+        "marginPercent": {
+          ".validate": "newData.isNumber() && newData.val() >= 5 && newData.val() <= 100"
+        },
+        "applyToThreshold": {
+          ".validate": "newData.isBoolean()"
+        },
+        "startedAt": {
+          ".validate": "(newData.isNumber() && newData.val() >= 0) || (newData.isString() && newData.val().length <= 40)"
+        },
+        "finishedAt": {
+          ".validate": "(newData.isNumber() && newData.val() >= 0) || (newData.isString() && newData.val().length <= 40)"
+        },
+        "stoppedAt": {
+          ".validate": "(newData.isNumber() && newData.val() >= 0) || (newData.isString() && newData.val().length <= 40)"
+        },
+        "deviceUpdatedAt": {
+          ".validate": "(newData.isNumber() && newData.val() >= 0) || (newData.isString() && newData.val().length <= 40)"
+        },
+        "startedBy": {
+          ".validate": "newData.isString() && newData.val().length <= 160"
+        },
+        "stoppedBy": {
+          ".validate": "newData.isString() && newData.val().length <= 160"
+        },
+        "message": {
+          ".validate": "newData.isString() && newData.val().length <= 240"
+        },
+        "$metric": {
+          ".validate": "newData.isNumber() || newData.isString() || newData.isBoolean()"
+        }
+      },
       "deviceBootstrap": {
         "pending": {
           ".write": "auth != null && auth.token.isTempAccount !== true && (root.child('users').child(auth.uid).child('role').val() === 'admin' || auth.token.email === 'listrik.iot.device@gmail.com')"

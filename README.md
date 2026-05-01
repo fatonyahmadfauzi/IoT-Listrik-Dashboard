@@ -21,7 +21,7 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 
 ## Ringkasan Fitur
 
-- Monitoring realtime arus, tegangan, daya semu, status `NORMAL / WARNING / DANGER`, dan relay.
+- Monitoring realtime arus, tegangan, daya aktif, daya semu, energi, frekuensi, power factor, status `NORMAL / WARNING / DANGER`, dan relay dari PZEM-004T.
 - **PWA Simulator Mode**: Platform simulasi virtual (*multi-akun*) yang terisolasi dari basis data utama, digunakan untuk pengujian atau presentasi tanpa memerlukan *hardware* fisik ESP32.
 - **Premium UI & Dark Mode**: Tampilan dasbor modern *(Glassmorphism)* yang responsif serta mendukung integrasi *Global Dark Mode* bawaan sistem operasi.
 - **Device Presence Detection (Watchdog)**: Deteksi otomatis status koneksi perangkat (**Online/Offline**) ketika aliran data terputus, bekerja secara *real-time* di seluruh platform tanpa modifikasi firmware ESP32.
@@ -29,6 +29,7 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 - Histori kejadian, export CSV, dan notifikasi multi-channel (Web push + Telegram + **Discord Webhook** + Discord Bot tools).
 - Auto-cutoff relay saat arus melewati ambang bahaya yang ditentukan.
 - Kontrol stream realtime perangkat: admin dapat pause/resume pengiriman data IoT dan mengatur delay stream.
+- Auto Learning Beban Normal: admin dapat mempelajari arus maksimum beban normal selama durasi tertentu, lalu sistem menghitung threshold aman dengan margin agar beban tinggi normal tidak salah dibaca sebagai kondisi bahaya.
 - Bootstrap device dari dashboard: WiFi, Firebase API key, dan RTDB URL perangkat dapat dikelola tanpa upload ulang firmware.
 - Reset realtime `/listrik`, hapus seluruh data monitoring (`/listrik` + `/logs`) dengan OTP email, serta backup database Firebase + rules ke email admin.
 - Laporan harian Excel otomatis: data monitoring 24 jam dikirim ke Telegram dan Discord jika ada data baru pada hari tersebut.
@@ -39,7 +40,7 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 
 ## Catatan Logika Deteksi
 
-- Sistem membaca arus beban menggunakan **SCT-013** dan tegangan menggunakan **ZMPT101B**.
+- Sistem membaca parameter listrik utama menggunakan **PZEM-004T**. Rangkaian sensor analog tambahan tidak lagi dipakai pada firmware utama.
 - Dashboard menampilkan **indikasi arus bocor** atau **arus abnormal** sebagai peringatan dini, bukan pengukuran residual current presisi seperti **RCD/ELCB**.
 - **Beban tinggi normal** tidak otomatis dianggap kebocoran selama nilai arus masih sesuai kapasitas beban uji dan belum melewati ambang yang ditentukan.
 - **Short circuit / gangguan ekstrem** diperlakukan sebagai kondisi bahaya dengan lonjakan arus sangat besar dan cepat.
@@ -48,7 +49,7 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 ## Arsitektur Singkat
 
 ```text
-ESP32 + SCT-013 + ZMPT101B + Relay/Kontaktor
+ESP32 + PZEM-004T + Relay/Kontaktor
   -> Firebase Realtime Database
      (/listrik, /logs, /settings, /settings/discord, /settings/telegramRecipients, /users)
   -> Client apps:
@@ -256,6 +257,13 @@ npx -y firebase-tools@latest deploy --only database
     "teganganCalibration": 1.0,
     "sendIntervalMs": 2000,
     "realtimeStreamEnabled": true,
+    "autoLearning": {
+      "active": false,
+      "status": "idle",
+      "durationMs": 120000,
+      "marginPercent": 25,
+      "applyToThreshold": true
+    },
     "telegramBotToken": "",
     "telegramNotifyEnabled": true,
     "telegramRecipients": [],
@@ -302,6 +310,7 @@ Library penting:
 - Firebase ESP Client
 - ArduinoJson
 - WiFiManager (tzapu)
+- PZEM004Tv30
 
 Firmware ada di `hardware/`.
 
@@ -309,7 +318,7 @@ Firmware ada di `hardware/`.
 
 Halaman admin dipisah agar pengaturan tidak menumpuk di satu halaman:
 
-- `/settings` dan `/app/settings`: umum, sensor, kalibrasi, bootstrap device, reset realtime, backup database, hapus monitoring, backend web.
+- `/settings` dan `/app/settings`: umum, sensor, auto learning beban normal, kalibrasi, bootstrap device, reset realtime, backup database, hapus monitoring, backend web.
 - `/telegram` dan `/app/telegram`: bot token, daftar Chat ID/Group ID, jumlah penerima, test pesan, hubungkan bot, serta `/pause` dan `/resume` per chat.
 - `/discord` dan `/app/discord`: webhook per channel, master switch, test pesan, status bot, ringkasan server, daftar ban, ban/unban user.
 - `/users` dan `/app/users`: manajemen pengguna dan role.

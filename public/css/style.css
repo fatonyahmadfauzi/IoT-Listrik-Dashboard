@@ -966,6 +966,10 @@ body.page-bg {
   text-underline-offset: 2px;
 }
 
+.telegram-info-panel + .telegram-config-stack {
+  margin-top: 14px;
+}
+
 .telegram-token-group,
 .telegram-recipient-group {
   min-width: 0;
@@ -3011,19 +3015,13 @@ body > header > nav {
   border-top: none;
   position: relative;
   margin-top: 0;
+  box-shadow: none;
 }
 
 /* Gradient fade yang juga full-width agar seamlessly dari konten */
 .landing-footer::before {
-  content: '';
-  position: absolute;
-  top: -80px;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: linear-gradient(to bottom, transparent, #000000);
-  pointer-events: none;
-  z-index: 0;
+  content: none;
+  display: none;
 }
 
 /* Inner wrapper hanya untuk centering & layout, TANPA background */
@@ -3106,7 +3104,7 @@ body > header > nav {
   margin: 0 auto;
   padding: 24px var(--page-gutter) 36px;
   text-align: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: none;
 }
 
 .footer-note {
@@ -5736,6 +5734,10 @@ body > header > nav {
   /* handled by grid gap */
 }
 
+#autoLearningMeta + .settings-action-row {
+  margin-top: 16px;
+}
+
 /* Tighter input-row on narrow viewports */
 @media (max-width: 560px) {
   .settings-section .input-row .form-group {
@@ -7484,6 +7486,93 @@ textarea.form-input {
   .landing-links.open {
     max-height: calc(100dvh - 82px);
     overflow-y: auto;
+  }
+}
+
+/* Final polish for reported mobile alignment and seamless public footer */
+@media (max-width: 768px) {
+  .section-card:has(.log-toolbar) .section-header {
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .section-card:has(.log-toolbar) .log-toolbar {
+    width: 100%;
+    margin: 0;
+  }
+
+  .section-card:has(.log-toolbar) .log-toolbar #filterStatus,
+  .section-card:has(.log-toolbar) .log-toolbar #exportBtn {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .section-card:has(.log-toolbar) .table-wrap {
+    width: 100%;
+    margin-inline: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .telegram-info-panel + .telegram-config-stack {
+    margin-top: 12px;
+  }
+}
+
+/* Mobile dashboard/history refinements */
+@media (max-width: 768px) {
+  .section-card:has(.chart-container) .section-header {
+    display: flex;
+    grid-template-columns: none;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section-card:has(.chart-container) .section-actions {
+    width: auto;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .section-card:has(.chart-container) #resetZoomBtn {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: max-content !important;
+    flex: 0 0 auto !important;
+    padding-inline: 10px !important;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .section-card:has(.log-toolbar) .section-header {
+    display: block;
+    box-sizing: border-box;
+    padding-inline: 0;
+  }
+
+  .section-card:has(.log-toolbar) .section-title {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .section-card:has(.log-toolbar) .log-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    box-sizing: border-box;
+    padding-inline: 0;
+  }
+
+  .section-card:has(.log-toolbar) .table-wrap:has(.history-table),
+  .section-card:has(.log-toolbar) .history-table,
+  .section-card:has(.log-toolbar) .history-table tbody,
+  .section-card:has(.log-toolbar) .history-table tr {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+    box-sizing: border-box;
   }
 }
 

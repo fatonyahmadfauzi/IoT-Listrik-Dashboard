@@ -632,12 +632,31 @@ function formatMetricValue(value, digits = 2) {
   return num.toFixed(digits);
 }
 
+function derivePowerMetrics(raw = {}) {
+  const arus = Number(raw.arus ?? 0);
+  const tegangan = Number(raw.tegangan ?? 0);
+  const pf = Number(raw.power_factor ?? 0.85);
+  const apparentPower = Number(raw.apparent_power ?? raw.daya ?? arus * tegangan);
+  const activePower = Number(raw.daya_w ?? raw.active_power ?? apparentPower * pf);
+  return {
+    activePower: Number.isFinite(activePower) ? activePower : 0,
+    apparentPower: Number.isFinite(apparentPower) ? apparentPower : 0,
+    pf: Number.isFinite(pf) ? pf : 0.85,
+  };
+}
+
+function formatPowerLabel(raw = {}) {
+  const { activePower, apparentPower } = derivePowerMetrics(raw);
+  return `${formatMetricValue(activePower, 1)} W / ${formatMetricValue(apparentPower, 1)} VA`;
+}
+
 function normalizeArchiveRecord(raw = {}) {
   const recordedAt = Number(raw.recordedAt || raw.timestamp || 0);
   const recordedDate = Number.isFinite(recordedAt) && recordedAt > 0
     ? new Date(recordedAt)
     : new Date();
 
+  const power = derivePowerMetrics(raw);
   return {
     recordedAt,
     waktu: recordedDate.toLocaleString('id-ID', {
@@ -651,7 +670,8 @@ function normalizeArchiveRecord(raw = {}) {
     }),
     arus: Number(raw.arus ?? 0),
     tegangan: Number(raw.tegangan ?? 0),
-    daya: Number(raw.daya ?? 0),
+    daya: power.activePower,
+    apparent_power: power.apparentPower,
     energi_kwh: Number(raw.energi_kwh ?? 0),
     frekuensi: Number(raw.frekuensi ?? 0),
     power_factor: Number(raw.power_factor ?? 0),
@@ -689,6 +709,7 @@ function buildDailyExcelBuffer(rows, dateKey) {
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.arus, 2))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.tegangan, 1))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.daya, 1))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.apparent_power, 1))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.frekuensi, 1))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.power_factor, 2))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.energi_kwh, 3))}</Data></Cell>
@@ -733,7 +754,8 @@ function buildDailyExcelBuffer(rows, dateKey) {
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Waktu (WIB)</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Arus (A)</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Tegangan (V)</Data></Cell>
-          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Daya (W/VA)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Daya Aktif (W)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Daya Semu (VA)</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Frekuensi (Hz)</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Power Factor</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Energi (kWh)</Data></Cell>
@@ -774,7 +796,7 @@ function buildMonitoringSummary(d = {}) {
   return [
     `Arus ${d.arus ?? '-'} A`,
     `Tegangan ${d.tegangan ?? '-'} V`,
-    `Daya ${d.daya ?? '-'} W`,
+    `Daya ${formatPowerLabel(d)}`,
     `Relay ${d.relay ? 'ON' : 'OFF'}`,
     `Status ${d.status ?? 'NORMAL'}`,
   ].join(' • ');
@@ -783,13 +805,16 @@ function buildMonitoringSummary(d = {}) {
 async function archivePhysicalTelemetrySnapshot(d = {}) {
   const timestamp = Date.now();
   const dateKey = getJakartaParts(new Date(timestamp)).dateKey;
+  const power = derivePowerMetrics(d);
   const payload = {
     recordedAt: timestamp,
     recordedAtIso: new Date(timestamp).toISOString(),
     localDate: dateKey,
     arus: Number(d.arus ?? 0),
     tegangan: Number(d.tegangan ?? 0),
-    daya: Number(d.daya ?? 0),
+    daya: power.activePower,
+    daya_w: power.activePower,
+    apparent_power: power.apparentPower,
     energi_kwh: Number(d.energi_kwh ?? 0),
     frekuensi: Number(d.frekuensi ?? 0),
     power_factor: Number(d.power_factor ?? 0),
@@ -1034,6 +1059,7 @@ db.ref('/listrik/status').on('value', async (snap) => {
   // Ambil semua data listrik
   const listrikSnap = await db.ref('/listrik').get();
   const d = listrikSnap.val() || {};
+  const power = derivePowerMetrics(d);
 
   const isBahaya = status === 'DANGER';
   const isPulih  = status === 'NORMAL' && (prev === 'DANGER' || prev === 'WARNING');
@@ -1049,7 +1075,8 @@ db.ref('/listrik/status').on('value', async (snap) => {
     fields: [
       { name: '⚡ Arus',        value: `${d.arus       ?? '-'} A`,  inline: true },
       { name: '🔋 Tegangan',    value: `${d.tegangan   ?? '-'} V`,  inline: true },
-      { name: '💡 Daya',        value: `${d.daya       ?? '-'} W`,  inline: true },
+      { name: '💡 Daya Aktif',  value: `${formatMetricValue(power.activePower, 1)} W`, inline: true },
+      { name: '🔌 Daya Semu',   value: `${formatMetricValue(power.apparentPower, 1)} VA`, inline: true },
       { name: '🔌 Relay',       value: d.relay ? 'ON' : 'OFF',      inline: true },
       { name: '📡 Frekuensi',   value: `${d.frekuensi  ?? '-'} Hz`, inline: true },
       { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`, inline: true },
@@ -1152,6 +1179,7 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
   if (now - lastMonitoringSent < 5 * 60 * 1000) return; // rate limit 5 mins
   const listrikSnap = await db.ref('/listrik').get();
   const d = listrikSnap.val() || {};
+  const power = derivePowerMetrics(d);
   const updateMarker = String(d.updated_at ?? snap.val() ?? '');
 
   if (updateMarker && updateMarker !== lastArchivedUpdatedAt) {
@@ -1171,7 +1199,8 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
     fields: [
       { name: '⚡ Arus',         value: `${d.arus         ?? '-'} A`,   inline: true },
       { name: '🔋 Tegangan',     value: `${d.tegangan     ?? '-'} V`,   inline: true },
-      { name: '💡 Daya',         value: `${d.daya         ?? '-'} W`,   inline: true },
+      { name: '💡 Daya Aktif',   value: `${formatMetricValue(power.activePower, 1)} W`, inline: true },
+      { name: '🔌 Daya Semu',    value: `${formatMetricValue(power.apparentPower, 1)} VA`, inline: true },
       { name: '🔌 Relay',        value: d.relay ? 'ON' : 'OFF',         inline: true },
       { name: '📡 Frekuensi',    value: `${d.frekuensi    ?? '-'} Hz`,  inline: true },
       { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`,     inline: true },
@@ -1192,7 +1221,8 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
       `📊 <b>Update Data Monitoring Listrik</b>\n` +
       `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
       `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
-      `💡 Daya: ${d.daya ?? '-'} W\n` +
+      `💡 Daya Aktif: ${formatMetricValue(power.activePower, 1)} W\n` +
+      `🔌 Daya Semu: ${formatMetricValue(power.apparentPower, 1)} VA\n` +
       `🔌 Relay: <b>${d.relay ? 'ON' : 'OFF'}</b>\n` +
       `📡 Frekuensi: ${d.frekuensi ?? '-'} Hz\n` +
       `📊 Power Factor: ${d.power_factor ?? '-'}\n` +
@@ -1203,7 +1233,9 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
       metrics: {
         arus: d.arus ?? 0,
         tegangan: d.tegangan ?? 0,
-        daya: d.daya ?? 0,
+        daya: power.apparentPower,
+        daya_w: power.activePower,
+        apparent_power: power.apparentPower,
         relay: d.relay ? 1 : 0,
         frekuensi: d.frekuensi ?? 0,
         power_factor: d.power_factor ?? 0,

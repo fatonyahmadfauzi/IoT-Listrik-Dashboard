@@ -595,6 +595,7 @@ function buildClearedListrikPayload(clearedAt = new Date().toISOString()) {
     energi_kwh: 0,
     frekuensi: 0,
     power_factor: 0,
+    sensor_source: "PZEM-004T",
     relay: 0,
     status: "NORMAL",
     updated_at: 0,
@@ -922,8 +923,9 @@ exports.createTempAccount = onCall(
     // Init data simulator
     await db.ref(`/sim/${userRecord.uid}`).set({
       listrik: {
-        arus: 0, tegangan: 220, daya: 0, energi_kwh: 0,
+        arus: 0, tegangan: 220, daya: 0, daya_w: 0, apparent_power: 0, energi_kwh: 0,
         frekuensi: 50, power_factor: 0.85,
+        sensor_source: "SIMULATOR",
         relay: 1, status: "NORMAL",
         updated_at: new Date().toISOString(),
       },
@@ -1036,7 +1038,7 @@ exports.testSimNotification = onCall(
     const energySnap = await admin.database().ref(`/sim/${uid}/listrik/energi_kwh`).get();
     const currentEnergy = parseFloat(energySnap.val() || 0);
 
-    // Generate data sesuai scenario — lengkap seperti hardware SCT-013 + ZMPT101B
+  // Generate data sesuai scenario — lengkap seperti hardware PZEM-004T
     const scenarios = {
       NORMAL:  { arus: 2.5,   tegangan: 222, pf: 0.92, status: "NORMAL",  relay: 1 },
       WARNING: { arus: 8.5,   tegangan: 218, pf: 0.88, status: "WARNING", relay: 1 },

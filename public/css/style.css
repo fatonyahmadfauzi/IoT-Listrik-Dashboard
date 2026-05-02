@@ -6099,7 +6099,11 @@ body > header > nav {
   border: 1px solid rgba(99, 102, 241, 0.22);
   color: #818cf8;
 }
-.pwa-install-icon .material-symbols-rounded { font-size: 24px; }
+.landing-main {
+  width: 100%;
+  max-width: var(--public-max-width);
+  padding: 20px var(--public-gutter) 0;
+}
 .pwa-install-icon--blue   { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.25); color: #60a5fa; }
 .pwa-install-icon--ios    { background: rgba(0, 122, 255, 0.12);  border-color: rgba(0, 122, 255, 0.25);  color: #4da6ff; }
 .pwa-install-icon--success{ background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.28); color: #34d399; }
@@ -6429,7 +6433,6 @@ body.page-bg h3 {
   width: 100%;
   max-width: var(--public-max-width);
   padding: 20px var(--public-gutter) 0;
-  overflow-x: hidden;
 }
 
 .clean-hero-content {
@@ -6538,7 +6541,6 @@ body.page-bg h3 {
   width: 100%;
   max-width: var(--public-max-width);
   padding: 56px 0 68px;
-  overflow-x: hidden;
 }
 
 .clean-features-grid {
@@ -6555,7 +6557,6 @@ body.page-bg h3 {
   width: 100%;
   max-width: var(--public-max-width);
   padding: 56px 0 68px;
-  overflow-x: hidden;
 }
 
 .logic-explainer-section .demo-clean-container {
@@ -7573,3 +7574,576 @@ textarea.form-input {
   }
 }
 
+/* =============================================================
+   CINEMATIC LANDING FX — Premium GPU-Only Animations
+   Apple/Tesla-inspired scroll-triggered cinematic transitions.
+   All animations use only transform + opacity (GPU layer).
+   ============================================================= */
+
+/* ── Custom Easing & Variables ──────────────────────────────── */
+:root {
+  --cine-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --cine-ease-dramatic: cubic-bezier(0.22, 1, 0.36, 1);
+  --cine-duration: 0.9s;
+  --cine-duration-slow: 1.2s;
+  --cine-stagger-step: 120ms;
+}
+
+/* ── A. Cinematic Fade — Smooth zoom-fade-in ────────────────── */
+[data-cine-fade] {
+  opacity: 0;
+  transform: translateY(48px) scale(0.97);
+  transition:
+    opacity var(--cine-duration) var(--cine-ease),
+    transform var(--cine-duration) var(--cine-ease);
+  will-change: opacity, transform;
+}
+
+[data-cine-fade].revealed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ── B. Cinematic Zoom — Dramatic scale-up entrance ─────────── */
+[data-cine-zoom] {
+  opacity: 0;
+  transform: scale(0.88);
+  transition:
+    opacity var(--cine-duration-slow) var(--cine-ease-dramatic),
+    transform var(--cine-duration-slow) var(--cine-ease-dramatic);
+  will-change: opacity, transform;
+}
+
+[data-cine-zoom].revealed {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── C. Cinematic Stagger — Elegant delayed child reveals ───── */
+[data-cine-stagger] > * {
+  opacity: 0;
+  transform: translateY(40px) scale(0.96);
+  transition:
+    opacity 0.75s var(--cine-ease),
+    transform 0.75s var(--cine-ease);
+  will-change: opacity, transform;
+}
+
+[data-cine-stagger].revealed > * {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Stagger delay — up to 8 children */
+[data-cine-stagger].revealed > *:nth-child(1) { transition-delay: 0ms; }
+[data-cine-stagger].revealed > *:nth-child(2) { transition-delay: var(--cine-stagger-step); }
+[data-cine-stagger].revealed > *:nth-child(3) { transition-delay: calc(var(--cine-stagger-step) * 2); }
+[data-cine-stagger].revealed > *:nth-child(4) { transition-delay: calc(var(--cine-stagger-step) * 3); }
+[data-cine-stagger].revealed > *:nth-child(5) { transition-delay: calc(var(--cine-stagger-step) * 4); }
+[data-cine-stagger].revealed > *:nth-child(6) { transition-delay: calc(var(--cine-stagger-step) * 5); }
+[data-cine-stagger].revealed > *:nth-child(7) { transition-delay: calc(var(--cine-stagger-step) * 6); }
+[data-cine-stagger].revealed > *:nth-child(8) { transition-delay: calc(var(--cine-stagger-step) * 7); }
+
+/* ── D. 3D Tilt Card Effect — Architecture cards hover ──────── */
+[data-cine-tilt] {
+  perspective: 1000px;
+}
+
+[data-cine-tilt] > .arch-box,
+[data-cine-tilt] > .logic-explainer-card,
+[data-cine-tilt] > .feat-clean-card,
+[data-cine-tilt] > .dl-clean-card,
+[data-cine-tilt] > .clean-step,
+[data-cine-tilt] > .feat-logic-card,
+[data-cine-tilt] > .feat-integration-card,
+.cine-tilt-card {
+  transform-style: preserve-3d;
+  transition:
+    transform 0.45s var(--cine-ease),
+    box-shadow 0.45s var(--cine-ease);
+  will-change: transform;
+}
+
+@media (hover: hover) and (min-width: 761px) {
+  [data-cine-tilt] > .arch-box:hover,
+  [data-cine-tilt] > .logic-explainer-card:hover,
+  [data-cine-tilt] > .feat-clean-card:hover,
+  [data-cine-tilt] > .dl-clean-card:hover,
+  [data-cine-tilt] > .clean-step:hover,
+  [data-cine-tilt] > .feat-logic-card:hover,
+  [data-cine-tilt] > .feat-integration-card:hover,
+  .cine-tilt-card:hover {
+    transform: rotateX(-2deg) rotateY(3deg) translateY(-4px);
+    box-shadow:
+      0 18px 40px rgba(0, 0, 0, 0.25),
+      0 0 30px rgba(14, 165, 233, 0.06);
+  }
+}
+
+/* ── E. Parallax Glow — Demo section floating orb ───────────── */
+[data-cine-parallax] {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-cine-parallax]::before {
+  content: '';
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(14, 165, 233, 0.12) 0%,
+    rgba(14, 165, 233, 0.04) 40%,
+    transparent 70%
+  );
+  top: -60px;
+  right: -80px;
+  pointer-events: none;
+  z-index: 0;
+  animation: cine-float 8s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+[data-cine-parallax]::after {
+  content: '';
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(124, 58, 237, 0.08) 0%,
+    rgba(124, 58, 237, 0.02) 50%,
+    transparent 70%
+  );
+  bottom: -40px;
+  left: -60px;
+  pointer-events: none;
+  z-index: 0;
+  animation: cine-float 10s ease-in-out infinite alternate-reverse;
+  will-change: transform;
+}
+
+[data-cine-parallax] > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes cine-float {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(15px, -20px) scale(1.05); }
+}
+
+/* ── F. Glass Mask Reveal — Sections fading in with backdrop ── */
+[data-cine-mask] {
+  opacity: 0;
+  transform: translateY(56px);
+  transition:
+    opacity var(--cine-duration-slow) var(--cine-ease),
+    transform var(--cine-duration-slow) var(--cine-ease);
+  will-change: opacity, transform;
+}
+
+[data-cine-mask].revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── G. Hero Staggered Zoom-Fade — Special hero entrance ────── */
+[data-cine-hero] .landing-badge {
+  opacity: 0;
+  transform: translateY(20px) scale(0.95);
+  transition:
+    opacity 0.6s var(--cine-ease),
+    transform 0.6s var(--cine-ease);
+  will-change: opacity, transform;
+}
+
+[data-cine-hero] h1,
+[data-cine-hero] .landing-title {
+  opacity: 0;
+  transform: translateY(30px) scale(0.96);
+  transition:
+    opacity 0.7s var(--cine-ease),
+    transform 0.7s var(--cine-ease);
+  transition-delay: 150ms;
+  will-change: opacity, transform;
+}
+
+[data-cine-hero] .hero-desc,
+[data-cine-hero] > p,
+[data-cine-hero] .landing-subtitle {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.7s var(--cine-ease),
+    transform 0.7s var(--cine-ease);
+  transition-delay: 300ms;
+  will-change: opacity, transform;
+}
+
+[data-cine-hero] .clean-cta,
+[data-cine-hero] .landing-cta,
+[data-cine-hero] .feat-cta-actions {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.6s var(--cine-ease),
+    transform 0.6s var(--cine-ease);
+  transition-delay: 450ms;
+  will-change: opacity, transform;
+}
+
+[data-cine-hero].revealed .landing-badge,
+[data-cine-hero].revealed h1,
+[data-cine-hero].revealed .landing-title,
+[data-cine-hero].revealed .hero-desc,
+[data-cine-hero].revealed > p,
+[data-cine-hero].revealed .landing-subtitle,
+[data-cine-hero].revealed .clean-cta,
+[data-cine-hero].revealed .landing-cta,
+[data-cine-hero].revealed .feat-cta-actions {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ── H. Button Hover — Premium lift effect ──────────────────── */
+@media (hover: hover) {
+  .landing-main .btn,
+  .feat-page-main .btn,
+  .dl-page-main .btn {
+    transition:
+      transform 0.3s var(--cine-ease),
+      box-shadow 0.3s var(--cine-ease),
+      background 0.24s ease,
+      border-color 0.24s ease;
+  }
+
+  .landing-main .btn:hover,
+  .feat-page-main .btn:hover,
+  .dl-page-main .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.15);
+  }
+
+  .landing-main .btn:active,
+  .feat-page-main .btn:active,
+  .dl-page-main .btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  .landing-main .btn-primary:hover,
+  .feat-page-main .btn-primary:hover,
+  .dl-page-main .btn-primary:hover {
+    box-shadow:
+      0 6px 24px rgba(14, 165, 233, 0.22),
+      0 0 0 1px rgba(14, 165, 233, 0.12);
+  }
+}
+
+/* ── I. Tech Chip hover glow ────────────────────────────────── */
+@media (hover: hover) and (min-width: 761px) {
+  .tech-chip {
+    transition:
+      transform 0.3s var(--cine-ease),
+      box-shadow 0.3s var(--cine-ease),
+      border-color 0.3s ease;
+  }
+
+  .tech-chip:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.08);
+    border-color: rgba(14, 165, 233, 0.25);
+  }
+}
+
+/* ── J. Slide-in from left/right variants ───────────────────── */
+[data-cine-slide-left] {
+  opacity: 0;
+  transform: translateX(-60px);
+  transition:
+    opacity var(--cine-duration) var(--cine-ease),
+    transform var(--cine-duration) var(--cine-ease);
+  will-change: opacity, transform;
+}
+
+[data-cine-slide-left].revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+[data-cine-slide-right] {
+  opacity: 0;
+  transform: translateX(60px);
+  transition:
+    opacity var(--cine-duration) var(--cine-ease),
+    transform var(--cine-duration) var(--cine-ease);
+  will-change: opacity, transform;
+}
+
+[data-cine-slide-right].revealed {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* =============================================================
+   CINEMATIC RESPONSIVE — All screen sizes
+   ============================================================= */
+
+/* ── Tablet: ≤1024px ───────────────────────────────────────── */
+@media (max-width: 1024px) {
+  [data-cine-parallax]::before {
+    width: 280px;
+    height: 280px;
+    top: -40px;
+    right: -50px;
+  }
+
+  [data-cine-parallax]::after {
+    width: 200px;
+    height: 200px;
+    bottom: -30px;
+    left: -40px;
+  }
+}
+
+/* ── Mobile: ≤760px — Reduce transform distances ────────────── */
+@media (max-width: 760px) {
+  :root {
+    --cine-stagger-step: 90ms;
+  }
+
+  [data-cine-fade] {
+    transform: translateY(32px) scale(0.98);
+  }
+
+  [data-cine-zoom] {
+    transform: scale(0.92);
+  }
+
+  [data-cine-stagger] > * {
+    transform: translateY(28px) scale(0.97);
+  }
+
+  [data-cine-mask] {
+    transform: translateY(40px);
+  }
+
+  [data-cine-hero] h1,
+  [data-cine-hero] .landing-title {
+    transform: translateY(22px) scale(0.97);
+  }
+
+  [data-cine-hero] .hero-desc,
+  [data-cine-hero] > p,
+  [data-cine-hero] .landing-subtitle {
+    transform: translateY(18px);
+  }
+
+  [data-cine-hero] .clean-cta,
+  [data-cine-hero] .landing-cta,
+  [data-cine-hero] .feat-cta-actions {
+    transform: translateY(16px);
+  }
+
+  [data-cine-slide-left] {
+    transform: translateX(-36px);
+  }
+
+  [data-cine-slide-right] {
+    transform: translateX(36px);
+  }
+
+  [data-cine-parallax]::before {
+    width: 200px;
+    height: 200px;
+    top: -30px;
+    right: -40px;
+  }
+
+  [data-cine-parallax]::after {
+    width: 160px;
+    height: 160px;
+    bottom: -20px;
+    left: -30px;
+  }
+}
+
+/* ── Small Mobile: ≤430px ──────────────────────────────────── */
+@media (max-width: 430px) {
+  :root {
+    --cine-stagger-step: 70ms;
+    --cine-duration: 0.75s;
+    --cine-duration-slow: 1s;
+  }
+
+  [data-cine-fade] {
+    transform: translateY(24px) scale(0.98);
+  }
+
+  [data-cine-zoom] {
+    transform: scale(0.94);
+  }
+
+  [data-cine-stagger] > * {
+    transform: translateY(20px) scale(0.98);
+  }
+
+  [data-cine-mask] {
+    transform: translateY(32px);
+  }
+
+  [data-cine-hero] .landing-badge {
+    transform: translateY(14px) scale(0.96);
+  }
+
+  [data-cine-hero] h1,
+  [data-cine-hero] .landing-title {
+    transform: translateY(18px) scale(0.97);
+    transition-delay: 100ms;
+  }
+
+  [data-cine-hero] .hero-desc,
+  [data-cine-hero] > p,
+  [data-cine-hero] .landing-subtitle {
+    transform: translateY(14px);
+    transition-delay: 200ms;
+  }
+
+  [data-cine-hero] .clean-cta,
+  [data-cine-hero] .landing-cta,
+  [data-cine-hero] .feat-cta-actions {
+    transform: translateY(12px);
+    transition-delay: 300ms;
+  }
+
+  [data-cine-slide-left] {
+    transform: translateX(-24px);
+  }
+
+  [data-cine-slide-right] {
+    transform: translateX(24px);
+  }
+
+  [data-cine-parallax]::before {
+    width: 160px;
+    height: 160px;
+    top: -20px;
+    right: -30px;
+  }
+
+  [data-cine-parallax]::after {
+    width: 120px;
+    height: 120px;
+    bottom: -15px;
+    left: -20px;
+  }
+
+  @keyframes cine-float {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(8px, -10px) scale(1.03); }
+  }
+}
+
+/* ── Tiny Mobile: ≤360px ───────────────────────────────────── */
+@media (max-width: 360px) {
+  :root {
+    --cine-stagger-step: 60ms;
+    --cine-duration: 0.65s;
+    --cine-duration-slow: 0.85s;
+  }
+
+  [data-cine-fade] {
+    transform: translateY(20px) scale(0.99);
+  }
+
+  [data-cine-stagger] > * {
+    transform: translateY(16px) scale(0.98);
+  }
+
+  [data-cine-mask] {
+    transform: translateY(24px);
+  }
+
+  [data-cine-parallax]::before {
+    width: 120px;
+    height: 120px;
+  }
+
+  [data-cine-parallax]::after {
+    width: 90px;
+    height: 90px;
+  }
+}
+
+/* ── Accessibility: Respect reduced motion preference ───────── */
+@media (prefers-reduced-motion: reduce) {
+  [data-cine-fade],
+  [data-cine-zoom],
+  [data-cine-mask],
+  [data-cine-slide-left],
+  [data-cine-slide-right],
+  [data-cine-stagger] > *,
+  [data-cine-hero] .landing-badge,
+  [data-cine-hero] h1,
+  [data-cine-hero] .hero-desc,
+  [data-cine-hero] .clean-cta,
+  [data-cine-hero] .landing-cta {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  [data-cine-parallax]::before,
+  [data-cine-parallax]::after {
+    animation: none !important;
+  }
+
+  .cine-tilt-card,
+  [data-cine-tilt] > * {
+    transition: none !important;
+  }
+}
+
+
+/* ==========================================================================
+   LENIS SMOOTH SCROLLING (Cinematic Parallax)
+   ========================================================================== */
+html.lenis, html.lenis body {
+  height: auto;
+  width: 100vw;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* =============================================================
+   Lenis Smooth Scroll Global Styles
+============================================================= */
+html.lenis, html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}

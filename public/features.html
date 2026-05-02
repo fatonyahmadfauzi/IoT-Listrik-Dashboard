@@ -199,8 +199,8 @@ app-navbar{display:block;position:sticky;top:0;z-index:40;pointer-events:none}ap
 .btn-secondary{background:#0ea5e91f;color:#f8fafc;border:1px solid rgba(14,165,233,.24)}
 @media(max-width:760px){.landing-menu-btn{display:inline-flex}.landing-links{display:none}.landing-nav{min-height:64px;padding:0 16px}.landing-brand{font-size:1.15rem}}
 </style>
-<link rel="stylesheet" href="/css/style.min.css?v=20260502-perf2" media="print" onload="this.media='all'" />
-<noscript><link rel="stylesheet" href="/css/style.min.css?v=20260502-perf2" /></noscript>
+<link rel="stylesheet" href="/css/style.min.css?v=20260502-cine1" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="/css/style.min.css?v=20260502-cine1" /></noscript>
     <link rel="stylesheet" href="/css/features.css?v=20260429-padding" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -224,13 +224,13 @@ app-navbar{display:block;position:sticky;top:0;z-index:40;pointer-events:none}ap
 
     <main class="feat-page-main">
       <!-- HERO -->
-      <section class="feat-hero text-center" style="text-align: center;" data-reveal>
+      <section class="feat-hero text-center" style="text-align: center;" data-cine-hero>
         <h1>Fitur Lengkap</h1>
         <p>Eksplorasi seluruh kemampuan Dashboard IoT Listrik. Halaman ini merangkum fitur monitoring, notifikasi, auto-cutoff, serta cara sistem membedakan beban normal, indikasi arus abnormal, dan kondisi bahaya.</p>
       </section>
 
       <!-- FEAT GRID -->
-      <section class="feat-grid" data-reveal-stagger>
+      <section class="feat-grid" data-cine-stagger>
         
         <!-- 1 -->
         <div class="feat-clean-card">
@@ -288,13 +288,13 @@ app-navbar{display:block;position:sticky;top:0;z-index:40;pointer-events:none}ap
 
       </section>
 
-      <section class="feat-logic-section" data-reveal>
+      <section class="feat-logic-section" data-cine-mask>
         <div class="feat-logic-header">
           <h2>Bagaimana Sistem Membaca Risiko</h2>
           <p>Status pada dashboard mengikuti pembacaan arus beban, ambang yang diatur admin, serta auto-cutoff relay. Penjelasan ini membantu membedakan kondisi listrik yang terlihat mirip tetapi maknanya berbeda.</p>
         </div>
 
-        <div class="feat-logic-grid">
+        <div class="feat-logic-grid" data-cine-tilt>
           <article class="feat-logic-card">
             <h3>Status NORMAL, WARNING, DANGER</h3>
             <p>NORMAL dipakai saat arus masih berada di bawah batas peringatan. WARNING muncul ketika arus mendekati threshold. DANGER aktif saat arus mencapai atau melewati threshold yang ditetapkan.</p>
@@ -322,7 +322,7 @@ app-navbar{display:block;position:sticky;top:0;z-index:40;pointer-events:none}ap
       </section>
 
       <!-- NOTIFICATION INTEGRATIONS -->
-      <section class="feat-notif-grid" data-reveal-stagger>
+      <section class="feat-notif-grid" data-cine-stagger>
 
         <!-- Telegram -->
         <div class="feat-integration-card feat-integration-telegram">
@@ -363,7 +363,7 @@ app-navbar{display:block;position:sticky;top:0;z-index:40;pointer-events:none}ap
       </section>
 
       <!-- CTA -->
-      <section class="feat-cta-section" data-reveal>
+      <section class="feat-cta-section" data-cine-fade>
         <h2>Siap memantau sistem Anda?</h2>
         <div class="feat-cta-actions">
           <a href="/app/login" class="btn btn-primary">Buka Dashboard</a>

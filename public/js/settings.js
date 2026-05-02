@@ -1013,21 +1013,31 @@ function syncSettingsSubnavVisibility() {
   }
 }
 
+let settingsSubnavTicking = false;
+
 function updateSettingsSubnavOnScroll() {
   if (!settingsSubnav) return;
+  if (settingsSubnavTicking) return;
 
-  const sections = getVisibleSettingsSections();
-  if (!sections.length) return;
-
-  const activationOffset = 140;
-  let activeId = sections[0].id;
-  sections.forEach((section) => {
-    const top = section.getBoundingClientRect().top;
-    if (top - activationOffset <= 0) {
-      activeId = section.id;
+  settingsSubnavTicking = true;
+  requestAnimationFrame(() => {
+    const sections = getVisibleSettingsSections();
+    if (!sections.length) {
+      settingsSubnavTicking = false;
+      return;
     }
+
+    const activationOffset = 140;
+    let activeId = sections[0].id;
+    sections.forEach((section) => {
+      const top = section.getBoundingClientRect().top;
+      if (top - activationOffset <= 0) {
+        activeId = section.id;
+      }
+    });
+    setActiveSettingsSubnav(activeId);
+    settingsSubnavTicking = false;
   });
-  setActiveSettingsSubnav(activeId);
 }
 
 function refreshSettingsSubnav() {

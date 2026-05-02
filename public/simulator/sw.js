@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-simulator-v20260501-pzem";
+const CACHE_NAME = "iot-simulator-v20260502-perf";
 
 // Simulator app shell
 const CACHE_URLS = [
@@ -15,7 +15,7 @@ const CACHE_URLS = [
   "/simulator/dashboard",
   "/simulator/settings",
   "/simulator/manifest.json",
-  "/css/style.css",
+  "/css/style.min.css",
   "/js/firebase-config.js",
   "/js/auth.js",
   "/js/app.js",
@@ -60,9 +60,13 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const requestUrl = new URL(url);
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
   if (
     url.startsWith("chrome-extension") ||
-    (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith("/api/")) ||
+    requestUrl.pathname.startsWith("/api/") ||
     url.includes("firebaseio.com") ||
     url.includes("googleapis.com/identitytoolkit") ||
     url.includes("firebase.googleapis.com") ||
@@ -84,7 +88,7 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match("/simulator/login"))
+          caches.match(request).then((cached) => cached || caches.match("/simulator/login") || Response.error())
         )
     );
     return;
@@ -105,7 +109,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(() => caches.match(request).then((cached) => cached || Response.error()))
     );
     return;
   }
@@ -121,7 +125,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => {});
+        .catch(() => cached || Response.error());
 
       return cached || networkFetch;
     })

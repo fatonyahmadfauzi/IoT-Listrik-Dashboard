@@ -149,6 +149,11 @@ function validateHtmlFiles(rootDir, errors, warnings) {
     const html = readText(file);
     const relative = rel(rootDir, file);
     const lower = html.toLowerCase();
+    const fileName = path.basename(file).toLowerCase();
+
+    if (/^google[a-z0-9]+\.html$/.test(fileName) && lower.trim().startsWith("google-site-verification:")) {
+      continue;
+    }
 
     if (!lower.includes("<!doctype html")) addWarning(warnings, `${relative}: missing <!doctype html>`);
     if (!lower.includes("<html")) addError(errors, `${relative}: missing <html> tag`);
@@ -194,12 +199,32 @@ function validateManifestAssets(rootDir, errors) {
   }
 }
 
-function validateAdminPageParity(rootDir, errors) {
+const ROOT_ADMIN_REDIRECTS = {
+  "/login": "/app/login",
+  "/login.html": "/app/login",
+  "/dashboard": "/app/dashboard",
+  "/dashboard.html": "/app/dashboard",
+  "/history": "/app/history",
+  "/history.html": "/app/history",
+  "/settings": "/app/settings",
+  "/settings.html": "/app/settings",
+  "/telegram": "/app/telegram",
+  "/telegram.html": "/app/telegram",
+  "/discord": "/app/discord",
+  "/discord.html": "/app/discord",
+  "/users": "/app/users",
+  "/users.html": "/app/users",
+};
+
+function validateAdminAppPages(rootDir, errors, warnings) {
   for (const page of ADMIN_PAGES) {
-    const rootPage = path.join(rootDir, "public", page);
     const appPage = path.join(rootDir, "public", "app", page);
-    if (!pathExists(rootPage)) addError(errors, `public/${page}: missing root admin page`);
     if (!pathExists(appPage)) addError(errors, `public/app/${page}: missing /app admin page`);
+
+    const rootPage = path.join(rootDir, "public", page);
+    if (pathExists(rootPage)) {
+      addWarning(warnings, `public/${page}: root admin duplicate exists; prefer /app/${page}`);
+    }
   }
 }
 
@@ -210,6 +235,19 @@ function validateVercelConfig(rootDir, errors) {
   if (!Array.isArray(vercel.rewrites)) {
     addError(errors, "vercel.json: rewrites must be an array");
     return;
+  }
+
+  const redirects = Array.isArray(vercel.redirects) ? vercel.redirects : [];
+  const redirectMap = new Map(
+    redirects
+      .filter((redirect) => redirect && redirect.source && redirect.destination)
+      .map((redirect) => [redirect.source, redirect.destination])
+  );
+
+  for (const [source, destination] of Object.entries(ROOT_ADMIN_REDIRECTS)) {
+    if (redirectMap.get(source) !== destination) {
+      addError(errors, `vercel.json: missing redirect ${source} -> ${destination}`);
+    }
   }
 
   const vercelFile = path.join(rootDir, "vercel.json");
@@ -240,9 +278,6 @@ function validateVercelConfig(rootDir, errors) {
 
 function validateAutoLearningCoverage(rootDir, errors) {
   const requiredSnippets = [
-    ["public/settings.html", "autoLearningSection"],
-    ["public/settings.html", "inpLearningDuration"],
-    ["public/settings.html", "startAutoLearningBtn"],
     ["public/app/settings.html", "autoLearningSection"],
     ["public/app/settings.html", "inpLearningDuration"],
     ["public/app/settings.html", "startAutoLearningBtn"],
@@ -302,7 +337,7 @@ function validateProject(options = {}) {
   validateJsonFiles(rootDir, errors);
   validateHtmlFiles(rootDir, errors, warnings);
   validateManifestAssets(rootDir, errors);
-  validateAdminPageParity(rootDir, errors);
+  validateAdminAppPages(rootDir, errors, warnings);
   validateVercelConfig(rootDir, errors);
   validateAutoLearningCoverage(rootDir, errors);
   validateJavaScriptSyntax(rootDir, errors);

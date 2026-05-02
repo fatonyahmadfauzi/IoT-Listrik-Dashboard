@@ -7,7 +7,7 @@ class AppFooter extends HTMLElement {
 
           <!-- Tentang Skripsi -->
           <div class="footer-col">
-            <h5 class="footer-col-title">TENTANG SKRIPSI</h5>
+            <p class="footer-col-title">TENTANG SKRIPSI</p>
             <p class="footer-col-desc">
               Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time di Perumahan Fontana Lake
             </p>
@@ -21,19 +21,19 @@ class AppFooter extends HTMLElement {
 
           <!-- Navigasi -->
           <div class="footer-col">
-            <h5 class="footer-col-title">NAVIGASI</h5>
+            <p class="footer-col-title">NAVIGASI</p>
             <ul class="footer-col-links">
               <li><a href="/">Beranda</a></li>
               <li><a href="/downloads">Unduhan Aplikasi</a></li>
               <li><a href="/pwa-simulator.html">PWA Simulator</a></li>
-              <li><a href="/dashboard">Dashboard</a></li>
+              <li><a href="/app/dashboard">Dashboard</a></li>
               <li><a href="https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard" target="_blank" rel="noopener">Kode Sumber</a></li>
             </ul>
           </div>
 
           <!-- Institusi -->
           <div class="footer-col">
-            <h5 class="footer-col-title">INSTITUSI</h5>
+            <p class="footer-col-title">INSTITUSI</p>
             <ul class="footer-col-links">
               <li><a href="https://binainsani.ac.id" target="_blank" rel="noopener">Universitas Bina Insani</a></li>
               <li><span style="opacity:.7;">Fakultas Informatika</span></li>
@@ -45,7 +45,7 @@ class AppFooter extends HTMLElement {
 
           <!-- Sosial & Repo -->
           <div class="footer-col">
-            <h5 class="footer-col-title">SOSIAL & REPO</h5>
+            <p class="footer-col-title">SOSIAL & REPO</p>
             <ul class="footer-col-links">
               <li>
                 <a href="https://github.com/fatonyahmadfauzi" target="_blank" rel="noopener">

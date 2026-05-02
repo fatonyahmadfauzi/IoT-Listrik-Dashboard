@@ -1,6 +1,10 @@
 /**
  * Scroll Reveal — Antigravity-inspired scroll animations
  * Lightweight IntersectionObserver-based fade-up effect.
+ *
+ * Uses [data-reveal] for standard sections and [data-reveal-stagger]
+ * for staggered children. The first [data-reveal] or hero section
+ * is revealed immediately to avoid blocking LCP.
  */
 (function () {
   'use strict';
@@ -30,8 +34,14 @@
 
   // Observe after DOM ready
   function init() {
-    document.querySelectorAll('[data-reveal],[data-reveal-stagger]').forEach(function (el) {
-      observer.observe(el);
+    var elements = document.querySelectorAll('[data-reveal],[data-reveal-stagger]');
+    elements.forEach(function (el, i) {
+      // Instantly reveal the first element (hero) so LCP is not delayed
+      if (i === 0) {
+        el.classList.add('revealed');
+      } else {
+        observer.observe(el);
+      }
     });
   }
 

@@ -28,7 +28,6 @@ function makeFixture() {
       ? "settings autoLearningSection inpLearningDuration startAutoLearningBtn"
       : page;
     const html = `<!doctype html><html><head><title>${page}</title></head><body>${body}</body></html>`;
-    fs.writeFileSync(path.join(root, "public", `${page}.html`), html);
     fs.writeFileSync(path.join(root, "public", "app", `${page}.html`), html);
   }
   fs.writeFileSync(path.join(root, "vercel.json"), JSON.stringify({
@@ -42,6 +41,22 @@ function makeFixture() {
           },
         ],
       },
+    ],
+    redirects: [
+      { source: "/login", destination: "/app/login", permanent: true },
+      { source: "/login.html", destination: "/app/login", permanent: true },
+      { source: "/dashboard", destination: "/app/dashboard", permanent: true },
+      { source: "/dashboard.html", destination: "/app/dashboard", permanent: true },
+      { source: "/history", destination: "/app/history", permanent: true },
+      { source: "/history.html", destination: "/app/history", permanent: true },
+      { source: "/settings", destination: "/app/settings", permanent: true },
+      { source: "/settings.html", destination: "/app/settings", permanent: true },
+      { source: "/telegram", destination: "/app/telegram", permanent: true },
+      { source: "/telegram.html", destination: "/app/telegram", permanent: true },
+      { source: "/discord", destination: "/app/discord", permanent: true },
+      { source: "/discord.html", destination: "/app/discord", permanent: true },
+      { source: "/users", destination: "/app/users", permanent: true },
+      { source: "/users.html", destination: "/app/users", permanent: true },
     ],
     rewrites: [
       { source: "/dashboard", destination: "/index.html" },

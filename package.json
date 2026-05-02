@@ -374,8 +374,9 @@
     "zustand": "^4.5.7"
   },
   "scripts": {
+    "build:css": "esbuild public/css/style.css --minify --outfile=public/css/style.min.css",
     "test": "node scripts/validate-project.test.js",
-    "validate": "node scripts/validate-project.js",
+    "validate": "npm run build:css && node scripts/validate-project.js",
     "deploy:safe": "npm run validate && npx vercel deploy --prod --yes"
   },
   "keywords": [],
@@ -383,5 +384,8 @@
   "license": "ISC",
   "overrides": {
     "svix": "1.92.2"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

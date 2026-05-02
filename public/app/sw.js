@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260501-auto-learning";
+const CACHE_NAME = "iot-app-v20260502-perf";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
@@ -22,7 +22,7 @@ const CACHE_URLS = [
   "/app/history",
   "/app/settings",
   "/app/manifest.json",
-  "/css/style.css",
+  "/css/style.min.css",
   "/js/firebase-config.js",
   "/js/auth.js",
   "/js/app.js",
@@ -78,9 +78,13 @@ self.addEventListener("fetch", (event) => {
 
   // Skip Firebase & external API calls — always go to network
   const requestUrl = new URL(url);
+  if (requestUrl.origin !== self.location.origin) {
+    return; // browser handles cross-origin scripts, fonts, and APIs with page CSP
+  }
+
   if (
     url.startsWith("chrome-extension") ||
-    (requestUrl.origin === self.location.origin && requestUrl.pathname.startsWith("/api/")) ||
+    requestUrl.pathname.startsWith("/api/") ||
     url.includes("firebaseio.com") ||
     url.includes("googleapis.com/identitytoolkit") ||
     url.includes("firebase.googleapis.com") ||
@@ -104,7 +108,7 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(() =>
           // Offline fallback: serve cached page if available
-          caches.match(request).then((cached) => cached || caches.match("/app/login"))
+          caches.match(request).then((cached) => cached || caches.match("/app/login") || Response.error())
         )
     );
     return;
@@ -125,7 +129,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(() => caches.match(request).then((cached) => cached || Response.error()))
     );
     return;
   }
@@ -141,7 +145,7 @@ self.addEventListener("fetch", (event) => {
           }
           return response;
         })
-        .catch(() => {/* offline */ });
+        .catch(() => cached || Response.error());
 
       return cached || networkFetch;
     })

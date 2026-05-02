@@ -12,26 +12,26 @@ class AppNavbar extends HTMLElement {
       this.innerHTML = `
         <header class="landing-nav-wrap">
           <nav class="landing-nav">
-            <a href="/dashboard" class="landing-brand">
+            <a href="/app/dashboard" class="landing-brand">
               <span>IoT Listrik Dashboard</span>
             </a>
             <button id="menuBtn" class="landing-menu-btn" aria-label="Toggle menu">
               <span class="material-symbols-rounded">menu</span>
             </button>
             <div id="navLinks" class="landing-links">
-              <a href="/dashboard">
+              <a href="/app/dashboard">
                 <span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle;margin-right:4px;">dashboard</span>
                 Dashboard
               </a>
-              <a href="/history">
+              <a href="/app/history">
                 <span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle;margin-right:4px;">history</span>
                 Riwayat
               </a>
-              <a href="/settings">
+              <a href="/app/settings">
                 <span class="material-symbols-rounded" style="font-size:18px;vertical-align:middle;margin-right:4px;">settings</span>
                 Pengaturan
               </a>
-              <a href="/login" class="btn btn-primary btn-sm" id="pwaLogoutNav">
+              <a href="/app/login" class="btn btn-primary btn-sm" id="pwaLogoutNav">
                 <span class="material-symbols-rounded">logout</span>Keluar
               </a>
             </div>
@@ -54,7 +54,7 @@ class AppNavbar extends HTMLElement {
               <a href="/">Beranda</a>
               <a href="/features">Fitur</a>
               <a href="/downloads">Download</a>
-              <a href="/login" class="btn btn-primary btn-sm">
+              <a href="/app/login" class="btn btn-primary btn-sm">
                 <span class="material-symbols-rounded">login</span>Get Started
               </a>
             </div>
@@ -100,35 +100,60 @@ class AppNavbar extends HTMLElement {
       });
     }
 
-    let lastScrollY = Math.max(window.scrollY || 0, 0);
+    // ── Scroll-aware show/hide (reflow-safe) ─────────────────
+    // We cache scrollY from the passive scroll handler to avoid
+    // forced reflows inside rAF. Reading window.scrollY inside
+    // rAF after DOM writes triggers a synchronous layout.
+    let lastScrollY = 0;
+    let cachedScrollY = 0;
     let ticking = false;
 
+    // This handler only reads scrollY — no DOM writes, no reflow.
+    const onScroll = () => {
+      cachedScrollY = window.scrollY; // fast, no reflow
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(syncNavbarState);
+    };
+
     const syncNavbarState = () => {
-      if (!navWrap) return;
+      if (!navWrap) { ticking = false; return; }
 
-      const currentScrollY = Math.max(window.scrollY || 0, 0);
+      const currentScrollY = Math.max(cachedScrollY, 0);
       const menuOpen = navLinks?.classList.contains("open");
-      const scrollingDown = currentScrollY > lastScrollY + 4;
-      const scrollingUp = currentScrollY < lastScrollY - 4;
 
-      if (menuOpen || scrollingUp || currentScrollY <= 120) {
+      // Always show when menu is open or near top
+      if (menuOpen || currentScrollY <= 120) {
         navWrap.classList.remove("nav-hidden");
-      } else if (scrollingDown) {
+        lastScrollY = currentScrollY;
+        ticking = false;
+        return;
+      }
+
+      const delta = currentScrollY - lastScrollY;
+      
+      // Require a minimum scroll distance before triggering to prevent bounce/jitter
+      if (Math.abs(delta) < 12) {
+        ticking = false;
+        return; 
+      }
+
+      if (delta > 0) {
         navWrap.classList.add("nav-hidden");
+      } else {
+        navWrap.classList.remove("nav-hidden");
       }
 
       lastScrollY = currentScrollY;
       ticking = false;
     };
 
-    const requestNavbarSync = () => {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(syncNavbarState);
-    };
-
-    syncNavbarState();
-    window.addEventListener("scroll", requestNavbarSync, { passive: true });
+    // Initial sync — defer to rAF to avoid forced reflow during parse
+    requestAnimationFrame(() => {
+      cachedScrollY = window.scrollY;
+      syncNavbarState();
+    });
+    window.addEventListener("scroll", onScroll, { passive: true });
   }
 }
 

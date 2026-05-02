@@ -3,8 +3,6 @@
    Dark Glassmorphism Premium UI
    ============================================================= */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap");
-
 /* ── CSS Variables ─────────────────────────────────────────── */
 :root {
   --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -2828,6 +2826,7 @@ body > header > nav {
   flex-shrink: 0;
 }
 
+.arch-box-content h3,
 .arch-box-content h4 {
   font-size: 15px; 
   margin: 0 0 4px; 
@@ -3420,6 +3419,7 @@ body > header > nav {
   margin-bottom: 16px;
 }
 
+.clean-step h3,
 .clean-step h4 {
   font-size: 18px;
   font-weight: 600;
@@ -3704,6 +3704,7 @@ body > header > nav {
   }
 
   /* Step headings */
+  .clean-step h3,
   .clean-step h4 {
     font-size: 15px;
     font-weight: 700;
@@ -3717,6 +3718,7 @@ body > header > nav {
   }
 
   /* Architecture box headings */
+  .arch-box-content h3,
   .arch-box-content h4 {
     font-size: 13px;
     font-weight: 600;
@@ -4240,6 +4242,7 @@ body > header > nav {
     flex: 1;
   }
 
+  .arch-leaf-cell .arch-box-content h3,
   .arch-leaf-cell .arch-box-content h4 {
     font-size: 12px;
     font-weight: 600;
@@ -6833,13 +6836,7 @@ body.page-bg h3 {
   -webkit-backdrop-filter: none;
 }
 
-.landing-nav-wrap.scrolled {
-  background: var(--bg-base);
-  border-bottom-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
+
 
 .landing-nav-wrap.nav-hidden:not(.menu-open) {
   transform: translateY(calc(-100% - 14px));

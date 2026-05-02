@@ -4,7 +4,7 @@
   "installCommand": "npm install --omit=optional",
   "buildCommand": "",
   "outputDirectory": "public",
-  "cleanUrls": true,
+  "cleanUrls": false,
   "headers": [
     {
       "source": "/(.*)",
@@ -14,7 +14,7 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
         { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://cdn.discordapp.com https://*.googleusercontent.com; connect-src 'self' http://localhost:* http://127.0.0.1:* https://iot-listrik-dashboard.vercel.app https://www.iot-listrik-dashboard.vercel.app https://*.googleapis.com https://www.googleapis.com https://www.gstatic.com https://cdn.jsdelivr.net https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://api.telegram.org https://discord.com; worker-src 'self' blob:; child-src 'self' https://*.firebaseapp.com; manifest-src 'self'; media-src 'self'; frame-src 'self' https://*.firebaseapp.com" }
+        { "key": "Content-Security-Policy", "value": "default-src 'none'; upgrade-insecure-requests; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://apis.google.com https://*.firebaseio.com https://*.firebasedatabase.app https://vercel.live https://www.clarity.ms https://*.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://vercel.live data:; img-src 'self' data: blob: https://cdn.discordapp.com https://*.googleusercontent.com https://*.clarity.ms https://c.bing.com; connect-src 'self' http://localhost:* http://127.0.0.1:* https://iot-listrik-dashboard.vercel.app https://www.iot-listrik-dashboard.vercel.app https://*.googleapis.com https://www.googleapis.com https://www.gstatic.com https://cdn.jsdelivr.net https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com https://*.firebaseapp.com https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://api.telegram.org https://discord.com https://vercel.live https://*.clarity.ms https://c.bing.com; worker-src 'self' blob:; child-src 'self' https://*.firebaseapp.com https://vercel.live; manifest-src 'self'; media-src 'self'; frame-src 'self' https://*.firebaseapp.com https://vercel.live" }
       ]
     },
     {
@@ -41,13 +41,13 @@
     {
       "source": "/(js|css)/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "max-age=0, must-revalidate" }
+        { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=86400" }
       ]
     },
     {
       "source": "/(.*)\\.(js|css)",
       "headers": [
-        { "key": "Cache-Control", "value": "max-age=0, must-revalidate" }
+        { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=86400" }
       ]
     },
     {
@@ -65,15 +65,42 @@
       ]
     },
     {
+      "source": "/BingSiteAuth.xml",
+      "headers": [
+        { "key": "Content-Type", "value": "application/xml; charset=utf-8" },
+        { "key": "Cache-Control", "value": "max-age=0, must-revalidate" }
+      ]
+    },
+    {
       "source": "/assets/seo/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" }
       ]
     }
   ],
+  "redirects": [
+    { "source": "/login",          "destination": "/app/login",     "permanent": true },
+    { "source": "/login.html",     "destination": "/app/login",     "permanent": true },
+    { "source": "/dashboard",      "destination": "/app/dashboard", "permanent": true },
+    { "source": "/dashboard.html", "destination": "/app/dashboard", "permanent": true },
+    { "source": "/history",        "destination": "/app/history",   "permanent": true },
+    { "source": "/history.html",   "destination": "/app/history",   "permanent": true },
+    { "source": "/settings",       "destination": "/app/settings",  "permanent": true },
+    { "source": "/settings.html",  "destination": "/app/settings",  "permanent": true },
+    { "source": "/telegram",       "destination": "/app/telegram",  "permanent": true },
+    { "source": "/telegram.html",  "destination": "/app/telegram",  "permanent": true },
+    { "source": "/discord",        "destination": "/app/discord",   "permanent": true },
+    { "source": "/discord.html",   "destination": "/app/discord",   "permanent": true },
+    { "source": "/users",          "destination": "/app/users",     "permanent": true },
+    { "source": "/users.html",     "destination": "/app/users",     "permanent": true }
+  ],
   "rewrites": [
     { "source": "/api/get-telegram-bot-profile", "destination": "/api/telegram-admin-action?action=profile" },
     { "source": "/api/test-telegram-config",     "destination": "/api/telegram-admin-action?action=test" },
+
+    { "source": "/features",      "destination": "/features.html" },
+    { "source": "/downloads",     "destination": "/downloads.html" },
+    { "source": "/pwa-simulator", "destination": "/pwa-simulator.html" },
 
     { "source": "/app/login",     "destination": "/app/login.html" },
     { "source": "/app/dashboard", "destination": "/app/dashboard.html" },
@@ -83,16 +110,7 @@
     { "source": "/app/discord",   "destination": "/app/discord.html" },
     { "source": "/app/users",     "destination": "/app/users.html" },
 
-    { "source": "/login",         "destination": "/login.html" },
-    { "source": "/dashboard",     "destination": "/dashboard.html" },
-    { "source": "/history",       "destination": "/history.html" },
-    { "source": "/settings",      "destination": "/settings.html" },
-    { "source": "/telegram",      "destination": "/telegram.html" },
-    { "source": "/discord",       "destination": "/discord.html" },
-    { "source": "/users",         "destination": "/users.html" },
-
     { "source": "/simulator/app",  "destination": "/simulator/dashboard.html" },
-    { "source": "/simulator",      "destination": "/simulator/index.html" },
-    { "source": "/downloads",      "destination": "/downloads.html" }
+    { "source": "/simulator",      "destination": "/simulator/index.html" }
   ]
 }

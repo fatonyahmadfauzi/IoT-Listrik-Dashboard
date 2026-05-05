@@ -340,17 +340,20 @@
 .dl-code-row {
   display: flex;
   gap: 12px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .dl-code-row code {
   flex: 1;
+  min-height: 44px;
   color: #10B981;
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.85rem;
   word-break: break-all;
   overflow-wrap: break-word;
   line-height: 1.5;
+  display: flex;
+  align-items: center;
 }
 
 .cmd-copy-btn {
@@ -359,7 +362,9 @@
   border-radius: 6px;
   color: var(--text-muted);
   width: 36px;
-  height: 36px;
+  min-width: 44px;
+  height: auto;
+  min-height: 44px;
   cursor: pointer;
   display: grid;
   place-items: center;
@@ -726,16 +731,27 @@
   }
 }
 
+.dl-cli-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  color: var(--brand-light);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+}
+
 /* ── E. CLI PORTABLE SECTION ────────────────────────────────── */
 @media (max-width: 760px) {
-  /* "HACKER MODE" badge — tighter and better aligned */
-  .dl-cli-card h3 > span[style*="HACKER MODE"] {
+  .dl-cli-badge {
     font-size: 0.62rem !important;
     padding: 2px 5px !important;
-    border-radius: 4px !important;
     margin-left: 6px !important;
-    vertical-align: middle !important;
-    display: inline-block !important;
     line-height: 1.4 !important;
     letter-spacing: 0.04em !important;
   }

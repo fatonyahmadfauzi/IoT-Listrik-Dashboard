@@ -151,7 +151,11 @@ function validateHtmlFiles(rootDir, errors, warnings) {
     const lower = html.toLowerCase();
     const fileName = path.basename(file).toLowerCase();
 
-    if (/^google[a-z0-9]+\.html$/.test(fileName) && lower.trim().startsWith("google-site-verification:")) {
+    const isSearchVerificationFile =
+      (/^google[a-z0-9]+\.html$/.test(fileName) && lower.trim().startsWith("google-site-verification:")) ||
+      (/^naver[a-z0-9]+\.html$/.test(fileName) && lower.trim().startsWith("naver-site-verification:"));
+
+    if (isSearchVerificationFile) {
       continue;
     }
 

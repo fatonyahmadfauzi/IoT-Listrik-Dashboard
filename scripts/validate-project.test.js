@@ -23,6 +23,10 @@ function makeFixture() {
   ].join("\n"));
   fs.writeFileSync(path.join(root, "public", "css", "style.css"), "body{}");
   fs.writeFileSync(path.join(root, "public", "js", "app.js"), "console.info('ok');");
+  fs.writeFileSync(
+    path.join(root, "public", "naverabc123.html"),
+    "naver-site-verification: naverabc123.html\n"
+  );
   for (const page of ["login", "dashboard", "history", "settings", "telegram", "discord", "users"]) {
     const body = page === "settings"
       ? "settings autoLearningSection inpLearningDuration startAutoLearningBtn"

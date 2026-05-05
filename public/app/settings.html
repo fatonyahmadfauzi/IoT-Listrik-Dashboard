@@ -304,6 +304,20 @@
         font-size: 16px;
         opacity: 0.85;
       }
+      .settings-danger-zone {
+        border-color: rgba(239, 68, 68, 0.26);
+        background:
+          linear-gradient(135deg, rgba(127, 29, 29, 0.18), rgba(15, 23, 42, 0.18) 46%),
+          var(--glass-bg);
+      }
+      .settings-danger-zone .settings-section-title {
+        color: var(--red-light);
+        border-bottom-color: rgba(239, 68, 68, 0.2);
+      }
+      .settings-danger-zone .settings-section-title .material-symbols-rounded {
+        color: var(--red-light);
+        opacity: 1;
+      }
 
       /* ── D. Two-column input row ─────────────────────────── */
       .input-row {
@@ -1229,7 +1243,7 @@
             <!-- Card 6: Reset live IoT data via OTP email (Admin only, non-temp) -->
             <div
               id="liveDataResetSection"
-              class="settings-section"
+              class="settings-section settings-danger-zone"
               style="grid-column: 1 / -1"
               data-settings-section
               hidden
@@ -1336,7 +1350,7 @@
 
             <div
               id="monitoringWipeSection"
-              class="settings-section"
+              class="settings-section settings-danger-zone"
               style="grid-column: 1 / -1"
               data-settings-section
               hidden

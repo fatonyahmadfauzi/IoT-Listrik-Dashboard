@@ -1,12 +1,39 @@
 /**
  * Cinematic Parallax (GSAP + Lenis)
- * Adds professional Awwwards-style smooth scrolling and scroll-linked animations.
+ * Adds professional scroll-linked parallax animations to the landing page.
  */
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Initialize Lenis for Smooth Scrolling
+  if (typeof Lenis === "undefined" || typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") {
+    return;
+  }
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const desktopMotion = window.matchMedia("(min-width: 1024px) and (pointer: fine)").matches;
+
+  if (reducedMotion || !desktopMotion) {
+    return;
+  }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  const root = document.documentElement;
+  let latestProgress = -1;
+
+  const updatePageProgress = () => {
+    const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+    const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
+    const rounded = Math.round(progress * 1000) / 1000;
+    if (rounded !== latestProgress) {
+      latestProgress = rounded;
+      root.style.setProperty("--cine-scroll-progress", String(rounded));
+    }
+  };
+
+  // 1. Initialize Lenis only on desktop-class pointer devices.
+  // Mobile keeps native scroll so the header and browser gestures remain reliable.
   const lenis = new Lenis({
-    duration: 1.2,
-    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Easing standard industry
+    duration: 0.95,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     direction: "vertical",
     gestureDirection: "vertical",
     smooth: true,
@@ -16,73 +43,79 @@ document.addEventListener("DOMContentLoaded", () => {
     infinite: false,
   });
 
-  // 2. Connect Lenis to GSAP ScrollTrigger
-  lenis.on("scroll", ScrollTrigger.update);
-
+  // Keep ScrollTrigger in sync with Lenis
+  lenis.on("scroll", () => {
+    updatePageProgress();
+    ScrollTrigger.update();
+  });
   gsap.ticker.add((time) => {
     lenis.raf(time * 1000);
   });
-
   gsap.ticker.lagSmoothing(0);
 
-  // 3. Create Parallax Animations
-  // We use GSAP matchMedia to only apply heavy parallax on larger screens (performance)
+  // 2. Setup GSAP MatchMedia for Responsive Performance.
+  // Scroll-linked parallax stays off mobile to keep touch scrolling predictable.
   let mm = gsap.matchMedia();
 
-  mm.add("(min-width: 769px)", () => {
-    // Parallax Y (Vertical movement)
+  mm.add("(min-width: 1024px) and (pointer: fine)", () => {
+    updatePageProgress();
+
+    window.addEventListener("resize", updatePageProgress, { passive: true });
+
+    document.querySelectorAll(".cine-scene").forEach((scene) => {
+      ScrollTrigger.create({
+        trigger: scene,
+        start: "top 68%",
+        end: "bottom 32%",
+        toggleClass: { targets: scene, className: "is-cine-active" },
+      });
+    });
+
+    // 3. Generic Data-Attribute Parallax Engine
+    // Elements with data-parallax-y will scrub vertically on scroll
     const parallaxYElements = document.querySelectorAll("[data-parallax-y]");
+
     parallaxYElements.forEach((el) => {
-      const yValue = el.getAttribute("data-parallax-y");
-      
+      const yValue = Number(el.getAttribute("data-parallax-y")) || 0;
+
       gsap.to(el, {
         y: yValue,
         ease: "none",
         scrollTrigger: {
           trigger: el,
-          start: "top bottom", // Animation starts when element top hits viewport bottom
-          end: "bottom top",   // Ends when element bottom hits viewport top
-          scrub: 1,            // 1 second smooth scrub delay
+          start: "top bottom", // Animation starts when element top hits bottom of viewport
+          end: "bottom top",   // Animation ends when element bottom hits top of viewport
+          scrub: 0.85,         // Smooth scrubbing without feeling laggy
         },
       });
     });
 
-    // Parallax Scale
-    const parallaxScaleElements = document.querySelectorAll("[data-parallax-scale]");
-    parallaxScaleElements.forEach((el) => {
-      const scaleValue = el.getAttribute("data-parallax-scale");
-      
-      gsap.to(el, {
-        scale: scaleValue,
-        ease: "none",
-        scrollTrigger: {
-          trigger: el,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1,
-        },
-      });
-    });
+    // 4. Custom Hero Section Fade & Sink
+    // Makes the hero text/graphics fade out and push down slightly on scroll
+    const heroSelectors = [".clean-hero-content", ".feat-hero-content", ".dl-hero-content"];
+    const heroTriggers = [".clean-hero", ".feat-hero", ".dl-hero"];
 
-    // Hero Custom Parallax (Moves background text or elements specifically)
-    // Find the hero section and animate it specially
-    const heroContent = document.querySelector(".clean-hero-content");
-    if (heroContent) {
-      gsap.to(heroContent, {
-        y: 120, // Moves down slightly as user scrolls down
-        opacity: 0.1, // Fades out
-        ease: "none",
-        scrollTrigger: {
-          trigger: ".clean-hero",
-          start: "top top",
-          end: "bottom top",
-          scrub: 1.5,
-        },
-      });
-    }
+    heroSelectors.forEach((selector, index) => {
+      const content = document.querySelector(selector);
+      const triggerSection = document.querySelector(heroTriggers[index]) || selector;
+      if (content) {
+        gsap.to(content, {
+          y: 110,
+          scale: 0.97,
+          opacity: 0.18,
+          ease: "none",
+          scrollTrigger: {
+            trigger: triggerSection,
+            start: "top top",
+            end: "bottom top",
+            scrub: true,
+          },
+        });
+      }
+    });
 
     return () => {
-      // Cleanup for mobile/desktop transitions
+      window.removeEventListener("resize", updatePageProgress);
     };
   });
 });

@@ -60,6 +60,7 @@ const elEndpointBadge = document.getElementById("endpointBadge");
 const elConnState = document.getElementById("connStateText");
 const elAlertPulse = document.getElementById("alertPulse");
 const elMiniLogs = document.getElementById("miniLogsBody");
+const elMiniLogsDetail = document.getElementById("miniLogsDetailBody");
 
 let chart = null;
 let detailChart = null;
@@ -264,6 +265,140 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function num(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function formatLogNumber(value, decimals = 0, unit = "") {
+  const suffix = unit ? ` ${unit}` : "";
+  return `${num(value).toFixed(decimals)}${suffix}`;
+}
+
+function formatLogRelay(value) {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (value === 1 || value === true || raw === "1" || raw === "ON") return "ON";
+  if (value === 0 || value === false || raw === "0" || raw === "OFF") return "OFF";
+  return "—";
+}
+
+function formatLogSource(row) {
+  const raw =
+    row?.source ??
+    row?.sumber ??
+    row?.mode ??
+    row?.endpoint ??
+    row?.dataSource ??
+    "";
+  const source = String(raw || "").trim().toUpperCase();
+  if (source) return source;
+  return isTempAccount() ? "SIM" : "CLOUD";
+}
+
+function getLogActivePower(row) {
+  return num(row?.daya_w ?? row?.active_power ?? row?.power_w ?? row?.dayaAktif ?? row?.daya);
+}
+
+function getLogEnergy(row) {
+  return num(row?.energi_kwh ?? row?.energy_kwh ?? row?.energi ?? row?.kwh);
+}
+
+function getLogPowerFactor(row) {
+  return num(row?.power_factor ?? row?.pf);
+}
+
+function getLogFrequency(row) {
+  return num(row?.frekuensi ?? row?.frequency ?? row?.hz);
+}
+
+function getLogApparentPower(row) {
+  const direct = row?.apparent ?? row?.apparent_va ?? row?.daya_va ?? row?.va;
+  if (direct !== undefined && direct !== null && direct !== "") return num(direct);
+  const daya = row?.daya;
+  if (daya !== undefined && daya !== null && daya !== "") return num(daya);
+  return num(row?.arus) * num(row?.tegangan);
+}
+
+function renderMiniLogsEmpty() {
+  if (elMiniLogs) {
+    elMiniLogs.innerHTML =
+      `<tr class="log-row mini-log-empty-row">
+        <td colspan="5">
+          <div class="mini-log-empty-state">
+            <span class="material-symbols-rounded">history</span>
+            <strong>Belum ada log</strong>
+            <small>Data terbaru akan muncul saat perangkat mengirim histori.</small>
+          </div>
+        </td>
+      </tr>`;
+  }
+  if (elMiniLogsDetail) {
+    elMiniLogsDetail.innerHTML = `
+      <div class="mini-log-empty">
+        <span class="material-symbols-rounded">history</span>
+        <strong>Belum ada log</strong>
+        <small>Detail audit akan muncul setelah histori tersedia.</small>
+      </div>`;
+  }
+}
+
+function renderMiniLogDetailRows(rows) {
+  if (!elMiniLogsDetail) return;
+  elMiniLogsDetail.innerHTML = rows
+    .map((r) => {
+      const safeStatus = normalizeStatus(r.status);
+      const relay = formatLogRelay(r.relay);
+      const source = formatLogSource(r);
+      return `<article class="mini-log-detail-row log-status-${safeStatus}">
+        <div class="mini-detail-main">
+          <span class="mini-detail-label">Waktu</span>
+          <strong>${escapeHtml(formatLogTime(r.waktu ?? r.timestamp))}</strong>
+        </div>
+        <div class="mini-detail-metrics">
+          <span class="mini-detail-metric metric-arus"><em>Arus</em><strong>${formatLogNumber(r.arus, 2, "A")}</strong></span>
+          <span class="mini-detail-metric metric-tegangan"><em>Tegangan</em><strong>${formatLogNumber(r.tegangan, 1, "V")}</strong></span>
+          <span class="mini-detail-metric metric-daya"><em>Daya Aktif</em><strong>${formatLogNumber(getLogActivePower(r), 0, "W")}</strong></span>
+          <span class="mini-detail-metric metric-energi"><em>Energi</em><strong>${formatLogNumber(getLogEnergy(r), 3, "kWh")}</strong></span>
+          <span class="mini-detail-metric metric-pf"><em>PF</em><strong>${formatLogNumber(getLogPowerFactor(r), 2)}</strong></span>
+          <span class="mini-detail-metric metric-freq"><em>Frekuensi</em><strong>${formatLogNumber(getLogFrequency(r), 1, "Hz")}</strong></span>
+          <span class="mini-detail-metric metric-va"><em>Apparent</em><strong>${formatLogNumber(getLogApparentPower(r), 0, "VA")}</strong></span>
+        </div>
+        <div class="mini-detail-state">
+          <span class="status-badge status-${safeStatus}">${safeStatus}</span>
+          <span class="mini-detail-pill">Relay ${escapeHtml(relay)}</span>
+          <span class="mini-detail-source">${escapeHtml(source)}</span>
+        </div>
+      </article>`;
+    })
+    .join("");
+}
+
+function initMiniLogTabs() {
+  const tabs = Array.from(document.querySelectorAll("[data-mini-log-tab]"));
+  if (!tabs.length) return;
+  const panels = {
+    summary: document.getElementById("miniLogsSummaryPanel"),
+    detail: document.getElementById("miniLogsDetailPanel"),
+  };
+
+  const activate = (target) => {
+    const safeTarget = target === "detail" ? "detail" : "summary";
+    tabs.forEach((tab) => {
+      const isActive = tab.dataset.miniLogTab === safeTarget;
+      tab.classList.toggle("active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+    });
+    Object.entries(panels).forEach(([key, panel]) => {
+      if (panel) panel.hidden = key !== safeTarget;
+    });
+  };
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => activate(tab.dataset.miniLogTab));
+  });
+  activate(tabs.find((tab) => tab.classList.contains("active"))?.dataset.miniLogTab);
+}
+
 function startMiniLogsListener() {
   if (stopLogs) stopLogs();
   const logsRef = query(ref(db, getDbPrefix() + "/logs"), orderByKey(), limitToLast(15));
@@ -271,26 +406,29 @@ function startMiniLogsListener() {
     if (!elMiniLogs) return;
     const v = snap.val();
     if (!v) {
-      elMiniLogs.innerHTML =
-        '<tr class="log-row"><td colspan="4" class="text-muted text-sm" style="padding:12px;">Belum ada log</td></tr>';
+      renderMiniLogsEmpty();
       return;
     }
     const rows = Object.entries(v)
       .map(([k, x]) => ({ k, ...x }))
       .reverse()
       .slice(0, 15);
+
     elMiniLogs.innerHTML = rows
-      .map(
-        (r) => {
-          const safeStatus = normalizeStatus(r.status);
-          return `<tr class="log-row log-status-${safeStatus}">
+      .map((r) => {
+        const safeStatus = normalizeStatus(r.status);
+        const relay = formatLogRelay(r.relay);
+        const source = formatLogSource(r);
+        return `<tr class="log-row log-status-${safeStatus}">
       <td class="log-time" data-label="Waktu">${escapeHtml(formatLogTime(r.waktu ?? r.timestamp))}</td>
-      <td class="log-values" data-label="Arus / Teg."><span class="log-val-arus">${Number(r.arus || 0).toFixed(2)} A</span><span class="log-val-sep">·</span><span class="log-val-teg">${Number(r.tegangan || 0).toFixed(0)} V</span></td>
+      <td class="log-values" data-label="Beban"><span class="log-val-arus">${num(r.arus).toFixed(2)} A</span><span class="log-val-sep">·</span><span class="log-val-teg">${num(r.tegangan).toFixed(1)} V</span><span class="log-val-sep">·</span><span class="log-val-daya">${getLogActivePower(r).toFixed(0)} W</span></td>
       <td class="log-status" data-label="Status"><span class="status-badge status-${safeStatus}">${safeStatus}</span></td>
+      <td class="log-relay" data-label="Relay">${escapeHtml(relay)}</td>
+      <td class="log-source" data-label="Sumber">${escapeHtml(source)}</td>
     </tr>`;
-        },
-      )
+      })
       .join("");
+    renderMiniLogDetailRows(rows);
   });
 
 }
@@ -394,6 +532,7 @@ initPage({
     if (canvas) chart = createRealtimeChart(canvas);
     if (detailCanvas) detailChart = createRealtimeDetailChart(detailCanvas);
 
+    initMiniLogTabs();
     startRealtimeListener();
     startMiniLogsListener();
 

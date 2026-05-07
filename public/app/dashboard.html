@@ -429,26 +429,65 @@
             </p>
           </div>
 
-          <div class="section-card glass">
-            <div class="section-header">
-              <div class="section-title">Log terkini</div>
-              <span class="text-xs text-muted">15 entri terakhir</span>
+          <div id="miniLogsCard" class="section-card glass mini-log-card">
+            <div class="section-header mini-log-header">
+              <div>
+                <div class="section-title">Log terkini</div>
+                <p class="mini-log-subtitle">
+                  Ringkas untuk pantauan cepat, detail untuk audit parameter listrik.
+                </p>
+              </div>
+              <div class="mini-log-actions">
+                <span class="text-xs text-muted">15 entri terakhir</span>
+                <div class="mini-log-tabs" role="tablist" aria-label="Tampilan log terkini">
+                  <button
+                    type="button"
+                    class="mini-log-tab active"
+                    data-mini-log-tab="summary"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="miniLogsSummaryPanel"
+                  >
+                    Ringkas
+                  </button>
+                  <button
+                    type="button"
+                    class="mini-log-tab"
+                    data-mini-log-tab="detail"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="miniLogsDetailPanel"
+                  >
+                    Detail
+                  </button>
+                </div>
+              </div>
             </div>
-            <div class="table-wrap">
+            <div id="miniLogsSummaryPanel" class="table-wrap mini-log-panel">
               <table class="mini-logs">
                 <thead>
                   <tr>
                     <th>Waktu</th>
-                    <th>Arus / Teg.</th>
+                    <th>Beban</th>
                     <th>Status</th>
+                    <th>Relay</th>
+                    <th>Sumber</th>
                   </tr>
                 </thead>
                 <tbody id="miniLogsBody">
                   <tr>
-                    <td colspan="3" class="text-muted text-sm" style="padding: 16px">Memuat…</td>
+                    <td colspan="5" class="text-muted text-sm" style="padding: 16px">Memuat…</td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div id="miniLogsDetailPanel" class="mini-log-panel mini-log-detail-panel" hidden>
+              <div class="mini-log-scroll-hint">
+                Detail menampilkan parameter lengkap untuk pengecekan audit.
+              </div>
+              <div id="miniLogsDetailBody" class="mini-log-detail-list">
+                <div class="mini-log-empty">Memuat…</div>
+              </div>
             </div>
           </div>
         </main>

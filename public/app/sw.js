@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260507-analytics";
+const CACHE_NAME = "iot-app-v20260507-date-filters";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [

@@ -333,9 +333,39 @@ function pushRealtimeDetailData(chart, label, d) {
   data.datasets[0].data.push(Number(d?.energi_kwh) || 0);
   data.datasets[1].data.push(Number(d?.power_factor) || 0);
   data.datasets[2].data.push(Number(d?.frekuensi) || 0);
-  data.datasets[3].data.push(Number(d?.daya) || 0);
+  data.datasets[3].data.push(Number(d?.apparent_power ?? d?.daya_va ?? d?.apparent ?? d?.daya) || 0);
 
   chart.update('none');
+}
+
+function numberFrom(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function readPowerFactor(log = {}) {
+  return numberFrom(log.power_factor ?? log.pf ?? log.powerFactor, 0);
+}
+
+function readActivePower(log = {}) {
+  const arus = numberFrom(log.arus);
+  const tegangan = numberFrom(log.tegangan);
+  const pf = numberFrom(log.power_factor ?? log.pf ?? log.powerFactor, 0.85);
+  return numberFrom(log.daya_w ?? log.active_power ?? log.activePower ?? log.daya, arus * tegangan * pf);
+}
+
+function readApparentPower(log = {}) {
+  const arus = numberFrom(log.arus);
+  const tegangan = numberFrom(log.tegangan);
+  return numberFrom(log.apparent_power ?? log.apparentPower ?? log.apparent ?? log.daya_va ?? log.va, arus * tegangan);
+}
+
+function readEnergy(log = {}) {
+  return numberFrom(log.energi_kwh ?? log.energy_kwh ?? log.kwh ?? log.energi ?? log.energy, 0);
+}
+
+function readFrequency(log = {}) {
+  return numberFrom(log.frekuensi ?? log.frequency ?? log.freq, 0);
 }
 
 /**
@@ -345,14 +375,23 @@ function pushRealtimeDetailData(chart, label, d) {
  */
 function loadHistoryIntoChart(chart, logs) {
   chart.data.labels           = logs.map(l => new Date(l.waktu).toLocaleTimeString('id-ID'));
-  chart.data.datasets[0].data = logs.map(l => Number(l.arus));
-  chart.data.datasets[1].data = logs.map(l => Number(l.tegangan));
-  chart.data.datasets[2].data = logs.map((l) => {
-    const a = Number(l.arus);
-    const v = Number(l.tegangan);
-    const pf = Number(l.power_factor ?? 0.85);
-    return Number(l.daya_w ?? l.active_power ?? a * v * pf);
-  });
+  chart.data.datasets[0].data = logs.map(l => numberFrom(l.arus));
+  chart.data.datasets[1].data = logs.map(l => numberFrom(l.tegangan));
+  chart.data.datasets[2].data = logs.map(readActivePower);
+  chart.update();
+}
+
+/**
+ * Load supporting history data into the secondary chart.
+ * @param {Chart} chart
+ * @param {Array} logs
+ */
+function loadHistoryIntoDetailChart(chart, logs) {
+  chart.data.labels           = logs.map(l => new Date(l.waktu).toLocaleTimeString('id-ID'));
+  chart.data.datasets[0].data = logs.map(readEnergy);
+  chart.data.datasets[1].data = logs.map(readPowerFactor);
+  chart.data.datasets[2].data = logs.map(readFrequency);
+  chart.data.datasets[3].data = logs.map(readApparentPower);
   chart.update();
 }
 
@@ -370,5 +409,6 @@ export {
   pushRealtimeData,
   pushRealtimeDetailData,
   loadHistoryIntoChart,
+  loadHistoryIntoDetailChart,
   resetChartZoom,
 };

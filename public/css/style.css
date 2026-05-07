@@ -5378,10 +5378,399 @@ body > header > nav {
 }
 
 /* =============================================================
+   HISTORY PAGE — CHART + TABLE COMPLETENESS
+   Keeps the history page readable while exposing all PZEM metrics.
+   ============================================================= */
+
+.history-chart-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.history-chart-block {
+  min-width: 0;
+}
+
+.history-chart-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.18), transparent);
+}
+
+.history-chart-subtitle {
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.history-summary-table {
+  min-width: 720px;
+}
+
+.history-detail-table {
+  min-width: 1180px;
+}
+
+.history-log-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.history-log-panel[hidden] {
+  display: none !important;
+}
+
+.history-log-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.58);
+  box-sizing: border-box;
+}
+
+.history-log-tab {
+  min-width: 76px;
+  height: 26px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.history-log-tab.active {
+  border-color: rgba(34, 211, 238, 0.32);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.34), rgba(2, 132, 199, 0.2));
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.history-load-values {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.history-val-arus {
+  color: var(--green-light);
+}
+
+.history-val-teg {
+  color: var(--primary-light);
+}
+
+.history-val-daya {
+  color: var(--yellow-light);
+}
+
+.history-val-sep {
+  color: rgba(148, 163, 184, 0.42);
+}
+
+.date-filter-card {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.date-filter-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.date-filter-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.date-filter-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.date-filter-header p {
+  max-width: 780px;
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.date-filter-summary {
+  min-width: 220px;
+  padding: 12px 14px;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.11), rgba(15, 23, 42, 0.68));
+  text-align: right;
+}
+
+.date-filter-summary strong,
+.date-filter-summary span {
+  display: block;
+}
+
+.date-filter-summary strong {
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.date-filter-summary span {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.date-filter-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  align-items: end;
+  gap: 12px;
+}
+
+.date-filter-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.date-filter-preset,
+.date-filter-day {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.52);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.date-filter-preset {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.date-filter-preset:hover,
+.date-filter-day.has-data:hover {
+  border-color: rgba(56, 189, 248, 0.38);
+  background: rgba(14, 165, 233, 0.12);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.date-filter-preset.active {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.34), rgba(2, 132, 199, 0.2));
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.date-filter-month {
+  display: grid;
+  gap: 6px;
+}
+
+.date-filter-month span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.date-filter-month input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text-primary);
+  color-scheme: dark;
+  font: inherit;
+  font-size: 12px;
+}
+
+.date-filter-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: var(--radius-lg);
+  background: rgba(2, 6, 23, 0.26);
+}
+
+.date-filter-weekday {
+  display: grid;
+  min-height: 24px;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.date-filter-day {
+  display: grid;
+  min-height: 42px;
+  place-items: center;
+  gap: 2px;
+  padding: 6px 3px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.date-filter-day small {
+  color: var(--cyan);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.date-filter-day.placeholder {
+  visibility: hidden;
+}
+
+.date-filter-day.no-data {
+  border-color: rgba(148, 163, 184, 0.08);
+  background: rgba(15, 23, 42, 0.26);
+  color: rgba(148, 163, 184, 0.32);
+  cursor: not-allowed;
+}
+
+.date-filter-day.today {
+  outline: 1px solid rgba(56, 189, 248, 0.36);
+  outline-offset: 2px;
+}
+
+.date-filter-day.selected {
+  border-color: rgba(34, 211, 238, 0.56);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.34), rgba(34, 211, 238, 0.12));
+  color: var(--text-primary);
+  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.14);
+}
+
+@media (max-width: 768px) {
+  .history-chart-stack {
+    gap: 14px;
+  }
+
+  .date-filter-card {
+    gap: 14px;
+  }
+
+  .date-filter-header,
+  .date-filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .date-filter-summary {
+    width: 100%;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .date-filter-presets {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .date-filter-preset {
+    width: 100%;
+  }
+
+  .date-filter-calendar {
+    gap: 5px;
+    padding: 10px;
+  }
+
+  .date-filter-day {
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  .history-chart-subtitle {
+    margin-bottom: 8px;
+    font-size: 10px;
+  }
+
+  .history-summary-table,
+  .history-detail-table {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .date-filter-header h2 {
+    font-size: 18px;
+  }
+
+  .date-filter-header p {
+    font-size: 12px;
+  }
+
+  .date-filter-presets {
+    grid-template-columns: 1fr;
+  }
+
+  .date-filter-calendar {
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .date-filter-weekday {
+    font-size: 9px;
+  }
+
+  .date-filter-day {
+    min-height: 36px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+  }
+
+  .date-filter-day small {
+    font-size: 8px;
+  }
+}
+
+/* =============================================================
    HISTORY PAGE — BUG FIX + LAYOUT FIX
    1. Excludes .history-table from dashboard table-wrap card rules
    2. Defines .log-toolbar as a proper class
-   3. Writes .history-table mobile card layout (6 fields, 2-col grid)
+   3. Writes .history-table mobile card layout (all PZEM fields)
    ============================================================= */
 
 /* ── 1. Exclude history-table from the generic table-wrap card transform ── */
@@ -5412,15 +5801,17 @@ body > header > nav {
     gap: 7px;
   }
 
-  /* History row: 2-column CSS Grid (6-field monitoring card) */
+  /* History row: 2-column CSS Grid (full PZEM monitoring card) */
   .table-wrap .history-table tr {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto;
     grid-template-areas:
       "waktu   status"
       "arus    tegangan"
-      "relay   sumber";
+      "daya    energi"
+      "pf      frekuensi"
+      "apparent relay"
+      "sumber sumber";
     column-gap: 10px;
     row-gap: 3px;
     padding: 11px 12px !important;
@@ -5463,6 +5854,11 @@ body > header > nav {
   .table-wrap .history-table tr td[data-label="Waktu"]    { grid-area: waktu; }
   .table-wrap .history-table tr td[data-label="Arus"]     { grid-area: arus; }
   .table-wrap .history-table tr td[data-label="Tegangan"] { grid-area: tegangan; }
+  .table-wrap .history-table tr td[data-label="Daya"]     { grid-area: daya; }
+  .table-wrap .history-table tr td[data-label="Energi"]   { grid-area: energi; }
+  .table-wrap .history-table tr td[data-label="PF"]       { grid-area: pf; }
+  .table-wrap .history-table tr td[data-label="Frekuensi"] { grid-area: frekuensi; }
+  .table-wrap .history-table tr td[data-label="Apparent"] { grid-area: apparent; }
   .table-wrap .history-table tr td[data-label="Status"]   { grid-area: status; }
   .table-wrap .history-table tr td[data-label="Relay"]    { grid-area: relay; }
   .table-wrap .history-table tr td[data-label="Sumber"]   { grid-area: sumber; }
@@ -5478,7 +5874,7 @@ body > header > nav {
     text-overflow: ellipsis;
   }
 
-  /* Arus + Tegangan: measurement values — colored monospace */
+  /* Measurement values — colored monospace */
   .table-wrap .history-table tr td[data-label="Arus"] {
     font-family: var(--font-data);
     font-size: 12px;
@@ -5491,6 +5887,29 @@ body > header > nav {
     font-size: 12px;
     font-weight: 600;
     color: var(--primary-light);
+  }
+
+  .table-wrap .history-table tr td[data-label="Daya"] {
+    font-family: var(--font-data);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--yellow);
+  }
+
+  .table-wrap .history-table tr td[data-label="Energi"] {
+    font-family: var(--font-data);
+    font-size: 12px;
+    font-weight: 600;
+    color: #c4b5fd;
+  }
+
+  .table-wrap .history-table tr td[data-label="PF"],
+  .table-wrap .history-table tr td[data-label="Frekuensi"],
+  .table-wrap .history-table tr td[data-label="Apparent"] {
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
   }
 
   /* Status: badge is inline-styled by JS, just ensure it fits */
@@ -5523,6 +5942,28 @@ body > header > nav {
   .table-wrap .history-table tr td[data-label="Sumber"] {
     font-size: 10.5px;
     color: rgba(100, 116, 139, 0.7);
+    padding-top: 2px !important;
+  }
+
+  .table-wrap .history-summary-table tr {
+    grid-template-areas:
+      "waktu status"
+      "beban beban"
+      "relay sumber";
+    min-height: 92px;
+    row-gap: 8px;
+  }
+
+  .table-wrap .history-summary-table tr td[data-label="Beban"] {
+    grid-area: beban;
+    font-family: var(--font-data);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .table-wrap .history-summary-table tr td[data-label="Beban"]::before {
+    margin-bottom: 5px !important;
   }
 
   /* Empty / loading state */
@@ -5547,7 +5988,10 @@ body > header > nav {
   }
 
   .table-wrap .history-table tr td[data-label="Arus"],
-  .table-wrap .history-table tr td[data-label="Tegangan"] {
+  .table-wrap .history-table tr td[data-label="Tegangan"],
+  .table-wrap .history-table tr td[data-label="Daya"],
+  .table-wrap .history-table tr td[data-label="Energi"],
+  .table-wrap .history-summary-table tr td[data-label="Beban"] {
     font-size: 11.5px;
   }
 }
@@ -5563,7 +6007,10 @@ body > header > nav {
   }
 
   .table-wrap .history-table tr td[data-label="Arus"],
-  .table-wrap .history-table tr td[data-label="Tegangan"] {
+  .table-wrap .history-table tr td[data-label="Tegangan"],
+  .table-wrap .history-table tr td[data-label="Daya"],
+  .table-wrap .history-table tr td[data-label="Energi"],
+  .table-wrap .history-summary-table tr td[data-label="Beban"] {
     font-size: 11px;
   }
 
@@ -5691,7 +6138,8 @@ body > header > nav {
 
   /* Both controls: same height on mobile, full-width */
   .log-toolbar #filterStatus,
-  .log-toolbar #exportBtn {
+  .log-toolbar #exportBtn,
+  .log-toolbar .history-log-tabs {
     height: 40px !important;
     min-height: 40px !important;
     max-height: 40px !important;
@@ -5713,7 +6161,8 @@ body > header > nav {
 
 @media (max-width: 430px) {
   .log-toolbar #filterStatus,
-  .log-toolbar #exportBtn {
+  .log-toolbar #exportBtn,
+  .log-toolbar .history-log-tabs {
     height: 38px !important;
     min-height: 38px !important;
     font-size: 12.5px !important;
@@ -5722,7 +6171,8 @@ body > header > nav {
 
 @media (max-width: 360px) {
   .log-toolbar #filterStatus,
-  .log-toolbar #exportBtn {
+  .log-toolbar #exportBtn,
+  .log-toolbar .history-log-tabs {
     height: 36px !important;
     min-height: 36px !important;
     font-size: 12px !important;
@@ -7658,7 +8108,8 @@ textarea.form-input {
   }
 
   .section-card:has(.log-toolbar) .log-toolbar #filterStatus,
-  .section-card:has(.log-toolbar) .log-toolbar #exportBtn {
+  .section-card:has(.log-toolbar) .log-toolbar #exportBtn,
+  .section-card:has(.log-toolbar) .log-toolbar .history-log-tabs {
     flex: 0 0 100% !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -7718,6 +8169,15 @@ textarea.form-input {
     gap: 10px;
     box-sizing: border-box;
     padding-inline: 0;
+  }
+
+  .section-card:has(.log-toolbar) .history-log-tabs {
+    justify-content: stretch;
+  }
+
+  .section-card:has(.log-toolbar) .history-log-tab {
+    flex: 1;
+    min-width: 0;
   }
 
   .section-card:has(.log-toolbar) .table-wrap:has(.history-table),
@@ -8284,6 +8744,588 @@ html.lenis, html.lenis body {
 }
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
+}
+
+/* =============================================================
+   Dashboard Mini Logs - Ringkas / Detail Responsive
+============================================================= */
+#miniLogsCard,
+#miniLogsCard * {
+  min-width: 0;
+}
+
+.mini-log-header {
+  align-items: flex-start;
+}
+
+.mini-log-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.mini-log-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mini-log-actions > .text-xs {
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.mini-log-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.mini-log-tab {
+  min-height: 30px;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.mini-log-tab.active {
+  border-color: rgba(34, 211, 238, 0.32);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.34), rgba(2, 132, 199, 0.2));
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.mini-log-panel[hidden] {
+  display: none !important;
+}
+
+#miniLogsSummaryPanel .mini-logs {
+  width: 100%;
+  table-layout: fixed;
+}
+
+#miniLogsSummaryPanel .mini-logs th:nth-child(1),
+#miniLogsSummaryPanel .mini-logs td:nth-child(1) {
+  width: 22%;
+}
+
+#miniLogsSummaryPanel .mini-logs th:nth-child(2),
+#miniLogsSummaryPanel .mini-logs td:nth-child(2) {
+  width: 36%;
+}
+
+#miniLogsSummaryPanel .mini-logs th:nth-child(3),
+#miniLogsSummaryPanel .mini-logs td:nth-child(3) {
+  width: 16%;
+}
+
+#miniLogsSummaryPanel .mini-logs th:nth-child(4),
+#miniLogsSummaryPanel .mini-logs td:nth-child(4) {
+  width: 12%;
+}
+
+#miniLogsSummaryPanel .mini-logs th:nth-child(5),
+#miniLogsSummaryPanel .mini-logs td:nth-child(5) {
+  width: 14%;
+}
+
+#miniLogsSummaryPanel .log-values {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+#miniLogsSummaryPanel .log-val-arus {
+  color: var(--green-light);
+}
+
+#miniLogsSummaryPanel .log-val-teg {
+  color: var(--primary-light);
+}
+
+#miniLogsSummaryPanel .log-val-daya {
+  color: var(--yellow-light);
+}
+
+#miniLogsSummaryPanel .log-val-sep {
+  color: rgba(148, 163, 184, 0.42);
+}
+
+#miniLogsSummaryPanel .log-relay,
+#miniLogsSummaryPanel .log-source {
+  color: var(--text-secondary);
+  font-family: var(--font-data);
+  font-weight: 800;
+}
+
+.mini-log-detail-panel {
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.5), rgba(2, 6, 23, 0.28));
+}
+
+.mini-log-scroll-hint {
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.mini-log-detail-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mini-log-empty {
+  display: grid;
+  min-height: 92px;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  background: rgba(15, 23, 42, 0.36);
+  text-align: center;
+}
+
+.mini-log-empty .material-symbols-rounded,
+.mini-log-empty-state .material-symbols-rounded {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  border-radius: 9px;
+  color: var(--primary-light);
+  background: rgba(14, 165, 233, 0.08);
+  font-size: 19px;
+}
+
+.mini-log-empty strong,
+.mini-log-empty-state strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.mini-log-empty small,
+.mini-log-empty-state small {
+  max-width: 280px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.mini-log-empty-state {
+  width: 100%;
+  min-height: 86px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  text-align: center;
+}
+
+#miniLogsSummaryPanel .mini-log-empty-row {
+  border-left-color: rgba(56, 189, 248, 0.28);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.56), rgba(15, 23, 42, 0.28));
+}
+
+.mini-log-detail-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.85fr) minmax(0, 3fr) minmax(150px, 0.85fr);
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-left: 3px solid rgba(100, 116, 139, 0.44);
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.mini-log-detail-row.log-status-NORMAL {
+  border-left-color: var(--green);
+}
+
+.mini-log-detail-row.log-status-WARNING {
+  border-left-color: var(--yellow);
+}
+
+.mini-log-detail-row.log-status-LEAKAGE,
+.mini-log-detail-row.log-status-DANGER {
+  border-left-color: var(--red);
+}
+
+.mini-detail-main,
+.mini-detail-state,
+.mini-detail-metric {
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.22);
+}
+
+.mini-detail-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.mini-detail-main strong {
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.mini-detail-label,
+.mini-detail-metric em {
+  color: var(--text-muted);
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mini-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.mini-detail-metric {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 10px;
+}
+
+.mini-detail-metric strong {
+  color: var(--text-primary);
+  font-family: var(--font-data);
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.mini-detail-metric.metric-arus strong {
+  color: var(--green-light);
+}
+
+.mini-detail-metric.metric-tegangan strong,
+.mini-detail-metric.metric-va strong {
+  color: var(--primary-light);
+}
+
+.mini-detail-metric.metric-daya strong,
+.mini-detail-metric.metric-freq strong {
+  color: var(--yellow-light);
+}
+
+.mini-detail-metric.metric-energi strong {
+  color: var(--purple);
+}
+
+.mini-detail-metric.metric-pf strong {
+  color: var(--cyan);
+}
+
+.mini-detail-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+}
+
+.mini-detail-state .status-badge {
+  width: fit-content;
+  padding: 5px 10px;
+  font-size: 10px;
+}
+
+.mini-detail-pill,
+.mini-detail-source {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+@media (max-width: 1280px) {
+  .mini-log-detail-row {
+    grid-template-columns: minmax(140px, 0.8fr) minmax(0, 2.6fr);
+  }
+
+  .mini-detail-state {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .mini-detail-metrics {
+    grid-template-columns: repeat(4, minmax(84px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  #miniLogsCard {
+    padding: 16px;
+  }
+
+  .mini-log-header {
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  #miniLogsCard .section-title {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .mini-log-subtitle {
+    font-size: 11px;
+  }
+
+  .mini-log-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(178px, 244px);
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mini-log-tabs {
+    width: 100%;
+    flex: none;
+    min-width: 0;
+  }
+
+  .mini-log-tab {
+    flex: 1;
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+
+  #miniLogsSummaryPanel {
+    overflow: visible !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  #miniLogsSummaryPanel .mini-logs {
+    display: block;
+    width: 100%;
+    border: 0;
+  }
+
+  #miniLogsSummaryPanel .mini-logs thead {
+    display: none;
+  }
+
+  #miniLogsSummaryPanel .mini-logs tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #miniLogsSummaryPanel .log-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "time status"
+      "vals vals"
+      "relay source";
+    min-height: 84px;
+    padding: 12px 13px !important;
+    column-gap: 12px;
+    row-gap: 9px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-left: 3px solid rgba(100, 116, 139, 0.34);
+    border-radius: var(--radius-md) !important;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.58), rgba(15, 23, 42, 0.48));
+  }
+
+  #miniLogsSummaryPanel .log-row td {
+    display: flex !important;
+    align-items: center;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  #miniLogsSummaryPanel .log-row td::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  #miniLogsSummaryPanel .log-row td[colspan] {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 104px;
+    display: grid !important;
+    place-items: center;
+    text-align: center;
+    padding: 14px !important;
+  }
+
+  #miniLogsSummaryPanel .log-time {
+    grid-area: time;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  #miniLogsSummaryPanel .log-values {
+    grid-area: vals;
+    gap: 6px;
+  }
+
+  #miniLogsSummaryPanel .log-status {
+    grid-area: status;
+    justify-content: flex-end;
+  }
+
+  #miniLogsSummaryPanel .log-relay {
+    grid-area: relay;
+    font-size: 11px;
+  }
+
+  #miniLogsSummaryPanel .log-source {
+    grid-area: source;
+    justify-content: flex-end;
+    font-size: 11px;
+  }
+
+  #miniLogsSummaryPanel .log-val-arus,
+  #miniLogsSummaryPanel .log-val-teg,
+  #miniLogsSummaryPanel .log-val-daya {
+    font-size: 12.5px;
+    font-weight: 800;
+  }
+
+  .mini-log-detail-panel {
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .mini-log-scroll-hint {
+    margin-bottom: 8px;
+    padding: 9px 10px;
+    border: 1px solid rgba(14, 165, 233, 0.16);
+    border-radius: var(--radius-md);
+    background: rgba(14, 165, 233, 0.07);
+  }
+
+  .mini-log-detail-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 11px;
+  }
+
+  .mini-detail-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .mini-detail-state {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .mini-log-empty {
+    min-height: 104px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 420px) {
+  #miniLogsCard {
+    padding: 14px;
+  }
+
+  .mini-log-actions {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .mini-log-actions .text-xs {
+    width: 100%;
+    order: 1;
+    text-align: left;
+  }
+
+  .mini-log-tabs {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  #miniLogsSummaryPanel .log-row {
+    padding: 11px 12px !important;
+  }
+
+  #miniLogsSummaryPanel .log-val-arus,
+  #miniLogsSummaryPanel .log-val-teg,
+  #miniLogsSummaryPanel .log-val-daya {
+    font-size: 12px;
+  }
+
+  #miniLogsSummaryPanel .log-status .status-badge,
+  .mini-detail-state .status-badge {
+    font-size: 8.5px;
+    padding: 3px 7px;
+  }
+
+  .mini-detail-metric {
+    padding: 8px;
+  }
+
+  .mini-detail-metric strong {
+    font-size: 12px;
+  }
 }
 
 /* =============================================================

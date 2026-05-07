@@ -64,6 +64,7 @@
 
     "logs": {
       ".read":  "auth != null && auth.token.isTempAccount !== true",
+      ".indexOn": ["waktu", "status"],
       "$logId": {
         ".write": "auth != null && auth.token.isTempAccount !== true && !data.exists() && newData.exists() && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         "arus": {

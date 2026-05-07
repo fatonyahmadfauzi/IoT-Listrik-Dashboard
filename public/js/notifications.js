@@ -168,14 +168,74 @@ function sendNotification(title, body, icon = '/assets/icons/icon-192.png', tag 
 // ── Web Audio API Siren Logic ─────────────────────────────────
 let audioCtx = null;
 let sirenInterval = null;
+let audioUnlockListenersInstalled = false;
+let lastAudioGestureAt = 0;
 
-function initAudio() {
+function getAudioContextConstructor() {
+  return window.AudioContext || window.webkitAudioContext;
+}
+
+function hasUserActivation() {
+  const activation = navigator.userActivation;
+  return Boolean(
+    activation?.isActive ||
+    activation?.hasBeenActive ||
+    (lastAudioGestureAt && Date.now() - lastAudioGestureAt < 1500)
+  );
+}
+
+function removeAudioUnlockListeners() {
+  if (!audioUnlockListenersInstalled) return;
+  audioUnlockListenersInstalled = false;
+  ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'].forEach((eventName) => {
+    window.removeEventListener(eventName, handleAudioUnlockGesture, true);
+  });
+}
+
+function handleAudioUnlockGesture() {
+  lastAudioGestureAt = Date.now();
+  initAudio({ fromGesture: true });
+}
+
+function installAudioUnlockListeners() {
+  if (audioUnlockListenersInstalled) return;
+  audioUnlockListenersInstalled = true;
+  ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'].forEach((eventName) => {
+    window.addEventListener(eventName, handleAudioUnlockGesture, {
+      capture: true,
+      passive: true,
+    });
+  });
+}
+
+function initAudio(options = {}) {
+  const AudioContextCtor = getAudioContextConstructor();
+  if (!AudioContextCtor) return false;
+
+  const canStartAudio = Boolean(options.fromGesture || hasUserActivation());
+  if (!canStartAudio) {
+    installAudioUnlockListeners();
+    return false;
+  }
+
   if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx = new AudioContextCtor();
   }
+
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx.resume()
+      .then(() => {
+        if (audioCtx?.state === 'running') removeAudioUnlockListeners();
+      })
+      .catch((err) => {
+        console.warn("Web audio resume blocked until user gesture:", err);
+        installAudioUnlockListeners();
+      });
+  } else if (audioCtx.state === 'running') {
+    removeAudioUnlockListeners();
   }
+
+  return audioCtx.state === 'running';
 }
 
 function playWebSiren() {

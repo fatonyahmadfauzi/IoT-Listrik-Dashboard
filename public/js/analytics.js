@@ -26,6 +26,7 @@ import {
   showToast,
   stopWebSiren,
 } from "./notifications.js";
+import { createLogDateFilter } from "./date-filter.js";
 import {
   ref,
   query,
@@ -34,7 +35,7 @@ import {
   onValue,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-const LOG_LIMIT = 200;
+const LOG_LIMIT = 1000;
 const TREND_LIMIT = 60;
 
 const COLORS = {
@@ -59,7 +60,9 @@ const countEl = document.getElementById("analyticsCount");
 const latestStatusEl = document.getElementById("analyticsLatestStatus");
 const updatedAtEl = document.getElementById("analyticsUpdatedAt");
 const statusLegendEl = document.getElementById("analyticsStatusLegend");
+const dateFilterRoot = document.getElementById("analyticsDateFilter");
 
+let allLogs = [];
 let logs = [];
 let latestRealtime = null;
 let trendChart = null;
@@ -67,6 +70,7 @@ let statusChart = null;
 let snapshotChart = null;
 let unsubLogs = null;
 let unsubListrik = null;
+let dateFilter = null;
 
 function number(value, fallback = 0) {
   const parsed = Number(value);
@@ -85,8 +89,24 @@ function getTimestamp(entry = {}) {
   if (value === undefined || value === null || value === "") return 0;
   const numeric = Number(value);
   if (Number.isFinite(numeric)) return numeric;
+  const localDate = parseLocalDateTime(value);
+  if (localDate) return localDate;
   const parsed = new Date(value).getTime();
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseLocalDateTime(value) {
+  const match = String(value).match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4}),?\s+(\d{1,2})[.:](\d{1,2})(?:[.:](\d{1,2}))?/);
+  if (!match) return 0;
+  const day = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  let year = Number(match[3]);
+  if (year < 100) year += 2000;
+  const hour = Number(match[4] || 0);
+  const minute = Number(match[5] || 0);
+  const second = Number(match[6] || 0);
+  const timestamp = new Date(year, month, day, hour, minute, second).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function formatDateTime(value) {
@@ -505,8 +525,13 @@ function startLogsListener() {
       snap.forEach((child) => {
         next.push(normalizeEntry({ _key: child.key, ...child.val() }));
       });
-      logs = next.sort((a, b) => a.waktu - b.waktu);
-      renderAnalytics();
+      allLogs = next.sort((a, b) => a.waktu - b.waktu);
+      if (dateFilter) {
+        dateFilter.setLogs(allLogs);
+      } else {
+        logs = allLogs;
+        renderAnalytics();
+      }
     },
     (error) => {
       showToast(`Gagal memuat analytics: ${error.message}`, "error");
@@ -547,6 +572,13 @@ initPage({
     });
 
     startRealtimeMonitor();
+    dateFilter = createLogDateFilter({
+      root: dateFilterRoot,
+      onChange: (filteredLogs) => {
+        logs = filteredLogs.slice().sort((a, b) => a.waktu - b.waktu);
+        renderAnalytics();
+      },
+    });
     startLogsListener();
 
     document.getElementById("logoutBtn")?.addEventListener("click", logout);

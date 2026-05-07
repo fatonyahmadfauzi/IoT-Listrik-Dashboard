@@ -21,12 +21,14 @@ body.page-bg {
   position: relative;
   max-width: 100%;
   overflow-x: clip;
+  touch-action: pan-y;
 }
 
 html.public-marketing {
-  overflow-x: hidden;
+  overflow-x: clip;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: pan-y;
 }
 
 html.public-marketing::-webkit-scrollbar,
@@ -55,6 +57,7 @@ body.page-bg::before {
   isolation: isolate;
   max-width: 100%;
   overflow-x: clip;
+  touch-action: pan-y;
 }
 
 .cine-scene::before {
@@ -464,6 +467,24 @@ body.page-bg::before {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  /* Clamp pseudo-element horizontal inset to prevent overflow on mobile */
+  .cine-scene::before {
+    inset: -92px 0;
+  }
+
+  /* Ensure vertical scroll is never blocked by touch on sections */
+  .cine-scene,
+  .landing-main,
+  .landing-section,
+  .clean-features-wrap,
+  .logic-explainer-section,
+  .architecture-section,
+  .tech-stack-section,
+  .demo-section-clean {
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: auto;
   }
 }
 

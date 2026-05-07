@@ -12,7 +12,9 @@ import {
 } from "./auth.js";
 import {
   createRealtimeChart,
+  createRealtimeDetailChart,
   pushRealtimeData,
+  pushRealtimeDetailData,
   resetChartZoom,
 } from "./charts.js";
 import {
@@ -53,12 +55,14 @@ const elRelayHint = document.getElementById("relayControlHint");
 const elResetZoom = document.getElementById("resetZoomBtn");
 const elRelaySection = document.getElementById("relaySection");
 const canvas = document.getElementById("monitorChart");
+const detailCanvas = document.getElementById("monitorDetailChart");
 const elEndpointBadge = document.getElementById("endpointBadge");
 const elConnState = document.getElementById("connStateText");
 const elAlertPulse = document.getElementById("alertPulse");
 const elMiniLogs = document.getElementById("miniLogsBody");
 
 let chart = null;
+let detailChart = null;
 let currentRole = null;
 let lastRelayVal = -1;
 let stopHybrid = null;
@@ -314,6 +318,7 @@ function startRealtimeListener() {
       if (chart) {
         const label = new Date().toLocaleTimeString("id-ID");
         pushRealtimeData(chart, label, d.arus, d.tegangan, d.daya_w);
+        if (detailChart) pushRealtimeDetailData(detailChart, label, d);
       }
       checkAndNotify(d.status, d.arus, d.tegangan);
     },
@@ -387,6 +392,7 @@ initPage({
     }
 
     if (canvas) chart = createRealtimeChart(canvas);
+    if (detailCanvas) detailChart = createRealtimeDetailChart(detailCanvas);
 
     startRealtimeListener();
     startMiniLogsListener();
@@ -405,7 +411,10 @@ initPage({
     elRelayOn?.addEventListener("click", () => sendRelayCommand(1));
     elRelayOff?.addEventListener("click", () => sendRelayCommand(0));
 
-    elResetZoom?.addEventListener("click", () => resetChartZoom(chart));
+    elResetZoom?.addEventListener("click", () => {
+      resetChartZoom(chart);
+      resetChartZoom(detailChart);
+    });
 
     document.getElementById("logoutBtn")?.addEventListener("click", logout);
   },

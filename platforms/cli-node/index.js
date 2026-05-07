@@ -112,6 +112,14 @@ function relayBlockedReason() {
   return "Perangkat belum siap menerima perintah.";
 }
 
+function statusColor(status) {
+  if (status === "NORMAL") return chalk.green.bold;
+  if (status === "WARNING") return chalk.yellow.bold;
+  if (status === "LEAKAGE") return chalk.hex ? chalk.hex("#fb923c").bold : chalk.yellow.bold;
+  if (status === "DANGER") return chalk.red.bold;
+  return chalk.gray;
+}
+
 function startPresenceWatch() {
   if (presenceListrikRef) off(presenceListrikRef);
   if (presenceConnRef) off(presenceConnRef);
@@ -165,7 +173,8 @@ function renderLiveMonitoring(data) {
         ? chalk.yellow
         : chalk.red;
 
-  console.log(chalk.cyan.bold("=== Data Realtime ==="));
+  console.log(chalk.cyan.bold("=== Ringkasan Monitoring PZEM-004T ==="));
+  console.log(`${chalk.blue("Sumber     :")} ${chalk.white("CLOUD")}`);
   console.log(`${chalk.blue("Koneksi    :")} ${connectionColor(connection)}`);
 
   if (!data) {
@@ -173,20 +182,23 @@ function renderLiveMonitoring(data) {
     return;
   }
 
-  console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
-  console.log(`${chalk.blue("Arus (A)   :")} ${chalk.white(data.arus || "0")}`);
-  console.log(`${chalk.blue("Tegangan(V):")} ${chalk.white(data.tegangan || "0")}`);
-  const pf = Number(data.power_factor ?? 0.85);
+  const status = String(data.status || "NORMAL").toUpperCase();
+  const arus = Number(data.arus ?? 0);
+  const tegangan = Number(data.tegangan ?? 0);
+  const energi = Number(data.energi_kwh ?? 0);
+  const frekuensi = Number(data.frekuensi ?? 0);
+  const pf = Number(data.power_factor ?? 0);
   const apparentPower = Number(data.apparent_power ?? data.daya ?? 0);
-  const activePower = Number(data.daya_w ?? apparentPower * pf);
-  console.log(`${chalk.blue("Daya Aktif :")} ${chalk.white(activePower.toFixed(1))} W`);
-  console.log(`${chalk.blue("Daya Semu  :")} ${chalk.white(apparentPower.toFixed(1))} VA`);
-  console.log(`${chalk.blue("PF / Freq  :")} ${chalk.white(pf.toFixed(2))} / ${chalk.white(Number(data.frekuensi ?? 50).toFixed(1))} Hz`);
+  const activePower = Number(data.daya_w ?? (pf > 0 ? apparentPower * pf : 0));
 
-  let statusColor = chalk.green;
-  if (data.status === "WARNING") statusColor = chalk.yellow;
-  if (data.status === "DANGER") statusColor = chalk.red.bold;
-  console.log(`${chalk.blue("Status     :")} ${statusColor(data.status || "-")}`);
+  console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
+  console.log(`${chalk.blue("Status     :")} ${statusColor(status)(status)}`);
+  console.log(`${chalk.blue("Arus       :")} ${chalk.green(`${arus.toFixed(2)} A`)} ${chalk.gray("(PZEM-004T Meter)")}`);
+  console.log(`${chalk.blue("Tegangan   :")} ${chalk.cyan(`${tegangan.toFixed(1)} V`)} ${chalk.gray("(PZEM-004T Meter)")}`);
+  console.log(`${chalk.blue("Daya Aktif :")} ${chalk.yellow(`${activePower.toFixed(1)} W`)} ${chalk.gray("V x I x PF")}`);
+  console.log(`${chalk.blue("Daya Semu  :")} ${chalk.white(`${apparentPower.toFixed(1)} VA`)} ${chalk.gray("V x I")}`);
+  console.log(`${chalk.blue("Energi     :")} ${chalk.white(`${energi.toFixed(3)} kWh`)} ${chalk.gray("akumulasi meter")}`);
+  console.log(`${chalk.blue("PF / Freq  :")} ${chalk.white(pf.toFixed(2))} / ${chalk.white(`${frekuensi.toFixed(1)} Hz`)}`);
   console.log(
     `${chalk.blue("Relay      :")} ${data.relay ? chalk.green("ON") : chalk.red("OFF")}`
   );

@@ -24,7 +24,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Dashboard IoT"
+                android:text="IoT Listrik Dashboard"
                 android:textSize="20sp"
                 android:textColor="@color/text_primary"
                 android:textStyle="bold"/>
@@ -107,7 +107,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="SISTEM STATUS"
+                    android:text="STATUS KESELAMATAN"
                     android:letterSpacing="0.1"
                     android:textSize="12sp"
                     android:textColor="#CCFFFFFF"/>
@@ -151,7 +151,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Arus (A)"
+                        android:text="Arus"
                         app:drawableStartCompat="@drawable/ic_bolt"
                         android:drawablePadding="6dp"
                         android:textColor="@color/text_secondary"
@@ -165,11 +165,11 @@
                         android:layout_marginTop="8dp"
                         android:textSize="36sp"
                         android:textStyle="bold"
-                        android:textColor="@color/cyan"/>
+                        android:textColor="@color/green"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="PZEM-004T"
+                        android:text="PZEM-004T Meter"
                         android:textSize="11sp"
                         android:layout_marginTop="4dp"
                         android:textColor="@color/text_secondary"/>
@@ -202,11 +202,11 @@
                         android:layout_marginTop="8dp"
                         android:textSize="36sp"
                         android:textStyle="bold"
-                        android:textColor="@color/yellow"/>
+                        android:textColor="@color/cyan"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="PZEM-004T"
+                        android:text="PZEM-004T Meter"
                         android:textSize="11sp"
                         android:layout_marginTop="4dp"
                         android:textColor="@color/text_secondary"/>
@@ -239,7 +239,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Daya (W)"
+                        android:text="Daya Aktif (W)"
                         android:textSize="11sp"
                         android:textColor="@color/text_secondary"/>
                     <TextView
@@ -250,7 +250,7 @@
                         android:layout_marginTop="6dp"
                         android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_primary"/>
+                        android:textColor="@color/yellow"/>
                 </LinearLayout>
 
                 <!-- Energi kWh -->
@@ -307,6 +307,117 @@
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/cyan"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ── METER DETAIL: Power Factor / Frekuensi / Daya Semu ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp"
+                android:baselineAligned="false">
+
+                <LinearLayout
+                    android:id="@+id/cardPowerFactor"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_glass"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="14dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Power Factor"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvPowerFactor"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.00"
+                        android:layout_marginTop="6dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Meter / fallback"
+                        android:textSize="10sp"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardFrekuensi"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginHorizontal="3dp"
+                    android:background="@drawable/bg_glass"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="14dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Frekuensi"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvFrekuensi"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 Hz"
+                        android:layout_marginTop="6dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Meter / fallback"
+                        android:textSize="10sp"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/text_secondary"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardApparentPower"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_glass"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="14dp"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Apparent (VA)"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"/>
+                    <TextView
+                        android:id="@+id/tvApparentPower"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 VA"
+                        android:layout_marginTop="6dp"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="V x I"
+                        android:textSize="10sp"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/text_secondary"/>
                 </LinearLayout>
             </LinearLayout>
 

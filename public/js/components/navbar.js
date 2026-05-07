@@ -107,7 +107,6 @@ class AppNavbar extends HTMLElement {
     let lastScrollY = 0;
     let cachedScrollY = 0;
     let ticking = false;
-    let lastTouchY = null;
 
     const scheduleNavbarSync = () => {
       if (ticking) return;
@@ -119,23 +118,6 @@ class AppNavbar extends HTMLElement {
     const onScroll = () => {
       cachedScrollY = window.scrollY;
       scheduleNavbarSync();
-    };
-
-    const onTouchStart = (event) => {
-      lastTouchY = event.touches?.[0]?.clientY ?? null;
-    };
-
-    const onTouchMove = (event) => {
-      const currentTouchY = event.touches?.[0]?.clientY;
-      if (!Number.isFinite(currentTouchY) || !Number.isFinite(lastTouchY)) return;
-
-      const touchDelta = lastTouchY - currentTouchY;
-      if (Math.abs(touchDelta) >= 8) {
-        if (touchDelta < 0) navWrap?.classList.remove("nav-hidden");
-        cachedScrollY = window.scrollY;
-        lastTouchY = currentTouchY;
-        scheduleNavbarSync();
-      }
     };
 
     const syncNavbarState = () => {
@@ -176,8 +158,6 @@ class AppNavbar extends HTMLElement {
       syncNavbarState();
     });
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
   }
 }
 

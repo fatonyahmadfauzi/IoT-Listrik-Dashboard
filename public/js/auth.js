@@ -159,6 +159,23 @@ function populateSidebar(user, role) {
   const emailEl = document.getElementById("sidebarEmail");
   const avatarEl = document.getElementById("sidebarAvatar");
   const rolePill = document.getElementById("sidebarRole");
+  const nav = document.querySelector(".sidebar-nav");
+
+  if (nav && !nav.querySelector('a[href="/app/analytics"]')) {
+    const historyLink = nav.querySelector('a[href="/app/history"]');
+    const analyticsLink = document.createElement("a");
+    analyticsLink.href = "/app/analytics";
+    analyticsLink.className = "nav-item";
+    analyticsLink.innerHTML = '<span class="material-symbols-rounded nav-icon">query_stats</span>Analytics';
+    historyLink?.insertAdjacentElement("afterend", analyticsLink);
+  }
+
+  const currentPath = window.location.pathname.replace(/\/$/, "");
+  if (currentPath === "/app/analytics") {
+    document.querySelectorAll(".sidebar-nav .nav-item").forEach((item) => {
+      item.classList.toggle("active", item.getAttribute("href") === "/app/analytics");
+    });
+  }
 
   if (emailEl) emailEl.textContent = user.email;
   if (avatarEl) avatarEl.textContent = user.email[0].toUpperCase();

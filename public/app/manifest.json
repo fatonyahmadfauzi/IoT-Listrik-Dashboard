@@ -62,6 +62,13 @@
       "description": "Lihat riwayat event",
       "url": "/app/history",
       "icons": [{ "src": "/assets/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics",
+      "description": "Lihat ringkasan dan distribusi status",
+      "url": "/app/analytics",
+      "icons": [{ "src": "/assets/icons/icon-96.png", "sizes": "96x96" }]
     }
   ]
 }

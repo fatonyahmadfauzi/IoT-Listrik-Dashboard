@@ -1,0 +1,1 @@
+const CACHE_NAME="iot-listrik-retired-v1";self.addEventListener("install",()=>{self.skipWaiting()}),self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(t=>Promise.all(t.map(i=>caches.delete(i)))).then(()=>self.registration.unregister()).then(()=>self.clients.claim()))});

@@ -13,13 +13,14 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260502-perf";
+const CACHE_NAME = "iot-app-v20260507-analytics";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
   "/app/login",
   "/app/dashboard",
   "/app/history",
+  "/app/analytics",
   "/app/settings",
   "/app/manifest.json",
   "/css/style.min.css",
@@ -27,6 +28,7 @@ const CACHE_URLS = [
   "/js/auth.js",
   "/js/app.js",
   "/js/history.js",
+  "/js/analytics.js",
   "/js/settings.js",
   "/js/charts.js",
   "/js/notifications.js",

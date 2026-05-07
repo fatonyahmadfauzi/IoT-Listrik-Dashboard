@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
     private val arusHistory = mutableListOf<Float>()
     private val tegHistory = mutableListOf<Float>()
 
-    private var currentStatusColor = Color.parseColor("#22c55e")
+    private var currentStatusColor = Color.parseColor("#2eea72")
     private var lastStatus = ""
     private var dangerPulseAnimator: ValueAnimator? = null
 
@@ -438,9 +438,9 @@ class MainActivity : AppCompatActivity() {
     private fun refreshPresenceUi() {
         val label = currentConnectionLabel()
         val color = when (label) {
-            "Connected" -> Color.parseColor("#22c55e")
-            "Memeriksa perangkat..." -> Color.parseColor("#f59e0b")
-            "Memulihkan..." -> Color.parseColor("#f59e0b")
+            "Connected" -> Color.parseColor("#2eea72")
+            "Memeriksa perangkat..." -> Color.parseColor("#fee58a")
+            "Memulihkan..." -> Color.parseColor("#fee58a")
             else -> Color.parseColor("#ef4444")
         }
 
@@ -513,8 +513,8 @@ class MainActivity : AppCompatActivity() {
                 val status = snapshot.child("status").getValue(String::class.java) ?: "NORMAL"
                 val arus = snapshot.child("arus").getValue(Double::class.java) ?: 0.0
                 val tegangan = snapshot.child("tegangan").getValue(Double::class.java) ?: 0.0
-                val frekuensi = snapshot.child("frekuensi").getValue(Double::class.java) ?: 50.0
-                val pf = snapshot.child("power_factor").getValue(Double::class.java) ?: 0.85
+                val frekuensi = snapshot.child("frekuensi").getValue(Double::class.java) ?: 0.0
+                val pf = snapshot.child("power_factor").getValue(Double::class.java) ?: 0.0
                 val apparent = snapshot.child("apparent_power").getValue(Double::class.java)
                     ?: snapshot.child("daya").getValue(Double::class.java)
                     ?: (arus * tegangan)
@@ -550,6 +550,9 @@ class MainActivity : AppCompatActivity() {
                 binding.tvTegangan.text = String.format("%.1f", tegangan)
                 binding.tvDayaW.text = String.format("%.0f", dayaW)
                 binding.tvEnergiKwh.text = String.format("%.3f", energi)
+                binding.tvPowerFactor.text = String.format("%.2f", pf)
+                binding.tvFrekuensi.text = String.format("%.0f Hz", frekuensi)
+                binding.tvApparentPower.text = String.format("%.0f VA", apparent)
                 refreshPresenceUi()
 
                 updateStatusColor(status)
@@ -685,12 +688,22 @@ class MainActivity : AppCompatActivity() {
 
         val colorTo = when (status) {
             "DANGER" -> Color.parseColor("#ef4444")
-            "NORMAL" -> Color.parseColor("#22c55e")
-            else -> Color.parseColor("#f59e0b")
+            "LEAKAGE" -> Color.parseColor("#fb923c")
+            "NORMAL" -> Color.parseColor("#2eea72")
+            else -> Color.parseColor("#fee58a")
         }
+
+        val statusBackground = when (status) {
+            "DANGER" -> R.drawable.bg_status_danger
+            "LEAKAGE" -> R.drawable.bg_status_leakage
+            "NORMAL" -> R.drawable.bg_status_normal
+            else -> R.drawable.bg_status_warning
+        }
+        binding.cardStatusOverlay.setBackgroundResource(statusBackground)
 
         dangerPulseAnimator?.cancel()
         dangerPulseAnimator = null
+        binding.tvStatus.alpha = 1f
 
         val colorAnimation = ValueAnimator.ofObject(ArgbEvaluator(), currentStatusColor, colorTo)
         colorAnimation.duration = 600
@@ -698,13 +711,6 @@ class MainActivity : AppCompatActivity() {
             val color = animator.animatedValue as Int
             currentStatusColor = color
             
-            val alphaColor = Color.argb(
-                50,
-                Color.red(color),
-                Color.green(color),
-                Color.blue(color)
-            )
-            binding.cardStatusOverlay.setBackgroundColor(alphaColor)
             binding.tvStatus.setTextColor(color)
         }
         
@@ -719,17 +725,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDangerPulse() {
-        val baseColor = Color.parseColor("#ef4444")
-        val glowColor = Color.parseColor("#33ff4444") // Add a glow tint
-        val normalAlpha = Color.argb(50, Color.red(baseColor), Color.green(baseColor), Color.blue(baseColor))
-
-        dangerPulseAnimator = ValueAnimator.ofObject(ArgbEvaluator(), normalAlpha, glowColor)
+        dangerPulseAnimator = ValueAnimator.ofFloat(1f, 0.65f)
         dangerPulseAnimator?.duration = 1000
         dangerPulseAnimator?.repeatCount = ValueAnimator.INFINITE
         dangerPulseAnimator?.repeatMode = ValueAnimator.REVERSE
         dangerPulseAnimator?.addUpdateListener { animator ->
-            val color = animator.animatedValue as Int
-            binding.cardStatusOverlay.setBackgroundColor(color)
+            binding.tvStatus.alpha = animator.animatedValue as Float
         }
         dangerPulseAnimator?.start()
     }
@@ -750,11 +751,11 @@ class MainActivity : AppCompatActivity() {
         var setTeg = data.getDataSetByIndex(1) as LineDataSet?
 
         if (setArus == null) {
-            setArus = createSet("Arus (A)", Color.parseColor("#06b6d4"))
+            setArus = createSet("Arus (A)", Color.parseColor("#2eea72"))
             data.addDataSet(setArus)
         }
         if (setTeg == null) {
-            setTeg = createSet("Tegangan (V)", Color.parseColor("#f59e0b"))
+            setTeg = createSet("Tegangan (V)", Color.parseColor("#7dd3fc"))
             setTeg.axisDependency = com.github.mikephil.charting.components.YAxis.AxisDependency.RIGHT
             chart.axisRight.isEnabled = true
             chart.axisRight.textColor = Color.LTGRAY

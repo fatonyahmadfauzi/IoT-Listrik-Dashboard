@@ -1,0 +1,52 @@
+{
+  "version": "1.0.0",
+  "buildDate": "2026-05-01",
+  "downloads": {
+    "android": {
+      "filename": "IoT-Listrik-Dashboard.apk",
+      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.apk",
+      "size": "3.27 MB"
+    },
+    "windows": {
+      "setup": {
+        "filename": "IoT-Listrik-Dashboard-Setup.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup.exe",
+        "size": "334.40 MB",
+        "architectures": ["ia32", "x64", "arm64"],
+        "type": "unified"
+      },
+      "portable": {
+        "filename": "IoT-Listrik-Dashboard-Portable.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable.exe",
+        "size": "334.13 MB",
+        "architectures": ["ia32", "x64", "arm64"],
+        "type": "unified"
+      },
+      "msi": {
+        "filename": "IoT-Listrik-Dashboard.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.msi",
+        "size": "124.86 MB",
+        "architectures": ["x64"],
+        "type": "installer"
+      }
+    },
+    "cli": {
+      "node": {
+        "filename": "iot-listrik-cli-node.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-node.exe",
+        "size": "189.28 MB"
+      },
+      "python": {
+        "filename": "iot-listrik-cli-python.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-cli-python.exe",
+        "size": "37.21 MB"
+      },
+      "linux": {
+        "filename": "iot-listrik-dashboard-cli-linux",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/iot-listrik-dashboard-cli-linux",
+        "size": "197.35 MB"
+      }
+    }
+  },
+  "notes": "Release v1.0.0 refreshed on 2026-05-01 with PZEM-only firmware terminology, versionless download filenames, rebuilt Android APK, Windows Setup/Portable/MSI, Node CLI, Python CLI, and Linux CLI assets."
+}

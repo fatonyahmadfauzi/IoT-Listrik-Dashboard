@@ -2299,7 +2299,7 @@ iconify-icon {
   font-size: 16px;
   line-height: 1.55;
   box-sizing: border-box;
-  position: sticky;
+  position: fixed;
   top: 0;
   z-index: 40;
   width: 100%;
@@ -2699,7 +2699,7 @@ body > header > nav {
 }
 
 .arch-tree-container {
-  overflow-x: auto;
+  overflow-x: clip;
   padding: 20px 0;
   width: 100%;
 }
@@ -2817,7 +2817,7 @@ body > header > nav {
     max-width: 100%;
   }
   .arch-tree-container {
-    overflow-x: unset;
+    overflow-x: clip;
   }
 }
 
@@ -6206,7 +6206,8 @@ html {
 }
 
 body.page-bg {
-  overflow-x: hidden;
+  overflow-x: clip;
+  touch-action: pan-y;
 }
 
 body.page-bg main,
@@ -6258,7 +6259,7 @@ body.page-bg h3 {
   width: 100%;
   max-width: var(--public-max-width);
   padding: 20px var(--public-gutter) 0;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .clean-hero-content {
@@ -6367,7 +6368,7 @@ body.page-bg h3 {
   width: 100%;
   max-width: var(--public-max-width);
   padding: 56px 0 68px;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .clean-features-grid {
@@ -6384,7 +6385,7 @@ body.page-bg h3 {
   width: 100%;
   max-width: var(--public-max-width);
   padding: 56px 0 68px;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .logic-explainer-section .demo-clean-container {
@@ -7261,7 +7262,7 @@ textarea.form-input {
   body.page-bg {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .landing-nav-wrap,

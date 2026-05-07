@@ -1,0 +1,57 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "twentyFirstApiKey",
+      "description": "21st.dev Magic API Key",
+      "password": true
+    }
+  ],
+  "servers": {
+    "21st-dev-magic": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@21st-dev/magic@latest"],
+      "env": {
+        "API_KEY": "${input:twentyFirstApiKey}"
+      }
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "git-local": {
+      "type": "stdio",
+      "command": "C:\\Users\\faton\\.mcp-venvs\\git-mcp\\Scripts\\mcp-server-git.exe",
+      "args": ["--repository", "${workspaceFolder}"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
+    },
+    "firebase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "firebase-tools@latest", "mcp", "--dir", "${workspaceFolder}"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "workspaceFilesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem@latest",
+        "${workspaceFolder}"
+      ]
+    }
+  }
+}

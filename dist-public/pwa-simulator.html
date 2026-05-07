@@ -1,0 +1,1043 @@
+<!doctype html><html lang="id"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>PWA Simulator IoT Listrik Dashboard | Uji Monitoring Tanpa Hardware</title><meta name="description" content="PWA Simulator untuk menguji alur dashboard, data demo, status NORMAL WARNING DANGER, notifikasi, dan kontrol sistem tanpa hardware ESP32 fisik." /><meta name="keywords" content="IoT Listrik Dashboard, monitoring listrik, deteksi kebocoran arus, arus abnormal, ESP32, Firebase, PWA, Android APK, Windows app, Telegram, Discord, dashboard realtime" /><meta name="author" content="Fatony Ahmad Fauzi" /><meta name="creator" content="Fatony Ahmad Fauzi" /><meta name="publisher" content="IoT Listrik Dashboard" /><meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" /><meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" /><meta name="bingbot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" /><meta name="language" content="id-ID" /><meta name="geo.region" content="ID-JB" /><meta name="geo.placename" content="Bekasi, Jawa Barat" /><meta name="rating" content="general" /><meta name="distribution" content="global" /><meta name="referrer" content="strict-origin-when-cross-origin" /><meta name="format-detection" content="telephone=no" /><meta name="color-scheme" content="dark" /><meta name="theme-color" content="#070c18" /><meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070c18" /><meta name="application-name" content="IoT Listrik Dashboard" /><meta name="mobile-web-app-capable" content="yes" /><meta name="apple-mobile-web-app-capable" content="yes" /><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" /><meta name="apple-mobile-web-app-title" content="IoT Simulator" /><meta name="msapplication-TileColor" content="#070c18" /><meta name="msapplication-TileImage" content="/assets/icons/icon-144.png" /><meta name="msapplication-config" content="/browserconfig.xml" /><meta name="msapplication-tooltip" content="PWA Simulator untuk menguji alur dashboard, data demo, status NORMAL WARNING DANGER, notifikasi, dan kontrol sistem tanpa hardware ESP32 fisik." /><meta name="msapplication-starturl" content="/pwa-simulator" /><meta name="HandheldFriendly" content="true" /><meta name="MobileOptimized" content="width" /><link rel="canonical" href="https://iot-listrik-dashboard.vercel.app/pwa-simulator" /><link rel="alternate" hreflang="id-ID" href="https://iot-listrik-dashboard.vercel.app/pwa-simulator" /><link rel="alternate" hreflang="x-default" href="https://iot-listrik-dashboard.vercel.app/pwa-simulator" /><link rel="manifest" href="/manifest-simulator.json" /><link rel="icon" href="/assets/favicon.ico" sizes="any" /><link rel="shortcut icon" href="/assets/favicon.ico" /><link rel="icon" type="image/png" sizes="72x72" href="/assets/icons/icon-72.png" /><link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/icon-96.png" /><link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png" /><link rel="icon" type="image/png" sizes="512x512" href="/assets/icons/icon-512.png" /><link rel="apple-touch-icon" href="/assets/icons/icon-192.png" /><link rel="mask-icon" href="/assets/safari-pinned-tab.svg" color="#0ea5e9" /><link rel="sitemap" type="application/xml" href="/sitemap.xml" /><meta property="og:site_name" content="IoT Listrik Dashboard" /><meta property="og:type" content="website" /><meta property="og:title" content="PWA Simulator IoT Listrik Dashboard | Uji Monitoring Tanpa Hardware" /><meta property="og:description" content="PWA Simulator untuk menguji alur dashboard, data demo, status NORMAL WARNING DANGER, notifikasi, dan kontrol sistem tanpa hardware ESP32 fisik." /><meta property="og:url" content="https://iot-listrik-dashboard.vercel.app/pwa-simulator" /><meta property="og:image" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-simulator.png" /><meta property="og:image:secure_url" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-simulator.png" /><meta property="og:image:type" content="image/png" /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" /><meta property="og:image:alt" content="Preview PWA Simulator IoT Listrik Dashboard." /><meta property="og:locale" content="id_ID" /><meta property="og:updated_time" content="2026-04-30T00:00:00+07:00" /><meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="PWA Simulator IoT Listrik Dashboard | Uji Monitoring Tanpa Hardware" /><meta name="twitter:description" content="PWA Simulator untuk menguji alur dashboard, data demo, status NORMAL WARNING DANGER, notifikasi, dan kontrol sistem tanpa hardware ESP32 fisik." /><meta name="twitter:image" content="https://iot-listrik-dashboard.vercel.app/assets/seo/og-simulator.png" /><meta name="twitter:image:alt" content="Preview PWA Simulator IoT Listrik Dashboard." /><meta name="twitter:url" content="https://iot-listrik-dashboard.vercel.app/pwa-simulator" /><meta name="twitter:domain" content="iot-listrik-dashboard.vercel.app" />
+ <script type="application/ld+json" id="seo-jsonld">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#organization",
+            "name": "IoT Listrik Dashboard",
+            "url": "https://iot-listrik-dashboard.vercel.app",
+            "logo": "https://iot-listrik-dashboard.vercel.app/assets/icons/icon-512.png",
+            "sameAs": [
+              "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard",
+              "https://discord.gg/WszeM4FVH6"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#website",
+            "name": "IoT Listrik Dashboard",
+            "url": "https://iot-listrik-dashboard.vercel.app",
+            "inLanguage": "id-ID",
+            "publisher": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#organization"
+            },
+            "potentialAction": {
+              "@type": "ViewAction",
+              "target": [
+                "https://iot-listrik-dashboard.vercel.app/",
+                "https://iot-listrik-dashboard.vercel.app/features",
+                "https://iot-listrik-dashboard.vercel.app/downloads"
+              ]
+            }
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://iot-listrik-dashboard.vercel.app/pwa-simulator#webpage",
+            "url": "https://iot-listrik-dashboard.vercel.app/pwa-simulator",
+            "name": "PWA Simulator IoT Listrik Dashboard | Uji Monitoring Tanpa Hardware",
+            "headline": "PWA Simulator IoT Listrik Dashboard | Uji Monitoring Tanpa Hardware",
+            "description": "PWA Simulator untuk menguji alur dashboard, data demo, status NORMAL WARNING DANGER, notifikasi, dan kontrol sistem tanpa hardware ESP32 fisik.",
+            "inLanguage": "id-ID",
+            "isPartOf": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#website"
+            },
+            "publisher": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#organization"
+            },
+            "image": "https://iot-listrik-dashboard.vercel.app/assets/seo/og-simulator.png",
+            "dateModified": "2026-04-30T00:00:00+07:00"
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "https://iot-listrik-dashboard.vercel.app/pwa-simulator#breadcrumb",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Beranda",
+                "item": "https://iot-listrik-dashboard.vercel.app/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "PWA Simulator IoT Listrik Dashboard",
+                "item": "https://iot-listrik-dashboard.vercel.app/pwa-simulator"
+              }
+            ]
+          },
+          {
+            "@type": "ItemList",
+            "@id": "https://iot-listrik-dashboard.vercel.app/#sitelinks",
+            "name": "Navigasi utama IoT Listrik Dashboard",
+            "itemListElement": [
+              {
+                "@type": "SiteNavigationElement",
+                "position": 1,
+                "name": "Beranda",
+                "url": "https://iot-listrik-dashboard.vercel.app/"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 2,
+                "name": "Fitur",
+                "url": "https://iot-listrik-dashboard.vercel.app/features"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 3,
+                "name": "Download",
+                "url": "https://iot-listrik-dashboard.vercel.app/downloads"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 4,
+                "name": "PWA Simulator",
+                "url": "https://iot-listrik-dashboard.vercel.app/pwa-simulator"
+              },
+              {
+                "@type": "SiteNavigationElement",
+                "position": 5,
+                "name": "Login Dashboard",
+                "url": "https://iot-listrik-dashboard.vercel.app/login"
+              }
+            ]
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://iot-listrik-dashboard.vercel.app/pwa-simulator#software",
+            "name": "IoT Listrik Dashboard",
+            "applicationCategory": "UtilitiesApplication",
+            "operatingSystem": "Web, Android, Windows",
+            "url": "https://iot-listrik-dashboard.vercel.app/pwa-simulator",
+            "image": "https://iot-listrik-dashboard.vercel.app/assets/seo/og-simulator.png",
+            "description": "PWA Simulator untuk menguji alur dashboard, data demo, status NORMAL WARNING DANGER, notifikasi, dan kontrol sistem tanpa hardware ESP32 fisik.",
+            "author": {
+              "@id": "https://iot-listrik-dashboard.vercel.app/#organization"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "IDR"
+            }
+          }
+        ]
+      }
+    </script>
+<script>
+      // Hanya izinkan akses jika dibuka dari PWA terinstall
+      if (!window.matchMedia("(display-mode: standalone)").matches) {
+        window.location.href = "/";
+      }
+    </script>
+ <link rel="stylesheet" href="/css/style.min.css?v=20260502-perf" /><link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link
+ rel="preload"
+ as="style"
+ href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0&display=swap"
+ onload="this.onload=null;this.rel='stylesheet'"
+ /><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0&display=swap" /></noscript>
+ <style>
+      .settings-section {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 18px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .settings-section-title {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 11px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--glass-border);
+      }
+      .settings-section-title .material-symbols-rounded {
+        font-size: 16px;
+        opacity: 0.85;
+      }
+      .settings-section .form-group {
+        margin-bottom: 13px;
+      }
+      .settings-section .form-group:last-of-type {
+        margin-bottom: 4px;
+      }
+      .settings-section .form-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.025em;
+        color: var(--text-secondary);
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .settings-section .form-input,
+      .settings-section .form-select {
+        padding: 9px 12px;
+        font-size: 13.5px;
+      }
+      .field-sensitive .form-input {
+        font-family: "JetBrains Mono", monospace;
+        letter-spacing: 0.4px;
+        font-size: 12.5px;
+      }
+      .input-reveal-wrap {
+        position: relative;
+      }
+      .input-reveal-wrap .form-input {
+        padding-right: 64px;
+      }
+      .reveal-btn {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        border-left: 1px solid var(--glass-border);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: color var(--transition), background var(--transition);
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      }
+      .reveal-btn:hover {
+        color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .reveal-btn .material-symbols-rounded {
+        font-size: 17px;
+      }
+      .input-reveal-wrap::before {
+        content: '';
+        position: absolute;
+        right: 40px;
+        top: 1px;
+        bottom: 1px;
+        width: 24px;
+        background: linear-gradient(90deg, transparent, rgba(8, 10, 16, 0.92));
+        pointer-events: none;
+        z-index: 1;
+        border-radius: 0;
+      }
+      .validation-msg {
+        font-size: 11px;
+        min-height: 14px;
+        margin-top: 3px;
+        transition: color 0.2s;
+      }
+      .validation-msg.ok { color: var(--green-light); }
+      .validation-msg.error { color: var(--red-light); }
+      .runtime-notice {
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.22);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        color: var(--primary-light);
+        line-height: 1.55;
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+      }
+      .runtime-notice .material-symbols-rounded {
+        font-size: 16px;
+        flex-shrink: 0;
+        margin-top: 1px;
+        opacity: 0.8;
+      }
+      .telegram-info-panel {
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .form-hint {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        line-height: 1.55;
+        margin-top: 5px;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+      .form-hint strong {
+        color: var(--text-secondary);
+        font-weight: 600;
+      }
+      .form-hint a {
+        color: var(--primary-light);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .chat-id-summary {
+        display: grid;
+        gap: 10px;
+        padding: 14px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.035);
+      }
+      .chat-id-summary-main {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+      .chat-id-summary-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(59, 130, 246, 0.14);
+        border: 1px solid rgba(59, 130, 246, 0.24);
+        color: var(--primary-light);
+        flex-shrink: 0;
+      }
+      .chat-id-summary-icon .material-symbols-rounded {
+        font-size: 20px;
+      }
+      .chat-id-summary-text {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+      .chat-id-summary-count {
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1;
+        color: var(--text-primary);
+      }
+      .chat-id-summary-label {
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: var(--text-secondary);
+      }
+      .chat-id-summary-note {
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--text-muted);
+      }
+      .telegram-recipient-help {
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .telegram-recipient-help a {
+        font-weight: 600 !important;
+      }
+      .chat-id-name {
+        font-size: 13.5px;
+        line-height: 1.4;
+      }
+      .chat-id-value {
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .chat-id-empty {
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .chat-id-actions .btn,
+      .chat-id-item-actions .btn {
+        min-height: 42px;
+        font-size: 13px;
+      }
+      .settings-save-status {
+        font-size: 12px;
+        color: var(--green-light);
+        min-height: 14px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .save-bar {
+        position: static;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        background: rgba(7, 12, 24, 0.93);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: var(--shadow-lg);
+        margin-top: 20px;
+        width: 100%;
+      }
+      .save-bar .btn-primary {
+        min-width: 200px;
+        height: 42px;
+        min-height: 42px;
+        font-size: 14px;
+      }
+      .save-bar .btn-primary .material-symbols-rounded {
+        font-size: 17px;
+      }
+      .telegram-inline-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .telegram-inline-actions .btn {
+        min-height: 42px;
+        font-size: 13px;
+      }
+      .telegram-action-status {
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--text-secondary);
+        min-height: 18px;
+        margin-top: 10px;
+      }
+      @media (max-width: 768px) {
+        .settings-section {
+          padding: 14px;
+        }
+        .settings-section-title {
+          font-size: 11px;
+          padding-bottom: 9px;
+          margin-bottom: 13px;
+        }
+        .settings-section .form-group {
+          margin-bottom: 11px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select {
+          padding: 8px 11px;
+          font-size: 13px;
+        }
+        .input-reveal-wrap .form-input {
+          padding-right: 64px;
+        }
+        .field-sensitive .form-input {
+          letter-spacing: 1px;
+        }
+        .runtime-notice {
+          padding: 9px 13px;
+          font-size: 11.5px;
+          margin-bottom: 13px;
+        }
+        .telegram-info-panel,
+        .telegram-recipient-help,
+        .chat-id-summary-note {
+          font-size: 12px;
+        }
+        .chat-id-summary {
+          padding: 13px 14px;
+        }
+        .chat-id-summary-count {
+          font-size: 20px;
+        }
+        .chat-id-summary-label {
+          font-size: 12px;
+        }
+        .chat-id-name {
+          font-size: 13.5px;
+        }
+        .chat-id-value,
+        .chat-id-empty {
+          font-size: 12.5px;
+        }
+        .chat-id-actions .btn,
+        .chat-id-item-actions .btn {
+          font-size: 12.5px;
+          width: 100%;
+          justify-content: center;
+          min-height: 44px;
+        }
+        .save-bar {
+          flex-direction: column;
+          padding: 12px 14px;
+          margin-top: 14px;
+          gap: 8px;
+        }
+        .save-bar .btn-primary {
+          min-width: 100%;
+          width: 100%;
+          justify-content: center;
+          min-height: 44px;
+        }
+        .save-bar .btn-ghost {
+          width: 100%;
+          justify-content: center;
+          min-height: 44px;
+        }
+      }
+      @media (max-width: 430px) {
+        .settings-section {
+          padding: 12px;
+        }
+        .settings-section-title {
+          font-size: 10.5px;
+        }
+        .settings-section .form-label {
+          font-size: 11px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select {
+          font-size: 12.5px;
+          padding: 8px 10px;
+        }
+        .input-reveal-wrap .form-input {
+          padding-right: 64px;
+        }
+        .field-sensitive .form-input {
+          font-size: 12px;
+          letter-spacing: 1.2px;
+        }
+        .form-hint {
+          font-size: 11px;
+        }
+        .chat-id-summary-main {
+          align-items: flex-start;
+        }
+        .chat-id-summary-icon {
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+        }
+        .chat-id-summary-count {
+          font-size: 18px;
+        }
+        .chat-id-summary-label,
+        .telegram-recipient-help,
+        .telegram-info-panel,
+        .chat-id-summary-note {
+          font-size: 11.5px;
+        }
+        .chat-id-actions .btn,
+        .chat-id-item-actions .btn {
+          min-height: 42px;
+          font-size: 12.5px;
+        }
+      }
+      @media (max-width: 360px) {
+        .settings-section {
+          padding: 11px 10px;
+        }
+        .settings-section .form-input,
+        .settings-section .form-select {
+          padding: 7px 9px;
+        }
+        .save-bar {
+          padding: 10px 12px;
+        }
+      }
+    </style>
+ <script data-delayed-clarity="wkpdqlv70s">window.addEventListener("load",function(){setTimeout(function(){(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","wkpdqlv70s");},2500);});</script>
+</head><body class="page-bg"><header class="landing-nav-wrap"><nav class="landing-nav"><a href="/" class="landing-brand"><span class="material-symbols-rounded">bolt</span><span>IoT Listrik Simulator</span></a><div class="landing-links"><a href="/">Beranda</a><a href="/pwa-simulator.html">Simulator</a><a href="/app/settings" class="btn btn-ghost btn-sm">
+ Pengaturan Sistem
+ </a></div></nav></header><main
+ class="landing-main"
+ style="padding: 1rem; max-width: 100%; margin: 0 auto"
+ ><section class="landing-section" style="padding: 1rem 0"><div class="section-card glass" style="padding: 1.5rem"><div class="section-header"><div
+ class="section-title"
+ style="display: flex; align-items: center; gap: 0.75rem"
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.75rem; color: #3b82f6"
+ >smart_toy</span
+ ><span>Control Console</span></div></div><p class="text-sm text-muted" style="margin-bottom: 16px">
+ Premium simulator environment for injecting synthetic data and
+ validating system responses.
+ </p><div class="landing-demo-grid" style="display: grid; gap: 1rem"><div class="landing-card glass" style="padding: 1.25rem"><div
+ style="
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ margin-bottom: 1rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.75rem; color: #3b82f6"
+ >account_circle</span
+ ><h3 style="margin: 0">Demo Session</h3></div><p class="text-sm text-muted">
+ Ephemeral credentials. Data is isolated and auto-purged after
+ session expiration.
+ </p><div style="display: grid; gap: 0.85rem; margin-bottom: 1rem"><label class="form-label" for="demoEmailInput"
+ >Session Email</label
+ ><input
+ id="demoEmailInput"
+ class="form-input"
+ type="email"
+ placeholder="demo_user@example.com"
+ autocomplete="off"
+ /><div
+ style="
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ padding: 0.75rem;
+ background: rgba(59, 130, 246, 0.1);
+ border-radius: 0.5rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.25rem; color: #60a5fa"
+ >key</span
+ ><div style="flex: 1"><div
+ style="
+ font-size: 0.75rem;
+ color: var(--text-muted);
+ margin-bottom: 0.25rem;
+ "
+ >
+ Password:
+ </div><div style="font-weight: 600; font-family: monospace"><span id="demoPassword">—</span></div></div></div><div
+ style="
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ padding: 0.75rem;
+ background: rgba(59, 130, 246, 0.08);
+ border-radius: 0.5rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.25rem; color: #f59e0b"
+ >info</span
+ ><div style="flex: 1"><div
+ style="
+ font-size: 0.75rem;
+ color: var(--text-muted);
+ margin-bottom: 0.25rem;
+ "
+ >
+ Status:
+ </div><div style="font-weight: 600"><span id="demoStatus">Inactive</span></div></div></div><div
+ style="
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ padding: 0.75rem;
+ background: rgba(168, 85, 247, 0.08);
+ border-radius: 0.5rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.25rem; color: #a855f7"
+ >schedule</span
+ ><div style="flex: 1"><div
+ style="
+ font-size: 0.75rem;
+ color: var(--text-muted);
+ margin-bottom: 0.25rem;
+ "
+ >
+ Expiring in:
+ </div><div style="font-weight: 600; font-family: monospace"><span id="demoTimer">00:00</span></div></div></div></div><div
+ style="
+ display: flex;
+ flex-wrap: wrap;
+ gap: 0.75rem;
+ align-items: center;
+ "
+ ><button
+ id="demoCreateBtn"
+ class="btn btn-primary"
+ type="button"
+ ><span class="material-symbols-rounded">person_add</span>
+ Generate Credentials
+ </button><button id="demoResetBtn" class="btn btn-ghost" type="button"><span class="material-symbols-rounded">delete</span>
+ Purge Session
+ </button><button
+ id="installBtn"
+ class="btn btn-ghost btn-sm hidden"
+ type="button"
+ ><span class="material-symbols-rounded">download</span>
+ Install App
+ </button></div><p
+ id="installHint"
+ class="text-sm text-muted"
+ style="margin-top: 12px"
+ >
+ For optimal experience, install this app to your device after
+ loading.
+ </p></div><div class="landing-card glass" style="padding: 1.25rem"><div
+ style="
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ margin-bottom: 1rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.75rem; color: #10b981"
+ >dataset</span
+ ><h3 style="margin: 0">Command Center</h3></div><p class="text-sm text-muted">
+ Execute synthetic telemetry injection and alert validation
+ commands.
+ </p><div
+ style="
+ display: flex;
+ flex-wrap: wrap;
+ gap: 0.75rem;
+ margin-bottom: 1rem;
+ "
+ ><button
+ id="demoGenerateDataBtn"
+ class="btn btn-primary"
+ type="button"
+ ><span class="material-symbols-rounded">autorenew</span>
+ Inject Telemetry
+ </button><button id="demoNotifyBtn" class="btn btn-ghost" type="button"><span class="material-symbols-rounded"
+ >notifications_active</span
+ >
+ Test Alert
+ </button></div><div
+ style="
+ padding: 1rem;
+ background: rgba(255, 255, 255, 0.05);
+ border-left: 3px solid #10b981;
+ border-radius: 0.75rem;
+ "
+ ><div
+ style="
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ margin-bottom: 0.5rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.25rem; color: #10b981"
+ >data_object</span
+ ><strong>Recent Data:</strong></div><pre
+ id="demoDataOutput"
+ style="
+ white-space: pre-wrap;
+ word-break: break-word;
+ margin: 0.5rem 0;
+ font-size: 0.85rem;
+ "
+ >
+No data.
+</pre
+ ><small
+ class="text-sm text-muted"
+ style="
+ display: flex;
+ align-items: flex-start;
+ gap: 0.5rem;
+ margin-top: 0.75rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1rem; flex-shrink: 0"
+ >info</span
+ ><span
+ >Test data is scoped to your temp session. Available across
+ Web, Windows, and Android platforms.</span
+ ></small></div></div><div class="landing-card glass" style="padding: 1.25rem"><div
+ style="
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ margin-bottom: 1rem;
+ "
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.75rem; color: #a855f7"
+ >settings</span
+ ><h3 style="margin: 0">Runtime Config</h3></div><p class="text-sm text-muted">
+ Adjust system parameters for this test session. Changes persist
+ locally in the PWA.
+ </p><div
+ class="settings-grid"
+ style="grid-template-columns: 1fr; gap: 1rem"
+ ><div class="settings-section"><label class="form-label" for="inpThreshold"
+ >Current Threshold (A)</label
+ ><input
+ id="inpThreshold"
+ class="form-input"
+ type="number"
+ min="1"
+ max="100"
+ step="0.1"
+ value="10"
+ /><div class="form-hint">
+ NORMAL stays below the warning band. WARNING appears when
+ current approaches the threshold. DANGER starts when current
+ ≥ threshold. Match the threshold to the tested load so high
+ but normal consumption is not misread as abnormal current.
+ </div></div><div class="settings-section"><label class="form-label" for="inpWarningPercent"
+ >Warning Threshold (%)</label
+ ><input
+ id="inpWarningPercent"
+ class="form-input"
+ type="number"
+ min="50"
+ max="99"
+ step="1"
+ value="80"
+ /><div class="form-hint">
+ Example: 80 → WARNING from 80% threshold up to &lt; 100%.
+ High load below this band should still be treated as normal
+ load, not automatic leakage.
+ </div></div><div class="settings-section"><label class="form-label" for="inpSendInterval"
+ >Transmission Interval (ms)</label
+ ><input
+ id="inpSendInterval"
+ class="form-input"
+ type="number"
+ min="500"
+ max="60000"
+ step="100"
+ value="2000"
+ /><div class="form-hint">
+ How often ESP32 writes to Firebase. Minimum: 500 ms |
+ Recommended: 2000 ms.
+ </div></div><div
+ class="settings-section"
+ style="
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 1rem;
+ "
+ ><div><div
+ class="settings-section-title"
+ style="font-size: 1rem; margin-bottom: 0.5rem"
+ >
+ Buzzer
+ </div><p class="text-sm text-muted">
+ Audio alert on abnormal conditions detected.
+ </p></div><label class="toggle-switch"
+ ><input type="checkbox" id="inpBuzzer" checked /><span
+ class="toggle-slider"
+ ></span
+ ></label></div><div
+ class="settings-section"
+ style="
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 1rem;
+ "
+ ><div><div
+ class="settings-section-title"
+ style="font-size: 1rem; margin-bottom: 0.5rem"
+ >
+ Relay Auto-Shutoff
+ </div><p class="text-sm text-muted">
+ Relay cuts off automatically on DANGER (current ≥
+ threshold). Standard MCB or ELCB protection still remains
+ the primary electrical safety layer.
+ </p></div><label class="toggle-switch"
+ ><input type="checkbox" id="inpAutoCutoff" checked /><span
+ class="toggle-slider"
+ ></span
+ ></label></div><div class="settings-section"><label class="form-label" for="inpArusCal"
+ >Current Calibration Factor</label
+ ><input
+ id="inpArusCal"
+ class="form-input"
+ type="number"
+ min="0.01"
+ max="10"
+ step="0.001"
+ value="1.000"
+ /><div class="form-hint">
+ Default: 1.000 (no correction). Example: clamp meter reads 5
+ A, ESP32 reads 4.8 A → factor = 1.042
+ </div></div><div class="settings-section"><label class="form-label" for="inpTeganganCal"
+ >Voltage Calibration Factor</label
+ ><input
+ id="inpTeganganCal"
+ class="form-input"
+ type="number"
+ min="0.01"
+ max="2000"
+ step="0.1"
+ value="1.0"
+ /><div class="form-hint">ADC→Volt AC conversion factor.</div></div><div class="settings-section"><label class="form-label" for="inpPowerFactor"
+ >Power Factor (estimated)</label
+ ><input
+ id="inpPowerFactor"
+ class="form-input"
+ type="number"
+ min="0.5"
+ max="1"
+ step="0.01"
+ value="0.85"
+ /><div class="form-hint">
+ For power (W) and kWh calculations in firmware — not true PF
+ measurement.
+ </div></div><div class="settings-section"><label class="form-label" for="inpFrequency"
+ >Nominal Frequency (Hz)</label
+ ><input
+ id="inpFrequency"
+ class="form-input"
+ type="number"
+ min="45"
+ max="65"
+ step="1"
+ value="50"
+ /></div><div
+ class="settings-section telegram-settings-section"
+ style="grid-column: 1 / -1"
+ ><div class="settings-section-title"><span class="material-symbols-rounded">send</span>
+ Konfigurasi Telegram
+ </div><div class="telegram-info-panel"><strong>Aman:</strong> Token dan daftar penerima tersimpan
+ lokal untuk sesi simulator ini.
+ </div><div class="telegram-config-stack"><div class="form-group field-sensitive telegram-token-group"><label class="form-label" for="inpBotToken"
+ >Bot Token</label
+ ><div class="input-reveal-wrap"><input
+ id="inpBotToken"
+ class="form-input"
+ type="password"
+ placeholder="••••••••••••••••••••••••••••••••••"
+ autocomplete="off"
+ /><button
+ type="button"
+ class="reveal-btn"
+ onclick="toggleReveal('inpBotToken',this)"
+ title="Tampilkan/sembunyikan"
+ ><span class="material-symbols-rounded">visibility</span></button></div><div class="form-hint">
+ Get from @BotFather → /newbot → copy token.
+ </div></div><div class="form-group telegram-recipient-group"><div class="recipient-editor-grid telegram-recipient-grid"><div><label
+ class="form-label"
+ for="inpTelegramRecipientName"
+ >Nama / Label</label
+ ><input
+ id="inpTelegramRecipientName"
+ class="form-input"
+ type="text"
+ placeholder="Contoh: Pak Budi atau Grup Lab"
+ autocomplete="off"
+ /></div><div><label class="form-label" for="inpChatId"
+ >Chat ID / Group ID</label
+ ><input
+ id="inpChatId"
+ class="form-input"
+ type="text"
+ placeholder="Masukkan ID lalu klik Tambah"
+ autocomplete="off"
+ /></div></div><div class="form-hint telegram-recipient-help">
+ Add one or more targets. For groups: prefix with -100.
+ For private: positive numeric ID.
+ </div></div><div class="toggle-row telegram-toggle-row"><div class="toggle-info"><h4>Notifikasi Telegram</h4><p>Transmit alerts on status change (master switch).</p></div><label class="toggle-switch"><input
+ type="checkbox"
+ id="inpTelegramNotify"
+ checked
+ /><span class="toggle-slider"></span></label></div></div></div><div class="settings-section"><label class="form-label" for="inpPublicApiBase"
+ >Public API Base (optional)</label
+ ><input
+ id="inpPublicApiBase"
+ class="form-input"
+ type="url"
+ placeholder="https://api.contoh.com"
+ /></div><div class="settings-section"><label class="form-label" for="inpLocalApiBase"
+ >Local API Base</label
+ ><input
+ id="inpLocalApiBase"
+ class="form-input"
+ type="text"
+ placeholder="http://localhost:3000"
+ /></div><div class="settings-section"><label class="form-label" for="inpDataMode">Data Mode</label><select id="inpDataMode" class="form-select"><option value="AUTO">
+ AUTO (Firebase → fallback local REST)
+ </option><option value="PUBLIC">
+ PUBLIC (Firebase or public API only)
+ </option><option value="LOCAL">LOCAL (local REST only)</option></select></div><div
+ class="settings-section"
+ style="
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 1rem;
+ "
+ ><div><div
+ class="settings-section-title"
+ style="font-size: 1rem; margin-bottom: 0.5rem"
+ >
+ Intelligent Failover
+ </div><p class="text-sm text-muted">
+ Fall back to local REST when Firebase is unavailable (AUTO
+ mode).
+ </p></div><label class="toggle-switch"><input type="checkbox" id="inpAutoFailover" checked /><span class="toggle-slider"></span></label></div><div class="settings-section"><label class="form-label" for="inpHealthPath"
+ >Health Check Path</label
+ ><input
+ id="inpHealthPath"
+ class="form-input"
+ type="text"
+ value="/health"
+ /></div><div
+ class="settings-section"
+ style="
+ display: grid;
+ grid-template-columns: 1fr 1fr;
+ gap: 0.75rem;
+ "
+ ><div><label class="form-label" for="inpRetryMs"
+ >Retry Interval (ms)</label
+ ><input
+ id="inpRetryMs"
+ class="form-input"
+ type="number"
+ min="2000"
+ max="120000"
+ step="500"
+ value="6000"
+ /></div><div><label class="form-label" for="inpTimeoutMs"
+ >Request Timeout (ms)</label
+ ><input
+ id="inpTimeoutMs"
+ class="form-input"
+ type="number"
+ min="1000"
+ max="30000"
+ step="500"
+ value="4000"
+ /></div></div><div
+ style="
+ display: flex;
+ gap: 12px;
+ flex-wrap: wrap;
+ align-items: center;
+ "
+ ><button
+ id="saveSettingsBtn"
+ class="btn btn-primary btn-sm"
+ type="button"
+ >
+ Save Configuration
+ </button><span id="settingsStatus" class="text-sm text-muted"></span></div></div></div></div></div></section></main><footer class="landing-footer" style="margin-top: 2rem"><div
+ class="landing-footer-inner"
+ style="
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ flex-wrap: wrap;
+ gap: 1rem;
+ "
+ ><div style="display: flex; align-items: center; gap: 0.5rem"><span
+ class="material-symbols-rounded"
+ style="font-size: 1.5rem; color: #3b82f6"
+ >copyright</span
+ ><div>© 2026 IoT Listrik Dashboard</div></div><div
+ class="text-muted"
+ style="display: flex; align-items: center; gap: 0.5rem"
+ ><span
+ class="material-symbols-rounded"
+ style="font-size: 1.25rem; color: #10b981"
+ >verified</span
+ ><span>Enterprise Simulation Environment</span></div></div></footer>
+
+ <script type="module" src="/js/simulator.js"></script>
+ </body></html>

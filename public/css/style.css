@@ -1567,6 +1567,25 @@ tbody tr:hover {
   height: 300px;
 }
 
+.chart-divider {
+  height: 1px;
+  margin: 18px 0 14px;
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.18), transparent);
+}
+
+.chart-subtitle {
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chart-container-secondary {
+  height: 230px;
+}
+
 /* ── Auth Page ─────────────────────────────────────────────── */
 /* ── Auth page layout — base ─────────────────────────────── */
 .auth-page-wrap {
@@ -4700,6 +4719,19 @@ body > header > nav {
     height: 190px;
   }
 
+  .chart-container-secondary {
+    height: 170px;
+  }
+
+  .chart-divider {
+    margin: 14px 0 12px;
+  }
+
+  .chart-subtitle {
+    margin-bottom: 8px;
+    font-size: 10.5px;
+  }
+
   /* Helper text below chart: compact */
   .section-card:has(.chart-container) .text-xs.text-muted {
     font-size: 10.5px !important;
@@ -4714,6 +4746,10 @@ body > header > nav {
     height: 175px;
   }
 
+  .chart-container-secondary {
+    height: 160px;
+  }
+
   .section-card:has(.chart-container) {
     padding: 12px;
   }
@@ -4722,6 +4758,10 @@ body > header > nav {
 @media (max-width: 360px) {
   .chart-container {
     height: 160px;
+  }
+
+  .chart-container-secondary {
+    height: 150px;
   }
 
   .section-card:has(.chart-container) {
@@ -8244,6 +8284,318 @@ html.lenis, html.lenis body {
 }
 .lenis.lenis-scrolling iframe {
   pointer-events: none;
+}
+
+/* =============================================================
+   PWA Analytics Overview
+   ============================================================= */
+.analytics-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.analytics-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 20px;
+  align-items: stretch;
+  padding: 24px;
+  border-radius: var(--radius-xl);
+}
+
+.analytics-eyebrow,
+.analytics-live-label {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analytics-hero h2 {
+  margin: 8px 0 10px;
+  color: var(--text-primary);
+  font-size: clamp(24px, 2.3vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+.analytics-hero p {
+  max-width: 820px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.analytics-live-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 132px;
+  padding: 20px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.10), rgba(15, 23, 42, 0.72));
+}
+
+.analytics-live-card strong {
+  margin-top: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.analytics-live-card strong.status-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  min-width: 0;
+  padding: 9px 15px;
+  border-radius: var(--radius-full);
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.analytics-live-card strong.status-text::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 0 14px currentColor;
+}
+
+.analytics-live-card span:last-child {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.status-text.status-NORMAL { color: var(--green); }
+.status-text.status-WARNING { color: var(--yellow-light); }
+.status-text.status-LEAKAGE { color: var(--status-leakage-light); }
+.status-text.status-DANGER { color: var(--red-light); }
+.status-text.status-UNKNOWN { color: var(--text-muted); }
+
+.analytics-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.analytics-stat-card {
+  position: relative;
+  min-height: 132px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.analytics-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--primary);
+  opacity: 0.85;
+}
+
+.analytics-stat-card span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analytics-stat-card strong {
+  display: block;
+  margin-top: 12px;
+  color: var(--text-primary);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(22px, 2vw, 32px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.analytics-stat-card small {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.analytics-stat-card.accent-green::before { background: var(--green); }
+.analytics-stat-card.accent-blue::before { background: var(--primary-light); }
+.analytics-stat-card.accent-yellow::before { background: var(--yellow); }
+.analytics-stat-card.accent-purple::before { background: var(--purple); }
+.analytics-stat-card.accent-cyan::before { background: var(--cyan); }
+.analytics-stat-card.accent-orange::before { background: var(--status-leakage); }
+.analytics-stat-card.accent-red::before { background: var(--red); }
+
+.analytics-stat-card.accent-green strong { color: var(--green); }
+.analytics-stat-card.accent-blue strong { color: var(--primary-light); }
+.analytics-stat-card.accent-yellow strong { color: var(--yellow-light); }
+.analytics-stat-card.accent-purple strong { color: var(--purple); }
+.analytics-stat-card.accent-cyan strong { color: var(--cyan); }
+.analytics-stat-card.accent-orange strong { color: var(--status-leakage-light); }
+.analytics-stat-card.accent-red strong { color: var(--red-light); }
+
+.analytics-chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+  gap: 18px;
+}
+
+.analytics-chart-card {
+  min-width: 0;
+}
+
+.analytics-chart-card .section-header {
+  align-items: flex-start;
+}
+
+.analytics-chart-card .section-header p {
+  margin-top: 4px;
+}
+
+.analytics-chart-container {
+  height: 320px;
+}
+
+.analytics-donut-container {
+  height: 260px;
+}
+
+.analytics-bar-container {
+  height: 300px;
+}
+
+.analytics-status-legend {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.analytics-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.42);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.analytics-status-row span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.analytics-status-row i {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  box-shadow: 0 0 16px currentColor;
+}
+
+.analytics-status-row strong {
+  color: var(--text-primary);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+}
+
+.analytics-status-row small {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 1180px) {
+  .analytics-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .analytics-page {
+    gap: 14px;
+  }
+
+  .analytics-hero {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .analytics-hero h2 {
+    font-size: 24px;
+  }
+
+  .analytics-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .analytics-stat-card {
+    min-height: 110px;
+    padding: 16px;
+  }
+
+  .analytics-chart-container,
+  .analytics-bar-container {
+    height: 260px;
+    min-height: 260px;
+  }
+
+  .analytics-donut-container {
+    height: 230px;
+    min-height: 230px;
+  }
+}
+
+@media (max-width: 420px) {
+  .analytics-hero {
+    padding: 16px 14px;
+  }
+
+  .analytics-hero h2 {
+    font-size: 22px;
+  }
+
+  .analytics-hero p {
+    font-size: 13px;
+  }
+
+  .analytics-stat-card strong {
+    font-size: 21px;
+  }
+
+  .analytics-chart-container,
+  .analytics-bar-container {
+    height: 230px;
+    min-height: 230px;
+  }
 }
 
 /* =============================================================

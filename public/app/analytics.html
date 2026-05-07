@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PWA Analytics Monitoring Listrik</title>
+  <meta name="description" content="PWA analytics untuk melihat ringkasan histori, distribusi status, tren sensor, dan snapshot parameter listrik." />
+  <meta name="robots" content="noindex, nofollow, noarchive, max-image-preview:large" />
+  <meta name="googlebot" content="noindex, nofollow, noarchive, max-image-preview:large" />
+  <meta name="bingbot" content="noindex, nofollow, noarchive, max-image-preview:large" />
+  <meta name="author" content="Fatony Ahmad Fauzi" />
+  <meta name="theme-color" content="#070c18" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="application-name" content="IoT Listrik Dashboard" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IoT Listrik" />
+  <meta name="msapplication-TileColor" content="#070c18" />
+  <meta name="msapplication-TileImage" content="/assets/icons/icon-144.png" />
+  <meta name="msapplication-config" content="/browserconfig.xml" />
+  <meta name="msapplication-starturl" content="/app/analytics" />
+  <link rel="canonical" href="https://iot-listrik-dashboard.vercel.app/app/analytics" />
+  <link rel="manifest" href="/app/manifest.json" />
+  <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="/assets/icons/icon-192.png" />
+  <link rel="stylesheet" href="/css/style.min.css?v=20260507-analytics" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="preload"
+    as="style"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0&display=swap"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0&display=swap" /></noscript>
+  <script src="/vendor/chart.umd.min.js"></script>
+</head>
+<body class="page-bg">
+  <div class="app-layout">
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <nav id="sidebar" class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <span class="material-symbols-rounded">bolt</span>
+        </div>
+        <div class="sidebar-logo-text">
+          <h2>IoT Listrik</h2>
+          <span>Monitor System</span>
+        </div>
+      </div>
+
+      <div class="sidebar-nav">
+        <a href="/app/dashboard" class="nav-item">
+          <span class="material-symbols-rounded nav-icon">dashboard</span>
+          Dashboard
+        </a>
+        <a href="/app/history" class="nav-item">
+          <span class="material-symbols-rounded nav-icon">history</span>
+          Riwayat Log
+        </a>
+        <a href="/app/analytics" class="nav-item active">
+          <span class="material-symbols-rounded nav-icon">query_stats</span>
+          Analytics
+        </a>
+        <div class="nav-divider"></div>
+        <a href="/app/settings" class="nav-item hidden" style="display: none;" data-admin-only>
+          <span class="material-symbols-rounded nav-icon">settings</span>
+          Pengaturan
+        </a>
+        <a href="/app/telegram" class="nav-item hidden" style="display: none;" data-admin-only>
+          <span class="material-symbols-rounded nav-icon">send</span>
+          Telegram
+        </a>
+        <a href="/app/discord" class="nav-item hidden" style="display: none;" data-admin-only>
+          <span class="material-symbols-rounded nav-icon">forum</span>
+          Discord
+        </a>
+        <a href="/app/users" class="nav-item hidden" style="display: none;" data-admin-only>
+          <span class="material-symbols-rounded nav-icon">manage_accounts</span>
+          Pengguna
+        </a>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="user-badge">
+          <div class="user-avatar" id="sidebarAvatar">?</div>
+          <div class="user-info">
+            <div class="user-email" id="sidebarEmail">—</div>
+            <div id="sidebarRole" class="role-pill user">Memuat...</div>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-ghost w-full">
+          <span class="material-symbols-rounded">logout</span>Logout
+        </button>
+      </div>
+    </nav>
+
+    <div class="main-content">
+      <header class="topbar">
+        <div class="topbar-heading">
+          <button id="hamburgerBtn" class="hamburger">
+            <span class="material-symbols-rounded">menu</span>
+          </button>
+          <h1 class="topbar-title">Analytics Overview</h1>
+        </div>
+        <div class="topbar-actions">
+          <span id="analyticsCount" class="text-sm text-muted">Memuat log</span>
+        </div>
+      </header>
+
+      <main class="page-content analytics-page">
+        <section class="analytics-hero glass">
+          <div>
+            <span class="analytics-eyebrow">Ringkasan Historis</span>
+            <h2>Tren, status, dan beban listrik dalam satu halaman.</h2>
+            <p>
+              Halaman ini membaca histori log dan data realtime untuk membantu melihat pola arus,
+              tegangan, daya aktif, energi, power factor, frekuensi, apparent power, dan distribusi status.
+            </p>
+          </div>
+          <div class="analytics-live-card">
+            <span class="analytics-live-label">Status terakhir</span>
+            <strong id="analyticsLatestStatus">—</strong>
+            <span id="analyticsUpdatedAt">Menunggu data</span>
+          </div>
+        </section>
+
+        <section class="analytics-summary-grid" aria-label="Ringkasan data analytics">
+          <article class="analytics-stat-card glass accent-green">
+            <span>Arus rata-rata</span>
+            <strong id="analyticsAvgCurrent">0.00 A</strong>
+            <small id="analyticsCurrentRange">Min 0.00 A · Max 0.00 A</small>
+          </article>
+          <article class="analytics-stat-card glass accent-blue">
+            <span>Tegangan rata-rata</span>
+            <strong id="analyticsAvgVoltage">0.0 V</strong>
+            <small id="analyticsVoltageRange">Min 0.0 V · Max 0.0 V</small>
+          </article>
+          <article class="analytics-stat-card glass accent-yellow">
+            <span>Daya aktif puncak</span>
+            <strong id="analyticsPeakPower">0 W</strong>
+            <small id="analyticsAvgPower">Rata-rata 0 W</small>
+          </article>
+          <article class="analytics-stat-card glass accent-purple">
+            <span>Energi terakhir</span>
+            <strong id="analyticsEnergy">0.000 kWh</strong>
+            <small id="analyticsSamples">0 sampel histori</small>
+          </article>
+          <article class="analytics-stat-card glass accent-cyan">
+            <span>Power factor rata-rata</span>
+            <strong id="analyticsAvgPf">0.00</strong>
+            <small>Diambil dari PZEM / fallback settings</small>
+          </article>
+          <article class="analytics-stat-card glass accent-orange">
+            <span>Frekuensi rata-rata</span>
+            <strong id="analyticsAvgFreq">0.0 Hz</strong>
+            <small>Nominal grid PLN</small>
+          </article>
+          <article class="analytics-stat-card glass accent-blue">
+            <span>Apparent puncak</span>
+            <strong id="analyticsPeakApparent">0 VA</strong>
+            <small id="analyticsAvgApparent">Rata-rata 0 VA</small>
+          </article>
+          <article class="analytics-stat-card glass accent-red">
+            <span>Status berisiko</span>
+            <strong id="analyticsRiskCount">0</strong>
+            <small>WARNING + LEAKAGE + DANGER</small>
+          </article>
+        </section>
+
+        <section class="analytics-chart-grid">
+          <article class="section-card glass analytics-chart-card analytics-chart-wide">
+            <div class="section-header">
+              <div>
+                <div class="section-title">Trend Historis</div>
+                <p class="text-xs text-muted">Arus, tegangan, dan daya aktif dari log terbaru.</p>
+              </div>
+            </div>
+            <div class="chart-container analytics-chart-container">
+              <canvas id="analyticsTrendChart"></canvas>
+            </div>
+          </article>
+
+          <article class="section-card glass analytics-chart-card">
+            <div class="section-header">
+              <div>
+                <div class="section-title">Distribusi Status</div>
+                <p class="text-xs text-muted">Perbandingan NORMAL, WARNING, LEAKAGE, dan DANGER.</p>
+              </div>
+            </div>
+            <div class="chart-container analytics-donut-container">
+              <canvas id="analyticsStatusChart"></canvas>
+            </div>
+            <div id="analyticsStatusLegend" class="analytics-status-legend"></div>
+          </article>
+        </section>
+
+        <section class="section-card glass analytics-chart-card">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Snapshot Metrik Terakhir</div>
+              <p class="text-xs text-muted">Nilai terakhir dari Arus, Tegangan, Daya Aktif, Energi, PF, Frekuensi, dan Apparent.</p>
+            </div>
+          </div>
+          <div class="chart-container analytics-bar-container">
+            <canvas id="analyticsSnapshotChart"></canvas>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <script type="module" src="/js/analytics.js"></script>
+</body>
+</html>

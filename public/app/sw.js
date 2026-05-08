@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260507-date-filters";
+const CACHE_NAME = "iot-app-v20260508-status-charts";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
@@ -22,10 +22,14 @@ const CACHE_URLS = [
   "/app/history",
   "/app/analytics",
   "/app/settings",
+  "/app/telegram",
+  "/app/discord",
+  "/app/users",
   "/app/manifest.json",
   "/css/style.min.css",
   "/js/firebase-config.js",
   "/js/auth.js",
+  "/js/app-header.js",
   "/js/app.js",
   "/js/history.js",
   "/js/analytics.js",

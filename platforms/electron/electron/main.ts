@@ -19,6 +19,16 @@ const isDev = process.env.NODE_ENV === 'development';
 // Store for settings
 const store = new Store();
 
+const APP_ID = 'com.iotlistrik.dashboard';
+
+function getIconPath(): string {
+  return isDev
+    ? join(__dirname, '../build/icon.ico')
+    : join(process.resourcesPath, 'app.asar', 'build', 'icon.ico');
+}
+
+app.setAppUserModelId(APP_ID);
+
 // Global references
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -66,17 +76,19 @@ if (!gotTheLock) {
 
 // Create main window
 function createWindow(): void {
+  const iconPath = getIconPath();
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: join(__dirname, 'preload.js'),
     },
-    icon: join(__dirname, '../build/icon.ico'),
+    icon: iconPath,
     show: false, // Don't show until ready
   });
 
@@ -88,10 +100,17 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../dist/index.html'));
   }
 
+  const windowIcon = nativeImage.createFromPath(iconPath);
+  if (!windowIcon.isEmpty()) {
+    mainWindow.setIcon(windowIcon);
+  }
+  mainWindow.setMenuBarVisibility(false);
+
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
     if (store.get('startMinimized', false)) {
-      mainWindow?.hide();
+      mainWindow?.show();
+      mainWindow?.minimize();
     } else {
       mainWindow?.show();
     }
@@ -105,10 +124,7 @@ function createWindow(): void {
     }
   });
 
-  // Handle minimize
-  mainWindow.on('minimize', () => {
-    mainWindow?.hide();
-  });
+  // Minimize uses the native behavior so the app stays visible on the taskbar.
 }
 
 // Create tray
@@ -116,7 +132,7 @@ function createTray(): void {
   // Guard: should only be created once
   if (tray) return;
 
-  const iconPath = join(__dirname, '../build/icon.ico');
+  const iconPath = getIconPath();
   const fs = require('fs');
   let trayIcon = nativeImage.createEmpty();
 
@@ -189,7 +205,7 @@ ipcMain.handle('show-notification', async (_, { title, body }) => {
     const notification = new Notification({
       title,
       body,
-      icon: join(__dirname, '../build/icon.ico'),
+      icon: getIconPath(),
     });
 
     notification.show();
@@ -271,6 +287,7 @@ ipcMain.handle('local-server:status', async () => ({
 
 // App event handlers
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   createTray();
   createWindow();
 

@@ -15,8 +15,8 @@ import { onValue, ref } from 'firebase/database';
 type Page = 'dashboard' | 'history' | 'analytics' | 'settings';
 
 function App() {
-  const { theme, notifications } = useStore();
-  const { user, role, loading, initAuth, logout, isTempAccount } = useAuthStore();
+  const { notifications } = useStore();
+  const { user, role, loading, initAuth, isTempAccount } = useAuthStore();
   const {
     currentData,
     subscribeToData,
@@ -33,8 +33,8 @@ function App() {
   const prevSystemEventId = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+    document.documentElement.classList.add('dark');
+  }, []);
 
   // Initialize Firebase auth on mount
   useEffect(() => {
@@ -173,7 +173,7 @@ function App() {
       case 'analytics':
         return <Analytics />;
       case 'settings':
-        return <Settings onLogout={logout} />;
+        return <Settings />;
       default:
         return <Dashboard />;
     }
@@ -181,10 +181,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="mt-4 text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -195,21 +195,23 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen bg-[#05070b] text-slate-100">
       <Sidebar activePage={page} onNavigate={setPage} />
       <div className="flex-1 flex flex-col">
         <Topbar
           title={
             page === 'history'
-              ? 'History'
+              ? 'Riwayat Log'
               : page === 'analytics'
-              ? 'Analytics'
+              ? 'Analytics Overview'
               : page === 'settings'
-              ? 'Settings'
-              : 'Dashboard'
+              ? 'Pengaturan'
+              : 'Dashboard Monitoring'
           }
         />
-        <main className="flex-1 p-6 overflow-auto">{renderPage()}</main>
+        <main className="flex-1 overflow-auto bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.10),_transparent_30%),#05070b] p-6">
+          {renderPage()}
+        </main>
       </div>
     </div>
   );

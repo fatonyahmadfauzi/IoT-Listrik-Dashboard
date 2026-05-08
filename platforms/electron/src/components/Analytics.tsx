@@ -1,327 +1,359 @@
-import { useDataStore } from '../lib/store';
-import { Line, Pie } from 'react-chartjs-2';
+import { useMemo } from 'react';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
-  Title,
+  BarElement,
+  ArcElement,
   Tooltip,
   Legend,
-  ArcElement,
 } from 'chart.js';
+import { useDataStore } from '../lib/store';
+import { LogDateFilter, useLogDateFilter } from './LogDateFilter';
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
-  Title,
+  BarElement,
+  ArcElement,
   Tooltip,
-  Legend,
-  ArcElement
+  Legend
 );
+
+const colors = {
+  normal: '#22c55e',
+  warning: '#facc15',
+  leakage: '#fb923c',
+  danger: '#ef4444',
+  current: '#22c55e',
+  voltage: '#60a5fa',
+  activePower: '#facc15',
+  energy: '#a78bfa',
+  pf: '#38bdf8',
+  frequency: '#2dd4bf',
+  apparent: '#fb923c',
+  text: '#cbd5e1',
+  grid: 'rgba(148, 163, 184, 0.16)',
+};
+
+function number(value: unknown, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function formatNumber(value: unknown, digits: number, fallback = '0') {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toFixed(digits) : fallback;
+}
+
+function formatClock(timestamp?: number) {
+  if (!timestamp) return '-';
+  if (timestamp < 1e12) return 'Live';
+  return new Date(timestamp).toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+function average(values: number[]) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  if (!clean.length) return 0;
+  return clean.reduce((sum, value) => sum + value, 0) / clean.length;
+}
+
+function minValue(values: number[]) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  return clean.length ? Math.min(...clean) : 0;
+}
+
+function maxValue(values: number[]) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  return clean.length ? Math.max(...clean) : 0;
+}
+
+function normalizeStatus(status?: string) {
+  const value = String(status || 'NORMAL').toUpperCase();
+  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'].includes(value) ? value : 'UNKNOWN';
+}
+
+function statusBadgeClass(status?: string) {
+  switch (normalizeStatus(status)) {
+    case 'NORMAL':
+      return 'border-emerald-400/45 bg-emerald-500/15 text-emerald-200';
+    case 'WARNING':
+      return 'border-amber-300/45 bg-amber-500/15 text-amber-100';
+    case 'LEAKAGE':
+      return 'border-orange-300/45 bg-orange-500/15 text-orange-100';
+    case 'DANGER':
+      return 'border-red-300/50 bg-red-500/20 text-red-100';
+    default:
+      return 'border-slate-600 bg-slate-800 text-slate-300';
+  }
+}
 
 export function Analytics() {
   const { logs, currentData } = useDataStore();
+  const dateFilter = useLogDateFilter(logs);
+  const filteredLogs = dateFilter.filteredLogs;
+  const snapshotSource = filteredLogs[0] || currentData;
 
-  // Calculate statistics
+  const chartLogs = useMemo(() => filteredLogs.slice(0, 60).reverse(), [filteredLogs]);
+  const currents = useMemo(() => filteredLogs.map((log) => number(log.arus)), [filteredLogs]);
+  const voltages = useMemo(() => filteredLogs.map((log) => number(log.tegangan)), [filteredLogs]);
+  const activePowers = useMemo(() => filteredLogs.map((log) => number(log.daya)), [filteredLogs]);
+  const pfValues = useMemo(() => filteredLogs.map((log) => number(log.power_factor)), [filteredLogs]);
+  const freqValues = useMemo(() => filteredLogs.map((log) => number(log.frekuensi)), [filteredLogs]);
+  const apparentValues = useMemo(() => filteredLogs.map((log) => number(log.apparent_power)), [filteredLogs]);
+
+  const statusCounts = useMemo(
+    () => ({
+      NORMAL: filteredLogs.filter((log) => normalizeStatus(log.status) === 'NORMAL').length,
+      WARNING: filteredLogs.filter((log) => normalizeStatus(log.status) === 'WARNING').length,
+      LEAKAGE: filteredLogs.filter((log) => normalizeStatus(log.status) === 'LEAKAGE').length,
+      DANGER: filteredLogs.filter((log) => normalizeStatus(log.status) === 'DANGER').length,
+    }),
+    [filteredLogs]
+  );
+
   const stats = {
-    avgCurrent:
-      logs.length > 0
-        ? (
-            logs.reduce((sum, log) => sum + (log.arus || 0), 0) / logs.length
-          ).toFixed(2)
-        : '0.00',
-    maxCurrent:
-      logs.length > 0
-        ? Math.max(...logs.map((log) => log.arus || 0)).toFixed(2)
-        : '0.00',
-    minCurrent:
-      logs.length > 0
-        ? Math.min(...logs.map((log) => log.arus || 0)).toFixed(2)
-        : '0.00',
-
-    avgVoltage:
-      logs.length > 0
-        ? (
-            logs.reduce((sum, log) => sum + (log.tegangan || 0), 0) /
-            logs.length
-          ).toFixed(2)
-        : '0.00',
-    maxVoltage:
-      logs.length > 0
-        ? Math.max(...logs.map((log) => log.tegangan || 0)).toFixed(2)
-        : '0.00',
-    minVoltage:
-      logs.length > 0
-        ? Math.min(...logs.map((log) => log.tegangan || 0)).toFixed(2)
-        : '0.00',
-
-    warningCount: logs.filter((log) => log.status === 'WARNING').length,
-    leakageCount: logs.filter((log) => log.status === 'LEAKAGE').length,
-    dangerCount: logs.filter((log) => log.status === 'DANGER').length,
-    normalCount: logs.filter((log) => log.status === 'NORMAL').length,
+    avgCurrent: average(currents),
+    minCurrent: minValue(currents),
+    maxCurrent: maxValue(currents),
+    avgVoltage: average(voltages),
+    minVoltage: minValue(voltages),
+    maxVoltage: maxValue(voltages),
+    avgPower: average(activePowers),
+    peakPower: maxValue(activePowers),
+    avgPf: average(pfValues),
+    avgFreq: average(freqValues),
+    avgApparent: average(apparentValues),
+    peakApparent: maxValue(apparentValues),
+    riskCount: statusCounts.WARNING + statusCounts.LEAKAGE + statusCounts.DANGER,
   };
 
-  // Calculate power statistics
-  const avgPower =
-    logs.length > 0
-      ? (
-          logs.reduce((sum, log) => sum + (log.apparent_power || 0), 0) /
-          logs.length
-        ).toFixed(2)
-      : '0.00';
-  const maxPower =
-    logs.length > 0
-      ? Math.max(...logs.map((log) => log.apparent_power || 0)).toFixed(2)
-      : '0.00';
-
-  // Estimated daily usage (assuming logs are hourly)
-  const estimatedDaily = ((parseFloat(avgPower) * 24) / 1000).toFixed(2);
-
-  // Chart Data
-  const lineData = {
-    labels: logs.map((_, i) => `#${i + 1}`),
+  const trendData = {
+    labels: chartLogs.map((log) => formatClock(number(log.timestamp))),
     datasets: [
       {
-        label: 'Current (A)',
-        data: logs.map((log) => log.arus || 0),
-        borderColor: 'rgb(37, 99, 235)',
-        backgroundColor: 'rgba(37, 99, 235, 0.2)',
-        yAxisID: 'y',
+        label: 'Arus (A)',
+        data: chartLogs.map((log) => number(log.arus)),
+        borderColor: colors.current,
+        backgroundColor: 'rgba(34, 197, 94, 0.12)',
+        tension: 0.34,
+        pointRadius: 2,
+        yAxisID: 'yA',
       },
       {
-        label: 'Voltage (V)',
-        data: logs.map((log) => log.tegangan || 0),
-        borderColor: 'rgb(16, 185, 129)',
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        yAxisID: 'y1',
+        label: 'Tegangan (V)',
+        data: chartLogs.map((log) => number(log.tegangan)),
+        borderColor: colors.voltage,
+        backgroundColor: 'rgba(96, 165, 250, 0.12)',
+        tension: 0.34,
+        pointRadius: 2,
+        yAxisID: 'yV',
+      },
+      {
+        label: 'Daya Aktif (W)',
+        data: chartLogs.map((log) => number(log.daya)),
+        borderColor: colors.activePower,
+        backgroundColor: 'rgba(250, 204, 21, 0.12)',
+        tension: 0.34,
+        pointRadius: 2,
+        yAxisID: 'yP',
       },
     ],
   };
 
-  const lineOptions = {
+  const trendOptions = {
     responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index' as const, intersect: false },
     plugins: {
-      legend: { position: 'top' as const },
-      title: { display: true, text: 'Current & Voltage Trend' },
+      legend: { labels: { color: colors.text, boxWidth: 14 } },
+      tooltip: { enabled: true },
     },
     scales: {
-      y: {
+      x: { ticks: { color: colors.text, maxRotation: 0 }, grid: { color: colors.grid } },
+      yA: {
         type: 'linear' as const,
-        display: true,
         position: 'left' as const,
-        title: { display: true, text: 'Current (A)' },
+        ticks: { color: colors.current },
+        grid: { color: colors.grid },
+        title: { display: true, text: 'Arus (A)', color: colors.current },
       },
-      y1: {
+      yV: {
         type: 'linear' as const,
-        display: true,
         position: 'right' as const,
+        ticks: { color: colors.voltage },
         grid: { drawOnChartArea: false },
-        title: { display: true, text: 'Voltage (V)' },
+        title: { display: true, text: 'Tegangan (V)', color: colors.voltage },
+      },
+      yP: {
+        type: 'linear' as const,
+        position: 'right' as const,
+        ticks: { color: colors.activePower },
+        grid: { drawOnChartArea: false },
+        title: { display: true, text: 'Daya Aktif (W)', color: colors.activePower },
       },
     },
   };
 
-  const pieData = {
-    labels: ['Normal', 'Warning', 'Leakage', 'Danger'],
+  const statusData = {
+    labels: ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'],
     datasets: [
       {
-        label: 'Status',
         data: [
-          stats.normalCount,
-          stats.warningCount,
-          stats.leakageCount,
-          stats.dangerCount,
+          statusCounts.NORMAL,
+          statusCounts.WARNING,
+          statusCounts.LEAKAGE,
+          statusCounts.DANGER,
         ],
-        backgroundColor: [
-          'rgb(22, 163, 74)',
-          'rgb(202, 138, 4)',
-          'rgb(251, 146, 60)',
-          'rgb(220, 38, 38)',
-        ],
-        borderWidth: 1,
+        backgroundColor: [colors.normal, colors.warning, colors.leakage, colors.danger],
+        borderColor: 'rgba(7, 12, 24, 0.92)',
+        borderWidth: 4,
       },
     ],
   };
 
+  const snapshotData = {
+    labels: ['Arus', 'Tegangan', 'Daya', 'Energi', 'PF', 'Frekuensi', 'Apparent'],
+    datasets: [
+      {
+        label: 'Snapshot terakhir',
+        data: [
+          number(snapshotSource?.arus),
+          number(snapshotSource?.tegangan),
+          number(snapshotSource?.daya),
+          number(snapshotSource?.energi_kwh),
+          number(snapshotSource?.power_factor),
+          number(snapshotSource?.frekuensi),
+          number(snapshotSource?.apparent_power),
+        ],
+        backgroundColor: [
+          colors.current,
+          colors.voltage,
+          colors.activePower,
+          colors.energy,
+          colors.pf,
+          colors.frequency,
+          colors.apparent,
+        ],
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  const commonChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: colors.text, boxWidth: 14 } },
+      tooltip: { enabled: true },
+    },
+  };
+
+  const latestStatus = normalizeStatus(snapshotSource?.status);
+
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-        Analytics Overview
-      </h2>
-
-      {/* Chart Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <Line data={lineData} options={lineOptions} height={220} />
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex flex-col items-center justify-center">
-          <Pie data={pieData} />
-          <div className="mt-4 text-center">
-            <div className="flex items-center justify-center space-x-4">
-              <span className="flex items-center">
-                <span className="w-3 h-3 rounded-full bg-green-600 inline-block mr-1"></span>
-                Normal
-              </span>
-              <span className="flex items-center">
-                <span className="w-3 h-3 rounded-full bg-yellow-600 inline-block mr-1"></span>
-                Warning
-              </span>
-              <span className="flex items-center">
-                <span className="w-3 h-3 rounded-full bg-orange-600 inline-block mr-1"></span>
-                Leakage
-              </span>
-              <span className="flex items-center">
-                <span className="w-3 h-3 rounded-full bg-red-600 inline-block mr-1"></span>
-                Danger
-              </span>
+    <div className="space-y-6 text-slate-100">
+      <section className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,320px)] lg:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Ringkasan Historis</p>
+            <h2 className="mt-3 text-3xl font-black text-white">Tren, status, dan beban listrik dalam satu halaman.</h2>
+            <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-300">
+              Halaman ini membaca histori log dan data realtime untuk membantu melihat pola arus,
+              tegangan, daya aktif, energi, power factor, frekuensi, apparent power, dan distribusi status.
+            </p>
+          </div>
+          <div className="rounded-lg border border-sky-500/30 bg-sky-950/30 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Status terakhir</p>
+            <div className={`mt-4 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-black ${statusBadgeClass(latestStatus)}`}>
+              <span className="h-2 w-2 rounded-full bg-current" />
+              {latestStatus}
             </div>
+            <p className="mt-4 text-sm text-slate-400">
+              {snapshotSource?.updated_at || snapshotSource?.timestamp
+                ? new Date(Number(snapshotSource.updated_at || snapshotSource.timestamp)).toLocaleString('id-ID')
+                : 'Menunggu data'}
+            </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">
-            Avg Current
-          </h4>
-          <p className="text-3xl font-bold text-blue-600">
-            {stats.avgCurrent} <span className="text-lg">A</span>
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Max: {stats.maxCurrent} A | Min: {stats.minCurrent} A
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">
-            Avg Voltage
-          </h4>
-          <p className="text-3xl font-bold text-green-600">
-            {stats.avgVoltage} <span className="text-lg">V</span>
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Max: {stats.maxVoltage} V | Min: {stats.minVoltage} V
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">
-            Peak Power
-          </h4>
-          <p className="text-3xl font-bold text-purple-600">
-            {maxPower} <span className="text-lg">VA</span>
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Avg: {avgPower} VA
-          </p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">
-            Est. Daily Usage
-          </h4>
-          <p className="text-3xl font-bold text-orange-600">
-            {estimatedDaily} <span className="text-lg">kWh</span>
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Based on {logs.length} log entries
-          </p>
-        </div>
-      </div>
+      <LogDateFilter
+        title="Filter Analytics"
+        subtitle="Tanggal tanpa log dibuat nonaktif. Pilihan ini menghitung ulang kartu statistik, grafik tren, distribusi status, dan snapshot."
+        filter={dateFilter}
+      />
 
-      {/* Status & Current Data */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Status Distribution (Last {logs.length} entries)
-          </h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-green-600"></div>
-                <span className="text-gray-700 dark:text-gray-300">Normal</span>
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {stats.normalCount}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-yellow-600"></div>
-                <span className="text-gray-700 dark:text-gray-300">
-                  Warning
-                </span>
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {stats.warningCount}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-orange-600"></div>
-                <span className="text-gray-700 dark:text-gray-300">
-                  Leakage
-                </span>
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {stats.leakageCount}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 rounded-full bg-red-600"></div>
-                <span className="text-gray-700 dark:text-gray-300">Danger</span>
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {stats.dangerCount}
-              </span>
-            </div>
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {[
+          ['Arus rata-rata', `${stats.avgCurrent.toFixed(2)} A`, `Min ${stats.minCurrent.toFixed(2)} A · Max ${stats.maxCurrent.toFixed(2)} A`, 'border-l-emerald-400'],
+          ['Tegangan rata-rata', `${stats.avgVoltage.toFixed(1)} V`, `Min ${stats.minVoltage.toFixed(1)} V · Max ${stats.maxVoltage.toFixed(1)} V`, 'border-l-sky-400'],
+          ['Daya aktif puncak', `${stats.peakPower.toFixed(0)} W`, `Rata-rata ${stats.avgPower.toFixed(0)} W`, 'border-l-amber-400'],
+          ['Energi terakhir', `${formatNumber(snapshotSource?.energi_kwh, 3, '0.000')} kWh`, `${filteredLogs.length} sampel histori`, 'border-l-violet-400'],
+          ['Power factor rata-rata', stats.avgPf.toFixed(2), 'Diambil dari PZEM / fallback settings', 'border-l-cyan-400'],
+          ['Frekuensi rata-rata', `${stats.avgFreq.toFixed(1)} Hz`, 'Nominal grid PLN', 'border-l-orange-400'],
+          ['Apparent puncak', `${stats.peakApparent.toFixed(0)} VA`, `Rata-rata ${stats.avgApparent.toFixed(0)} VA`, 'border-l-sky-300'],
+          ['Status berisiko', String(stats.riskCount), 'WARNING + LEAKAGE + DANGER', 'border-l-red-400'],
+        ].map(([label, value, note, border]) => (
+          <article key={label} className={`rounded-xl border border-slate-700/75 bg-slate-900/70 p-5 shadow-lg border-l-2 ${border}`}>
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+            <p className="mt-4 font-mono text-3xl font-black tracking-wider text-slate-100">{value}</p>
+            <p className="mt-3 text-sm text-slate-400">{note}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-4">
+        <article className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
+          <div className="border-b border-slate-700/70 pb-4">
+            <h2 className="text-lg font-black text-white">Trend Historis</h2>
+            <p className="mt-1 text-sm text-slate-400">Arus, tegangan, dan daya aktif dari log terbaru.</p>
           </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Current Status
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-700 dark:text-gray-300">
-                Current Reading
-              </span>
-              <span className="font-semibold text-blue-600">
-                {currentData?.arus?.toFixed(2) || '0.00'} A
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-700 dark:text-gray-300">
-                Voltage Reading
-              </span>
-              <span className="font-semibold text-green-600">
-                {currentData?.tegangan?.toFixed(2) || '0.00'} V
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-700 dark:text-gray-300">
-                Power Reading
-              </span>
-              <span className="font-semibold text-purple-600">
-                {currentData?.apparent_power?.toFixed(2) || '0.00'} VA
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-700 dark:text-gray-300">
-                Relay Status
-              </span>
-              <span
-                className={`font-semibold ${currentData?.relay ? 'text-green-600' : 'text-red-600'}`}
-              >
-                {currentData?.relay ? 'ON' : 'OFF'}
-              </span>
-            </div>
+          <div className="mt-6 h-80 min-w-0">
+            <Line data={trendData} options={trendOptions} />
           </div>
+        </article>
+
+        <article className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
+          <div className="border-b border-slate-700/70 pb-4">
+            <h2 className="text-lg font-black text-white">Distribusi Status</h2>
+            <p className="mt-1 text-sm text-slate-400">Perbandingan NORMAL, WARNING, LEAKAGE, dan DANGER.</p>
+          </div>
+          <div className="mt-6 h-80 min-w-0">
+            <Doughnut data={statusData} options={commonChartOptions} />
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
+        <div className="border-b border-slate-700/70 pb-4">
+          <h2 className="text-lg font-black text-white">Snapshot Metrik Terakhir</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Nilai terakhir dari Arus, Tegangan, Daya Aktif, Energi, PF, Frekuensi, dan Apparent.
+          </p>
         </div>
-      </div>
+        <div className="mt-6 h-80 min-w-0">
+          <Bar
+            data={snapshotData}
+            options={{
+              ...commonChartOptions,
+              scales: {
+                x: { ticks: { color: colors.text }, grid: { color: colors.grid } },
+                y: { ticks: { color: colors.text }, grid: { color: colors.grid } },
+              },
+            }}
+          />
+        </div>
+      </section>
     </div>
   );
 }

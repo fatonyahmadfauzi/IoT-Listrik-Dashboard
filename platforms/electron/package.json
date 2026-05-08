@@ -82,9 +82,11 @@
   },
   "dependencies": {
     "chart.js": "^4.5.1",
+    "chartjs-plugin-zoom": "^2.2.0",
     "electron-store": "^8.1.1",
     "electron-updater": "^6.8.3",
     "firebase": "^12.12.1",
+    "hammerjs": "^2.0.8",
     "lucide-react": "^0.294.0",
     "react-chartjs-2": "^5.3.1",
     "zustand": "^4.4.1"

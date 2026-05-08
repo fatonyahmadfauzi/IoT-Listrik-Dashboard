@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
 import { db, auth as mainAuth, firebaseConfig } from '../lib/firebase';
 import { ref, update, remove, set } from 'firebase/database';
@@ -17,10 +17,6 @@ import {
   saveClientConfig,
   type ClientBackendConfig,
 } from '../lib/clientConfig';
-
-interface SettingsProps {
-  onLogout: () => void;
-}
 
 interface TelegramRecipient {
   name: string;
@@ -190,7 +186,7 @@ const telegramPrimaryActionClass =
 const telegramMutedActionClass =
   'min-h-[46px] px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-semibold transition';
 
-export function Settings({ onLogout }: SettingsProps) {
+export function Settings() {
   const { settings, users } = useDataStore();
   const { role, user, isTempAccount } = useAuthStore();
   const [tab, setTab] = useState<
@@ -1379,13 +1375,6 @@ export function Settings({ onLogout }: SettingsProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Settings</h1>
-        <button
-          onClick={onLogout}
-          className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
-        </button>
       </div>
 
       {/* Tabs */}

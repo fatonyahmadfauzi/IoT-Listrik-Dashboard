@@ -12,6 +12,13 @@ const electron_updater_1 = require("electron-updater");
 const isDev = process.env.NODE_ENV === 'development';
 // Store for settings
 const store = new electron_store_1.default();
+const APP_ID = 'com.iotlistrik.dashboard';
+function getIconPath() {
+    return isDev
+        ? (0, path_1.join)(__dirname, '../build/icon.ico')
+        : (0, path_1.join)(process.resourcesPath, 'app.asar', 'build', 'icon.ico');
+}
+electron_1.app.setAppUserModelId(APP_ID);
 // Global references
 let mainWindow = null;
 let tray = null;
@@ -54,17 +61,19 @@ else {
 }
 // Create main window
 function createWindow() {
+    const iconPath = getIconPath();
     mainWindow = new electron_1.BrowserWindow({
         width: 1200,
         height: 800,
         minWidth: 800,
         minHeight: 600,
+        autoHideMenuBar: true,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
             preload: (0, path_1.join)(__dirname, 'preload.js'),
         },
-        icon: (0, path_1.join)(__dirname, '../build/icon.ico'),
+        icon: iconPath,
         show: false, // Don't show until ready
     });
     // Load the app
@@ -75,10 +84,16 @@ function createWindow() {
     else {
         mainWindow.loadFile((0, path_1.join)(__dirname, '../dist/index.html'));
     }
+    const windowIcon = electron_1.nativeImage.createFromPath(iconPath);
+    if (!windowIcon.isEmpty()) {
+        mainWindow.setIcon(windowIcon);
+    }
+    mainWindow.setMenuBarVisibility(false);
     // Show window when ready
     mainWindow.once('ready-to-show', () => {
         if (store.get('startMinimized', false)) {
-            mainWindow?.hide();
+            mainWindow?.show();
+            mainWindow?.minimize();
         }
         else {
             mainWindow?.show();
@@ -91,17 +106,14 @@ function createWindow() {
             mainWindow?.hide();
         }
     });
-    // Handle minimize
-    mainWindow.on('minimize', () => {
-        mainWindow?.hide();
-    });
+    // Minimize uses the native behavior so the app stays visible on the taskbar.
 }
 // Create tray
 function createTray() {
     // Guard: should only be created once
     if (tray)
         return;
-    const iconPath = (0, path_1.join)(__dirname, '../build/icon.ico');
+    const iconPath = getIconPath();
     const fs = require('fs');
     let trayIcon = electron_1.nativeImage.createEmpty();
     if (fs.existsSync(iconPath)) {
@@ -167,7 +179,7 @@ electron_1.ipcMain.handle('show-notification', async (_, { title, body }) => {
         const notification = new electron_1.Notification({
             title,
             body,
-            icon: (0, path_1.join)(__dirname, '../build/icon.ico'),
+            icon: getIconPath(),
         });
         notification.show();
         return new Promise((resolve) => {
@@ -234,6 +246,7 @@ electron_1.ipcMain.handle('local-server:status', async () => ({
 }));
 // App event handlers
 electron_1.app.whenReady().then(() => {
+    electron_1.Menu.setApplicationMenu(null);
     createTray();
     createWindow();
     // Set startup

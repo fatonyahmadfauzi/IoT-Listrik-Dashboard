@@ -15,15 +15,20 @@ if (!fs.existsSync(buildDir)) {
   fs.mkdirSync(buildDir, { recursive: true });
 }
 
-const pngBuffer = await sharp(source)
-  .resize(256, 256, {
-    fit: 'contain',
-    background: { r: 0, g: 0, b: 0, alpha: 0 },
-  })
-  .png()
-  .toBuffer();
+const iconSizes = [16, 24, 32, 48, 64, 128, 256];
+const pngBuffers = await Promise.all(
+  iconSizes.map((size) =>
+    sharp(source)
+      .resize(size, size, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer()
+  )
+);
 
-const icoBuffer = await pngToIco(pngBuffer);
+const icoBuffer = await pngToIco(pngBuffers);
 fs.writeFileSync(outputIco, icoBuffer);
 
 console.log('Created:', outputIco);

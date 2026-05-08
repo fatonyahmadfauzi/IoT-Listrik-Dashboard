@@ -49,6 +49,24 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 const FCM_VAPID_KEY = "g9Cx-PNOUASH7e5oCunyYgut0I6sUIobkq-QoffeCEw";
 const HARDWARE_ALERTS_TOPIC = "iot_alarms";
 const LAST_FCM_TOPIC_KEY = "iot_last_fcm_topic_subscription";
+let fcmVapidKeyWarningShown = false;
+
+function isValidFcmVapidKey(key) {
+  return (
+    typeof key === "string" &&
+    key.length >= 80 &&
+    key.length <= 120 &&
+    /^[A-Za-z0-9_-]+$/.test(key)
+  );
+}
+
+function warnInvalidFcmVapidKey() {
+  if (fcmVapidKeyWarningShown) return;
+  fcmVapidKeyWarningShown = true;
+  console.warn(
+    "[FCM] Web push VAPID key belum valid. Token FCM dilewati; notifikasi lokal tetap aktif.",
+  );
+}
 
 function isSimulatorScope() {
   return window.location.pathname.startsWith("/simulator/");
@@ -111,6 +129,11 @@ async function requestNotificationPermission() {
 async function registerFCMToken() {
   if (!messaging || isSimulatorScope()) return;
   try {
+    if (!isValidFcmVapidKey(FCM_VAPID_KEY)) {
+      warnInvalidFcmVapidKey();
+      return;
+    }
+
     const serviceWorkerRegistration = await resolveMessagingServiceWorkerRegistration();
     if (!serviceWorkerRegistration) {
       console.warn("[FCM] No active service worker registration found for push notifications.");
@@ -132,6 +155,11 @@ async function registerFCMToken() {
       console.warn("[FCM] No registration token available.");
     }
   } catch (err) {
+    const message = String(err?.message || "");
+    if (err?.name === "InvalidAccessError" || message.includes("applicationServerKey")) {
+      warnInvalidFcmVapidKey();
+      return;
+    }
     console.error("[FCM] Error obtaining token", err);
   }
 }

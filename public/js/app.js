@@ -13,8 +13,10 @@ import {
 import {
   createRealtimeChart,
   createRealtimeDetailChart,
+  createRealtimeElectricalDetailChart,
   pushRealtimeData,
   pushRealtimeDetailData,
+  pushRealtimeElectricalDetailData,
   resetChartZoom,
 } from "./charts.js";
 import {
@@ -56,14 +58,17 @@ const elResetZoom = document.getElementById("resetZoomBtn");
 const elRelaySection = document.getElementById("relaySection");
 const canvas = document.getElementById("monitorChart");
 const detailCanvas = document.getElementById("monitorDetailChart");
+const electricalDetailCanvas = document.getElementById("monitorElectricalDetailChart");
 const elEndpointBadge = document.getElementById("endpointBadge");
 const elConnState = document.getElementById("connStateText");
+const elHeartbeatText = document.getElementById("heartbeatText");
 const elAlertPulse = document.getElementById("alertPulse");
 const elMiniLogs = document.getElementById("miniLogsBody");
 const elMiniLogsDetail = document.getElementById("miniLogsDetailBody");
 
 let chart = null;
 let detailChart = null;
+let electricalDetailChart = null;
 let currentRole = null;
 let lastRelayVal = -1;
 let stopHybrid = null;
@@ -158,7 +163,13 @@ function renderConnectionMeta(m) {
       : b === "FALLBACK"
         ? "ep-fallback"
         : "ep-cloud");
-  elConnState.textContent = m.connection || "—";
+  const rawConnection = m.connection || "—";
+  elConnState.textContent =
+    rawConnection === "Connected" ? "Device Online" : rawConnection;
+  if (elHeartbeatText) {
+    elHeartbeatText.textContent =
+      rawConnection === "Connected" ? "Heartbeat aktif" : "Tanpa heartbeat";
+  }
   if (m.fallbackActive) {
     elEndpointBadge.textContent = "FALLBACK";
     elEndpointBadge.className = "ep-badge ep-fallback";
@@ -188,17 +199,9 @@ function renderConnectionMeta(m) {
   }
   if (elUpdated) {
     const seenLabel = formatSeenTime(m.lastDeviceSeenAt);
-    if (seenLabel) {
-      elUpdated.textContent = `Update ${seenLabel}`;
-    } else if (m.connection === "Device Offline") {
-      elUpdated.textContent = "Tanpa heartbeat";
-    } else if (m.connection === "Memeriksa perangkat...") {
-      elUpdated.textContent = "Menunggu heartbeat";
-    } else if (m.connection === "Memulihkan...") {
-      elUpdated.textContent = "Menyambungkan cloud";
-    } else {
-      elUpdated.textContent = "—";
-    }
+    elUpdated.textContent = seenLabel
+      ? `Update terakhir: ${seenLabel}`
+      : "Update terakhir: -";
   }
 }
 
@@ -457,6 +460,7 @@ function startRealtimeListener() {
         const label = new Date().toLocaleTimeString("id-ID");
         pushRealtimeData(chart, label, d.arus, d.tegangan, d.daya_w);
         if (detailChart) pushRealtimeDetailData(detailChart, label, d);
+        if (electricalDetailChart) pushRealtimeElectricalDetailData(electricalDetailChart, label, d);
       }
       checkAndNotify(d.status, d.arus, d.tegangan);
     },
@@ -531,6 +535,9 @@ initPage({
 
     if (canvas) chart = createRealtimeChart(canvas);
     if (detailCanvas) detailChart = createRealtimeDetailChart(detailCanvas);
+    if (electricalDetailCanvas) {
+      electricalDetailChart = createRealtimeElectricalDetailChart(electricalDetailCanvas);
+    }
 
     initMiniLogTabs();
     startRealtimeListener();
@@ -553,6 +560,7 @@ initPage({
     elResetZoom?.addEventListener("click", () => {
       resetChartZoom(chart);
       resetChartZoom(detailChart);
+      resetChartZoom(electricalDetailChart);
     });
 
     document.getElementById("logoutBtn")?.addEventListener("click", logout);

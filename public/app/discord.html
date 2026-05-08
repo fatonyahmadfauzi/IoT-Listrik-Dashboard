@@ -175,7 +175,7 @@
         ]
       }
     </script>
-<link rel="stylesheet" href="/css/style.min.css?v=20260502-perf" />
+    <link rel="stylesheet" href="/css/style.min.css?v=20260508-header-final" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -656,14 +656,30 @@
 
       <div class="main-content">
         <header class="topbar">
-          <div style="display: flex; align-items: center; gap: 12px">
+          <div class="topbar-heading">
             <button id="hamburgerBtn" class="hamburger">
               <span class="material-symbols-rounded">menu</span>
             </button>
             <h1 class="topbar-title">Konfigurasi Discord</h1>
           </div>
-          <div class="topbar-actions">
-            <span class="role-pill admin">Admin Only</span>
+          <div class="topbar-actions app-topbar-actions">
+            <button id="installBtn" class="btn btn-ghost btn-sm hidden">
+              <span class="material-symbols-rounded">download</span>Install App
+            </button>
+            <div id="connStrip" class="conn-strip app-header-status glass" title="Sumber data dan koneksi perangkat">
+              <span id="endpointBadge" class="ep-badge ep-cloud">CLOUD</span>
+              <span id="connStateText" class="app-header-state">Device Offline</span>
+              <span id="heartbeatText" class="app-header-heartbeat">Tanpa heartbeat</span>
+              <span class="app-header-divider" aria-hidden="true"></span>
+              <span class="app-header-updated">
+                <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+                <span id="lastUpdated">Update terakhir: -</span>
+              </span>
+              <span id="alertPulse" class="alert-pulse hidden" aria-hidden="true"></span>
+            </div>
+            <button id="testNotifyBtn" class="btn btn-ghost btn-icon app-header-notify" type="button" title="Test notifikasi" aria-label="Test notifikasi">
+              <span class="material-symbols-rounded">notifications</span>
+            </button>
           </div>
         </header>
 
@@ -932,6 +948,7 @@
     </div>
 
     <div id="toastContainer" class="toast-container"></div>
+    <script type="module" src="/js/app-header.js"></script>
     <script type="module" src="/js/settings.js"></script>
   </body>
 </html>

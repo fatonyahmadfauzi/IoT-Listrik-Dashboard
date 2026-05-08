@@ -193,7 +193,7 @@
         ]
       }
     </script>
-<link rel="stylesheet" href="/css/style.min.css?v=20260502-perf" />
+    <link rel="stylesheet" href="/css/style.min.css?v=20260508-header-final" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -284,17 +284,25 @@
             </button>
             <h1 class="topbar-title">Dashboard Monitoring</h1>
           </div>
-          <div class="topbar-actions dashboard-topbar-actions">
-            <div id="connStrip" class="conn-strip glass" title="Sumber data & koneksi">
-              <span id="endpointBadge" class="ep-badge ep-cloud">CLOUD</span>
-              <span id="connStateText" class="text-sm text-muted">Connected</span>
-              <span id="alertPulse" class="alert-pulse hidden" aria-hidden="true"></span>
-            </div>
+          <div class="topbar-actions app-topbar-actions">
             <!-- Install PWA button (hidden until browser fires beforeinstallprompt) -->
             <button id="installBtn" class="btn btn-ghost btn-sm hidden">
               <span class="material-symbols-rounded">download</span>Install App
             </button>
-            <span id="lastUpdated" class="dashboard-last-updated text-sm text-muted">—</span>
+            <div id="connStrip" class="conn-strip app-header-status glass" title="Sumber data dan koneksi perangkat">
+              <span id="endpointBadge" class="ep-badge ep-cloud">CLOUD</span>
+              <span id="connStateText" class="app-header-state">Device Offline</span>
+              <span id="heartbeatText" class="app-header-heartbeat">Tanpa heartbeat</span>
+              <span class="app-header-divider" aria-hidden="true"></span>
+              <span class="app-header-updated">
+                <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+                <span id="lastUpdated">Update terakhir: -</span>
+              </span>
+              <span id="alertPulse" class="alert-pulse hidden" aria-hidden="true"></span>
+            </div>
+            <button id="testNotifyBtn" class="btn btn-ghost btn-icon app-header-notify" type="button" title="Test notifikasi" aria-label="Test notifikasi">
+              <span class="material-symbols-rounded">notifications</span>
+            </button>
           </div>
         </header>
 
@@ -421,11 +429,22 @@
             </p>
             <div class="chart-divider"></div>
             <div class="chart-subtitle">Metrik pendukung realtime</div>
-            <div class="chart-container chart-container-secondary">
-              <canvas id="monitorDetailChart"></canvas>
+            <div class="support-chart-stack" aria-label="Metrik pendukung realtime">
+              <div class="support-chart-block">
+                <div class="support-chart-label">Energi (kWh) dan Power Factor</div>
+                <div class="chart-container chart-container-secondary">
+                  <canvas id="monitorDetailChart"></canvas>
+                </div>
+              </div>
+              <div class="support-chart-block">
+                <div class="support-chart-label">Frekuensi dan Apparent (VA)</div>
+                <div class="chart-container chart-container-secondary">
+                  <canvas id="monitorElectricalDetailChart"></canvas>
+                </div>
+              </div>
             </div>
             <p class="text-xs text-muted mt-8">
-              Energi (kWh), power factor, frekuensi, dan apparent power (VA) dipisah agar skala grafik utama tetap mudah dibaca.
+              Frekuensi dan apparent power (VA) dipisah ke grafik kedua agar tampilan tetap mudah dibaca pada desktop, tablet, dan mobile.
             </p>
           </div>
 
@@ -499,6 +518,7 @@
     <!-- Toast -->
     <div id="toastContainer" class="toast-container"></div>
 
+    <script type="module" src="/js/app-header.js"></script>
     <script type="module" src="/js/app.js"></script>
   </body>
 </html>

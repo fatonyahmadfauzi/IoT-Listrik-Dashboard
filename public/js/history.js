@@ -162,11 +162,11 @@ function renderSummaryTable(logs) {
   if (!summaryTbody) return;
   if (logs.length === 0) {
     summaryTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-secondary);">Belum ada data log</td></tr>`;
-    countEl.textContent = '0 log';
+    if (countEl) countEl.textContent = '0 log';
     return;
   }
 
-  countEl.textContent = `${logs.length} log`;
+  if (countEl) countEl.textContent = `${logs.length} log`;
 
   summaryTbody.innerHTML = logs.map(l => {
     const power = derivePower(l);

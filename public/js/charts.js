@@ -148,9 +148,9 @@ function createRealtimeChart(canvas) {
 }
 
 /**
- * Create the secondary realtime chart for slower/supporting electrical metrics.
- * Kept separate from the main chart because kWh, PF, Hz, and VA use very
- * different scales.
+ * Create the secondary realtime chart for cumulative/ratio metrics.
+ * Energy and power factor are kept together because both are slow-moving
+ * support indicators.
  * @param {HTMLCanvasElement} canvas
  * @returns {Chart}
  */
@@ -186,6 +186,81 @@ function createRealtimeDetailChart(canvas) {
           pointHoverRadius:5,
           yAxisID:         'yPf',
         },
+      ],
+    },
+    options: {
+      responsive:          true,
+      maintainAspectRatio: false,
+      animation:           { duration: 250 },
+      interaction:         { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#94a3b8', boxWidth: 14, padding: 14 },
+        },
+        tooltip: {
+          backgroundColor: 'rgba(13,20,36,0.95)',
+          borderColor:     'rgba(255,255,255,0.12)',
+          borderWidth:     1,
+          padding:         12,
+          callbacks: {
+            label: ctx => {
+              const units = [' kWh', ''];
+              const decimals = ctx.datasetIndex === 0 ? 3 : 2;
+              return ` ${ctx.dataset.label}: ${Number(ctx.raw).toFixed(decimals)}${units[ctx.datasetIndex]}`;
+            },
+          },
+        },
+        zoom: {
+          pan:  { enabled: true, mode: 'x' },
+          zoom: {
+            wheel:  { enabled: true },
+            pinch:  { enabled: true },
+            mode:   'x',
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8', maxRotation: 0, maxTicksLimit: 8 },
+          grid:  { color: 'rgba(255,255,255,0.05)' },
+        },
+        yKwh: {
+          type:     'linear',
+          position: 'left',
+          beginAtZero: true,
+          title:    { display: true, text: 'Energi (kWh)', color: COLORS.purple.border },
+          ticks:    { color: COLORS.purple.border },
+          grid:     { color: 'rgba(255,255,255,0.05)' },
+        },
+        yPf: {
+          type:     'linear',
+          position: 'right',
+          min:      0,
+          max:      1,
+          title:    { display: true, text: 'PF', color: COLORS.green.border },
+          ticks:    { color: COLORS.green.border },
+          grid:     { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+/**
+ * Create the tertiary realtime chart for frequency and apparent power.
+ * These metrics are separated so the VA axis does not crowd the energy/PF chart
+ * on tablet and mobile screens.
+ * @param {HTMLCanvasElement} canvas
+ * @returns {Chart}
+ */
+function createRealtimeElectricalDetailChart(canvas) {
+  applyDarkDefaults();
+
+  return new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
         {
           label:           'Frekuensi (Hz)',
           data:            [],
@@ -228,8 +303,8 @@ function createRealtimeDetailChart(canvas) {
           padding:         12,
           callbacks: {
             label: ctx => {
-              const units = [' kWh', '', ' Hz', ' VA'];
-              const decimals = ctx.datasetIndex === 0 ? 3 : ctx.datasetIndex === 1 ? 2 : 1;
+              const units = [' Hz', ' VA'];
+              const decimals = ctx.datasetIndex === 0 ? 1 : 0;
               return ` ${ctx.dataset.label}: ${Number(ctx.raw).toFixed(decimals)}${units[ctx.datasetIndex]}`;
             },
           },
@@ -248,38 +323,21 @@ function createRealtimeDetailChart(canvas) {
           ticks: { color: '#94a3b8', maxRotation: 0, maxTicksLimit: 8 },
           grid:  { color: 'rgba(255,255,255,0.05)' },
         },
-        yKwh: {
-          type:     'linear',
-          position: 'left',
-          beginAtZero: true,
-          title:    { display: true, text: 'Energi (kWh)', color: COLORS.purple.border },
-          ticks:    { color: COLORS.purple.border },
-          grid:     { color: 'rgba(255,255,255,0.05)' },
-        },
-        yPf: {
-          type:     'linear',
-          position: 'right',
-          min:      0,
-          max:      1,
-          title:    { display: true, text: 'PF', color: COLORS.green.border },
-          ticks:    { color: COLORS.green.border },
-          grid:     { drawOnChartArea: false },
-        },
         yHz: {
           type:     'linear',
-          position: 'right',
-          offset:   true,
+          position: 'left',
           suggestedMin: 45,
           suggestedMax: 65,
           title:    { display: true, text: 'Hz', color: COLORS.cyan.border },
           ticks:    { color: COLORS.cyan.border },
-          grid:     { drawOnChartArea: false },
+          grid:     { color: 'rgba(255,255,255,0.05)' },
         },
         yVa: {
           type:     'linear',
-          position: 'left',
-          display:  false,
+          position: 'right',
           beginAtZero: true,
+          title:    { display: true, text: 'VA', color: COLORS.orange.border },
+          ticks:    { color: COLORS.orange.border },
           grid:     { drawOnChartArea: false },
         },
       },
@@ -332,8 +390,27 @@ function pushRealtimeDetailData(chart, label, d) {
   data.labels.push(label);
   data.datasets[0].data.push(Number(d?.energi_kwh) || 0);
   data.datasets[1].data.push(Number(d?.power_factor) || 0);
-  data.datasets[2].data.push(Number(d?.frekuensi) || 0);
-  data.datasets[3].data.push(Number(d?.apparent_power ?? d?.daya_va ?? d?.apparent ?? d?.daya) || 0);
+
+  chart.update('none');
+}
+
+/**
+ * Push frequency and apparent power to the tertiary realtime chart.
+ * @param {Chart} chart
+ * @param {string} label
+ * @param {object} d
+ */
+function pushRealtimeElectricalDetailData(chart, label, d) {
+  const data = chart.data;
+
+  if (data.labels.length >= MAX_POINTS) {
+    data.labels.shift();
+    data.datasets.forEach((dataset) => dataset.data.shift());
+  }
+
+  data.labels.push(label);
+  data.datasets[0].data.push(Number(d?.frekuensi) || 0);
+  data.datasets[1].data.push(Number(d?.apparent_power ?? d?.daya_va ?? d?.apparent ?? d?.daya) || 0);
 
   chart.update('none');
 }
@@ -390,8 +467,18 @@ function loadHistoryIntoDetailChart(chart, logs) {
   chart.data.labels           = logs.map(l => new Date(l.waktu).toLocaleTimeString('id-ID'));
   chart.data.datasets[0].data = logs.map(readEnergy);
   chart.data.datasets[1].data = logs.map(readPowerFactor);
-  chart.data.datasets[2].data = logs.map(readFrequency);
-  chart.data.datasets[3].data = logs.map(readApparentPower);
+  chart.update();
+}
+
+/**
+ * Load frequency and apparent power history into the tertiary chart.
+ * @param {Chart} chart
+ * @param {Array} logs
+ */
+function loadHistoryIntoElectricalDetailChart(chart, logs) {
+  chart.data.labels           = logs.map(l => new Date(l.waktu).toLocaleTimeString('id-ID'));
+  chart.data.datasets[0].data = logs.map(readFrequency);
+  chart.data.datasets[1].data = logs.map(readApparentPower);
   chart.update();
 }
 
@@ -406,9 +493,12 @@ function resetChartZoom(chart) {
 export {
   createRealtimeChart,
   createRealtimeDetailChart,
+  createRealtimeElectricalDetailChart,
   pushRealtimeData,
   pushRealtimeDetailData,
+  pushRealtimeElectricalDetailData,
   loadHistoryIntoChart,
   loadHistoryIntoDetailChart,
+  loadHistoryIntoElectricalDetailChart,
   resetChartZoom,
 };

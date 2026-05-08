@@ -1,14 +1,36 @@
-import { Bell, Moon, Sun } from 'lucide-react';
+import { Bell, Clock, Cloud } from 'lucide-react';
+import { useDataStore } from '../lib/store';
 import { useStore } from '../store';
-import { useAuthStore } from '../lib/store';
 
 type TopbarProps = {
   title: string;
 };
 
 export function Topbar({ title }: TopbarProps) {
-  const { theme, toggleTheme } = useStore();
-  const { role, isTempAccount, loading } = useAuthStore();
+  const { notifications } = useStore();
+  const { currentData, connectionMeta } = useDataStore();
+  const endpoint = String(connectionMeta?.endpointBadge || 'CLOUD');
+  const connection = String(connectionMeta?.connection || 'Memeriksa perangkat...');
+  const fallback = connectionMeta?.fallbackActive ? ' · FALLBACK' : '';
+  const lastDeviceSeenAt = Number(connectionMeta?.lastDeviceSeenAt ?? 0);
+  const heartbeatLabel =
+    connection === 'Connected'
+      ? 'Heartbeat aktif'
+      : connection === 'Device Offline'
+        ? 'Tanpa heartbeat'
+        : 'Menunggu heartbeat';
+  const connectionColor =
+    connection === 'Connected'
+      ? 'text-emerald-200'
+      : connection === 'Memeriksa perangkat...' || connection === 'Memulihkan...'
+        ? 'text-amber-200'
+        : 'text-red-200';
+
+  const formatTime = (timestamp?: number) => {
+    if (!timestamp) return '-';
+    if (timestamp < 1e12) return 'Live';
+    return new Date(timestamp).toLocaleString('id-ID');
+  };
 
   const handleNotification = () => {
     if (window.electronAPI) {
@@ -19,39 +41,34 @@ export function Topbar({ title }: TopbarProps) {
     }
   };
 
-  const roleText = loading
-    ? 'Memuat...'
-    : isTempAccount
-    ? 'Temp Session'
-    : role === 'admin'
-    ? 'Admin'
-    : 'User';
-
   return (
-    <header className="h-16 bg-white dark:bg-gray-800 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700 shrink-0">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <header className="min-h-16 bg-[#090d12] flex flex-col gap-3 border-b border-slate-800/90 px-4 py-3 shadow-[0_10px_35px_rgba(0,0,0,0.28)] lg:flex-row lg:items-center lg:justify-between sm:px-6 shrink-0">
+      <h2 className="text-lg font-black text-white">
         {title}
       </h2>
-      <div className="flex items-center space-x-4">
-        <div className="hidden sm:flex items-center text-sm bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full">
-          <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-          <span className="text-gray-600 dark:text-gray-300 font-medium capitalize">{roleText}</span>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+        <div className="flex h-10 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-900/75 px-3 shadow-lg sm:max-w-[640px]">
+          <span className="shrink-0 rounded-md border border-blue-700/55 bg-blue-900/45 px-2 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-blue-200">
+            {endpoint}
+          </span>
+          <span className={`shrink-0 whitespace-nowrap text-sm font-black ${connectionColor}`}>{connection}{fallback}</span>
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-slate-700 bg-slate-950/55 px-2.5 py-1 text-[11px] font-bold text-slate-300">
+            {heartbeatLabel}
+          </span>
+          <span className="hidden h-4 w-px shrink-0 bg-slate-700/80 md:block" />
+          <span className="flex min-w-0 items-center gap-1.5 truncate text-xs font-semibold text-slate-400">
+            <Cloud className="h-3.5 w-3.5 shrink-0 text-sky-300" />
+            <span className="truncate">Update terakhir: {formatTime(lastDeviceSeenAt || currentData?.updated_at)}</span>
+            <Clock className="hidden h-3.5 w-3.5 shrink-0 text-sky-300 md:block" />
+          </span>
         </div>
         <button
           onClick={handleNotification}
-          className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          disabled={!notifications}
+          title={notifications ? 'Test notifikasi' : 'Notifikasi nonaktif'}
+          className="grid h-10 w-10 place-items-center rounded-lg border border-slate-700/80 bg-slate-900/70 text-slate-400 transition hover:border-sky-500/45 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Bell className="w-5 h-5" />
-        </button>
-        <button
-          onClick={toggleTheme}
-          className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-        >
-          {theme === 'light' ? (
-            <Moon className="w-5 h-5" />
-          ) : (
-            <Sun className="w-5 h-5" />
-          )}
         </button>
       </div>
     </header>

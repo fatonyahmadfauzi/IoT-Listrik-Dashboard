@@ -11,7 +11,14 @@
 
 import { db }           from './firebase-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount } from './auth.js';
-import { createRealtimeChart, createRealtimeDetailChart, loadHistoryIntoChart, loadHistoryIntoDetailChart } from './charts.js';
+import {
+  createRealtimeChart,
+  createRealtimeDetailChart,
+  createRealtimeElectricalDetailChart,
+  loadHistoryIntoChart,
+  loadHistoryIntoDetailChart,
+  loadHistoryIntoElectricalDetailChart,
+} from './charts.js';
 import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, startSystemNotificationFeed, initAudio, showToast, stopWebSiren } from './notifications.js';
 import { createLogDateFilter } from './date-filter.js';
 import { ref, query, orderByKey, limitToLast, onValue }
@@ -27,10 +34,12 @@ const exportBtn   = document.getElementById('exportBtn');
 const countEl     = document.getElementById('logCount');
 const canvas      = document.getElementById('historyChart');
 const detailCanvas = document.getElementById('historyDetailChart');
+const electricalDetailCanvas = document.getElementById('historyElectricalDetailChart');
 const dateFilterRoot = document.getElementById('historyDateFilter');
 
 let chart     = null;
 let detailChart = null;
+let electricalDetailChart = null;
 let allLogs   = [];   // raw log array (newest first)
 let dateLogs  = [];   // date-filtered log array (newest first)
 let visibleLogs = []; // date + status filtered log array (newest first)
@@ -255,9 +264,11 @@ function applyFilter() {
     const chartLogs = filtered.slice().reverse().slice(-50);
     if (chart) loadHistoryIntoChart(chart, chartLogs);
     if (detailChart) loadHistoryIntoDetailChart(detailChart, chartLogs);
+    if (electricalDetailChart) loadHistoryIntoElectricalDetailChart(electricalDetailChart, chartLogs);
   } else {
     if (chart) loadHistoryIntoChart(chart, []);
     if (detailChart) loadHistoryIntoDetailChart(detailChart, []);
+    if (electricalDetailChart) loadHistoryIntoElectricalDetailChart(electricalDetailChart, []);
   }
   
   // Auto-scroll logic
@@ -339,6 +350,9 @@ initPage({
     // Init history chart
     if (canvas) chart = createRealtimeChart(canvas);
     if (detailCanvas) detailChart = createRealtimeDetailChart(detailCanvas);
+    if (electricalDetailCanvas) {
+      electricalDetailChart = createRealtimeElectricalDetailChart(electricalDetailCanvas);
+    }
     initHistoryLogTabs();
     dateFilter = createLogDateFilter({
       root: dateFilterRoot,

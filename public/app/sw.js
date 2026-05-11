@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260508-status-charts";
+const CACHE_NAME = "iot-app-v20260508-speed-insights";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
@@ -38,6 +38,7 @@ const CACHE_URLS = [
   "/js/notifications.js",
   "/js/client-config.js",
   "/js/hybrid-listrik.js",
+  "/js/speed-insights.js",
   "/vendor/chart.umd.min.js",
   "/vendor/hammer.min.js",
   "/vendor/chartjs-plugin-zoom.min.js",

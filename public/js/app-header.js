@@ -22,6 +22,12 @@ const lastUpdated = document.getElementById("lastUpdated");
 const alertPulse = document.getElementById("alertPulse");
 const testNotifyBtn = document.getElementById("testNotifyBtn");
 
+const mEndpointBadge = document.getElementById("mobileEndpointBadge");
+const mConnStateText = document.getElementById("mobileConnStateText");
+const mHeartbeatText = document.getElementById("mobileHeartbeatText");
+const mLastUpdated = document.getElementById("mobileLastUpdated");
+const mAlertPulse = document.getElementById("mobileAlertPulse");
+
 let lastSeenAt = null;
 let lastStatus = "NORMAL";
 let firebaseConnected = true;
@@ -54,20 +60,21 @@ function resolveUpdatedAt(payload) {
 }
 
 function setBadge(label = "CLOUD") {
-  if (!endpointBadge) return;
   const safeLabel = label === "LOCAL" || label === "FALLBACK" ? label : "CLOUD";
-  endpointBadge.textContent = safeLabel;
-  endpointBadge.className =
-    "ep-badge " +
-    (safeLabel === "LOCAL"
-      ? "ep-local"
-      : safeLabel === "FALLBACK"
-        ? "ep-fallback"
-        : "ep-cloud");
+  const className = "ep-badge " + (safeLabel === "LOCAL" ? "ep-local" : safeLabel === "FALLBACK" ? "ep-fallback" : "ep-cloud");
+
+  if (endpointBadge) {
+    endpointBadge.textContent = safeLabel;
+    endpointBadge.className = className;
+  }
+  if (mEndpointBadge) {
+    mEndpointBadge.textContent = safeLabel;
+    mEndpointBadge.className = className;
+  }
 }
 
 function renderHeader() {
-  if (!endpointBadge || !connStateText) return;
+  if (!connStateText && !mConnStateText) return;
 
   const now = Date.now();
   const hasFreshHeartbeat =
@@ -75,28 +82,34 @@ function renderHeader() {
 
   setBadge("CLOUD");
 
+  let stateTxt = "";
+  let hbTxt = "";
+
   if (!firebaseConnected) {
-    connStateText.textContent = "Memulihkan...";
-    if (heartbeatText) heartbeatText.textContent = "Tanpa heartbeat";
+    stateTxt = "Memulihkan...";
+    hbTxt = "Tanpa heartbeat";
   } else if (hasFreshHeartbeat) {
-    connStateText.textContent = "Device Online";
-    if (heartbeatText) heartbeatText.textContent = "Heartbeat aktif";
+    stateTxt = "Device Online";
+    hbTxt = "Heartbeat aktif";
   } else {
-    connStateText.textContent = "Device Offline";
-    if (heartbeatText) heartbeatText.textContent = "Tanpa heartbeat";
+    stateTxt = "Device Offline";
+    hbTxt = "Tanpa heartbeat";
   }
 
-  if (lastUpdated) {
-    const seenLabel = formatTime(lastSeenAt);
-    lastUpdated.textContent = seenLabel
-      ? `Update terakhir: ${seenLabel}`
-      : "Update terakhir: -";
-  }
+  if (connStateText) connStateText.textContent = stateTxt;
+  if (mConnStateText) mConnStateText.textContent = stateTxt;
 
-  if (alertPulse) {
-    const risky = ["WARNING", "LEAKAGE", "DANGER"].includes(String(lastStatus).toUpperCase());
-    alertPulse.classList.toggle("hidden", !risky);
-  }
+  if (heartbeatText) heartbeatText.textContent = hbTxt;
+  if (mHeartbeatText) mHeartbeatText.textContent = hbTxt;
+
+  const seenLabel = formatTime(lastSeenAt);
+  const upTxt = seenLabel ? `Update terakhir: ${seenLabel}` : "Update terakhir: -";
+  if (lastUpdated) lastUpdated.textContent = upTxt;
+  if (mLastUpdated) mLastUpdated.textContent = upTxt;
+
+  const risky = ["WARNING", "LEAKAGE", "DANGER"].includes(String(lastStatus).toUpperCase());
+  if (alertPulse) alertPulse.classList.toggle("hidden", !risky);
+  if (mAlertPulse) mAlertPulse.classList.toggle("hidden", !risky);
 }
 
 function startSharedHeaderFeed() {
@@ -146,7 +159,7 @@ async function handleTestNotification() {
 
 testNotifyBtn?.addEventListener("click", handleTestNotification);
 
-if (endpointBadge && connStateText) {
+if ((endpointBadge && connStateText) || (mEndpointBadge && mConnStateText)) {
   renderHeader();
   onAuthStateChanged(auth, (user) => {
     if (!user) {

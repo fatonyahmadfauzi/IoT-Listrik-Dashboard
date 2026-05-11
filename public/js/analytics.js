@@ -68,6 +68,8 @@ let latestRealtime = null;
 let trendChart = null;
 let statusChart = null;
 let snapshotChart = null;
+let energyPfChart = null;
+let frequencyApparentChart = null;
 let unsubLogs = null;
 let unsubListrik = null;
 let dateFilter = null;
@@ -240,6 +242,111 @@ function createTrendChart(canvas) {
   });
 }
 
+function createEnergyPfChart(canvas) {
+  applyChartDefaults();
+  return new Chart(canvas, {
+    type: "line",
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 220 },
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: COLORS.text, boxWidth: 13, padding: 14 } },
+        tooltip: {
+          backgroundColor: COLORS.surface,
+          borderColor: "rgba(255,255,255,0.14)",
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: (ctx) => {
+              const unit = ctx.dataset.yAxisID === "yKwh" ? " kWh" : "";
+              return ` ${ctx.dataset.label}: ${Number(ctx.raw || 0).toFixed(unit ? 3 : 2)}${unit}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: COLORS.text, maxRotation: 0, maxTicksLimit: 8 },
+          grid: { color: "rgba(255,255,255,0.04)" },
+        },
+        yKwh: {
+          type: "linear",
+          position: "left",
+          beginAtZero: true,
+          title: { display: true, text: "Energi (kWh)", color: COLORS.energy },
+          ticks: { color: COLORS.energy },
+          grid: { color: "rgba(255,255,255,0.05)" },
+        },
+        yPf: {
+          type: "linear",
+          position: "right",
+          min: 0,
+          max: 1,
+          title: { display: true, text: "PF", color: COLORS.normal },
+          ticks: { color: COLORS.normal },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+function createFrequencyApparentChart(canvas) {
+  applyChartDefaults();
+  return new Chart(canvas, {
+    type: "line",
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 220 },
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: COLORS.text, boxWidth: 13, padding: 14 } },
+        tooltip: {
+          backgroundColor: COLORS.surface,
+          borderColor: "rgba(255,255,255,0.14)",
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: (ctx) => {
+              const unit = ctx.dataset.yAxisID === "yHz" ? " Hz" : " VA";
+              const digits = ctx.dataset.yAxisID === "yHz" ? 1 : 0;
+              return ` ${ctx.dataset.label}: ${Number(ctx.raw || 0).toFixed(digits)}${unit}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: COLORS.text, maxRotation: 0, maxTicksLimit: 8 },
+          grid: { color: "rgba(255,255,255,0.04)" },
+        },
+        yHz: {
+          type: "linear",
+          position: "left",
+          suggestedMin: 45,
+          suggestedMax: 65,
+          title: { display: true, text: "Hz", color: COLORS.pf },
+          ticks: { color: COLORS.pf },
+          grid: { color: "rgba(255,255,255,0.05)" },
+        },
+        yVa: {
+          type: "linear",
+          position: "right",
+          beginAtZero: true,
+          title: { display: true, text: "VA", color: COLORS.apparent },
+          ticks: { color: COLORS.apparent },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
 function createStatusChart(canvas) {
   applyChartDefaults();
   return new Chart(canvas, {
@@ -325,10 +432,23 @@ function ensureCharts() {
     return false;
   }
 
-  trendChart ||= createTrendChart(document.getElementById("analyticsTrendChart"));
-  statusChart ||= createStatusChart(document.getElementById("analyticsStatusChart"));
-  snapshotChart ||= createSnapshotChart(document.getElementById("analyticsSnapshotChart"));
-  return Boolean(trendChart && statusChart && snapshotChart);
+  const trendCanvas = document.getElementById("analyticsTrendChart");
+  const statusCanvas = document.getElementById("analyticsStatusChart");
+  const snapshotCanvas = document.getElementById("analyticsSnapshotChart");
+  const energyPfCanvas = document.getElementById("analyticsEnergyPfChart");
+  const frequencyApparentCanvas = document.getElementById("analyticsFrequencyApparentChart");
+
+  if (!trendCanvas || !statusCanvas || !snapshotCanvas || !energyPfCanvas || !frequencyApparentCanvas) {
+    showToast("Elemen chart analytics belum lengkap", "error");
+    return false;
+  }
+
+  trendChart ||= createTrendChart(trendCanvas);
+  statusChart ||= createStatusChart(statusCanvas);
+  snapshotChart ||= createSnapshotChart(snapshotCanvas);
+  energyPfChart ||= createEnergyPfChart(energyPfCanvas);
+  frequencyApparentChart ||= createFrequencyApparentChart(frequencyApparentCanvas);
+  return Boolean(trendChart && statusChart && snapshotChart && energyPfChart && frequencyApparentChart);
 }
 
 function calculateStats(entries) {
@@ -435,6 +555,69 @@ function updateTrendChart(entries) {
   trendChart.update("none");
 }
 
+function updateSupportCharts(entries) {
+  const selected = entries.slice(-TREND_LIMIT);
+  const labels = selected.map((entry) => formatTime(entry.waktu));
+
+  energyPfChart.data.labels = labels;
+  energyPfChart.data.datasets = [
+    {
+      label: "Energi (kWh)",
+      data: selected.map((entry) => entry.energi_kwh),
+      borderColor: COLORS.energy,
+      backgroundColor: "rgba(167,139,250,0.10)",
+      borderWidth: 2,
+      tension: 0.35,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      fill: true,
+      yAxisID: "yKwh",
+    },
+    {
+      label: "Power Factor",
+      data: selected.map((entry) => entry.power_factor),
+      borderColor: COLORS.normal,
+      backgroundColor: "rgba(34,197,94,0.08)",
+      borderWidth: 2,
+      tension: 0.35,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      fill: false,
+      yAxisID: "yPf",
+    },
+  ];
+  energyPfChart.update("none");
+
+  frequencyApparentChart.data.labels = labels;
+  frequencyApparentChart.data.datasets = [
+    {
+      label: "Frekuensi (Hz)",
+      data: selected.map((entry) => entry.frekuensi),
+      borderColor: COLORS.pf,
+      backgroundColor: "rgba(56,189,248,0.08)",
+      borderWidth: 2,
+      tension: 0.35,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      fill: false,
+      yAxisID: "yHz",
+    },
+    {
+      label: "Apparent (VA)",
+      data: selected.map((entry) => entry.daya),
+      borderColor: COLORS.apparent,
+      backgroundColor: "rgba(251,146,60,0.08)",
+      borderWidth: 2,
+      tension: 0.35,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      fill: false,
+      yAxisID: "yVa",
+    },
+  ];
+  frequencyApparentChart.update("none");
+}
+
 function updateStatusChart(stats) {
   const counts = [
     stats.statusCounts.NORMAL,
@@ -510,6 +693,7 @@ function renderAnalytics() {
 
   updateSummary(stats, latest);
   updateTrendChart(logs);
+  updateSupportCharts(logs);
   updateStatusChart(stats);
   updateSnapshotChart(latest, stats);
 }

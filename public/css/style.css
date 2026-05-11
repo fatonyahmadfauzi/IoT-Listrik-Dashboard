@@ -2287,12 +2287,17 @@ tbody tr:hover {
   border-radius: var(--radius-md);
 }
 .ep-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
   padding: 4px 8px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  line-height: 1;
 }
 .ep-cloud {
   background: rgba(59, 130, 246, 0.15);
@@ -5616,6 +5621,9 @@ body > header > nav {
 .date-filter-month {
   display: grid;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .date-filter-month span {
@@ -5627,9 +5635,16 @@ body > header > nav {
 }
 
 .date-filter-month input {
+  display: block;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  justify-self: stretch;
   min-height: 38px;
   padding: 0 12px;
+  overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: var(--radius-md);
   background: rgba(15, 23, 42, 0.72);
@@ -5637,6 +5652,12 @@ body > header > nav {
   color-scheme: dark;
   font: inherit;
   font-size: 12px;
+}
+
+.date-filter-month input::-webkit-date-and-time-value {
+  min-width: 0;
+  width: 100%;
+  text-align: center;
 }
 
 .date-filter-calendar {
@@ -5708,30 +5729,63 @@ body > header > nav {
   }
 
   .date-filter-card {
+    --date-filter-mobile-gutter: 10px;
     gap: 14px;
+    overflow: hidden;
   }
 
   .date-filter-header,
   .date-filter-controls {
     grid-template-columns: 1fr;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .date-filter-summary {
-    width: 100%;
+    box-sizing: border-box;
+    width: auto;
+    inline-size: calc(100% - (var(--date-filter-mobile-gutter) * 2));
+    max-inline-size: calc(100% - (var(--date-filter-mobile-gutter) * 2));
+    margin-inline: var(--date-filter-mobile-gutter);
     min-width: 0;
     text-align: left;
+  }
+
+  .date-filter-controls {
+    box-sizing: border-box;
+    inline-size: calc(100% - (var(--date-filter-mobile-gutter) * 2));
+    max-inline-size: calc(100% - (var(--date-filter-mobile-gutter) * 2));
+    margin-inline: var(--date-filter-mobile-gutter);
   }
 
   .date-filter-presets {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
   }
 
   .date-filter-preset {
     width: 100%;
   }
 
+  .date-filter-month {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    margin-inline: 0;
+  }
+
+  .date-filter-month input {
+    inline-size: 100%;
+    max-inline-size: 100%;
+  }
+
   .date-filter-calendar {
+    box-sizing: border-box;
+    width: auto;
+    inline-size: calc(100% - (var(--date-filter-mobile-gutter) * 2));
+    max-inline-size: calc(100% - (var(--date-filter-mobile-gutter) * 2));
+    margin-inline: var(--date-filter-mobile-gutter);
+    min-width: 0;
     gap: 5px;
     padding: 10px;
   }
@@ -5753,6 +5807,10 @@ body > header > nav {
 }
 
 @media (max-width: 420px) {
+  .date-filter-card {
+    --date-filter-mobile-gutter: 8px;
+  }
+
   .date-filter-header h2 {
     font-size: 18px;
   }
@@ -5770,6 +5828,12 @@ body > header > nav {
     padding: 8px;
   }
 
+  .date-filter-month {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    margin-inline: 0;
+  }
+
   .date-filter-weekday {
     font-size: 9px;
   }
@@ -5782,6 +5846,10 @@ body > header > nav {
 
   .date-filter-day small {
     font-size: 8px;
+  }
+
+  .date-filter-month input {
+    padding-inline: 10px;
   }
 }
 
@@ -9354,6 +9422,7 @@ html.lenis, html.lenis body {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  container: analytics-page / inline-size;
 }
 
 .analytics-hero {
@@ -9363,6 +9432,10 @@ html.lenis, html.lenis body {
   align-items: stretch;
   padding: 24px;
   border-radius: var(--radius-xl);
+}
+
+.analytics-hero > div {
+  min-width: 0;
 }
 
 .analytics-eyebrow,
@@ -9397,6 +9470,7 @@ html.lenis, html.lenis body {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
+  min-width: 0;
   min-height: 132px;
   padding: 20px;
   border: 1px solid var(--glass-border);
@@ -9535,6 +9609,22 @@ html.lenis, html.lenis body {
   height: 320px;
 }
 
+.analytics-trend-divider {
+  margin: 20px 0 16px;
+}
+
+.analytics-support-section {
+  min-width: 0;
+}
+
+.analytics-support-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analytics-support-chart {
+  height: 230px;
+}
+
 .analytics-donut-container {
   height: 260px;
 }
@@ -9589,12 +9679,57 @@ html.lenis, html.lenis body {
   font-size: 11px;
 }
 
+@container analytics-page (max-width: 860px) {
+  .analytics-hero {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .analytics-hero h2,
+  .analytics-hero p {
+    max-width: none;
+  }
+
+  .analytics-live-card {
+    min-height: 0;
+    padding: 18px;
+    justify-content: flex-start;
+  }
+}
+
+@container analytics-page (max-width: 520px) {
+  .analytics-hero {
+    padding: 18px 16px;
+  }
+
+  .analytics-hero h2 {
+    font-size: 22px;
+    line-height: 1.16;
+  }
+
+  .analytics-hero p {
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .analytics-live-card strong.status-text {
+    max-width: 100%;
+    font-size: 16px;
+    white-space: normal;
+  }
+}
+
 @media (max-width: 1180px) {
   .analytics-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .analytics-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-support-stack {
     grid-template-columns: 1fr;
   }
 }
@@ -9629,6 +9764,11 @@ html.lenis, html.lenis body {
     min-height: 260px;
   }
 
+  .analytics-support-chart {
+    height: 220px;
+    min-height: 220px;
+  }
+
   .analytics-donut-container {
     height: 230px;
     min-height: 230px;
@@ -9657,6 +9797,11 @@ html.lenis, html.lenis body {
     height: 230px;
     min-height: 230px;
   }
+
+  .analytics-support-chart {
+    height: 190px;
+    min-height: 190px;
+  }
 }
 
 /* =============================================================
@@ -9682,16 +9827,21 @@ html.lenis, html.lenis body {
    Shared Protected App Header
 ============================================================= */
 .app-topbar-actions {
+  --app-header-control-height: 44px;
   flex-wrap: nowrap;
   justify-content: flex-end;
   overflow: visible;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
+  min-height: var(--app-header-control-height);
 }
 
 .app-header-status {
-  min-height: 40px;
+  box-sizing: border-box;
+  min-height: var(--app-header-control-height, 44px);
+  height: var(--app-header-control-height, 44px);
   max-width: none;
+  align-items: center;
   gap: 8px;
   padding: 6px 12px;
   border-radius: var(--radius-md);
@@ -9700,10 +9850,13 @@ html.lenis, html.lenis body {
 }
 
 .app-header-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.1;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -9754,9 +9907,11 @@ html.lenis, html.lenis body {
 }
 
 .app-header-notify {
-  width: 40px;
-  min-width: 40px;
-  height: 40px;
+  box-sizing: border-box;
+  width: var(--app-header-control-height, 44px);
+  min-width: var(--app-header-control-height, 44px);
+  height: var(--app-header-control-height, 44px);
+  min-height: var(--app-header-control-height, 44px);
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -9787,53 +9942,71 @@ html.lenis, html.lenis body {
 
 /* ── responsive ≤900px: status strip drops below header row ── */
 @media (max-width: 900px) {
-  .topbar:has(.app-topbar-actions) {
-    height: auto;
-    min-height: var(--topbar-h);
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto;
-    align-items: center;
-    gap: 0 12px;
-    padding-block: 8px;
-  }
-
-  .topbar:has(.app-topbar-actions) .topbar-heading {
-    min-width: 0;
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .topbar:has(.app-topbar-actions) .topbar-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* topbar-actions becomes a 2-row grid internally */
-  .app-topbar-actions {
-    display: contents;
-  }
-
-  /* Actions row (Install + Notify btn): stays top right */
-  .app-topbar-actions > #installBtn,
-  .app-topbar-actions > .app-header-notify {
-    grid-row: 1;
-  }
-
-  /* Status strip: hide completely on mobile when it doesn't fit */
-  .app-topbar-actions > .app-header-status {
+  .app-header-status {
     display: none !important;
   }
+}
 
-  .app-header-divider {
-    display: block;
+/* ── Mobile Connection Strip (Below Header) ── */
+.mobile-conn-strip {
+  display: none; /* Hidden on desktop */
+}
+
+@media (max-width: 900px) {
+  .mobile-conn-strip {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: calc(100% - 64px);
+    margin: 12px 32px 0;
+    padding: 12px 14px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(96, 165, 250, 0.18);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    z-index: 80;
+    position: sticky;
+    top: calc(var(--topbar-h) + 10px);
+    flex-wrap: wrap;
+    text-align: left;
   }
 
-  .app-header-notify {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
+  .mobile-conn-strip .app-header-state,
+  .mobile-conn-strip .app-header-heartbeat,
+  .mobile-conn-strip .app-header-updated {
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    justify-content: flex-start;
+  }
+
+  .mobile-conn-strip .ep-badge {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mobile-conn-strip {
+    width: calc(100% - 28px);
+    margin: 12px 14px 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .mobile-conn-strip {
+    width: calc(100% - 24px);
+    margin: 12px 12px 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-conn-strip {
+    width: calc(100% - 20px);
+    margin: 10px 10px 0;
   }
 }
 
@@ -9844,9 +10017,652 @@ html.lenis, html.lenis body {
   }
 
   .app-header-notify {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
+    width: var(--app-header-control-height, 44px);
+    min-width: var(--app-header-control-height, 44px);
+    height: var(--app-header-control-height, 44px);
+    min-height: var(--app-header-control-height, 44px);
+  }
+
+  .mobile-conn-strip {
+    gap: 9px 10px;
+    padding: 12px;
+  }
+
+  .mobile-conn-strip .app-header-updated {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 }
 
+/* ── Final app header/content responsive alignment
+   One gutter token keeps the page title, notification action, status strip,
+   and first content card aligned at every protected-app breakpoint. */
+.main-content {
+  --app-responsive-gutter: 32px;
+}
+
+.topbar,
+.topbar:has(.app-topbar-actions),
+.topbar:has(.dashboard-topbar-actions),
+.page-content {
+  padding-left: var(--app-responsive-gutter) !important;
+  padding-right: var(--app-responsive-gutter) !important;
+}
+
+@media (max-width: 1180px) {
+  .main-content {
+    --app-responsive-gutter: 22px;
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar,
+  .topbar:has(.app-topbar-actions),
+  .topbar:has(.dashboard-topbar-actions) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .topbar-heading,
+  .topbar > div:first-child {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .topbar-title {
+    text-align: left;
+  }
+
+  .app-topbar-actions,
+  .dashboard-topbar-actions {
+    justify-self: end;
+    margin-left: auto;
+    max-width: none;
+  }
+
+  .app-topbar-actions .app-header-status,
+  .dashboard-topbar-actions .app-header-status,
+  .app-topbar-actions #connStrip,
+  .dashboard-topbar-actions #connStrip {
+    display: none !important;
+  }
+
+  .mobile-conn-strip {
+    position: relative !important;
+    top: auto !important;
+    z-index: auto !important;
+    width: calc(100% - (var(--app-responsive-gutter) * 2)) !important;
+    max-width: none !important;
+    margin: 14px var(--app-responsive-gutter) 0 !important;
+    box-sizing: border-box;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    gap: 9px 10px;
+  }
+
+  .mobile-conn-strip .app-header-state,
+  .mobile-conn-strip .app-header-heartbeat,
+  .mobile-conn-strip .app-header-updated {
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+  }
+
+  .mobile-conn-strip .app-header-updated {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    --app-responsive-gutter: 14px;
+  }
+}
+
+@media (max-width: 430px) {
+  .main-content {
+    --app-responsive-gutter: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .main-content {
+    --app-responsive-gutter: 10px;
+  }
+}
+
+/* History event table card mode for non-full desktop layouts. */
+#historyLogsCard {
+  container: history-log-card / inline-size;
+}
+
+@media (max-width: 1240px) {
+  #historyLogsCard .history-log-panel {
+    overflow-x: visible !important;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.26);
+    box-shadow: none;
+  }
+
+  #historyLogsCard .history-table,
+  #historyLogsCard .history-summary-table,
+  #historyLogsCard .history-detail-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  #historyLogsCard .history-table thead {
+    display: none !important;
+  }
+
+  #historyLogsCard .history-table tbody {
+    display: grid !important;
+    width: 100%;
+    max-width: 100%;
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-table tr {
+    display: grid !important;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px;
+    margin: 0;
+    padding: 14px;
+    box-sizing: border-box;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: var(--radius-md);
+    background:
+      linear-gradient(135deg, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.74)),
+      rgba(15, 23, 42, 0.5);
+    box-shadow: 0 12px 24px rgba(2, 6, 23, 0.16);
+  }
+
+  #historyLogsCard .history-table td {
+    display: grid !important;
+    grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    color: var(--text-primary);
+    text-align: left !important;
+    overflow-wrap: anywhere;
+  }
+
+  #historyLogsCard .history-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
+
+  #historyLogsCard .history-table td[colspan] {
+    display: flex !important;
+    min-height: 112px;
+    align-items: center;
+    justify-content: center;
+    text-align: center !important;
+  }
+
+  #historyLogsCard .history-table td[colspan]::before {
+    content: none;
+  }
+
+  #historyLogsCard .history-load-values {
+    display: grid;
+    gap: 3px;
+    justify-items: start;
+  }
+
+  #historyLogsCard .history-val-sep {
+    display: none;
+  }
+
+  #historyLogsCard .status-badge,
+  #historyLogsCard .relay-state-badge,
+  #historyLogsCard .source-badge {
+    width: fit-content;
+    max-width: 100%;
+  }
+}
+
+@container history-log-card (max-width: 1240px) {
+  #historyLogsCard .history-log-panel {
+    overflow-x: visible !important;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.26);
+    box-shadow: none;
+  }
+
+  #historyLogsCard .history-table,
+  #historyLogsCard .history-summary-table,
+  #historyLogsCard .history-detail-table {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  #historyLogsCard .history-table thead {
+    display: none !important;
+  }
+
+  #historyLogsCard .history-table tbody {
+    display: grid !important;
+    width: 100%;
+    max-width: 100%;
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-table tr {
+    display: grid !important;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 8px;
+    margin: 0;
+    padding: 14px;
+    box-sizing: border-box;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: var(--radius-md);
+    background:
+      linear-gradient(135deg, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.74)),
+      rgba(15, 23, 42, 0.5);
+    box-shadow: 0 12px 24px rgba(2, 6, 23, 0.16);
+  }
+
+  #historyLogsCard .history-table td {
+    display: grid !important;
+    grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0 !important;
+    color: var(--text-primary);
+    text-align: left !important;
+    overflow-wrap: anywhere;
+  }
+
+  #historyLogsCard .history-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
+
+  #historyLogsCard .history-table td[colspan] {
+    display: flex !important;
+    min-height: 112px;
+    align-items: center;
+    justify-content: center;
+    text-align: center !important;
+  }
+
+  #historyLogsCard .history-table td[colspan]::before {
+    content: none;
+  }
+
+  #historyLogsCard .history-load-values {
+    display: grid;
+    gap: 3px;
+    justify-items: start;
+  }
+
+  #historyLogsCard .history-val-sep {
+    display: none;
+  }
+
+  #historyLogsCard .status-badge,
+  #historyLogsCard .relay-state-badge,
+  #historyLogsCard .source-badge {
+    width: fit-content;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  #historyLogsCard .history-table tbody {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  #historyLogsCard .history-table tr {
+    padding: 12px;
+  }
+
+  #historyLogsCard .history-table td {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+/* History log event toolbar: keep controls inside the card on every width. */
+#historyLogsCard,
+#historyLogsCard * {
+  box-sizing: border-box;
+}
+
+#historyLogsCard .section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  max-width: 100%;
+}
+
+#historyLogsCard .section-header > div:first-child {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+#historyLogsCard .log-toolbar {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#historyLogsCard .log-toolbar #filterStatus,
+#historyLogsCard .log-toolbar .history-log-tabs,
+#historyLogsCard .log-toolbar #exportBtn {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+#historyLogsCard .log-toolbar #filterStatus {
+  width: min(180px, 100%) !important;
+}
+
+#historyLogsCard .log-toolbar .history-log-tabs {
+  width: auto;
+}
+
+#historyLogsCard .log-toolbar #exportBtn {
+  width: auto !important;
+}
+
+@container history-log-card (max-width: 860px) {
+  #historyLogsCard .section-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #historyLogsCard .log-toolbar {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  #historyLogsCard .log-toolbar #filterStatus,
+  #historyLogsCard .log-toolbar .history-log-tabs,
+  #historyLogsCard .log-toolbar #exportBtn {
+    flex: 1 1 160px !important;
+  }
+}
+
+@container history-log-card (max-width: 620px) {
+  #historyLogsCard .log-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  #historyLogsCard .log-toolbar #filterStatus,
+  #historyLogsCard .log-toolbar .history-log-tabs,
+  #historyLogsCard .log-toolbar #exportBtn {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  #historyLogsCard .log-toolbar .history-log-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #historyLogsCard .log-toolbar .history-log-tab {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* =============================================================
+   Protected app responsive alignment final pass.
+   Keeps topbar, mobile connection strip, filter cards, analytics
+   hero, and section cards on the same page gutter across app menus.
+   ============================================================= */
+.main-content {
+  --app-responsive-gutter: 32px;
+}
+
+.topbar,
+.topbar:has(.app-topbar-actions),
+.topbar:has(.dashboard-topbar-actions),
+.page-content {
+  padding-inline: var(--app-responsive-gutter) !important;
+}
+
+.page-content,
+.page-content > *,
+.analytics-page > *,
+.history-page > * {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .main-content {
+    --app-responsive-gutter: 22px;
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar,
+  .topbar:has(.app-topbar-actions),
+  .topbar:has(.dashboard-topbar-actions) {
+    padding-inline: var(--app-responsive-gutter) !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .topbar-heading,
+  .topbar > div:first-child {
+    justify-self: start;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .topbar-title {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .app-topbar-actions,
+  .dashboard-topbar-actions {
+    justify-self: end;
+    margin-left: auto;
+    max-width: none;
+  }
+
+  .app-topbar-actions .app-header-status,
+  .dashboard-topbar-actions .app-header-status,
+  .app-topbar-actions #connStrip,
+  .dashboard-topbar-actions #connStrip {
+    display: none !important;
+  }
+
+  .mobile-conn-strip {
+    display: flex !important;
+    position: relative !important;
+    top: auto !important;
+    z-index: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 14px var(--app-responsive-gutter) 0 !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 9px 10px !important;
+    overflow: hidden;
+    text-align: left !important;
+  }
+
+  .mobile-conn-strip > * {
+    min-width: 0;
+  }
+
+  .mobile-conn-strip .app-header-state,
+  .mobile-conn-strip .app-header-heartbeat {
+    flex: 0 1 auto;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    min-height: 24px;
+    line-height: 1;
+    text-align: left !important;
+  }
+
+  .mobile-conn-strip .app-header-updated {
+    flex: 1 1 100%;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    min-width: 0;
+    min-height: 20px;
+    line-height: 1.2;
+    white-space: normal;
+    text-align: left !important;
+  }
+
+  .page-content > .glass,
+  .page-content > .section-card,
+  .page-content > section,
+  .analytics-page > section,
+  .history-page > section {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@container analytics-page (max-width: 980px) {
+  .analytics-hero {
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch;
+  }
+
+  .analytics-live-card {
+    width: 100%;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    --app-responsive-gutter: 14px;
+  }
+
+  .page-content > .glass,
+  .page-content > .section-card,
+  .page-content > section,
+  .analytics-page > section,
+  .history-page > section {
+    overflow: hidden;
+  }
+
+  .analytics-hero {
+    grid-template-columns: minmax(0, 1fr) !important;
+    padding: 18px !important;
+  }
+
+  .analytics-live-card {
+    width: 100%;
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .date-filter-header,
+  .date-filter-controls {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .date-filter-summary,
+  .date-filter-controls,
+  .date-filter-calendar {
+    inline-size: 100% !important;
+    max-inline-size: 100% !important;
+    margin-inline: 0 !important;
+  }
+
+  .date-filter-month,
+  .date-filter-month input {
+    inline-size: 100% !important;
+    max-inline-size: 100% !important;
+  }
+
+  .date-filter-calendar {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .date-filter-day {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .main-content {
+    --app-responsive-gutter: 12px;
+  }
+
+  .analytics-hero {
+    padding: 16px 14px !important;
+  }
+
+  .date-filter-card {
+    gap: 12px;
+  }
+
+  .date-filter-calendar {
+    gap: 4px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .main-content {
+    --app-responsive-gutter: 10px;
+  }
+}

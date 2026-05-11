@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "buildDate": "2026-05-01",
+  "buildDate": "2026-05-09",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard.apk",
@@ -11,21 +11,21 @@
       "setup": {
         "filename": "IoT-Listrik-Dashboard-Setup.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup.exe",
-        "size": "334.40 MB",
+        "size": "334.72 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable.exe",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable.exe",
-        "size": "334.13 MB",
+        "size": "334.42 MB",
         "architectures": ["ia32", "x64", "arm64"],
         "type": "unified"
       },
       "msi": {
         "filename": "IoT-Listrik-Dashboard.msi",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.msi",
-        "size": "124.86 MB",
+        "size": "125.08 MB",
         "architectures": ["x64"],
         "type": "installer"
       }
@@ -48,5 +48,5 @@
       }
     }
   },
-  "notes": "Release v1.0.0 refreshed on 2026-05-01 with PZEM-only firmware terminology, versionless download filenames, rebuilt Android APK, Windows Setup/Portable/MSI, Node CLI, Python CLI, and Linux CLI assets."
+  "notes": "Release v1.0.0 refreshed on 2026-05-09 with updated Windows Setup/Portable/MSI assets and versionless download filenames. Android APK and CLI assets are unchanged."
 }

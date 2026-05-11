@@ -7,6 +7,7 @@
     "doc": "docs"
   },
   "dependencies": {
+    "@vercel/speed-insights": "^2.0.0",
     "@xmldom/xmldom": "^0.9.10",
     "7zip-bin": "^5.2.0",
     "acorn": "^8.16.0",
@@ -375,8 +376,10 @@
   },
   "scripts": {
     "build:css": "esbuild public/css/style.css --minify --outfile=public/css/style.min.css",
+    "build:speed-insights": "esbuild scripts/entries/speed-insights.js --bundle --minify --format=iife --outfile=public/js/speed-insights.js",
+    "build:assets": "npm run build:css && npm run build:speed-insights",
     "test": "node scripts/validate-project.test.js",
-    "validate": "npm run build:css && node scripts/validate-project.js",
+    "validate": "npm run build:assets && node scripts/validate-project.js",
     "deploy:safe": "npm run validate && npx vercel deploy --prod --yes"
   },
   "keywords": [],

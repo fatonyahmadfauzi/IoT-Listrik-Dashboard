@@ -175,7 +175,7 @@
         ]
       }
     </script>
-    <link rel="stylesheet" href="/css/style.min.css?v=20260508-header-final" />
+    <link rel="stylesheet" href="/css/style.min.css?v=20260511-align1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -849,6 +849,19 @@
             </button>
           </div>
         </header>
+
+        <!-- Mobile Connection Strip -->
+        <div class="mobile-conn-strip glass">
+          <span id="mobileEndpointBadge" class="ep-badge ep-cloud">CLOUD</span>
+          <span id="mobileConnStateText" class="app-header-state">Device Offline</span>
+          <span id="mobileHeartbeatText" class="app-header-heartbeat">Tanpa heartbeat</span>
+          <span class="app-header-divider" aria-hidden="true"></span>
+          <span class="app-header-updated">
+            <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+            <span id="mobileLastUpdated">Update terakhir: -</span>
+          </span>
+          <span id="mobileAlertPulse" class="alert-pulse hidden" aria-hidden="true"></span>
+        </div>
 
         <main class="page-content">
           <div class="settings-shell">
@@ -1608,6 +1621,7 @@
     <div id="toastContainer" class="toast-container"></div>
     <script type="module" src="/js/app-header.js"></script>
     <script type="module" src="/js/settings.js"></script>
-  </body>
+  <script src="/js/speed-insights.js" defer></script>
+</body>
 </html>
 

@@ -77,6 +77,24 @@ function maxValue(values: number[]) {
   return clean.length ? Math.max(...clean) : 0;
 }
 
+function readEnergy(source: any) {
+  return number(source?.energi_kwh ?? source?.energy_kwh ?? source?.energy ?? source?.energi);
+}
+
+function readPowerFactor(source: any) {
+  return number(source?.power_factor ?? source?.powerFactor ?? source?.pf);
+}
+
+function readFrequency(source: any) {
+  return number(source?.frekuensi ?? source?.frequency);
+}
+
+function readApparent(source: any) {
+  const arus = number(source?.arus);
+  const tegangan = number(source?.tegangan);
+  return number(source?.apparent_power ?? source?.apparentPower ?? source?.apparent_va ?? source?.daya_va, arus * tegangan);
+}
+
 function normalizeStatus(status?: string) {
   const value = String(status || 'NORMAL').toUpperCase();
   return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'].includes(value) ? value : 'UNKNOWN';
@@ -107,9 +125,9 @@ export function Analytics() {
   const currents = useMemo(() => filteredLogs.map((log) => number(log.arus)), [filteredLogs]);
   const voltages = useMemo(() => filteredLogs.map((log) => number(log.tegangan)), [filteredLogs]);
   const activePowers = useMemo(() => filteredLogs.map((log) => number(log.daya)), [filteredLogs]);
-  const pfValues = useMemo(() => filteredLogs.map((log) => number(log.power_factor)), [filteredLogs]);
-  const freqValues = useMemo(() => filteredLogs.map((log) => number(log.frekuensi)), [filteredLogs]);
-  const apparentValues = useMemo(() => filteredLogs.map((log) => number(log.apparent_power)), [filteredLogs]);
+  const pfValues = useMemo(() => filteredLogs.map(readPowerFactor), [filteredLogs]);
+  const freqValues = useMemo(() => filteredLogs.map(readFrequency), [filteredLogs]);
+  const apparentValues = useMemo(() => filteredLogs.map(readApparent), [filteredLogs]);
 
   const statusCounts = useMemo(
     () => ({
@@ -136,6 +154,14 @@ export function Analytics() {
     peakApparent: maxValue(apparentValues),
     riskCount: statusCounts.WARNING + statusCounts.LEAKAGE + statusCounts.DANGER,
   };
+
+  const statusTotal = Object.values(statusCounts).reduce((sum, value) => sum + value, 0);
+  const statusRows = [
+    ['NORMAL', statusCounts.NORMAL, colors.normal],
+    ['WARNING', statusCounts.WARNING, colors.warning],
+    ['LEAKAGE', statusCounts.LEAKAGE, colors.leakage],
+    ['DANGER', statusCounts.DANGER, colors.danger],
+  ] as const;
 
   const trendData = {
     labels: chartLogs.map((log) => formatClock(number(log.timestamp))),
@@ -221,6 +247,106 @@ export function Analytics() {
     ],
   };
 
+  const energyPfData = {
+    labels: chartLogs.map((log) => formatClock(number(log.timestamp))),
+    datasets: [
+      {
+        label: 'Energi (kWh)',
+        data: chartLogs.map(readEnergy),
+        borderColor: colors.energy,
+        backgroundColor: 'rgba(167, 139, 250, 0.12)',
+        tension: 0.34,
+        pointRadius: 2,
+        yAxisID: 'yEnergy',
+      },
+      {
+        label: 'Power Factor',
+        data: chartLogs.map(readPowerFactor),
+        borderColor: colors.normal,
+        backgroundColor: 'rgba(34, 197, 94, 0.12)',
+        tension: 0.34,
+        pointRadius: 2,
+        yAxisID: 'yPf',
+      },
+    ],
+  };
+
+  const frequencyApparentData = {
+    labels: chartLogs.map((log) => formatClock(number(log.timestamp))),
+    datasets: [
+      {
+        label: 'Frekuensi (Hz)',
+        data: chartLogs.map(readFrequency),
+        borderColor: colors.frequency,
+        backgroundColor: 'rgba(45, 212, 191, 0.12)',
+        tension: 0.34,
+        pointRadius: 2,
+        yAxisID: 'yFreq',
+      },
+      {
+        label: 'Apparent (VA)',
+        data: chartLogs.map(readApparent),
+        borderColor: colors.apparent,
+        backgroundColor: 'rgba(251, 146, 60, 0.12)',
+        tension: 0.34,
+        pointRadius: 2,
+        yAxisID: 'yApparent',
+      },
+    ],
+  };
+
+  const supportChartBaseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index' as const, intersect: false },
+    plugins: {
+      legend: { labels: { color: colors.text, boxWidth: 14 } },
+      tooltip: { enabled: true },
+    },
+  };
+
+  const energyPfOptions = {
+    ...supportChartBaseOptions,
+    scales: {
+      x: { ticks: { color: colors.text, maxRotation: 0 }, grid: { color: colors.grid } },
+      yEnergy: {
+        type: 'linear' as const,
+        position: 'left' as const,
+        ticks: { color: colors.energy },
+        grid: { color: colors.grid },
+        title: { display: true, text: 'Energi (kWh)', color: colors.energy },
+      },
+      yPf: {
+        type: 'linear' as const,
+        position: 'right' as const,
+        ticks: { color: colors.normal },
+        grid: { drawOnChartArea: false },
+        title: { display: true, text: 'PF', color: colors.normal },
+      },
+    },
+  };
+
+  const frequencyApparentOptions = {
+    ...supportChartBaseOptions,
+    scales: {
+      x: { ticks: { color: colors.text, maxRotation: 0 }, grid: { color: colors.grid } },
+      yFreq: {
+        type: 'linear' as const,
+        position: 'left' as const,
+        ticks: { color: colors.frequency },
+        grid: { color: colors.grid },
+        title: { display: true, text: 'Hz', color: colors.frequency },
+      },
+      yApparent: {
+        type: 'linear' as const,
+        position: 'right' as const,
+        ticks: { color: colors.apparent },
+        grid: { drawOnChartArea: false },
+        title: { display: true, text: 'VA', color: colors.apparent },
+      },
+    },
+  };
+
   const snapshotData = {
     labels: ['Arus', 'Tegangan', 'Daya', 'Energi', 'PF', 'Frekuensi', 'Apparent'],
     datasets: [
@@ -230,10 +356,10 @@ export function Analytics() {
           number(snapshotSource?.arus),
           number(snapshotSource?.tegangan),
           number(snapshotSource?.daya),
-          number(snapshotSource?.energi_kwh),
-          number(snapshotSource?.power_factor),
-          number(snapshotSource?.frekuensi),
-          number(snapshotSource?.apparent_power),
+          readEnergy(snapshotSource),
+          readPowerFactor(snapshotSource),
+          readFrequency(snapshotSource),
+          readApparent(snapshotSource),
         ],
         backgroundColor: [
           colors.current,
@@ -298,7 +424,7 @@ export function Analytics() {
           ['Arus rata-rata', `${stats.avgCurrent.toFixed(2)} A`, `Min ${stats.minCurrent.toFixed(2)} A · Max ${stats.maxCurrent.toFixed(2)} A`, 'border-l-emerald-400'],
           ['Tegangan rata-rata', `${stats.avgVoltage.toFixed(1)} V`, `Min ${stats.minVoltage.toFixed(1)} V · Max ${stats.maxVoltage.toFixed(1)} V`, 'border-l-sky-400'],
           ['Daya aktif puncak', `${stats.peakPower.toFixed(0)} W`, `Rata-rata ${stats.avgPower.toFixed(0)} W`, 'border-l-amber-400'],
-          ['Energi terakhir', `${formatNumber(snapshotSource?.energi_kwh, 3, '0.000')} kWh`, `${filteredLogs.length} sampel histori`, 'border-l-violet-400'],
+          ['Energi terakhir', `${formatNumber(readEnergy(snapshotSource), 3, '0.000')} kWh`, `${filteredLogs.length} sampel histori`, 'border-l-violet-400'],
           ['Power factor rata-rata', stats.avgPf.toFixed(2), 'Diambil dari PZEM / fallback settings', 'border-l-cyan-400'],
           ['Frekuensi rata-rata', `${stats.avgFreq.toFixed(1)} Hz`, 'Nominal grid PLN', 'border-l-orange-400'],
           ['Apparent puncak', `${stats.peakApparent.toFixed(0)} VA`, `Rata-rata ${stats.avgApparent.toFixed(0)} VA`, 'border-l-sky-300'],
@@ -331,7 +457,53 @@ export function Analytics() {
           <div className="mt-6 h-80 min-w-0">
             <Doughnut data={statusData} options={commonChartOptions} />
           </div>
+          <div className="mt-5 space-y-3">
+            {statusRows.map(([label, count, color]) => {
+              const pct = statusTotal ? Math.round((count / statusTotal) * 100) : 0;
+              return (
+                <div key={label} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/75 bg-slate-950/35 px-4 py-3">
+                  <span className="inline-flex items-center gap-2 text-sm font-black text-slate-200">
+                    <i className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                    {label}
+                  </span>
+                  <strong className="font-mono text-sm text-slate-100">
+                    {count} <small className="text-slate-400">{pct}%</small>
+                  </strong>
+                </div>
+              );
+            })}
+          </div>
         </article>
+      </section>
+
+      <section className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
+        <div className="border-b border-slate-700/70 pb-4">
+          <h2 className="text-lg font-black text-white">Metrik Pendukung Riwayat</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Energi, power factor, frekuensi, dan apparent power dipisah agar tren utama tetap mudah dibaca.
+          </p>
+        </div>
+        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+          <div className="min-w-0">
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.12em] text-slate-300">
+              Energi (kWh) dan Power Factor
+            </p>
+            <div className="h-72 min-w-0">
+              <Line data={energyPfData} options={energyPfOptions} />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <p className="mb-3 text-xs font-black uppercase tracking-[0.12em] text-slate-300">
+              Frekuensi dan Apparent (VA)
+            </p>
+            <div className="h-72 min-w-0">
+              <Line data={frequencyApparentData} options={frequencyApparentOptions} />
+            </div>
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-slate-400">
+          Frekuensi dan apparent power (VA) dipisah ke grafik kedua agar tampilan riwayat tetap mudah dibaca pada desktop, tablet, dan mobile.
+        </p>
       </section>
 
       <section className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">

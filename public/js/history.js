@@ -166,11 +166,28 @@ function statusChip(status) {
   return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">${escapeHtml(safeStatus)}</span>`;
 }
 
+function renderEmptyLogRow(colspan, detail = false) {
+  const helper = detail
+    ? 'Detail audit akan muncul setelah histori tersedia.'
+    : 'Data terbaru akan muncul saat perangkat mengirim histori.';
+  return `
+    <tr class="history-log-empty-row">
+      <td colspan="${colspan}">
+        <div class="mini-log-empty-state history-log-empty-state">
+          <span class="material-symbols-rounded" aria-hidden="true">history</span>
+          <strong>Belum ada log</strong>
+          <small>${helper}</small>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
 // ─── Render table ─────────────────────────────────────────────
 function renderSummaryTable(logs) {
   if (!summaryTbody) return;
   if (logs.length === 0) {
-    summaryTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--text-secondary);">Belum ada data log</td></tr>`;
+    summaryTbody.innerHTML = renderEmptyLogRow(5);
     if (countEl) countEl.textContent = '0 log';
     return;
   }
@@ -202,25 +219,28 @@ function renderSummaryTable(logs) {
 function renderDetailTable(logs) {
   if (!detailTbody) return;
   if (logs.length === 0) {
-    detailTbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-secondary);">Belum ada data log</td></tr>`;
+    detailTbody.innerHTML = renderEmptyLogRow(11, true);
     return;
   }
 
-  detailTbody.innerHTML = logs.map(l => `
+  detailTbody.innerHTML = logs.map(l => {
+    const power = derivePower(l);
+    return `
     <tr>
       <td data-label="Waktu" class="td-mono text-sm">${escapeHtml(fmtTime(l.waktu))}</td>
-      <td data-label="Arus" class="td-mono">${Number(l.arus     || 0).toFixed(2)} A</td>
-      <td data-label="Tegangan" class="td-mono">${Number(l.tegangan || 0).toFixed(1)} V</td>
-      <td data-label="Daya" class="td-mono">${derivePower(l).active.toFixed(1)} W</td>
+      <td data-label="Arus (A)" class="td-mono">${Number(l.arus || 0).toFixed(2)} A</td>
+      <td data-label="Tegangan (V)" class="td-mono">${Number(l.tegangan || 0).toFixed(1)} V</td>
+      <td data-label="Daya Aktif (W)" class="td-mono">${power.active.toFixed(1)} W</td>
       <td data-label="Energi" class="td-mono">${getEnergy(l).toFixed(3)} kWh</td>
       <td data-label="PF" class="td-mono">${getPowerFactor(l).toFixed(2)}</td>
       <td data-label="Frekuensi" class="td-mono">${getFrequency(l).toFixed(1)} Hz</td>
-      <td data-label="Apparent" class="td-mono">${derivePower(l).apparent.toFixed(1)} VA</td>
+      <td data-label="Apparent (VA)" class="td-mono">${power.apparent.toFixed(1)} VA</td>
       <td data-label="Status">${statusChip(l.status || '—')}</td>
       <td data-label="Relay" class="td-mono">${getRelayText(l)}</td>
       <td data-label="Sumber" class="text-sm text-muted">${escapeHtml(getSource(l))}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function renderTable(logs) {

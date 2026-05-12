@@ -77,6 +77,14 @@ function formatDateLabel(dateKey) {
   });
 }
 
+function formatMonthLabel(monthKey) {
+  const date = parseMonthKey(monthKey);
+  return date.toLocaleDateString("id-ID", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
 function formatRangeLabel(range) {
   if (!range || range.mode === "all") return "Semua data tersedia";
   if (range.mode === "today") return "Hari ini";
@@ -149,8 +157,12 @@ export function createLogDateFilter(options = {}) {
         ${PRESETS.map((preset) => `<button type="button" class="date-filter-preset" data-date-preset="${preset.key}">${preset.label}</button>`).join("")}
       </div>
       <label class="date-filter-month">
-        <span>Bulan</span>
-        <input type="month" data-date-month />
+        <span class="date-filter-month-label">Bulan</span>
+        <span class="date-filter-month-shell">
+          <span class="date-filter-month-text" data-date-month-label>${formatMonthLabel(monthKey)}</span>
+          <span class="material-symbols-rounded date-filter-month-icon" aria-hidden="true">calendar_month</span>
+          <input type="month" data-date-month aria-label="Pilih bulan data log" />
+        </span>
       </label>
     </div>
     <div class="date-filter-calendar" data-date-calendar aria-label="Kalender tanggal data log"></div>
@@ -158,8 +170,14 @@ export function createLogDateFilter(options = {}) {
 
   const summaryEl = root.querySelector("[data-date-summary]");
   const monthInput = root.querySelector("[data-date-month]");
+  const monthLabelEl = root.querySelector("[data-date-month-label]");
   const calendarEl = root.querySelector("[data-date-calendar]");
   const presetButtons = Array.from(root.querySelectorAll("[data-date-preset]"));
+
+  function updateMonthControl() {
+    if (monthInput && monthInput.value !== monthKey) monthInput.value = monthKey;
+    if (monthLabelEl) monthLabelEl.textContent = formatMonthLabel(monthKey);
+  }
 
   function rebuildAvailableDates() {
     availableCounts = new Map();
@@ -173,7 +191,7 @@ export function createLogDateFilter(options = {}) {
       !newest || item.timestamp > newest.timestamp ? item : newest
     ), null);
     if (latest && !monthInput.value) monthKey = latest.dateKey.slice(0, 7);
-    if (monthInput) monthInput.value = monthKey;
+    updateMonthControl();
   }
 
   function currentFiltered() {
@@ -205,6 +223,7 @@ export function createLogDateFilter(options = {}) {
   function renderCalendar() {
     if (!calendarEl) return;
 
+    updateMonthControl();
     const monthDate = parseMonthKey(monthKey);
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth();
@@ -272,6 +291,7 @@ export function createLogDateFilter(options = {}) {
 
   monthInput?.addEventListener("change", () => {
     monthKey = monthInput.value || monthKeyFromDate(new Date());
+    updateMonthControl();
     renderCalendar();
   });
 

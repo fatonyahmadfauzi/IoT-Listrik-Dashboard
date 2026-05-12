@@ -175,7 +175,7 @@
         ]
       }
     </script>
-    <link rel="stylesheet" href="/css/style.min.css?v=20260511-align1" />
+    <link rel="stylesheet" href="/css/style.min.css?v=20260512-historylogfix1" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -329,24 +329,18 @@
       </div>
 
       <!-- Filter + export -->
-      <div id="historyLogsCard" class="section-card glass">
-        <div class="section-header">
+      <div id="historyLogsCard" class="section-card glass mini-log-card">
+        <div class="section-header mini-log-header history-log-header">
           <div>
-            <div class="section-title">Tabel Log Event</div>
-            <p class="history-log-subtitle">Ringkas untuk pantauan cepat, detail untuk audit parameter listrik.</p>
+            <div class="section-title">Log terkini</div>
+            <p class="mini-log-subtitle history-log-subtitle">Ringkas untuk pantauan cepat, detail untuk audit parameter listrik.</p>
           </div>
-          <div class="log-toolbar">
-            <select id="filterStatus" class="form-select">
-              <option value="ALL">Semua Status</option>
-              <option value="NORMAL">NORMAL</option>
-              <option value="WARNING">WARNING</option>
-              <option value="LEAKAGE">LEAKAGE</option>
-              <option value="DANGER">DANGER</option>
-            </select>
-            <div class="history-log-tabs" role="tablist" aria-label="Tampilan tabel log event">
+          <div class="mini-log-actions history-log-actions" aria-label="Tampilan log terkini">
+            <span class="history-log-count text-xs text-muted">15 entri terakhir</span>
+            <div class="mini-log-tabs" role="tablist" aria-label="Tampilan log terkini">
               <button
                 type="button"
-                class="history-log-tab active"
+                class="mini-log-tab active"
                 data-history-log-tab="summary"
                 role="tab"
                 aria-selected="true"
@@ -356,7 +350,7 @@
               </button>
               <button
                 type="button"
-                class="history-log-tab"
+                class="mini-log-tab"
                 data-history-log-tab="detail"
                 role="tab"
                 aria-selected="false"
@@ -365,11 +359,21 @@
                 Detail
               </button>
             </div>
-            <button id="exportBtn" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">download</span>Export CSV</button>
           </div>
         </div>
 
-        <div id="historySummaryPanel" class="table-wrap history-log-panel">
+        <div class="history-log-tools" aria-label="Filter dan ekspor log terkini">
+          <select id="filterStatus" class="form-select">
+            <option value="ALL">Semua Status</option>
+            <option value="NORMAL">NORMAL</option>
+            <option value="WARNING">WARNING</option>
+            <option value="LEAKAGE">LEAKAGE</option>
+            <option value="DANGER">DANGER</option>
+          </select>
+          <button id="exportBtn" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">download</span>Export CSV</button>
+        </div>
+
+        <div id="historySummaryPanel" class="table-wrap mini-log-panel history-log-panel">
           <table class="history-table history-summary-table">
             <thead>
               <tr>
@@ -390,7 +394,7 @@
           </table>
         </div>
 
-        <div id="historyDetailPanel" class="table-wrap history-log-panel" hidden>
+        <div id="historyDetailPanel" class="table-wrap mini-log-panel history-log-panel" hidden>
           <table class="history-table history-detail-table">
             <thead>
               <tr>

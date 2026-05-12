@@ -5626,7 +5626,7 @@ body > header > nav {
   max-width: 100%;
 }
 
-.date-filter-month span {
+.date-filter-month-label {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 900;
@@ -5634,7 +5634,52 @@ body > header > nav {
   text-transform: uppercase;
 }
 
+.date-filter-month-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 38px;
+  padding: 0 42px 0 12px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.date-filter-month-text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date-filter-month-icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .date-filter-month input {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   min-width: 0;
@@ -5642,16 +5687,21 @@ body > header > nav {
   min-inline-size: 0;
   max-inline-size: 100%;
   justify-self: stretch;
-  min-height: 38px;
-  padding: 0 12px;
+  height: 100%;
+  min-height: 100%;
+  padding: 0;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: var(--radius-md);
-  background: rgba(15, 23, 42, 0.72);
-  color: var(--text-primary);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: transparent;
   color-scheme: dark;
   font: inherit;
   font-size: 12px;
+  opacity: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .date-filter-month input::-webkit-date-and-time-value {
@@ -5774,6 +5824,7 @@ body > header > nav {
     margin-inline: 0;
   }
 
+  .date-filter-month-shell,
   .date-filter-month input {
     inline-size: 100%;
     max-inline-size: 100%;
@@ -5848,8 +5899,12 @@ body > header > nav {
     font-size: 8px;
   }
 
-  .date-filter-month input {
-    padding-inline: 10px;
+  .date-filter-month-shell {
+    padding: 0 34px 0 10px;
+  }
+
+  .date-filter-month-icon {
+    right: 10px;
   }
 }
 
@@ -10131,6 +10186,310 @@ html.lenis, html.lenis body {
   }
 }
 
+/* History log mobile spacing final pass. */
+#historyLogsCard > p.text-xs.text-muted.mt-8 {
+  margin-top: 2px !important;
+}
+
+@container history-log-card (max-width: 760px) {
+  #historyLogsCard.mini-log-card {
+    gap: 10px !important;
+  }
+
+  #historyLogsCard .history-log-panel {
+    margin-top: 4px !important;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    min-height: 132px !important;
+    padding: 16px 12px !important;
+  }
+
+  #historyLogsCard > p.text-xs.text-muted.mt-8 {
+    margin-top: 4px !important;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 760px) {
+  #historyLogsCard.mini-log-card {
+    gap: 10px !important;
+  }
+
+  #historyLogsCard .history-log-panel {
+    margin-top: 4px !important;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    min-height: 132px !important;
+    padding: 16px 12px !important;
+  }
+
+  #historyLogsCard > p.text-xs.text-muted.mt-8 {
+    margin-top: 4px !important;
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 420px) {
+  #historyLogsCard .history-log-empty-state {
+    min-height: 124px !important;
+    padding: 14px 10px !important;
+  }
+}
+
+/* =============================================================
+   Final Riwayat Log parity with Dashboard mini log.
+   Keep this block near the end because older history overrides exist above.
+   ============================================================= */
+#historyLogsCard.mini-log-card,
+#historyLogsCard.mini-log-card * {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#historyLogsCard.mini-log-card {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+}
+
+#historyLogsCard .history-log-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#historyLogsCard .history-log-actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+}
+
+#historyLogsCard .history-log-count {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+#historyLogsCard .history-log-tabs,
+#historyLogsCard .mini-log-tabs {
+  display: inline-grid !important;
+  grid-template-columns: repeat(2, minmax(76px, 1fr));
+  align-items: center;
+  gap: 4px;
+  width: auto !important;
+  min-width: 174px !important;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.58);
+  overflow: hidden;
+}
+
+#historyLogsCard .history-log-tab,
+#historyLogsCard .mini-log-tab {
+  min-width: 0 !important;
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  transform: none !important;
+  box-shadow: none;
+}
+
+#historyLogsCard .history-log-tab.active,
+#historyLogsCard .mini-log-tab.active {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+#historyLogsCard .history-log-tools {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+#historyLogsCard .history-log-tools #filterStatus {
+  flex: 0 1 180px !important;
+  width: 180px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+#historyLogsCard .history-log-tools #exportBtn {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 38px;
+  justify-content: center;
+}
+
+#historyLogsCard .history-log-panel {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+#historyLogsCard .history-table {
+  width: 100%;
+  margin: 0;
+}
+
+#historyLogsCard .history-log-empty-row,
+#historyLogsCard .history-log-empty-row > td {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#historyLogsCard .history-log-empty-state {
+  width: 100%;
+  max-width: 100%;
+  min-height: 124px;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  #historyLogsCard.mini-log-card {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  #historyLogsCard .history-log-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  #historyLogsCard .section-title {
+    color: var(--text-primary);
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.12;
+  }
+
+  #historyLogsCard .history-log-subtitle {
+    font-size: 13px;
+  }
+
+  #historyLogsCard .history-log-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  #historyLogsCard .history-log-count {
+    width: 100%;
+    white-space: normal;
+    text-align: left;
+  }
+
+  #historyLogsCard .history-log-tabs,
+  #historyLogsCard .mini-log-tabs {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #historyLogsCard .history-log-tab,
+  #historyLogsCard .mini-log-tab {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+
+  #historyLogsCard .history-log-tools {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+    justify-content: stretch;
+    padding-top: 12px;
+  }
+
+  #historyLogsCard .history-log-tools #filterStatus,
+  #historyLogsCard .history-log-tools #exportBtn {
+    width: 100% !important;
+  }
+
+  #historyLogsCard .history-log-panel {
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  #historyLogsCard .history-table {
+    display: block;
+    width: 100%;
+    border: 0;
+  }
+
+  #historyLogsCard .history-table thead {
+    display: none;
+  }
+
+  #historyLogsCard .history-table tbody {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    padding: 0 !important;
+  }
+
+  #historyLogsCard .history-log-empty-row,
+  #historyLogsCard .history-log-empty-row > td {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    min-height: 184px;
+    padding: 24px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  #historyLogsCard.mini-log-card {
+    padding: 14px;
+  }
+
+  #historyLogsCard .history-log-actions {
+    gap: 8px;
+  }
+}
+
 /* History event table card mode for non-full desktop layouts. */
 #historyLogsCard {
   container: history-log-card / inline-size;
@@ -10374,7 +10733,7 @@ html.lenis, html.lenis body {
 
 #historyLogsCard .section-header {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-start;
   gap: 14px;
   width: 100%;
@@ -10382,39 +10741,89 @@ html.lenis, html.lenis body {
 }
 
 #historyLogsCard .section-header > div:first-child {
-  flex: 1 1 220px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-#historyLogsCard .log-toolbar {
+#historyLogsCard .section-title {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-transform: none;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+#historyLogsCard .history-log-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+#historyLogsCard .history-log-actions {
   display: flex;
-  flex: 0 1 auto;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   max-width: 100%;
+  margin-left: auto;
 }
 
-#historyLogsCard .log-toolbar #filterStatus,
-#historyLogsCard .log-toolbar .history-log-tabs,
-#historyLogsCard .log-toolbar #exportBtn {
+#historyLogsCard .history-log-count {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+#historyLogsCard .history-log-actions .history-log-tabs {
+  width: auto;
+}
+
+#historyLogsCard .history-log-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  margin: 14px 0 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+#historyLogsCard .history-log-tools #filterStatus,
+#historyLogsCard .history-log-tools #exportBtn {
   flex: 0 1 auto !important;
   min-width: 0 !important;
   max-width: 100% !important;
 }
 
-#historyLogsCard .log-toolbar #filterStatus {
+#historyLogsCard .history-log-tools #filterStatus {
   width: min(180px, 100%) !important;
 }
 
-#historyLogsCard .log-toolbar .history-log-tabs {
-  width: auto;
+#historyLogsCard .history-log-tools #exportBtn {
+  width: auto !important;
+  justify-content: center;
 }
 
-#historyLogsCard .log-toolbar #exportBtn {
-  width: auto !important;
+#historyLogsCard .history-log-empty-row {
+  border-left-color: rgba(56, 189, 248, 0.28);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.56), rgba(15, 23, 42, 0.28));
+}
+
+#historyLogsCard .history-log-empty-state {
+  min-height: 126px;
+  padding: 22px 18px;
+  border: 1px solid rgba(56, 189, 248, 0.12);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.38), rgba(15, 23, 42, 0.5));
 }
 
 @container history-log-card (max-width: 860px) {
@@ -10423,40 +10832,447 @@ html.lenis, html.lenis body {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  #historyLogsCard .log-toolbar {
+  #historyLogsCard .history-log-actions {
     width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+
+  #historyLogsCard .history-log-tools {
     justify-content: stretch;
   }
 
-  #historyLogsCard .log-toolbar #filterStatus,
-  #historyLogsCard .log-toolbar .history-log-tabs,
-  #historyLogsCard .log-toolbar #exportBtn {
+  #historyLogsCard .history-log-tools #filterStatus,
+  #historyLogsCard .history-log-tools #exportBtn {
     flex: 1 1 160px !important;
   }
 }
 
 @container history-log-card (max-width: 620px) {
-  #historyLogsCard .log-toolbar {
+  #historyLogsCard .history-log-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
+    gap: 10px;
   }
 
-  #historyLogsCard .log-toolbar #filterStatus,
-  #historyLogsCard .log-toolbar .history-log-tabs,
-  #historyLogsCard .log-toolbar #exportBtn {
+  #historyLogsCard .history-log-count {
+    order: 1;
+    width: 100%;
+    text-align: left;
+  }
+
+  #historyLogsCard .history-log-actions .history-log-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    order: 2;
+    width: 100%;
+  }
+
+  #historyLogsCard .history-log-actions .history-log-tab {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #historyLogsCard .history-log-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  #historyLogsCard .history-log-tools #filterStatus,
+  #historyLogsCard .history-log-tools #exportBtn {
     width: 100% !important;
     max-width: 100% !important;
   }
+}
 
-  #historyLogsCard .log-toolbar .history-log-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 640px) {
+  #historyLogsCard .section-title {
+    font-size: 24px;
+    line-height: 1.12;
   }
 
-  #historyLogsCard .log-toolbar .history-log-tab {
+  #historyLogsCard .history-log-subtitle {
+    font-size: 13px;
+  }
+
+  #historyLogsCard .history-log-panel {
+    margin-top: 14px;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    min-height: 170px;
+  }
+}
+
+/* History log card final normalization.
+   Keeps History and Dashboard log surfaces visually aligned without horizontal overflow. */
+#historyLogsCard {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+}
+
+#historyLogsCard .history-log-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#historyLogsCard .history-log-header > div:first-child {
+  min-width: 0;
+}
+
+#historyLogsCard .history-log-actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+#historyLogsCard .history-log-count {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+#historyLogsCard .history-log-tabs {
+  display: inline-grid !important;
+  grid-template-columns: repeat(2, minmax(76px, 1fr));
+  width: auto !important;
+  min-width: 174px;
+  max-width: 100%;
+  padding: 4px;
+}
+
+#historyLogsCard .history-log-tab {
+  min-width: 0 !important;
+  width: 100%;
+}
+
+#historyLogsCard .history-log-tools {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+#historyLogsCard .history-log-tools #filterStatus {
+  flex: 0 1 180px !important;
+  width: 180px !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+#historyLogsCard .history-log-tools #exportBtn {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 38px;
+  max-width: 100% !important;
+  justify-content: center;
+}
+
+#historyLogsCard .history-log-panel {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: var(--radius-lg);
+  background: rgba(15, 23, 42, 0.28);
+  box-shadow: none;
+}
+
+#historyLogsCard .history-table {
+  width: 100%;
+  margin: 0;
+}
+
+#historyLogsCard .history-table tbody {
+  max-width: 100%;
+}
+
+#historyLogsCard .history-log-empty-row {
+  width: 100%;
+  max-width: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#historyLogsCard .history-log-empty-row > td {
+  width: 100%;
+  max-width: 100%;
+  padding: 12px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+#historyLogsCard .history-log-empty-state {
+  width: 100%;
+  min-height: 124px;
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(135deg, rgba(30, 41, 59, 0.46), rgba(15, 23, 42, 0.58)),
+    rgba(15, 23, 42, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+@container history-log-card (max-width: 760px) {
+  #historyLogsCard {
+    gap: 12px;
+  }
+
+  #historyLogsCard .history-log-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #historyLogsCard .section-title {
+    font-size: 24px;
+    line-height: 1.12;
+  }
+
+  #historyLogsCard .history-log-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
     width: 100%;
+    gap: 10px;
+  }
+
+  #historyLogsCard .history-log-count {
+    width: 100%;
+    white-space: normal;
+  }
+
+  #historyLogsCard .history-log-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100% !important;
     min-width: 0;
+  }
+
+  #historyLogsCard .history-log-tools {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  #historyLogsCard .history-log-tools #filterStatus,
+  #historyLogsCard .history-log-tools #exportBtn {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  #historyLogsCard .history-log-panel {
+    border-radius: var(--radius-md);
+  }
+
+  #historyLogsCard .history-table tbody {
+    padding: 10px;
+  }
+
+  #historyLogsCard .history-log-empty-row {
+    display: block !important;
+  }
+
+  #historyLogsCard .history-log-empty-row > td {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    min-height: 140px;
+    padding: 18px 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  #historyLogsCard {
+    gap: 12px;
+  }
+
+  #historyLogsCard .history-log-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #historyLogsCard .section-title {
+    font-size: 24px;
+    line-height: 1.12;
+  }
+
+  #historyLogsCard .history-log-actions,
+  #historyLogsCard .history-log-tools {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  #historyLogsCard .history-log-count {
+    width: 100%;
+    white-space: normal;
+  }
+
+  #historyLogsCard .history-log-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  #historyLogsCard .history-log-tools #filterStatus,
+  #historyLogsCard .history-log-tools #exportBtn {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  #historyLogsCard .history-log-empty-row {
+    display: block !important;
+  }
+
+  #historyLogsCard .history-log-empty-row > td {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    min-height: 140px;
+    padding: 18px 12px;
+  }
+}
+
+/* History log mobile cleanup.
+   The old table-card fallback and the new empty state both styled a surface,
+   which made the mobile log area look doubled and pushed toolbar controls. */
+@container history-log-card (max-width: 760px) {
+  #historyLogsCard .history-log-actions,
+  #historyLogsCard .history-log-tools {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-log-tabs,
+  #historyLogsCard .history-log-tools #filterStatus,
+  #historyLogsCard .history-log-tools #exportBtn {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-log-panel {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  #historyLogsCard .history-table tbody {
+    padding: 0 !important;
+    gap: 10px;
+  }
+
+  #historyLogsCard .history-log-empty-row,
+  #historyLogsCard .history-log-empty-row > td {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 760px) {
+  #historyLogsCard .history-log-actions,
+  #historyLogsCard .history-log-tools {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-log-tabs,
+  #historyLogsCard .history-log-tools #filterStatus,
+  #historyLogsCard .history-log-tools #exportBtn {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-log-panel {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  #historyLogsCard .history-table tbody {
+    padding: 0 !important;
+    gap: 10px;
+  }
+
+  #historyLogsCard .history-log-empty-row,
+  #historyLogsCard .history-log-empty-row > td {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    box-sizing: border-box;
+  }
+
+  #historyLogsCard .history-log-empty-state {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box;
   }
 }
 
@@ -10628,6 +11444,7 @@ html.lenis, html.lenis body {
   }
 
   .date-filter-month,
+  .date-filter-month-shell,
   .date-filter-month input {
     inline-size: 100% !important;
     max-inline-size: 100% !important;

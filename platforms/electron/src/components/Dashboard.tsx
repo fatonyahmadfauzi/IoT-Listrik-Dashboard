@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { ref, update } from 'firebase/database';
+import { ref, set } from 'firebase/database';
 import { Line } from 'react-chartjs-2';
 import { AlertTriangle, Clock, Cloud, History, Maximize2, Shield, Zap } from 'lucide-react';
 import zoomPlugin from 'chartjs-plugin-zoom';
@@ -143,9 +143,7 @@ export function Dashboard() {
     }
     setLoadingRelay(true);
     try {
-      await update(ref(db, 'listrik'), {
-        relay: nextRelay,
-      });
+      await set(ref(db, 'commands/relay'), nextRelay ? 1 : 0);
     } catch (error) {
       console.error('Error toggling relay:', error);
       showNotification('Gagal mengubah relay', 'Request relay ditolak atau gagal terkirim.');

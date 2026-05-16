@@ -272,7 +272,7 @@ async function toggleRelay() {
 
   if (confirmToggle !== null) {
     try {
-      await set(ref(db, `${pathPrefix}/listrik/relay`), confirmToggle);
+      await set(ref(db, `${pathPrefix}/commands/relay`), confirmToggle ? 1 : 0);
       console.log(chalk.green(`\nBerhasil mengirim perintah [${confirmToggle ? 'ON' : 'OFF'}] ke alat!`));
     } catch (e) {
       console.log(chalk.red(`\nGagal mengirim perintah:`), e.message);

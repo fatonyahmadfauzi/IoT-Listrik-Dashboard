@@ -858,7 +858,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        db.getReference("${pathPrefix}listrik/relay")
+        db.getReference("${pathPrefix}commands/relay")
             .setValue(value)
             .addOnFailureListener { e ->
                 val msg = e.message ?: "Gagal mengirim perintah relay."

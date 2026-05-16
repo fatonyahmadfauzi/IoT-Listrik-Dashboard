@@ -10,8 +10,12 @@ if (-not (Test-Path $propsPath)) {
 
 Push-Location $androidDir
 
-# Build Android release signed APK (uses keystore.properties via build.gradle.kts)
-& .\gradlew.bat :app:assembleRelease
+# Build Android release signed APK (uses keystore.properties via build.gradle.kts).
+# renameReleaseApk is not configuration-cache compatible, so keep release builds uncached.
+& .\gradlew.bat --no-configuration-cache :app:assembleRelease
+if ($LASTEXITCODE -ne 0) {
+  throw "Gradle assembleRelease gagal dengan exit code $LASTEXITCODE"
+}
 
 Pop-Location
 

@@ -19,15 +19,67 @@
 #ifndef FIREBASE_HANDLER_H
 #define FIREBASE_HANDLER_H
 
-#include "config.h"
 #include <Arduino.h>
+#include "config.h"
+
+// ═══════════════════════════════════════════════════════════════
+// SKIP_FIREBASE MODE — All Firebase functions become safe no-ops
+// ═══════════════════════════════════════════════════════════════
+#ifdef SKIP_FIREBASE
+
+// Stub FirebaseData so main.ino compiles (it references fbBootstrapData)
+struct FirebaseData {
+  String errorReason() { return ""; }
+  bool boolData()      { return false; }
+  String stringData()  { return ""; }
+  int intData()        { return 0; }
+  String jsonString()  { return "{}"; }
+};
+static FirebaseData fbData;
+static FirebaseData fbBootstrapData;
+
+void initFirebase(const char*, const char*, const char*, const char*) {
+  Serial.println("[Firebase] SKIP_FIREBASE aktif — Firebase DINONAKTIFKAN");
+}
+bool isFirebaseReady() { return false; }
+bool writeMonitorData(float, float, float, float, float, float, float,
+                      const String&, int, const String& = "PZEM-004T") { return false; }
+bool writeLog(float, float, const String&, int, const String&,
+              float = 0, float = 0, float = 0, float = 50, float = 0.85,
+              const String& = "PZEM-004T") { return false; }
+bool readRelayCommand(int&) { return false; }
+bool updateRelayState(int) { return false; }
+bool readAllSettings(RuntimeSettings& out) {
+  Serial.println("[Firebase] SKIP — settings menggunakan default");
+  return false;
+}
+bool updateAutoLearningStatus(const String&, const String&, bool, const String& = "") { return false; }
+bool writeAutoLearningResult(const String&, unsigned long, float, float, float, float, float, float, bool) { return false; }
+
+#else
+// ═══════════════════════════════════════════════════════════════
+// NORMAL MODE — Full Firebase implementation
+// ═══════════════════════════════════════════════════════════════
+
 #include <Firebase_ESP_Client.h>
 
 // ── Firebase global objects ───────────────────────────────────
 // Declared here, defined once — main.ino must NOT re-declare these.
 FirebaseData   fbData;
+FirebaseData   fbBootstrapData;
 FirebaseAuth   fbAuth;
 FirebaseConfig fbConfig;
+
+// ─── Firebase token callback (plain function, not lambda) ─────
+// Using a regular function avoids potential heap issues from
+// std::function allocation on ESP32's limited memory.
+void firebaseTokenStatusCallback(TokenInfo info) {
+  if (info.status == token_status_error) {
+    Serial.println("[Firebase] Token error.");
+  } else if (info.status == token_status_ready) {
+    Serial.println("[Firebase] Auth token ready ✓");
+  }
+}
 
 // ─── initFirebase() ───────────────────────────────────────────
 /**
@@ -41,30 +93,30 @@ FirebaseConfig fbConfig;
  * @param email     IoT device email (from NVS/bootstrap)
  * @param password  IoT device password (from NVS/bootstrap)
  */
-void initFirebase(const char* apiKey,
-                  const char* dbUrl,
-                  const char* email,
-                  const char* password) {
+void initFirebase(const String& apiKey,
+                  const String& dbUrl,
+                  const String& email,
+                  const String& password) {
 
   fbConfig.api_key      = apiKey;
   fbConfig.database_url = dbUrl;
   fbAuth.user.email     = email;
   fbAuth.user.password  = password;
 
-  fbConfig.token_status_callback = [](TokenInfo info) {
-    if (info.status == token_status_error) {
-      Serial.printf("[Firebase] Token error: %s\n", getTokenError(info).c_str());
-    } else if (info.status == token_status_ready) {
-      Serial.println("[Firebase] Auth token ready ✓");
-    }
-  };
-
-  // Buffer tuning for stability
-  fbData.setBSSLBufferSize(4096, 1024);
-  fbData.setResponseSize(4096);
+  fbConfig.token_status_callback = firebaseTokenStatusCallback;
 
   Firebase.begin(&fbConfig, &fbAuth);
-  Firebase.reconnectWiFi(true);
+  // Dihapus untuk mencegah bentrok dengan WiFiManager dan watchdog manual di loop()
+  // Firebase.reconnectWiFi(true);
+
+  // Buffer tuning AFTER begin() — internal state must be initialized first
+  fbData.setBSSLBufferSize(4096, 1024);
+  fbData.setResponseSize(4096);
+  fbBootstrapData.setBSSLBufferSize(4096, 1024);
+  fbBootstrapData.setResponseSize(2048);
+
+  delay(100);  // let Firebase internal tasks initialize
+  yield();
 
   Serial.printf("[Firebase] Inisialisasi: %s\n", dbUrl);
 }
@@ -72,6 +124,12 @@ void initFirebase(const char* apiKey,
 // ─── isFirebaseReady() ────────────────────────────────────────
 bool isFirebaseReady() {
   return Firebase.ready();
+}
+
+bool isFirebasePathMissing(const String& reason) {
+  return reason.indexOf("path not exist") != -1 ||
+         reason.indexOf("Path not exist") != -1 ||
+         reason.indexOf("path is not exist") != -1;
 }
 
 // ─── writeMonitorData() ───────────────────────────────────────
@@ -165,8 +223,9 @@ bool writeLog(float arus, float tegangan,
 
 // ─── readRelayCommand() ───────────────────────────────────────
 /**
- * Read /listrik/relay to get the command set by the web admin.
- * The IoT device then applies this to the physical relay.
+ * Read /commands/relay to get the command set by the web admin.
+ * The IoT device then applies this to the physical relay and confirms
+ * the actual state back to /listrik/relay.
  *
  * @param outRelay  Output: relay value read (0 or 1)
  * @return true on success
@@ -174,11 +233,14 @@ bool writeLog(float arus, float tegangan,
 bool readRelayCommand(int& outRelay) {
   if (!isFirebaseReady()) return false;
 
-  bool ok = Firebase.RTDB.getInt(&fbData, "/listrik/relay");
+  bool ok = Firebase.RTDB.getInt(&fbData, "/commands/relay");
   if (ok) {
-    outRelay = fbData.intData();
+    outRelay = fbData.intData() == 1 ? 1 : 0;
   } else {
-    Serial.println("[Firebase] readRelayCommand gagal: " + fbData.errorReason());
+    String reason = fbData.errorReason();
+    if (!isFirebasePathMissing(reason)) {
+      Serial.println("[Firebase] readRelayCommand gagal: " + reason);
+    }
   }
   return ok;
 }
@@ -361,5 +423,7 @@ bool writeAutoLearningResult(const String& requestId,
   }
   return resultOk && thresholdOk;
 }
+
+#endif // SKIP_FIREBASE
 
 #endif // FIREBASE_HANDLER_H

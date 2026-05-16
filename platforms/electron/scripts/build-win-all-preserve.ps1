@@ -15,6 +15,7 @@ if (-not (Test-Path $preserveDir)) {
 # Clean existing downloads
 Write-Host "Cleaning old Windows downloads..." -ForegroundColor Yellow
 Get-ChildItem -Path $preserveDir -Filter "*.exe" | Remove-Item -Force
+Get-ChildItem -Path $preserveDir -Filter "*.msi" | Remove-Item -Force
 
 # Clean temp directory
 if (Test-Path $tempDir) {
@@ -37,8 +38,8 @@ foreach ($build in $builds) {
     npm run $build
 
     if ($LASTEXITCODE -eq 0) {
-        # Copy all .exe files to temp
-        Get-ChildItem -Path "$releaseDir\*.exe" -File | ForEach-Object {
+        # Copy stable public release artifacts to temp
+        Get-ChildItem -Path (Join-Path $releaseDir "*") -Include "*.exe","*.msi" -File | ForEach-Object {
             Copy-Item -Path $_.FullName -Destination $tempDir -Force
         }
         Write-Host "Build completed, files preserved"
@@ -51,7 +52,7 @@ foreach ($build in $builds) {
 
 # Copy all preserved files to public downloads
 Write-Host "Copying all builds to public/downloads/windows..." -ForegroundColor Cyan
-Get-ChildItem -Path "$tempDir\*.exe" -File | ForEach-Object {
+Get-ChildItem -Path (Join-Path $tempDir "*") -Include "*.exe","*.msi" -File | ForEach-Object {
     Copy-Item -Path $_.FullName -Destination $preserveDir -Force
     $sizeMB = [math]::Round($_.Length/1MB, 2)
     Write-Host "  - $($_.Name) ($sizeMB MB)"
@@ -62,4 +63,4 @@ Remove-Item -Path $tempDir -Recurse -Force
 
 Write-Host "All Windows builds completed and deployed!" -ForegroundColor Green
 Write-Host "Download directory: $preserveDir"
-Get-ChildItem -Path "$preserveDir\*.exe" -File | Select-Object Name, @{Name='SizeMB';Expression={[math]::Round($_.Length/1MB,2)}} | Format-Table -AutoSize
+Get-ChildItem -Path (Join-Path $preserveDir "*") -Include "*.exe","*.msi" -File | Select-Object Name, @{Name='SizeMB';Expression={[math]::Round($_.Length/1MB,2)}} | Format-Table -AutoSize

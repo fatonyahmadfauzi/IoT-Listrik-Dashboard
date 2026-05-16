@@ -9,6 +9,10 @@
  *  PZEM-004T TX → ESP32 RX2 (PZEM_RX_PIN)
  *  PZEM-004T RX → ESP32 TX2 (PZEM_TX_PIN)
  *  PZEM VCC/GND → 5 V/common GND. Use level shifting if needed.
+ *
+ * NOTE: PZEM object is lazy-initialized in initSensors() to avoid
+ *       accessing Serial2 before setup(). Global constructors run
+ *       before setup() and can cause StoreProhibited crashes.
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -20,7 +24,9 @@
 #include <math.h>
 
 #include <PZEM004Tv30.h>
-PZEM004Tv30 pzem(Serial2, PZEM_RX_PIN, PZEM_TX_PIN);
+
+// Lazy-initialized — created in initSensors() after Serial2.begin()
+static PZEM004Tv30* pzem = nullptr;
 
 struct ElectricalReading {
   float arus = 0.0f;
@@ -37,10 +43,21 @@ struct ElectricalReading {
 
 // ─── initSensors() ────────────────────────────────────────────
 /**
- * Start the PZEM serial bus.
+ * Start the PZEM serial bus and create the PZEM object.
+ * MUST be called in setup() before any readElectrical() call.
  */
 void initSensors() {
-  Serial2.begin(PZEM_BAUD, SERIAL_8N1, PZEM_RX_PIN, PZEM_TX_PIN);
+  // Let the PZEM constructor handle Serial2.begin() internally.
+  // Do NOT call Serial2.begin() separately — double-init corrupts
+  // UART state and can cause StoreProhibited crashes on ESP32.
+  pzem = new PZEM004Tv30(Serial2, PZEM_RX_PIN, PZEM_TX_PIN);
+  delay(100);  // let UART settle after PZEM init
+
+  if (pzem) {
+    Serial.println("[PZEM] Sensor diinisialisasi OK");
+  } else {
+    Serial.println("[PZEM] GAGAL alokasi memori untuk sensor!");
+  }
 }
 
 // ─── computeDaya() ────────────────────────────────────────────
@@ -72,15 +89,23 @@ ElectricalReading readElectrical(RuntimeSettings& settings,
   r.frekuensi = settings.frequencyHz;
   r.powerFactor = settings.powerFactorEstimate;
 
-  float pzemVoltage = pzem.voltage();
-  float pzemCurrent = pzem.current();
+  // Guard: PZEM not initialized (sensor not connected or init failed)
+  if (!pzem) {
+    Serial.println("[PZEM] Sensor belum diinisialisasi — skip pembacaan");
+    r.valid = false;
+    r.sensorSource = "PZEM-004T";
+    return r;
+  }
+
+  float pzemVoltage = pzem->voltage();
+  float pzemCurrent = pzem->current();
 
   if (isValidMeterValue(pzemVoltage) && pzemVoltage > 1.0f &&
       isValidMeterValue(pzemCurrent)) {
-    float pzemPower = pzem.power();
-    float pzemEnergy = pzem.energy();
-    float pzemFrequency = pzem.frequency();
-    float pzemPf = pzem.pf();
+    float pzemPower = pzem->power();
+    float pzemEnergy = pzem->energy();
+    float pzemFrequency = pzem->frequency();
+    float pzemPf = pzem->pf();
 
     r.tegangan = fmaxf(pzemVoltage * settings.teganganCalibration, 0.0f);
     r.arus = fmaxf(pzemCurrent * settings.arusCalibration, 0.0f);
@@ -101,6 +126,14 @@ ElectricalReading readElectrical(RuntimeSettings& settings,
     r.valid = true;
     r.sensorSource = "PZEM-004T";
     return r;
+  }
+
+  static unsigned long lastInvalidPzemLogMs = 0;
+  unsigned long now = millis();
+  if (now - lastInvalidPzemLogMs >= 5000UL) {
+    lastInvalidPzemLogMs = now;
+    Serial.printf("[PZEM] Pembacaan tidak valid: V=%.2f I=%.3f. Cek TX/RX silang, 5V/GND common, dan alamat PZEM.\n",
+                  pzemVoltage, pzemCurrent);
   }
 
   r.arus = 0.0f;

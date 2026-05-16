@@ -239,7 +239,7 @@ async function sendRelayCommand(val) {
 
     elRelayOn.disabled = true;
     elRelayOff.disabled = true;
-    await set(ref(db, getDbPrefix() + "/listrik/relay"), val);
+    await set(ref(db, getDbPrefix() + "/commands/relay"), val);
     showToast(`Perintah relay ${val === 1 ? "ON" : "OFF"} dikirim`, "success");
   } catch (err) {
     showToast("Gagal mengirim perintah relay: " + err.message, "error");

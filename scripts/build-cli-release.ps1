@@ -17,6 +17,19 @@ New-Item -ItemType Directory -Force -Path $cliDownloadsDir | Out-Null
 Write-Host "Syncing latest Node CLI source..." -ForegroundColor Cyan
 Copy-Item (Join-Path $repoRoot "platforms\cli-node\index.js") (Join-Path $nodeSourceDir "index.js") -Force
 Copy-Item (Join-Path $repoRoot "platforms\cli-node\download-cli.js") (Join-Path $nodeSourceDir "download-cli.js") -Force
+Copy-Item (Join-Path $repoRoot "platforms\cli-node\package.json") (Join-Path $nodeSourceDir "package.json") -Force
+Copy-Item (Join-Path $repoRoot "platforms\cli-node\package-lock.json") (Join-Path $nodeSourceDir "package-lock.json") -Force
+
+Write-Host "Installing Node CLI dependencies..." -ForegroundColor Cyan
+Push-Location $nodeSourceDir
+try {
+    & npm ci --omit=dev
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm ci gagal dengan exit code $LASTEXITCODE"
+    }
+} finally {
+    Pop-Location
+}
 
 if (-not $SkipNodeWindows) {
     Write-Host "Building Node CLI (Windows x64)..." -ForegroundColor Green

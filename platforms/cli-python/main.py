@@ -338,7 +338,7 @@ def toggle_relay():
 
     if answer is not None:
         try:
-            db.child(f"{path_prefix}listrik").child("relay").set(answer, current_user['token'])
+            db.child(f"{path_prefix}commands").child("relay").set(1 if answer else 0, current_user['token'])
             state_str = "ON" if answer else "OFF"
             console.print(f"\n[bold green]Berhasil mengirim perintah \\[{state_str}] ke alat![/bold green]")
         except Exception as e:

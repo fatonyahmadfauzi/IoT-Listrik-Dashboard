@@ -1,32 +1,42 @@
 {
   "version": "1.0.0",
-  "buildDate": "2026-04-30",
+  "buildDate": "2026-05-15",
   "downloads": {
     "android": {
-      "filename": "IoT-Listrik-Dashboard.apk",
-      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.apk",
+      "filename": "IoT Listrik Dashboard 1.0.0.apk",
+      "url": "/downloads/android/IoT Listrik Dashboard 1.0.0.apk",
       "size": "3.27 MB"
     },
     "windows": {
       "setup": {
-        "filename": "IoT-Listrik-Dashboard-Setup.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Setup.exe",
+        "filename": "IoT Listrik Dashboard 1.0.0 Setup.exe",
+        "url": "/downloads/windows/IoT Listrik Dashboard 1.0.0 Setup.exe",
         "size": "334.40 MB",
-        "architectures": ["ia32", "x64", "arm64"],
+        "architectures": [
+          "ia32",
+          "x64",
+          "arm64"
+        ],
         "type": "unified"
       },
       "portable": {
-        "filename": "IoT-Listrik-Dashboard-Portable.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard-Portable.exe",
+        "filename": "IoT Listrik Dashboard 1.0.0.exe",
+        "url": "/downloads/windows/IoT Listrik Dashboard 1.0.0.exe",
         "size": "334.13 MB",
-        "architectures": ["ia32", "x64", "arm64"],
+        "architectures": [
+          "ia32",
+          "x64",
+          "arm64"
+        ],
         "type": "unified"
       },
       "msi": {
         "filename": "IoT-Listrik-Dashboard.msi",
         "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.msi",
         "size": "124.86 MB",
-        "architectures": ["x64"],
+        "architectures": [
+          "x64"
+        ],
         "type": "installer"
       }
     },

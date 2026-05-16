@@ -72,7 +72,12 @@
 // Output pins
 #define PIN_RELAY1            26    // Relay channel 1 — main load / contactor
 #define PIN_RELAY2            27    // Relay channel 2 — optional
-#define PIN_BUZZER            25    // Passive buzzer
+#define PIN_BUZZER            25    // Buzzer module / passive buzzer
+
+// Output polarity. Change only if the installed module uses the opposite logic.
+// Most relay modules are active-LOW. Passive buzzers wired directly are active-HIGH.
+#define RELAY_ACTIVE_LOW      1
+#define BUZZER_ACTIVE_HIGH    1
 
 // Factory reset button (hold on boot to erase NVS and re-enter portal)
 #define PIN_FACTORY_RESET     0     // GPIO0 = BOOT button on most ESP32 boards
@@ -99,6 +104,18 @@ struct BootstrapConfig {
   char firebaseDbUrl[128]  = DEFAULT_DATABASE_URL;
   char iotEmail[64]        = DEFAULT_IOT_EMAIL;
   char iotPassword[64]     = DEFAULT_IOT_PASSWORD;
+};
+
+struct RemoteBootstrapRequest {
+  bool   pending = false;
+  String action;
+  String requestId;
+  String wifiSsid;
+  String wifiPassword;
+  String firebaseApiKey;
+  String firebaseDbUrl;
+  String iotEmail;
+  String iotPassword;
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -158,5 +175,11 @@ struct RuntimeSettings {
 // #define LCD_ADDR  0x27
 // #define LCD_COLS  16
 // #define LCD_ROWS  2
+// #ifndef LCD_SDA_PIN
+// #define LCD_SDA_PIN 21
+// #endif
+// #ifndef LCD_SCL_PIN
+// #define LCD_SCL_PIN 22
+// #endif
 
 #endif // CONFIG_H

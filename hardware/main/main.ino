@@ -29,7 +29,7 @@
  *
  * Arduino IDE Board Settings:
  *   Board          : ESP32 Dev Module
- *   Partition Scheme: Default 4MB with spiffs
+ *   Partition Scheme: Huge APP (3MB No OTA/1MB SPIFFS)
  *   Upload Speed   : 921600
  *   CPU Frequency  : 240 MHz
  * ═══════════════════════════════════════════════════════════════
@@ -39,12 +39,13 @@
 #include <WiFi.h>
 #include <WiFiManager.h>     // tzapu WiFiManager — captive portal
 #include <Preferences.h>     // NVS — non-volatile bootstrap storage
-#include "config.h"
-#include "sensors.h"
-#include "firebase_handler.h"
-#include "telegram_handler.h"
+#include "../config.h"
+#include "../sensors.h"
+#include "../firebase_handler.h"
+#include "../telegram_handler.h"
 
 #ifdef USE_LCD
+  #include <Wire.h>
   #include <LiquidCrystal_I2C.h>
   LiquidCrystal_I2C lcd(LCD_ADDR, LCD_COLS, LCD_ROWS);
 #endif
@@ -105,27 +106,50 @@ void saveEnergyKwhToNvs() {
 }
 
 // Timers
-unsigned long lastSendMs         = 0;
-unsigned long lastSettingsSyncMs = 0;
-unsigned long lastRelayCheckMs   = 0;
-unsigned long lastLogMs          = 0;
+unsigned long lastSendMs           = 0;
+unsigned long lastSettingsSyncMs   = 0;
+unsigned long lastRelayCheckMs     = 0;
+unsigned long lastLogMs            = 0;
+unsigned long lastPeriodicLogMs    = 0;  // Periodic log timer (independent of status change)
 unsigned long lastBootstrapCheckMs = 0;
+
+// Interval log periodik — log ke /logs setiap 5 menit meski kondisi stabil
+static const unsigned long PERIODIC_LOG_INTERVAL_MS = 300000UL;  // 5 menit
+bool firstLoopTrace = true;
+
+// FreeRTOS
+TaskHandle_t TaskFirebase;
+SemaphoreHandle_t dataMutex = NULL;
+
+// Variables for cross-task communication
+struct PendingLog {
+  bool active = false;
+  float arus = 0;
+  float tegangan = 0;
+  String status = "";
+  int relay = 0;
+  String cause = "";
+  float dayaW = 0;
+  float apparentPowerVa = 0;
+  float energiKwh = 0;
+  float frekuensi = 0;
+  float powerFactor = 0;
+  String sensorSource = "";
+} pendingLog;
+
+struct PendingAlert {
+  bool active = false;
+  String newStatus = "";
+  String lastStatus = "";
+  float arus = 0;
+  float tegangan = 0;
+  int relay = 0;
+} pendingAlert;
 
 static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000UL;
 static const unsigned long REMOTE_BOOTSTRAP_POLL_MS = 5000UL;
 static const unsigned long AUTO_LEARNING_SAMPLE_MS = 500UL;
-
-struct RemoteBootstrapRequest {
-  bool   pending = false;
-  String action;
-  String requestId;
-  String wifiSsid;
-  String wifiPassword;
-  String firebaseApiKey;
-  String firebaseDbUrl;
-  String iotEmail;
-  String iotPassword;
-};
+static const unsigned long RELAY_COMMAND_POLL_MS = 1000UL;
 
 String readBootstrapMeta(const char* key) {
   prefs.begin(NVS_NAMESPACE, true);
@@ -258,21 +282,83 @@ bool connectStoredWiFi(unsigned long timeoutMs = WIFI_CONNECT_TIMEOUT_MS) {
 }
 
 bool writeBootstrapStatusString(const char* child, const String& value) {
+  #ifdef SKIP_FIREBASE
+  return false;
+  #else
   if (!isFirebaseReady()) return false;
   return Firebase.RTDB.setString(
-    &fbData,
+    &fbBootstrapData,
     String("/settings/deviceBootstrap/") + child,
     value
   );
+  #endif
 }
 
 bool writeBootstrapStatusBool(const char* child, bool value) {
+  #ifdef SKIP_FIREBASE
+  return false;
+  #else
   if (!isFirebaseReady()) return false;
   return Firebase.RTDB.setBool(
-    &fbData,
+    &fbBootstrapData,
     String("/settings/deviceBootstrap/") + child,
     value
   );
+  #endif
+}
+
+bool isMissingFirebasePathError(const String& reason) {
+  return reason.indexOf("path not exist") != -1 ||
+         reason.indexOf("Path not exist") != -1 ||
+         reason.indexOf("path is not exist") != -1;
+}
+
+String bootstrapChildPath(const char* child) {
+  return String("/settings/deviceBootstrap/") + child;
+}
+
+bool readBootstrapBoolChild(const char* child, bool& out) {
+  #ifdef SKIP_FIREBASE
+  return false;
+  #else
+  const String path = bootstrapChildPath(child);
+  if (Firebase.RTDB.getBool(&fbBootstrapData, path)) {
+    out = fbBootstrapData.boolData();
+    return true;
+  }
+
+  String reason = fbBootstrapData.errorReason();
+  if (Firebase.RTDB.getString(&fbBootstrapData, path)) {
+    String value = fbBootstrapData.stringData();
+    value.toLowerCase();
+    out = (value == "true" || value == "1");
+    return true;
+  }
+
+  reason = fbBootstrapData.errorReason();
+  if (!isMissingFirebasePathError(reason)) {
+    Serial.println(String("[Firebase] read deviceBootstrap/") + child + " gagal: " + reason);
+  }
+  return false;
+  #endif
+}
+
+bool readBootstrapStringChild(const char* child, String& out) {
+  #ifdef SKIP_FIREBASE
+  return false;
+  #else
+  const String path = bootstrapChildPath(child);
+  if (Firebase.RTDB.getString(&fbBootstrapData, path)) {
+    out = fbBootstrapData.stringData();
+    return true;
+  }
+
+  const String reason = fbBootstrapData.errorReason();
+  if (!isMissingFirebasePathError(reason)) {
+    Serial.println(String("[Firebase] read deviceBootstrap/") + child + " gagal: " + reason);
+  }
+  return false;
+  #endif
 }
 
 void updateRemoteBootstrapStatus(const String& status,
@@ -298,6 +384,7 @@ void confirmPendingBootstrapIfNeeded() {
   const String action = getPendingBootstrapConfirmationAction();
   if (requestId.isEmpty() || !isFirebaseReady()) return;
 
+  clearPendingBootstrapConfirmation();
   writeBootstrapStatusString("lastAppliedRequestId", requestId);
   writeBootstrapStatusString("lastConfirmedAt", String(millis()));
   writeBootstrapStatusString("lastAction", action);
@@ -308,37 +395,29 @@ void confirmPendingBootstrapIfNeeded() {
     "",
     false
   );
-  clearPendingBootstrapConfirmation();
 }
 
 bool readRemoteBootstrapRequest(RemoteBootstrapRequest& out) {
   if (!isFirebaseReady()) return false;
 
-  if (!Firebase.RTDB.getJSON(&fbData, "/settings/deviceBootstrap")) {
-    const String reason = fbData.errorReason();
-    if (reason.indexOf("path not exist") == -1 &&
-        reason.indexOf("Path not exist") == -1) {
-      Serial.println("[Firebase] readRemoteBootstrapRequest gagal: " + reason);
-    }
+  bool pending = false;
+  if (!readBootstrapBoolChild("pending", pending) || !pending) {
     return false;
   }
 
-  FirebaseJson json;
-  FirebaseJsonData val;
-  json.setJsonData(fbData.jsonString());
+  out.pending = true;
+  readBootstrapStringChild("action", out.action);
+  readBootstrapStringChild("requestId", out.requestId);
+  readBootstrapStringChild("wifiSsid", out.wifiSsid);
+  readBootstrapStringChild("wifiPassword", out.wifiPassword);
+  readBootstrapStringChild("firebaseApiKey", out.firebaseApiKey);
+  readBootstrapStringChild("firebaseDbUrl", out.firebaseDbUrl);
+  readBootstrapStringChild("iotEmail", out.iotEmail);
+  readBootstrapStringChild("iotPassword", out.iotPassword);
 
-  if (json.get(val, "pending")) {
-    out.pending = (val.stringValue == "true" || val.intValue == 1);
+  if (out.requestId.isEmpty()) {
+    Serial.println("[Firebase] deviceBootstrap pending tanpa requestId, diabaikan.");
   }
-  if (json.get(val, "action")) out.action = val.stringValue;
-  if (json.get(val, "requestId")) out.requestId = val.stringValue;
-  if (json.get(val, "wifiSsid")) out.wifiSsid = val.stringValue;
-  if (json.get(val, "wifiPassword")) out.wifiPassword = val.stringValue;
-  if (json.get(val, "firebaseApiKey")) out.firebaseApiKey = val.stringValue;
-  if (json.get(val, "firebaseDbUrl")) out.firebaseDbUrl = val.stringValue;
-  if (json.get(val, "iotEmail")) out.iotEmail = val.stringValue;
-  if (json.get(val, "iotPassword")) out.iotPassword = val.stringValue;
-
   return out.pending && !out.requestId.isEmpty();
 }
 
@@ -425,8 +504,7 @@ void applyRemoteBootstrapRequest(const RemoteBootstrapRequest& cmd) {
  * ─────────────────────────────────────────────────────────────
  * 1. On first boot (or after factory reset), the ESP32 cannot
  *    find a known WiFi network.
- * 2. It starts a soft-AP named "IoT-Listrik-Setup" with password
- *    "listrik123".
+ * 2. It starts a soft-AP named AP_SSID with password AP_PASSWORD.
  * 3. The user connects their phone to this AP.
  * 4. A captive portal page opens automatically (or navigate to
  *    192.168.4.1 in browser).
@@ -632,32 +710,109 @@ void handleAutoLearning(unsigned long now) {
 // ═══════════════════════════════════════════════════════════════
 
 void setRelay(int val) {
-  // Relay module is active-LOW: val=1(ON)→pin LOW, val=0(OFF)→pin HIGH
+  // Relay module polarity is configured in config.h.
+#if RELAY_ACTIVE_LOW
   digitalWrite(PIN_RELAY1, val == 1 ? LOW : HIGH);
+#else
+  digitalWrite(PIN_RELAY1, val == 1 ? HIGH : LOW);
+#endif
   state.relay = val;
   Serial.printf("[Relay] → %s\n", val == 1 ? "ON" : "OFF");
+}
+
+void setBuzzerOutput(bool on) {
+#if BUZZER_ACTIVE_HIGH
+  digitalWrite(PIN_BUZZER, on ? HIGH : LOW);
+#else
+  digitalWrite(PIN_BUZZER, on ? LOW : HIGH);
+#endif
 }
 
 void buzzerBeep(int times = 3, int onMs = 200, int offMs = 100) {
   if (!rt.buzzerEnabled) return;
   for (int i = 0; i < times; i++) {
-    digitalWrite(PIN_BUZZER, HIGH); delay(onMs);
-    digitalWrite(PIN_BUZZER, LOW);  delay(offMs);
+    setBuzzerOutput(true);  delay(onMs);
+    setBuzzerOutput(false); delay(offMs);
   }
 }
 
 void buzzerLong() {
   if (!rt.buzzerEnabled) return;
-  digitalWrite(PIN_BUZZER, HIGH); delay(1500);
-  digitalWrite(PIN_BUZZER, LOW);
+  setBuzzerOutput(true);  delay(1500);
+  setBuzzerOutput(false);
 }
 
 #ifdef USE_LCD
+void lcdPrintLine(uint8_t row, const String& text) {
+  lcd.setCursor(0, row);
+  String line = text;
+  if (line.length() > LCD_COLS) line.remove(LCD_COLS);
+  lcd.print(line);
+  for (uint8_t i = line.length(); i < LCD_COLS; i++) {
+    lcd.print(' ');
+  }
+}
+
+void lcdStatus(const char* line1, const char* line2) {
+  lcdPrintLine(0, String(line1));
+  lcdPrintLine(1, String(line2));
+}
+
+void scanI2CBus() {
+  byte found = 0;
+  Serial.printf("[I2C] Scan LCD bus SDA=%d SCL=%d target=0x%02X\n",
+                LCD_SDA_PIN, LCD_SCL_PIN, LCD_ADDR);
+  for (byte addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) {
+      Serial.printf("[I2C] Device ditemukan: 0x%02X\n", addr);
+      found++;
+      delay(2);
+    }
+  }
+  if (found == 0) {
+    Serial.println("[I2C] Tidak ada device. Cek VCC, GND, SDA=21, SCL=22, dan solder backpack LCD.");
+  }
+}
+
+void initLCD() {
+  Wire.begin(LCD_SDA_PIN, LCD_SCL_PIN);
+  delay(50);
+  scanI2CBus();
+
+  // Auto-detect LCD address: try primary (0x27), fallback to secondary (0x3F)
+  byte detectedAddr = 0;
+  Wire.beginTransmission(LCD_ADDR_PRIMARY);
+  if (Wire.endTransmission() == 0) {
+    detectedAddr = LCD_ADDR_PRIMARY;
+  } else {
+    Wire.beginTransmission(LCD_ADDR_SECONDARY);
+    if (Wire.endTransmission() == 0) {
+      detectedAddr = LCD_ADDR_SECONDARY;
+    }
+  }
+
+  if (detectedAddr != 0 && detectedAddr != LCD_ADDR) {
+    Serial.printf("[LCD] Alamat terdeteksi 0x%02X (beda dari config 0x%02X) — gunakan terdeteksi\n",
+                  detectedAddr, LCD_ADDR);
+    lcd = LiquidCrystal_I2C(detectedAddr, LCD_COLS, LCD_ROWS);
+  } else if (detectedAddr == 0) {
+    Serial.println("[LCD] Tidak ada LCD ditemukan di 0x27 atau 0x3F. Cek kabel SDA/SCL.");
+  }
+
+  lcd.init();
+  lcd.backlight();
+  lcdStatus("IoT Listrik", "Booting...");
+  Serial.printf("[LCD] Siap di alamat 0x%02X\n", detectedAddr ? detectedAddr : LCD_ADDR);
+}
+
 void updateLCD() {
-  lcd.setCursor(0, 0);
-  lcd.printf("I:%.2fA V:%.0fV  ", state.arus, state.tegangan);
-  lcd.setCursor(0, 1);
-  lcd.printf("%-8s R:%s", state.status.c_str(), state.relay ? "ON " : "OFF");
+  char line1[17];
+  char line2[17];
+  snprintf(line1, sizeof(line1), "I:%4.2fA V:%3.0f", state.arus, state.tegangan);
+  snprintf(line2, sizeof(line2), "%-8s R:%s", state.status.c_str(), state.relay ? "ON" : "OFF");
+  lcdPrintLine(0, String(line1));
+  lcdPrintLine(1, String(line2));
 }
 #endif
 
@@ -677,7 +832,7 @@ void setup() {
   pinMode(PIN_RELAY2,       OUTPUT);
   pinMode(PIN_BUZZER,       OUTPUT);
   pinMode(PIN_FACTORY_RESET,INPUT_PULLUP);
-  digitalWrite(PIN_BUZZER, LOW);
+  setBuzzerOutput(false);
   setRelay(1);  // default: relay ON (load connected)
 
   // ── Factory reset check ─────────────────────────────────────
@@ -697,8 +852,7 @@ void setup() {
 
   // ── LCD init (optional) ──────────────────────────────────────
   #ifdef USE_LCD
-    lcd.init(); lcd.backlight();
-    lcd.print(" Inisialisasi...");
+    initLCD();
   #endif
 
   // ── Load bootstrap config from NVS ──────────────────────────
@@ -706,9 +860,15 @@ void setup() {
   loadEnergyKwhFromNvs();
 
   // ── Connect WiFi (with captive portal fallback) ──────────────
+  #ifdef USE_LCD
+    lcdStatus("WiFi", "Connecting...");
+  #endif
   connectWithPortal();
 
   // ── Initialize Firebase with bootstrap credentials ───────────
+  #ifdef USE_LCD
+    lcdStatus("Firebase", "Init...");
+  #endif
   initFirebase(
     bootstrap.firebaseApiKey,
     bootstrap.firebaseDbUrl,
@@ -741,48 +901,243 @@ void setup() {
                  rt.telegramCooldownMs, true);
   }
 
-  Serial.println(F("[Setup] Selesai! Mulai monitoring...\n"));
-  buzzerBeep(2, 150, 80);
+  buzzerBeep(2, 150, 80);  // buzzer sebelum monitoring dimulai
+
+  #ifdef USE_LCD
+    lcdStatus("Monitoring", "Mulai...");
+  #endif
+
+  Serial.printf("[Setup] Free heap: %u bytes\n", ESP.getFreeHeap());
+  Serial.println(F("[Setup] Selesai! Mulai monitoring..."));
+  Serial.flush();  // pastikan output tercetak sebelum loop
+
+  // ── Start FreeRTOS Task on Core 0 ────────────────────────────
+  dataMutex = xSemaphoreCreateMutex();
+  if (dataMutex != NULL) {
+    xTaskCreatePinnedToCore(
+      firebaseTaskCore0,   // Task function
+      "FirebaseTask",      // Name
+      32768,               // Stack size (32KB)
+      NULL,                // Parameter
+      1,                   // Priority
+      &TaskFirebase,       // Task handle
+      0                    // Core 0
+    );
+    Serial.println("[Setup] FreeRTOS FirebaseTask berjalan di Core 0.");
+  } else {
+    Serial.println("[Setup] [ERROR] Gagal membuat dataMutex!");
+  }
+
+  // ── Stagger timer awal agar Firebase ops tidak semua trigger sekaligus ──
+  // Task dimulai setelah delay 5 detik (lihat vTaskDelay di firebaseTaskCore0).
+  // Kita atur timer agar send/relay/bootstrap terdistribusi:
+  unsigned long nowMs = millis();
+  lastSendMs           = nowMs;                          // kirim pertama setelah sendIntervalMs
+  lastRelayCheckMs     = nowMs;                          // relay check setelah 2.5 s
+  lastBootstrapCheckMs = nowMs;                          // bootstrap setelah 5 s
+  // lastSettingsSyncMs sudah diset saat readAllSettings di atas
+
+  delay(500);      // stabilisasi sebelum loop pertama
+  yield();
 }
 
 // ═══════════════════════════════════════════════════════════════
-// LOOP
+// FREERTOS TASK (CORE 0) - Network Operations
+// ═══════════════════════════════════════════════════════════════
+
+void firebaseTaskCore0(void *pvParameters) {
+  // Tunggu 5 detik sebelum mulai operasi Firebase:
+  // 1) Memberi waktu Firebase internal SSL context selesai inisialisasi
+  // 2) Mencegah race dengan setup() yang baru saja selesai readAllSettings
+  vTaskDelay(pdMS_TO_TICKS(5000));
+  Serial.println("[Firebase Task] Siap, mulai operasi...");
+
+  for (;;) {
+    unsigned long now = millis();
+
+    // Pastikan WiFi terhubung sebelum melakukan operasi network
+    if (WiFi.status() == WL_CONNECTED) {
+
+      // 1. Check Remote Bootstrap
+      if (isFirebaseReady() && (now - lastBootstrapCheckMs >= REMOTE_BOOTSTRAP_POLL_MS)) {
+        lastBootstrapCheckMs = now;
+        confirmPendingBootstrapIfNeeded();
+        RemoteBootstrapRequest bootstrapCmd;
+        if (readRemoteBootstrapRequest(bootstrapCmd)) {
+          applyRemoteBootstrapRequest(bootstrapCmd);
+        }
+      }
+
+      // Read state with Mutex
+      DeviceState localState;
+      RuntimeSettings localRt;
+      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        localState = state;
+        localRt = rt;
+        xSemaphoreGive(dataMutex);
+      } else {
+        vTaskDelay(pdMS_TO_TICKS(10));
+        continue;
+      }
+
+      // 2. Stream Data to /listrik
+      if (now - lastSendMs >= localRt.sendIntervalMs) {
+        lastSendMs = now;
+        if (localRt.realtimeStreamEnabled) {
+          bool monitorOk = writeMonitorData(localState.arus, localState.tegangan, localState.dayaW,
+                                            localState.apparentPowerVa, localState.energiKwh,
+                                            localState.frekuensi, localState.powerFactor,
+                                            localState.status, localState.relay, localState.sensorSource);
+          Serial.printf("[Monitor] src=%s I=%.2fA V=%.1fV P=%.1fW S=%.1fVA PF=%.2f f=%.1fHz status=%s relay=%d\n",
+                        localState.sensorSource.c_str(), localState.arus, localState.tegangan,
+                        localState.dayaW, localState.apparentPowerVa, localState.powerFactor,
+                        localState.frekuensi, localState.status.c_str(), localState.relay);
+        }
+      }
+
+      // 3. Process Pending Logs
+      PendingLog logToSend;
+      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        if (pendingLog.active) {
+          logToSend = pendingLog;
+          pendingLog.active = false;
+        }
+        xSemaphoreGive(dataMutex);
+      }
+      if (logToSend.active) {
+        writeLog(logToSend.arus, logToSend.tegangan, logToSend.status, logToSend.relay, logToSend.cause.c_str(),
+                 logToSend.dayaW, logToSend.apparentPowerVa, logToSend.energiKwh,
+                 logToSend.frekuensi, logToSend.powerFactor, logToSend.sensorSource);
+      }
+
+      // 4. Process Pending Alerts
+      PendingAlert alertToSend;
+      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        if (pendingAlert.active) {
+          alertToSend = pendingAlert;
+          pendingAlert.active = false;
+        }
+        xSemaphoreGive(dataMutex);
+      }
+      if (alertToSend.active && localRt.telegramNotifyEnabled) {
+        sendAlertIfNeeded(
+          alertToSend.newStatus, alertToSend.lastStatus,
+          alertToSend.arus, alertToSend.tegangan, alertToSend.relay,
+          localRt.telegramBotToken, localRt.telegramChatId,
+          localRt.telegramCooldownMs
+        );
+      }
+
+      // 5. Read Web Relay Command
+      if (now - lastRelayCheckMs >= RELAY_COMMAND_POLL_MS) {
+        lastRelayCheckMs = now;
+        int cmdRelay = localState.relay;
+        if (readRelayCommand(cmdRelay) && cmdRelay != localState.relay) {
+          Serial.printf("[Relay] Command dari web: %s\n", cmdRelay ? "ON" : "OFF");
+
+          if (cmdRelay == 1 && localRt.autoCutoffEnabled && localState.status == "DANGER") {
+            Serial.println("[Relay] Ditolak: kondisi masih berbahaya.");
+            updateRelayState(0);
+          } else {
+            // Kita butuh setRelay fisik (ini i2c / pcf8574). Lakukan via state command
+            bool relayApplied = false;
+            if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+              setRelay(cmdRelay); // setRelay menggunakan PCF8574, pastikan PCF thread-safe atau diakses di sini OK.
+              state.relay = cmdRelay;
+              relayApplied = true;
+
+              pendingLog.active = true;
+              pendingLog.arus = state.arus;
+              pendingLog.tegangan = state.tegangan;
+              pendingLog.status = state.status;
+              pendingLog.relay = cmdRelay;
+              pendingLog.cause = "web_command";
+              pendingLog.dayaW = state.dayaW;
+              pendingLog.apparentPowerVa = state.apparentPowerVa;
+              pendingLog.energiKwh = state.energiKwh;
+              pendingLog.frekuensi = state.frekuensi;
+              pendingLog.powerFactor = state.powerFactor;
+              pendingLog.sensorSource = state.sensorSource;
+
+              xSemaphoreGive(dataMutex);
+            }
+            if (relayApplied) {
+              updateRelayState(cmdRelay);
+              buzzerBeep(1, 80, 0); // buzzerBeep blokir, tapi di core 0 tidak masalah.
+            }
+          }
+        }
+      }
+
+      // 6. Sync Runtime Settings
+      if (now - lastSettingsSyncMs >= localRt.settingsSyncMs) {
+        lastSettingsSyncMs = now;
+        RuntimeSettings newRt;
+        if (readAllSettings(newRt)) {
+          if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            rt = newRt;
+            xSemaphoreGive(dataMutex);
+          }
+        }
+      }
+    }
+
+    // Yield ke watchdog/task lain
+    vTaskDelay(pdMS_TO_TICKS(50));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOOP (CORE 1) - Sensor Reading & Local Logic
 // ═══════════════════════════════════════════════════════════════
 
 void loop() {
   unsigned long now = millis();
 
+  // Heap safety — restart jika memori kritis untuk mencegah crash
+  uint32_t freeHeap = ESP.getFreeHeap();
+  if (freeHeap < 8192) {
+    Serial.printf("[WARN] Heap kritis: %u bytes — restart preventif\n", freeHeap);
+    Serial.flush();
+    delay(500);
+    ESP.restart();
+  }
+
+  bool trace = firstLoopTrace;
+  if (trace) {
+    Serial.printf("[Loop] ═══ LOOP PERTAMA (heap: %u) ═══\n", freeHeap);
+    Serial.flush();
+  }
+
+  // ── Ambil salinan RuntimeSettings dan state yang aman dengan Mutex ──
+  RuntimeSettings localRt;
+  int currentRelay;
+  if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    localRt = rt;
+    currentRelay = state.relay;
+    xSemaphoreGive(dataMutex);
+  } else {
+    // Fallback jika lock gagal
+    localRt = rt;
+    currentRelay = state.relay;
+  }
+
   // ── WiFi watchdog ────────────────────────────────────────────
+  if (trace) { Serial.println("[Loop] 1. Cek WiFi..."); Serial.flush(); }
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("[WiFi] Terputus — reconnecting...");
     WiFi.reconnect();
     delay(3000);
     return;
   }
-
-  if (isFirebaseReady() && (now - lastBootstrapCheckMs >= REMOTE_BOOTSTRAP_POLL_MS)) {
-    lastBootstrapCheckMs = now;
-    confirmPendingBootstrapIfNeeded();
-    RemoteBootstrapRequest bootstrapCmd;
-    if (readRemoteBootstrapRequest(bootstrapCmd)) {
-      applyRemoteBootstrapRequest(bootstrapCmd);
-    }
-  }
+  if (trace) { Serial.println("[Loop] 1. WiFi OK"); Serial.flush(); }
 
   // ── Read metering data from PZEM-004T ───────────────────────
-  ElectricalReading reading = readElectrical(rt, g_energiKwh);
-  state.arus            = reading.arus;
-  state.tegangan        = reading.tegangan;
-  state.dayaW           = reading.dayaW;
-  state.apparentPowerVa = reading.apparentPowerVa;
-  state.energiKwh       = reading.energiKwh;
-  state.frekuensi       = reading.frekuensi;
-  state.powerFactor     = reading.powerFactor;
-  state.sensorSource    = reading.sensorSource;
+  if (trace) { Serial.println("[Loop] 2. Baca PZEM..."); Serial.flush(); }
+  ElectricalReading reading = readElectrical(localRt, g_energiKwh);
+  if (trace) { Serial.println("[Loop] 2. PZEM OK"); Serial.flush(); }
 
   // ── Energy handling ──────────────────────────────────────────
-  // PZEM provides kWh directly. If the meter omits kWh but voltage/current
-  // are valid, estimate energy from active power until the meter reports again.
   if (reading.energyFromMeter) {
     g_energiKwh = reading.energiKwh;
     g_lastEnergyMs = now;
@@ -792,112 +1147,162 @@ void loop() {
     if (now >= prev) {
       float dt_h = (now - prev) / 3600000.0f;
       if (dt_h > 0.0f && dt_h < 1.0f) {
-        float pKw = state.dayaW / 1000.0f;
+        float pKw = reading.dayaW / 1000.0f;
         if (pKw > 0.0f) g_energiKwh += pKw * dt_h;
       }
     }
     g_lastEnergyMs = now;
   }
-  state.energiKwh = g_energiKwh;
   if (now - g_lastKwhSaveMs >= 60000UL) {
     g_lastKwhSaveMs = now;
     saveEnergyKwhToNvs();
   }
 
-  // ── Auto Learning: sample beban normal saat admin mengaktifkan ──
+  // ── Auto Learning ───────────────────────────────────────────
+  if (trace) { Serial.println("[Loop] 3. Auto learning..."); Serial.flush(); }
   handleAutoLearning(now);
+  if (trace) { Serial.println("[Loop] 3. Auto learning OK"); Serial.flush(); }
 
   // ── Determine status using RUNTIME threshold ─────────────────
-  String newStatus = determineStatus(state.arus, rt.thresholdArus,
-                                      rt.warningPercent);
+  if (trace) { Serial.println("[Loop] 4. Determine status..."); Serial.flush(); }
+  String newStatus = determineStatus(reading.arus, localRt.thresholdArus,
+                                      localRt.warningPercent);
+  if (trace) { Serial.printf("[Loop] 4. Status OK: %s\n", newStatus.c_str()); Serial.flush(); }
   bool statusChanged = (newStatus != lastStatus);
 
-  // ── Auto-cutoff (uses rt.autoCutoffEnabled) ──────────────────
-  if (rt.autoCutoffEnabled && newStatus == "DANGER" && state.relay == 1) {
-
+  // ── Auto-cutoff (uses localRt.autoCutoffEnabled) ───────────────
+  if (localRt.autoCutoffEnabled && newStatus == "DANGER" && currentRelay == 1) {
     Serial.println("[Auto-Cutoff] Kondisi berbahaya! Relay OFF.");
-    setRelay(0);
-    updateRelayState(0);
-    buzzerLong();
-    writeLog(state.arus, state.tegangan, newStatus, 0, "auto_cutoff",
-             state.dayaW, state.apparentPowerVa, state.energiKwh,
-             state.frekuensi, state.powerFactor, state.sensorSource);
-  }
-  state.status = newStatus;
 
-  // ── Buzzer feedback (status change only) ─────────────────────
-  if (statusChanged) {
-    if (newStatus == "WARNING") buzzerBeep(2, 100, 100);
-    if (newStatus == "DANGER") buzzerBeep(5, 200, 100);
-  }
+    if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
+      setRelay(0); // This also updates state.relay inside
+      currentRelay = 0;
+      updateRelayState(0);
 
-  // ── Firebase write (rt.sendIntervalMs controls rate) ─────────
-  if (now - lastSendMs >= rt.sendIntervalMs) {
-    lastSendMs = now;
-    if (rt.realtimeStreamEnabled) {
-      writeMonitorData(state.arus, state.tegangan, state.dayaW,
-                        state.apparentPowerVa, state.energiKwh,
-                        state.frekuensi, state.powerFactor,
-                        state.status, state.relay, state.sensorSource);
-      Serial.printf("[Monitor] src=%s I=%.2fA V=%.1fV P=%.1fW S=%.1fVA PF=%.2f f=%.1fHz status=%s relay=%d\n",
-                    state.sensorSource.c_str(), state.arus, state.tegangan,
-                    state.dayaW, state.apparentPowerVa, state.powerFactor,
-                    state.frekuensi, state.status.c_str(), state.relay);
-    } else {
-      Serial.println("[Monitor] Stream realtime ke /listrik sedang PAUSE.");
+      pendingLog.active = true;
+      pendingLog.arus = reading.arus;
+      pendingLog.tegangan = reading.tegangan;
+      pendingLog.status = newStatus;
+      pendingLog.relay = 0;
+      pendingLog.cause = "auto_cutoff";
+      pendingLog.dayaW = reading.dayaW;
+      pendingLog.apparentPowerVa = reading.apparentPowerVa;
+      pendingLog.energiKwh = g_energiKwh;
+      pendingLog.frekuensi = reading.frekuensi;
+      pendingLog.powerFactor = reading.powerFactor;
+      pendingLog.sensorSource = reading.sensorSource;
+
+      xSemaphoreGive(dataMutex);
     }
-    #ifdef USE_LCD
-      updateLCD();
-    #endif
+    buzzerLong();
   }
+
+  // ── Update Global State dengan Mutex ───────────────────────────
+  if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
+    state.arus            = reading.arus;
+    state.tegangan        = reading.tegangan;
+    state.dayaW           = reading.dayaW;
+    state.apparentPowerVa = reading.apparentPowerVa;
+    state.energiKwh       = g_energiKwh;
+    state.frekuensi       = reading.frekuensi;
+    state.powerFactor     = reading.powerFactor;
+    state.sensorSource    = reading.sensorSource;
+    state.status          = newStatus;
+    // state.relay already accurate from previous operations
+    xSemaphoreGive(dataMutex);
+  }
+
+  // ── Buzzer feedback ───────────────────────────────────────────
+  // Hanya berbunyi jika status MEMBURUK (eskalasi severity), bukan saat
+  // kembali ke kondisi lebih baik. Cooldown 60 detik mencegah buzzing
+  // berulang akibat PZEM berfluktuasi di sekitar batas threshold.
+  if (statusChanged) {
+    int newSev  = (newStatus  == "DANGER") ? 2 : (newStatus  == "WARNING") ? 1 : 0;
+    int prevSev = (lastStatus == "DANGER") ? 2 : (lastStatus == "WARNING") ? 1 : 0;
+    static unsigned long lastBuzzerMs = 0;
+    const  unsigned long BUZZER_COOLDOWN_MS = 60000UL;  // 60 s antara bunyi
+
+    bool isEscalation = (newSev > prevSev);
+    bool cooldownOk   = (now - lastBuzzerMs >= BUZZER_COOLDOWN_MS);
+
+    if (isEscalation && cooldownOk) {
+      if (newStatus == "WARNING") buzzerBeep(2, 100, 100);
+      if (newStatus == "DANGER")  buzzerBeep(5, 200, 100);
+      lastBuzzerMs = now;
+    }
+  }
+
+  // ── Update LCD ─────────────────────────────────────────────────
+  #ifdef USE_LCD
+    static unsigned long lastLcdUpdateMs = 0;
+    if (now - lastLcdUpdateMs >= localRt.sendIntervalMs) {
+      lastLcdUpdateMs = now;
+      if (trace) { Serial.println("[Loop] 5. Update LCD..."); Serial.flush(); }
+      updateLCD();
+      if (trace) { Serial.println("[Loop] 5. LCD OK"); Serial.flush(); }
+    }
+  #endif
 
   // ── Log on status change ──────────────────────────────────────
   if (statusChanged && (now - lastLogMs > 2000)) {
     lastLogMs = now;
-    writeLog(state.arus, state.tegangan, newStatus, state.relay, "esp32",
-             state.dayaW, state.apparentPowerVa, state.energiKwh,
-             state.frekuensi, state.powerFactor, state.sensorSource);
-  }
-
-  // ── Read relay command from web (every ~2.5 s) ───────────────
-  if (now - lastRelayCheckMs >= 2500) {
-    lastRelayCheckMs = now;
-    int cmdRelay = state.relay;
-    if (readRelayCommand(cmdRelay) && cmdRelay != state.relay) {
-      Serial.printf("[Relay] Command dari web: %s\n", cmdRelay ? "ON" : "OFF");
-
-      // Reject ON command when auto-cutoff is active and still dangerous
-      if (cmdRelay == 1 && rt.autoCutoffEnabled && state.status == "DANGER") {
-        Serial.println("[Relay] Ditolak: kondisi masih berbahaya.");
-        updateRelayState(0);
-      } else {
-        setRelay(cmdRelay);
-        writeLog(state.arus, state.tegangan,
-                 state.status, cmdRelay, "web_command",
-                 state.dayaW, state.apparentPowerVa, state.energiKwh,
-                 state.frekuensi, state.powerFactor, state.sensorSource);
-        buzzerBeep(1, 80, 0);
-      }
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      pendingLog.active = true;
+      pendingLog.arus = reading.arus;
+      pendingLog.tegangan = reading.tegangan;
+      pendingLog.status = newStatus;
+      pendingLog.relay = currentRelay;
+      pendingLog.cause = "esp32";
+      pendingLog.dayaW = reading.dayaW;
+      pendingLog.apparentPowerVa = reading.apparentPowerVa;
+      pendingLog.energiKwh = g_energiKwh;
+      pendingLog.frekuensi = reading.frekuensi;
+      pendingLog.powerFactor = reading.powerFactor;
+      pendingLog.sensorSource = reading.sensorSource;
+      xSemaphoreGive(dataMutex);
     }
   }
 
-  // ── Telegram alert (uses RUNTIME token + chatId) ─────────────
-  if (rt.telegramNotifyEnabled) {
-    sendAlertIfNeeded(
-      newStatus, lastStatus,
-      state.arus, state.tegangan, state.relay,
-      rt.telegramBotToken, rt.telegramChatId,
-      rt.telegramCooldownMs
-    );
+  // ── Periodic log (every 5 minutes regardless of status change) ──
+  if (now - lastPeriodicLogMs >= PERIODIC_LOG_INTERVAL_MS) {
+    lastPeriodicLogMs = now;
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      if (!pendingLog.active) {  // Jangan timpa event log yang belum terkirim
+        pendingLog.active       = true;
+        pendingLog.arus         = reading.arus;
+        pendingLog.tegangan     = reading.tegangan;
+        pendingLog.status       = newStatus;
+        pendingLog.relay        = currentRelay;
+        pendingLog.cause        = "periodic";
+        pendingLog.dayaW        = reading.dayaW;
+        pendingLog.apparentPowerVa = reading.apparentPowerVa;
+        pendingLog.energiKwh    = g_energiKwh;
+        pendingLog.frekuensi    = reading.frekuensi;
+        pendingLog.powerFactor  = reading.powerFactor;
+        pendingLog.sensorSource = reading.sensorSource;
+      }
+      xSemaphoreGive(dataMutex);
+    }
   }
 
-  // ── Sync Runtime Settings from Firebase ──────────────────────
-  // This is how changes made on the web Settings page take effect.
-  if (now - lastSettingsSyncMs >= rt.settingsSyncMs) {
-    lastSettingsSyncMs = now;
-    readAllSettings(rt);
+  // ── Telegram alert ─────────────────────────────
+  if (localRt.telegramNotifyEnabled && statusChanged) {
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      pendingAlert.active = true;
+      pendingAlert.newStatus = newStatus;
+      pendingAlert.lastStatus = lastStatus;
+      pendingAlert.arus = reading.arus;
+      pendingAlert.tegangan = reading.tegangan;
+      pendingAlert.relay = currentRelay;
+      xSemaphoreGive(dataMutex);
+    }
   }
 
   lastStatus = newStatus;
+  if (trace) {
+    Serial.printf("[Loop] ═══ LOOP PERTAMA SELESAI (heap: %u) ═══\n", ESP.getFreeHeap());
+    Serial.flush();
+    firstLoopTrace = false;
+  }
   delay(10);  // small yield to keep watchdog happy
 }

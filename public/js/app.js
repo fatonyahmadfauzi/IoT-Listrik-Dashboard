@@ -184,14 +184,8 @@ function renderConnectionMeta(m) {
         : m.connection === "Memulihkan..."
           ? "Koneksi cloud sedang dipulihkan."
           : "Perangkat belum siap menerima perintah.";
-  if (elRelayOn) {
-    elRelayOn.disabled = !relayControlAllowed;
-    elRelayOn.title = relayControlAllowed ? "Nyalakan relay" : relayControlReason;
-  }
-  if (elRelayOff) {
-    elRelayOff.disabled = !relayControlAllowed;
-    elRelayOff.title = relayControlAllowed ? "Matikan relay" : relayControlReason;
-  }
+  // Re-render tombol relay sesuai state terakhir + status koneksi
+  if (lastRelayVal !== -1) renderRelay(lastRelayVal);
   if (elRelayHint) {
     elRelayHint.textContent = relayControlAllowed
       ? "Perangkat terhubung. Auto-cutoff tetap aktif dan perintah ON akan ditolak jika status masih berbahaya."
@@ -210,6 +204,20 @@ function renderRelay(relay) {
   if (elRelay) elRelay.textContent = isOn ? "ON" : "OFF";
   if (elRelayDot) elRelayDot.className = `relay-indicator ${isOn ? "on" : "off"}`;
 
+  // Disable tombol yang sesuai state saat ini:
+  // Relay ON  → tombol ON disabled, tombol OFF aktif
+  // Relay OFF → tombol OFF disabled, tombol ON aktif
+  if (elRelayOn) {
+    elRelayOn.disabled = !relayControlAllowed || isOn;
+    elRelayOn.title = !relayControlAllowed ? relayControlReason
+      : isOn ? "Relay sudah menyala" : "Nyalakan relay";
+  }
+  if (elRelayOff) {
+    elRelayOff.disabled = !relayControlAllowed || !isOn;
+    elRelayOff.title = !relayControlAllowed ? relayControlReason
+      : !isOn ? "Relay sudah mati" : "Matikan relay";
+  }
+
   if (lastRelayVal !== -1 && lastRelayVal !== relay) {
     showToast(
       `Relay ${isOn ? "dinyalakan" : "dimatikan"}`,
@@ -220,32 +228,41 @@ function renderRelay(relay) {
 }
 
 async function sendRelayCommand(val) {
+  if (currentRole !== "admin") {
+    showToast(
+      "Akses ditolak: hanya admin yang bisa mengontrol relay.",
+      "error",
+    );
+    return;
+  }
+
+  if (!relayControlAllowed) {
+    showToast(
+      relayControlReason || "Perangkat offline. Perintah relay diblokir.",
+      "warning",
+    );
+    return;
+  }
+
+  // Disable kedua tombol saat mengirim perintah.
+  // renderRelay() akan mengaktifkan kembali tombol yang tepat
+  // setelah Firebase mengkonfirmasi state relay aktual dari /listrik/relay.
+  if (elRelayOn) elRelayOn.disabled = true;
+  if (elRelayOff) elRelayOff.disabled = true;
+
   try {
-    if (currentRole !== "admin") {
-      showToast(
-        "Akses ditolak: hanya admin yang bisa mengontrol relay.",
-        "error",
-      );
-      return;
-    }
-
-    if (!relayControlAllowed) {
-      showToast(
-        relayControlReason || "Perangkat offline. Perintah relay diblokir.",
-        "warning",
-      );
-      return;
-    }
-
-    elRelayOn.disabled = true;
-    elRelayOff.disabled = true;
     await set(ref(db, getDbPrefix() + "/commands/relay"), val);
     showToast(`Perintah relay ${val === 1 ? "ON" : "OFF"} dikirim`, "success");
+
+    // Safety timeout: jika Firebase tidak mengkonfirmasi dalam 8 detik,
+    // re-enable tombol berdasarkan state terakhir yang diketahui.
+    setTimeout(() => {
+      if (lastRelayVal !== -1) renderRelay(lastRelayVal);
+    }, 8000);
   } catch (err) {
     showToast("Gagal mengirim perintah relay: " + err.message, "error");
-  } finally {
-    elRelayOn.disabled = false;
-    elRelayOff.disabled = false;
+    // Kembalikan tombol jika gagal
+    if (lastRelayVal !== -1) renderRelay(lastRelayVal);
   }
 }
 
@@ -258,6 +275,7 @@ function formatLogTime(raw) {
   if (Number.isFinite(p)) return new Date(p).toLocaleString("id-ID");
   return "—";
 }
+
 
 function escapeHtml(value) {
   return String(value ?? "")

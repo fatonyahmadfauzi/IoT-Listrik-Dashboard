@@ -146,6 +146,12 @@ struct PendingAlert {
   int relay = 0;
 } pendingAlert;
 
+// Flag untuk auto-cutoff relay sync: Core 1 set flag, Core 0 kirim ke Firebase
+struct PendingRelaySync {
+  bool active = false;
+  int relayVal = -1;
+} pendingRelaySync;
+
 static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000UL;
 static const unsigned long REMOTE_BOOTSTRAP_POLL_MS = 5000UL;
 static const unsigned long AUTO_LEARNING_SAMPLE_MS = 500UL;
@@ -162,6 +168,19 @@ void writeBootstrapMeta(const char* key, const String& value) {
   prefs.begin(NVS_NAMESPACE, false);
   prefs.putString(key, value);
   prefs.end();
+}
+
+void saveRelayStateToNvs(int r) {
+  prefs.begin(NVS_NAMESPACE, false);
+  prefs.putInt("last_relay", r);
+  prefs.end();
+}
+
+int loadRelayStateFromNvs() {
+  prefs.begin(NVS_NAMESPACE, true);
+  int r = prefs.getInt("last_relay", 1); // Default ON
+  prefs.end();
+  return r;
 }
 
 void clearBootstrapMeta(const char* key) {
@@ -833,7 +852,8 @@ void setup() {
   pinMode(PIN_BUZZER,       OUTPUT);
   pinMode(PIN_FACTORY_RESET,INPUT_PULLUP);
   setBuzzerOutput(false);
-  setRelay(1);  // default: relay ON (load connected)
+  state.relay = loadRelayStateFromNvs();
+  setRelay(state.relay); // Restore last relay state
 
   // ── Factory reset check ─────────────────────────────────────
   // Hold BOOT button (GPIO0) during power-on → erase NVS → portal
@@ -980,7 +1000,81 @@ void firebaseTaskCore0(void *pvParameters) {
         continue;
       }
 
-      // 2. Stream Data to /listrik
+      // 2. Process pending relay sync from Core 1 (auto-cutoff)
+      //    Core 1 tidak boleh panggil Firebase langsung (fbData race condition).
+      //    Flag ini di-set oleh auto-cutoff, di-handle di sini (Core 0) yang aman.
+      {
+        int syncVal = -1;
+        if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+          if (pendingRelaySync.active) {
+            syncVal = pendingRelaySync.relayVal;
+            pendingRelaySync.active = false;
+          }
+          // Re-capture localState setelah auto-cutoff mungkin mengubah state.relay
+          localState = state;
+          xSemaphoreGive(dataMutex);
+        }
+        if (syncVal >= 0) {
+          updateRelayState(syncVal);
+          Serial.printf("[Firebase] Auto-cutoff relay sync: %d ✓\n", syncVal);
+        }
+      }
+
+      // 3. Read Web Relay Command (BEFORE streaming, so writeMonitorData uses latest relay state)
+      if (now - lastRelayCheckMs >= RELAY_COMMAND_POLL_MS) {
+        lastRelayCheckMs = now;
+        int cmdRelay = -1;  // -1 = no command found
+        bool hasCommand = readRelayCommand(cmdRelay);
+
+        if (hasCommand) {
+          // ALWAYS clear the command from Firebase so it's not re-processed next cycle
+          clearRelayCommand();
+
+          if (cmdRelay != localState.relay) {
+            Serial.printf("[Relay] Command dari web: %s\n", cmdRelay ? "ON" : "OFF");
+
+            if (cmdRelay == 1 && localRt.autoCutoffEnabled && localState.status == "DANGER") {
+              Serial.println("[Relay] Ditolak: kondisi masih berbahaya.");
+              updateRelayState(0);
+            } else {
+              bool relayApplied = false;
+              if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                saveRelayStateToNvs(cmdRelay);
+                setRelay(cmdRelay);
+                state.relay = cmdRelay;
+                relayApplied = true;
+
+                pendingLog.active = true;
+                pendingLog.arus = state.arus;
+                pendingLog.tegangan = state.tegangan;
+                pendingLog.status = state.status;
+                pendingLog.relay = cmdRelay;
+                pendingLog.cause = "web_command";
+                pendingLog.dayaW = state.dayaW;
+                pendingLog.apparentPowerVa = state.apparentPowerVa;
+                pendingLog.energiKwh = state.energiKwh;
+                pendingLog.frekuensi = state.frekuensi;
+                pendingLog.powerFactor = state.powerFactor;
+                pendingLog.sensorSource = state.sensorSource;
+
+                // Re-capture localState agar writeMonitorData pakai relay terbaru
+                localState = state;
+
+                xSemaphoreGive(dataMutex);
+              }
+              if (relayApplied) {
+                updateRelayState(cmdRelay);
+                buzzerBeep(1, 80, 0);
+              }
+            }
+          } else {
+            Serial.printf("[Relay] Command sama dengan state saat ini (%s) — diabaikan.\n",
+                          cmdRelay ? "ON" : "OFF");
+          }
+        }
+      }
+
+      // 4. Stream Data to /listrik (uses latest relay state from step 2/3)
       if (now - lastSendMs >= localRt.sendIntervalMs) {
         lastSendMs = now;
         if (localRt.realtimeStreamEnabled) {
@@ -995,7 +1089,7 @@ void firebaseTaskCore0(void *pvParameters) {
         }
       }
 
-      // 3. Process Pending Logs
+      // 5. Process Pending Logs
       PendingLog logToSend;
       if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         if (pendingLog.active) {
@@ -1010,7 +1104,7 @@ void firebaseTaskCore0(void *pvParameters) {
                  logToSend.frekuensi, logToSend.powerFactor, logToSend.sensorSource);
       }
 
-      // 4. Process Pending Alerts
+      // 6. Process Pending Alerts
       PendingAlert alertToSend;
       if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
         if (pendingAlert.active) {
@@ -1028,48 +1122,7 @@ void firebaseTaskCore0(void *pvParameters) {
         );
       }
 
-      // 5. Read Web Relay Command
-      if (now - lastRelayCheckMs >= RELAY_COMMAND_POLL_MS) {
-        lastRelayCheckMs = now;
-        int cmdRelay = localState.relay;
-        if (readRelayCommand(cmdRelay) && cmdRelay != localState.relay) {
-          Serial.printf("[Relay] Command dari web: %s\n", cmdRelay ? "ON" : "OFF");
-
-          if (cmdRelay == 1 && localRt.autoCutoffEnabled && localState.status == "DANGER") {
-            Serial.println("[Relay] Ditolak: kondisi masih berbahaya.");
-            updateRelayState(0);
-          } else {
-            // Kita butuh setRelay fisik (ini i2c / pcf8574). Lakukan via state command
-            bool relayApplied = false;
-            if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-              setRelay(cmdRelay); // setRelay menggunakan PCF8574, pastikan PCF thread-safe atau diakses di sini OK.
-              state.relay = cmdRelay;
-              relayApplied = true;
-
-              pendingLog.active = true;
-              pendingLog.arus = state.arus;
-              pendingLog.tegangan = state.tegangan;
-              pendingLog.status = state.status;
-              pendingLog.relay = cmdRelay;
-              pendingLog.cause = "web_command";
-              pendingLog.dayaW = state.dayaW;
-              pendingLog.apparentPowerVa = state.apparentPowerVa;
-              pendingLog.energiKwh = state.energiKwh;
-              pendingLog.frekuensi = state.frekuensi;
-              pendingLog.powerFactor = state.powerFactor;
-              pendingLog.sensorSource = state.sensorSource;
-
-              xSemaphoreGive(dataMutex);
-            }
-            if (relayApplied) {
-              updateRelayState(cmdRelay);
-              buzzerBeep(1, 80, 0); // buzzerBeep blokir, tapi di core 0 tidak masalah.
-            }
-          }
-        }
-      }
-
-      // 6. Sync Runtime Settings
+      // 7. Sync Runtime Settings
       if (now - lastSettingsSyncMs >= localRt.settingsSyncMs) {
         lastSettingsSyncMs = now;
         RuntimeSettings newRt;
@@ -1171,13 +1224,23 @@ void loop() {
   bool statusChanged = (newStatus != lastStatus);
 
   // ── Auto-cutoff (uses localRt.autoCutoffEnabled) ───────────────
-  if (localRt.autoCutoffEnabled && newStatus == "DANGER" && currentRelay == 1) {
+  // Guard: cooldown 10 detik agar tidak berulang terus saat kondisi DANGER persisten
+  static unsigned long lastAutoCutoffMs = 0;
+  const  unsigned long AUTO_CUTOFF_COOLDOWN_MS = 10000UL;
+
+  if (localRt.autoCutoffEnabled && newStatus == "DANGER" && currentRelay == 1
+      && (now - lastAutoCutoffMs >= AUTO_CUTOFF_COOLDOWN_MS)) {
+    lastAutoCutoffMs = now;
     Serial.println("[Auto-Cutoff] Kondisi berbahaya! Relay OFF.");
 
     if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
-      setRelay(0); // This also updates state.relay inside
+      saveRelayStateToNvs(0);
+      setRelay(0);
       currentRelay = 0;
-      updateRelayState(0);
+      // JANGAN panggil updateRelayState() di sini — fbData bukan thread-safe!
+      // Gunakan flag agar Core 0 yang handle Firebase write.
+      pendingRelaySync.active = true;
+      pendingRelaySync.relayVal = 0;
 
       pendingLog.active = true;
       pendingLog.arus = reading.arus;

@@ -183,6 +183,24 @@ int loadRelayStateFromNvs() {
   return r;
 }
 
+// ─── Relay Locked-OFF flag ──────────────────────────────────────
+// Ketika flag ini true, relay TIDAK BOLEH nyala secara otomatis.
+// Hanya perintah ON dari web (sendRelayCommand) yang bisa clear flag ini.
+// Flag persisten di NVS agar bertahan saat device restart.
+void saveRelayLockedOff(bool locked) {
+  prefs.begin(NVS_NAMESPACE, false);
+  prefs.putBool("relay_lock", locked);
+  prefs.end();
+  Serial.printf("[Relay] Lock flag → %s\n", locked ? "LOCKED (OFF)" : "UNLOCKED");
+}
+
+bool loadRelayLockedOff() {
+  prefs.begin(NVS_NAMESPACE, true);
+  bool locked = prefs.getBool("relay_lock", false);
+  prefs.end();
+  return locked;
+}
+
 void clearBootstrapMeta(const char* key) {
   prefs.begin(NVS_NAMESPACE, false);
   prefs.remove(key);
@@ -852,8 +870,18 @@ void setup() {
   pinMode(PIN_BUZZER,       OUTPUT);
   pinMode(PIN_FACTORY_RESET,INPUT_PULLUP);
   setBuzzerOutput(false);
-  state.relay = loadRelayStateFromNvs();
-  setRelay(state.relay); // Restore last relay state
+  // Cek relay locked-off flag — jika pernah dimatikan (oleh user atau auto-cutoff)
+  // relay WAJIB tetap OFF sampai user klik btn ON secara eksplisit.
+  bool lockedOff = loadRelayLockedOff();
+  if (lockedOff) {
+    state.relay = 0;
+    setRelay(0);
+    saveRelayStateToNvs(0);
+    Serial.println("[Relay] NVS lock aktif — relay tetap OFF (tunggu perintah ON dari web).");
+  } else {
+    state.relay = loadRelayStateFromNvs();
+    setRelay(state.relay); // Restore last relay state
+  }
 
   // ── Factory reset check ─────────────────────────────────────
   // Hold BOOT button (GPIO0) during power-on → erase NVS → portal
@@ -1030,25 +1058,65 @@ void firebaseTaskCore0(void *pvParameters) {
           // ALWAYS clear the command from Firebase so it's not re-processed next cycle
           clearRelayCommand();
 
-          if (cmdRelay != localState.relay) {
-            Serial.printf("[Relay] Command dari web: %s\n", cmdRelay ? "ON" : "OFF");
+          Serial.printf("[Relay] Command dari web: %s (state saat ini: %s)\n",
+                        cmdRelay ? "ON" : "OFF", localState.relay ? "ON" : "OFF");
 
-            if (cmdRelay == 1 && localRt.autoCutoffEnabled && localState.status == "DANGER") {
-              Serial.println("[Relay] Ditolak: kondisi masih berbahaya.");
+          if (cmdRelay == 0) {
+            // ── Perintah OFF ─────────────────────────────────────────
+            // Set lock flag: relay tidak boleh nyala otomatis sampai user klik ON lagi.
+            saveRelayLockedOff(true);
+
+            bool relayApplied = false;
+            if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+              saveRelayStateToNvs(0);
+              setRelay(0);
+              state.relay = 0;
+              relayApplied = true;
+
+              pendingLog.active = true;
+              pendingLog.arus = state.arus;
+              pendingLog.tegangan = state.tegangan;
+              pendingLog.status = state.status;
+              pendingLog.relay = 0;
+              pendingLog.cause = "web_command";
+              pendingLog.dayaW = state.dayaW;
+              pendingLog.apparentPowerVa = state.apparentPowerVa;
+              pendingLog.energiKwh = state.energiKwh;
+              pendingLog.frekuensi = state.frekuensi;
+              pendingLog.powerFactor = state.powerFactor;
+              pendingLog.sensorSource = state.sensorSource;
+              localState = state;
+              xSemaphoreGive(dataMutex);
+            }
+            if (relayApplied) {
+              updateRelayState(0);
+              buzzerBeep(1, 80, 0);
+            }
+
+          } else if (cmdRelay == 1) {
+            // ── Perintah ON ──────────────────────────────────────────
+            // Tolak jika kondisi masih WARNING atau DANGER.
+            bool conditionUnsafe = (localState.status == "DANGER" || localState.status == "WARNING");
+            if (localRt.autoCutoffEnabled && conditionUnsafe) {
+              Serial.printf("[Relay] ON ditolak: kondisi %s masih tidak aman.\n",
+                            localState.status.c_str());
               updateRelayState(0);
             } else {
+              // Kondisi aman — clear lock dan nyalakan relay.
+              saveRelayLockedOff(false);
+
               bool relayApplied = false;
               if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-                saveRelayStateToNvs(cmdRelay);
-                setRelay(cmdRelay);
-                state.relay = cmdRelay;
+                saveRelayStateToNvs(1);
+                setRelay(1);
+                state.relay = 1;
                 relayApplied = true;
 
                 pendingLog.active = true;
                 pendingLog.arus = state.arus;
                 pendingLog.tegangan = state.tegangan;
                 pendingLog.status = state.status;
-                pendingLog.relay = cmdRelay;
+                pendingLog.relay = 1;
                 pendingLog.cause = "web_command";
                 pendingLog.dayaW = state.dayaW;
                 pendingLog.apparentPowerVa = state.apparentPowerVa;
@@ -1056,20 +1124,14 @@ void firebaseTaskCore0(void *pvParameters) {
                 pendingLog.frekuensi = state.frekuensi;
                 pendingLog.powerFactor = state.powerFactor;
                 pendingLog.sensorSource = state.sensorSource;
-
-                // Re-capture localState agar writeMonitorData pakai relay terbaru
                 localState = state;
-
                 xSemaphoreGive(dataMutex);
               }
               if (relayApplied) {
-                updateRelayState(cmdRelay);
+                updateRelayState(1);
                 buzzerBeep(1, 80, 0);
               }
             }
-          } else {
-            Serial.printf("[Relay] Command sama dengan state saat ini (%s) — diabaikan.\n",
-                          cmdRelay ? "ON" : "OFF");
           }
         }
       }
@@ -1223,15 +1285,19 @@ void loop() {
   if (trace) { Serial.printf("[Loop] 4. Status OK: %s\n", newStatus.c_str()); Serial.flush(); }
   bool statusChanged = (newStatus != lastStatus);
 
-  // ── Auto-cutoff (uses localRt.autoCutoffEnabled) ───────────────
-  // Guard: cooldown 10 detik agar tidak berulang terus saat kondisi DANGER persisten
-  static unsigned long lastAutoCutoffMs = 0;
-  const  unsigned long AUTO_CUTOFF_COOLDOWN_MS = 10000UL;
+  // ── Auto-cutoff (WARNING atau DANGER, relay=ON) ─────────────────
+  // Trigger jika: autoCutoffEnabled AND (WARNING atau DANGER) AND relay masih ON.
+  // Setelah cutoff, set relayLockedOff sehingga relay TIDAK nyala otomatis
+  // meskipun kondisi kembali NORMAL — hanya perintah ON dari web yang bisa clear lock.
+  bool shouldAutoCutoff = localRt.autoCutoffEnabled
+                          && (newStatus == "DANGER" || newStatus == "WARNING")
+                          && currentRelay == 1;
 
-  if (localRt.autoCutoffEnabled && newStatus == "DANGER" && currentRelay == 1
-      && (now - lastAutoCutoffMs >= AUTO_CUTOFF_COOLDOWN_MS)) {
-    lastAutoCutoffMs = now;
-    Serial.println("[Auto-Cutoff] Kondisi berbahaya! Relay OFF.");
+  if (shouldAutoCutoff) {
+    Serial.printf("[Auto-Cutoff] Kondisi %s — Relay OFF + Lock.\n", newStatus.c_str());
+
+    // Set lock SEBELUM acquire mutex (NVS di luar mutex, ok karena hanya Core 1 yang call ini)
+    saveRelayLockedOff(true);
 
     if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
       saveRelayStateToNvs(0);
@@ -1257,7 +1323,8 @@ void loop() {
 
       xSemaphoreGive(dataMutex);
     }
-    buzzerLong();
+    if (newStatus == "DANGER") buzzerLong();
+    else buzzerBeep(3, 150, 100);  // WARNING: 3 bip pendek
   }
 
   // ── Update Global State dengan Mutex ───────────────────────────

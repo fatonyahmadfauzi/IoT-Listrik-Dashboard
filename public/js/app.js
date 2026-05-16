@@ -71,6 +71,7 @@ let detailChart = null;
 let electricalDetailChart = null;
 let currentRole = null;
 let lastRelayVal = -1;
+let lastDeviceStatus = "NORMAL"; // track status terbaru dari perangkat
 let stopHybrid = null;
 let stopLogs = null;
 let relayControlAllowed = false;
@@ -149,6 +150,8 @@ function renderStatus(status) {
       elAlertPulse.classList.add("hidden");
     }
   }
+  // Track status terbaru
+  lastDeviceStatus = safeStatus;
 }
 
 function renderConnectionMeta(m) {
@@ -187,9 +190,16 @@ function renderConnectionMeta(m) {
   // Re-render tombol relay sesuai state terakhir + status koneksi
   if (lastRelayVal !== -1) renderRelay(lastRelayVal);
   if (elRelayHint) {
-    elRelayHint.textContent = relayControlAllowed
-      ? "Perangkat terhubung. Auto-cutoff tetap aktif dan perintah ON akan ditolak jika status masih berbahaya."
-      : relayControlReason;
+    const statusUnsafe = lastDeviceStatus === "WARNING" || lastDeviceStatus === "DANGER";
+    if (!relayControlAllowed) {
+      elRelayHint.textContent = relayControlReason;
+    } else if (statusUnsafe) {
+      elRelayHint.textContent = `Kondisi ${lastDeviceStatus} — relay dikunci OFF. Perbaiki kondisi lebih dulu, lalu klik ON.`;
+    } else if (lastRelayVal === 0) {
+      elRelayHint.textContent = "Relay dimatikan. Klik tombol ON untuk menyalakan kembali.";
+    } else {
+      elRelayHint.textContent = "Perangkat terhubung. Auto-cutoff aktif: relay OFF otomatis jika WARNING/DANGER.";
+    }
   }
   if (elUpdated) {
     const seenLabel = formatSeenTime(m.lastDeviceSeenAt);
@@ -240,6 +250,15 @@ async function sendRelayCommand(val) {
     showToast(
       relayControlReason || "Perangkat offline. Perintah relay diblokir.",
       "warning",
+    );
+    return;
+  }
+
+  // Blokir perintah ON jika kondisi masih WARNING atau DANGER
+  if (val === 1 && (lastDeviceStatus === "WARNING" || lastDeviceStatus === "DANGER")) {
+    showToast(
+      `Perintah ON ditolak: kondisi ${lastDeviceStatus}. Perbaiki kondisi listrik lebih dulu.`,
+      "error",
     );
     return;
   }

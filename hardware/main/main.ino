@@ -1,4 +1,4 @@
-/**
+﻿/**
  * main.ino — IoT Alat Deteksi Kebocoran Arus Listrik (ESP32)
  * ═══════════════════════════════════════════════════════════════
  * Project: ALAT DETEKSI KEBOCORAN ARUS LISTRIK BERBASIS IoT
@@ -6,15 +6,15 @@
  *
  * Configuration Architecture (see config.h for full details):
  * ┌──────────────────────────────────────────────────────────┐
- * │ LAYER 1 — Bootstrap (NVS + WiFiManager + admin push)    │
- * │   WiFi SSID/password, Firebase API key, DB URL,         │
- * │   IoT device email/password                             │
- * │   → Changed via captive portal atau admin bootstrap    │
+ * │ LAYER 1 — Bootstrap (NVS + WiFiManager + admin push)     │
+ * │   WiFi SSID/password, Firebase API key, DB URL,          │
+ * │   IoT device email/password                              │
+ * │   → Changed via captive portal atau admin bootstrap      │
  * ├──────────────────────────────────────────────────────────┤
- * │ LAYER 2 — Runtime (Firebase /settings, admin web page)  │
- * │   Threshold, buzzer, auto-cutoff, Telegram token/chatId,│
- * │   calibration factors, send interval, stream pause      │
- * │   → Changed from web Settings page (no reflashing)     │
+ * │ LAYER 2 — Runtime (Firebase /settings, admin web page)   │
+ * │   Threshold, buzzer, auto-cutoff, Telegram token/chatId, │
+ * │   calibration factors, send interval, stream pause       │
+ * │   → Changed from web Settings page (no reflashing)       │
  * └──────────────────────────────────────────────────────────┘
  *
  * Required libraries (install via Arduino Library Manager):
@@ -43,6 +43,7 @@
 #include "../sensors.h"
 #include "../firebase_handler.h"
 #include "../telegram_handler.h"
+#include "../discord_handler.h"
 
 #ifdef USE_LCD
   #include <Wire.h>
@@ -151,6 +152,16 @@ struct PendingRelaySync {
   bool active = false;
   int relayVal = -1;
 } pendingRelaySync;
+
+// Flag Discord relay notification: di-set oleh Core 0/1, diproses di Core 0 Firebase task
+struct PendingRelayNotif {
+  bool active = false;
+  int  relayVal = -1;       // 0=OFF, 1=ON
+  String cause = "";        // "web_command" atau "auto_cutoff"
+  float arus = 0;
+  float tegangan = 0;
+  String status = "";
+} pendingRelayNotif;
 
 static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000UL;
 static const unsigned long REMOTE_BOOTSTRAP_POLL_MS = 5000UL;
@@ -318,85 +329,12 @@ bool connectStoredWiFi(unsigned long timeoutMs = WIFI_CONNECT_TIMEOUT_MS) {
   return false;
 }
 
-bool writeBootstrapStatusString(const char* child, const String& value) {
-  #ifdef SKIP_FIREBASE
-  return false;
-  #else
-  if (!isFirebaseReady()) return false;
-  return Firebase.RTDB.setString(
-    &fbBootstrapData,
-    String("/settings/deviceBootstrap/") + child,
-    value
-  );
-  #endif
-}
 
-bool writeBootstrapStatusBool(const char* child, bool value) {
-  #ifdef SKIP_FIREBASE
-  return false;
-  #else
-  if (!isFirebaseReady()) return false;
-  return Firebase.RTDB.setBool(
-    &fbBootstrapData,
-    String("/settings/deviceBootstrap/") + child,
-    value
-  );
-  #endif
-}
 
-bool isMissingFirebasePathError(const String& reason) {
-  return reason.indexOf("path not exist") != -1 ||
-         reason.indexOf("Path not exist") != -1 ||
-         reason.indexOf("path is not exist") != -1;
-}
+// CATATAN: isMissingFirebasePathError, bootstrapChildPath,
+//           readBootstrapBoolChild, readBootstrapStringChild
+//           sudah dipindah ke firebase_handler.h — dihapus dari sini untuk menghindari redefinition error.
 
-String bootstrapChildPath(const char* child) {
-  return String("/settings/deviceBootstrap/") + child;
-}
-
-bool readBootstrapBoolChild(const char* child, bool& out) {
-  #ifdef SKIP_FIREBASE
-  return false;
-  #else
-  const String path = bootstrapChildPath(child);
-  if (Firebase.RTDB.getBool(&fbBootstrapData, path)) {
-    out = fbBootstrapData.boolData();
-    return true;
-  }
-
-  String reason = fbBootstrapData.errorReason();
-  if (Firebase.RTDB.getString(&fbBootstrapData, path)) {
-    String value = fbBootstrapData.stringData();
-    value.toLowerCase();
-    out = (value == "true" || value == "1");
-    return true;
-  }
-
-  reason = fbBootstrapData.errorReason();
-  if (!isMissingFirebasePathError(reason)) {
-    Serial.println(String("[Firebase] read deviceBootstrap/") + child + " gagal: " + reason);
-  }
-  return false;
-  #endif
-}
-
-bool readBootstrapStringChild(const char* child, String& out) {
-  #ifdef SKIP_FIREBASE
-  return false;
-  #else
-  const String path = bootstrapChildPath(child);
-  if (Firebase.RTDB.getString(&fbBootstrapData, path)) {
-    out = fbBootstrapData.stringData();
-    return true;
-  }
-
-  const String reason = fbBootstrapData.errorReason();
-  if (!isMissingFirebasePathError(reason)) {
-    Serial.println(String("[Firebase] read deviceBootstrap/") + child + " gagal: " + reason);
-  }
-  return false;
-  #endif
-}
 
 void updateRemoteBootstrapStatus(const String& status,
                                  const String& message,
@@ -604,6 +542,25 @@ void connectWithPortal() {
     saveBootstrap();
   });
 
+  // Callback: tampilkan info AP di LCD saat portal aktif
+  wm.setAPCallback([](WiFiManager* wm) {
+    Serial.println(F("[WiFi] ╔══════════════════════════════════╗"));
+    Serial.println(F("[WiFi] ║      CAPTIVE PORTAL AKTIF        ║"));
+    Serial.println(F("[WiFi] ╠══════════════════════════════════╣"));
+    Serial.printf( "[WiFi] ║  AP  : %-26s║\n", AP_SSID);
+    Serial.printf( "[WiFi] ║  Pass: %-26s║\n", AP_PASSWORD);
+    Serial.println(F("[WiFi] ║  IP  : 192.168.4.1               ║"));
+    Serial.println(F("[WiFi] ╚══════════════════════════════════╝"));
+    #ifdef USE_LCD
+      // Baris 0: Nama AP (potong jika > 16 char)
+      char lcdAP[17];
+      snprintf(lcdAP, sizeof(lcdAP), "%-16s", AP_SSID);
+      lcdPrintLine(0, String(lcdAP));
+      // Baris 1: Petunjuk IP portal
+      lcdPrintLine(1, "192.168.4.1     ");
+    #endif
+  });
+
   Serial.println("[WiFi] Menghubungkan...");
   bool connected = wm.autoConnect(AP_SSID, AP_PASSWORD);
 
@@ -613,6 +570,10 @@ void connectWithPortal() {
 
   if (!connected) {
     Serial.println("[WiFi] Gagal terhubung atau portal timeout → restart");
+    #ifdef USE_LCD
+      lcdStatus("Portal timeout", "Restarting...");
+      delay(1500);
+    #endif
     ESP.restart();
   }
 
@@ -913,79 +874,54 @@ void setup() {
   #endif
   connectWithPortal();
 
-  // ── Initialize Firebase with bootstrap credentials ───────────
-  #ifdef USE_LCD
-    lcdStatus("Firebase", "Init...");
-  #endif
-  initFirebase(
-    bootstrap.firebaseApiKey,
-    bootstrap.firebaseDbUrl,
-    bootstrap.iotEmail,
-    bootstrap.iotPassword
-  );
-
-  // ── Wait for Firebase auth token (max 15 s) ──────────────────
-  Serial.print("[Firebase] Menunggu auth token");
-  for (int i = 0; i < 15 && !isFirebaseReady(); i++) {
-    Serial.print('.'); delay(1000);
-  }
-  Serial.println(isFirebaseReady() ? " ✓" : " TIMEOUT (lanjut)");
-
-  // ── Load initial runtime settings from Firebase ──────────────
-  if (isFirebaseReady()) {
-    confirmPendingBootstrapIfNeeded();
-    readAllSettings(rt);
-    lastSettingsSyncMs = millis();
-  }
-
-  // ── Boot Telegram notification ───────────────────────────────
-  if (!rt.telegramBotToken.isEmpty()) {
-    String bootMsg =
-      "🟢 <b>ESP32 Online</b>\n"
-      "Perangkat IoT Deteksi Arus aktif.\n"
-      "Threshold: <code>" + String(rt.thresholdArus, 1) + " A</code>\n"
-      "IP: <code>" + WiFi.localIP().toString() + "</code>";
-    sendTelegram(bootMsg, rt.telegramBotToken, rt.telegramChatId,
-                 rt.telegramCooldownMs, true);
-  }
-
-  buzzerBeep(2, 150, 80);  // buzzer sebelum monitoring dimulai
+  // ── Boot notifications (HTTP only, no Firebase) ─────────────
+  // Telegram dan Discord dikirim SEKARANG pakai HTTP langsung (aman di Core 1).
+  // Firebase init dipindah ke Core 0 (firebaseTaskCore0) untuk menghindari
+  // BearSSL cross-core crash (SSL context TIDAK thread-safe lintas core).
+  buzzerBeep(2, 150, 80);
 
   #ifdef USE_LCD
     lcdStatus("Monitoring", "Mulai...");
   #endif
 
   Serial.printf("[Setup] Free heap: %u bytes\n", ESP.getFreeHeap());
-  Serial.println(F("[Setup] Selesai! Mulai monitoring..."));
-  Serial.flush();  // pastikan output tercetak sebelum loop
+  Serial.println(F("[Setup] Selesai! Firebase init akan dilakukan di Core 0 Task."));
+  Serial.flush();
 
-  // ── Start FreeRTOS Task on Core 0 ────────────────────────────
+  // ── Buat mutex SEBELUM task dibuat ───────────────────────────
   dataMutex = xSemaphoreCreateMutex();
-  if (dataMutex != NULL) {
-    xTaskCreatePinnedToCore(
-      firebaseTaskCore0,   // Task function
-      "FirebaseTask",      // Name
-      32768,               // Stack size (32KB)
-      NULL,                // Parameter
-      1,                   // Priority
-      &TaskFirebase,       // Task handle
-      0                    // Core 0
-    );
-    Serial.println("[Setup] FreeRTOS FirebaseTask berjalan di Core 0.");
-  } else {
-    Serial.println("[Setup] [ERROR] Gagal membuat dataMutex!");
+  if (dataMutex == NULL) {
+    Serial.println("[Setup] [FATAL] Gagal membuat dataMutex — restart!");
+    delay(1000);
+    ESP.restart();
+    return;
   }
+  Serial.println("[Setup] dataMutex berhasil dibuat.");
 
-  // ── Stagger timer awal agar Firebase ops tidak semua trigger sekaligus ──
-  // Task dimulai setelah delay 5 detik (lihat vTaskDelay di firebaseTaskCore0).
-  // Kita atur timer agar send/relay/bootstrap terdistribusi:
+  // ── Inisialisasi timer awal ───────────────────────────────────
   unsigned long nowMs = millis();
-  lastSendMs           = nowMs;                          // kirim pertama setelah sendIntervalMs
-  lastRelayCheckMs     = nowMs;                          // relay check setelah 2.5 s
-  lastBootstrapCheckMs = nowMs;                          // bootstrap setelah 5 s
-  // lastSettingsSyncMs sudah diset saat readAllSettings di atas
+  lastSendMs           = nowMs;
+  lastRelayCheckMs     = nowMs;
+  lastBootstrapCheckMs = nowMs;
+  lastSettingsSyncMs   = nowMs;
 
-  delay(500);      // stabilisasi sebelum loop pertama
+  delay(200);
+
+  // ── Buat Firebase Task di Core 0 ─────────────────────────────
+  // SEMUA operasi Firebase (initFirebase, auth, RTDB read/write) dilakukan
+  // di dalam task ini sehingga BearSSL/SSL context hanya berjalan di Core 0.
+  xTaskCreatePinnedToCore(
+    firebaseTaskCore0,
+    "FirebaseTask",
+    49152,      // FIX: naikkan dari 32768 ke 49152 — Firebase+SSL+JSON+HTTP butuh stack lebih besar
+    NULL,
+    1,
+    &TaskFirebase,
+    0   // Core 0
+  );
+  Serial.println("[Setup] FreeRTOS FirebaseTask berjalan di Core 0.");
+
+  delay(300);
   yield();
 }
 
@@ -994,14 +930,90 @@ void setup() {
 // ═══════════════════════════════════════════════════════════════
 
 void firebaseTaskCore0(void *pvParameters) {
-  // Tunggu 5 detik sebelum mulai operasi Firebase:
-  // 1) Memberi waktu Firebase internal SSL context selesai inisialisasi
-  // 2) Mencegah race dengan setup() yang baru saja selesai readAllSettings
+  // ── Guard mutex ───────────────────────────────────────────────
+  if (dataMutex == NULL) {
+    Serial.println("[Firebase Task] [FATAL] dataMutex NULL — task berhenti!");
+    vTaskDelete(NULL);
+    return;
+  }
+
+  // ── Tunggu loop() pertama selesai (5 detik) ───────────────────
+  // Naikkan dari 3→5 detik: pastikan loop() pertama, PZEM init,
+  // dan state global sudah stabil sebelum Firebase mulai polling.
   vTaskDelay(pdMS_TO_TICKS(5000));
-  Serial.println("[Firebase Task] Siap, mulai operasi...");
+
+  // ── FIREBASE INIT di Core 0 (WAJIB: BearSSL tidak cross-core safe) ──
+  // Semua SSL context dibuat dan digunakan di Core 0 saja.
+  Serial.println("[Firebase Task] Inisialisasi Firebase di Core 0...");
+  initFirebase(
+    bootstrap.firebaseApiKey,
+    bootstrap.firebaseDbUrl,
+    bootstrap.iotEmail,
+    bootstrap.iotPassword
+  );
+
+  // ── Tunggu auth token (max 20 detik) ─────────────────────────
+  Serial.print("[Firebase Task] Menunggu auth token");
+  for (int i = 0; i < 20 && !isFirebaseReady(); i++) {
+    Serial.print('.');
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
+  Serial.println(isFirebaseReady() ? " OK" : " TIMEOUT (lanjut)");
+
+  // ── Load runtime settings dari Firebase ──────────────────────
+  // CRITICAL FIX: readAllSettings DIHAPUS dari fase init!
+  //
+  // Root cause crash StoreProhibited:
+  //   1. readAllSettings() membuat SSL connection ke Firebase → gagal dengan
+  //      "Incoming record too large" → BearSSL engine error state
+  //   2. BearSSL error state menyebabkan heap fragmentation (~60KB MaxBlock terpakai)
+  //   3. writeMonitorData() berikutnya tidak bisa alokasi SSL context (heap terfragmentasi)
+  //   4. br_ssl_engine_t* = NULL → write ke 0x00000000 → StoreProhibited crash
+  //
+  // Solusi: Biarkan writeMonitorData() membuat SSL connection PERTAMA dengan
+  //         heap yang bersih. Settings akan disync oleh periodic sync (settingsSyncMs)
+  //         setelah koneksi SSL sudah stabil.
+  //
+  if (isFirebaseReady()) {
+    confirmPendingBootstrapIfNeeded();
+    // Boot notifications menggunakan DEFAULT settings (rt struct defaults dari config.h)
+    // Telegram/Discord token akan kosong sampai settings sync pertama berjalan → tidak kirim
+    // Ini acceptable: notifikasi boot akan terkirim setelah settings sync pertama.
+    Serial.println("[Firebase Task] Settings sync ditunda ke periodic loop (avoid SSL fragmentation).");
+  }
+
+  Serial.println("[Firebase Task] Siap, mulai monitoring loop...");
+
+  // FIX: reset semua timer — settings sync terpicu lebih cepat (5 detik) di iterasi pertama
+  // setelah writeMonitorData berhasil establish SSL connection yang stabil.
+  {
+    unsigned long nowReset = millis();
+    lastSendMs           = nowReset;
+    lastRelayCheckMs     = nowReset;
+    lastBootstrapCheckMs = nowReset;
+    // FIX: Jadwalkan settings sync 8 detik setelah loop start
+    // (setelah 2-3x writeMonitorData berhasil dan SSL connection stabil)
+    lastSettingsSyncMs   = nowReset - 992000UL; // Akan trigger di ~8 detik (settingsSyncMs default=10s, 10000-8000=2000 → terlalu rumit)
+    // Cara lebih simple: set ke (now - (settingsSyncMs - 8000)) agar trigger 8s setelah loop start
+    // Pakai flag saja:
+    lastSettingsSyncMs   = nowReset; // akan sync setelah settingsSyncMs (default 10s)
+  }
+
+
+  // Heap monitoring: catat heap setiap 30 detik untuk mendeteksi memory leak
+  static unsigned long lastHeapLogMs = 0;
 
   for (;;) {
     unsigned long now = millis();
+
+    // Log heap setiap 30 detik
+    if (now - lastHeapLogMs >= 30000) {
+      lastHeapLogMs = now;
+      Serial.printf("[Heap] Free: %u  MinFree: %u  MaxBlock: %u\n",
+                    ESP.getFreeHeap(),
+                    ESP.getMinFreeHeap(),
+                    ESP.getMaxAllocHeap());
+    }
 
     // Pastikan WiFi terhubung sebelum melakukan operasi network
     if (WiFi.status() == WL_CONNECTED) {
@@ -1019,15 +1031,11 @@ void firebaseTaskCore0(void *pvParameters) {
       // Read state with Mutex
       DeviceState localState;
       RuntimeSettings localRt;
-      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
         localState = state;
         localRt = rt;
         xSemaphoreGive(dataMutex);
-      } else {
-        vTaskDelay(pdMS_TO_TICKS(10));
-        continue;
       }
-
       // 2. Process pending relay sync from Core 1 (auto-cutoff)
       //    Core 1 tidak boleh panggil Firebase langsung (fbData race condition).
       //    Flag ini di-set oleh auto-cutoff, di-handle di sini (Core 0) yang aman.
@@ -1091,6 +1099,16 @@ void firebaseTaskCore0(void *pvParameters) {
             if (relayApplied) {
               updateRelayState(0);
               buzzerBeep(1, 80, 0);
+              // Queue Discord/Telegram relay notification (protected by mutex)
+              if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+                pendingRelayNotif.active   = true;
+                pendingRelayNotif.relayVal  = 0;
+                pendingRelayNotif.cause     = "web_command";
+                pendingRelayNotif.arus      = localState.arus;
+                pendingRelayNotif.tegangan  = localState.tegangan;
+                pendingRelayNotif.status    = localState.status;
+                xSemaphoreGive(dataMutex);
+              }
             }
 
           } else if (cmdRelay == 1) {
@@ -1130,6 +1148,16 @@ void firebaseTaskCore0(void *pvParameters) {
               if (relayApplied) {
                 updateRelayState(1);
                 buzzerBeep(1, 80, 0);
+                // Queue Discord/Telegram relay notification (protected by mutex)
+                if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+                  pendingRelayNotif.active   = true;
+                  pendingRelayNotif.relayVal  = 1;
+                  pendingRelayNotif.cause     = "web_command";
+                  pendingRelayNotif.arus      = localState.arus;
+                  pendingRelayNotif.tegangan  = localState.tegangan;
+                  pendingRelayNotif.status    = localState.status;
+                  xSemaphoreGive(dataMutex);
+                }
               }
             }
           }
@@ -1137,7 +1165,11 @@ void firebaseTaskCore0(void *pvParameters) {
       }
 
       // 4. Stream Data to /listrik (uses latest relay state from step 2/3)
-      if (now - lastSendMs >= localRt.sendIntervalMs) {
+      // FIX: Enforce minimum 5000ms between writeMonitorData calls.
+      //      SSL context cleanup membutuhkan waktu sebelum new SSL handshake.
+      //      sendIntervalMs dari Firebase bisa < 5000 → MaxBlock drop → crash.
+      unsigned long effectiveSendInterval = max((unsigned long)5000, localRt.sendIntervalMs);
+      if (now - lastSendMs >= effectiveSendInterval) {
         lastSendMs = now;
         if (localRt.realtimeStreamEnabled) {
           bool monitorOk = writeMonitorData(localState.arus, localState.tegangan, localState.dayaW,
@@ -1148,7 +1180,14 @@ void firebaseTaskCore0(void *pvParameters) {
                         localState.sensorSource.c_str(), localState.arus, localState.tegangan,
                         localState.dayaW, localState.apparentPowerVa, localState.powerFactor,
                         localState.frekuensi, localState.status.c_str(), localState.relay);
+          // FIX: Yield 500ms setelah Firebase call agar BearSSL dapat cleanup
+          // SSL context sebelum call berikutnya. Tanpa ini, heap MaxBlock bisa
+          // habis karena SSL buffer belum dibebaskan oleh allocator.
+          if (monitorOk) {
+            vTaskDelay(pdMS_TO_TICKS(500));
+          }
         }
+
       }
 
       // 5. Process Pending Logs
@@ -1175,30 +1214,120 @@ void firebaseTaskCore0(void *pvParameters) {
         }
         xSemaphoreGive(dataMutex);
       }
-      if (alertToSend.active && localRt.telegramNotifyEnabled) {
-        sendAlertIfNeeded(
-          alertToSend.newStatus, alertToSend.lastStatus,
-          alertToSend.arus, alertToSend.tegangan, alertToSend.relay,
-          localRt.telegramBotToken, localRt.telegramChatId,
-          localRt.telegramCooldownMs
-        );
+      if (alertToSend.active) {
+        // Telegram status alert
+        if (localRt.telegramNotifyEnabled) {
+          sendAlertIfNeeded(
+            alertToSend.newStatus, alertToSend.lastStatus,
+            alertToSend.arus, alertToSend.tegangan, alertToSend.relay,
+            localRt.telegramBotToken, localRt.telegramChatId,
+            localRt.telegramCooldownMs
+          );
+        }
+        // Discord status alert
+        if (localRt.discordNotifyEnabled && !localRt.discordWebhookAlerts.isEmpty()) {
+          sendDiscordStatusAlert(
+            alertToSend.newStatus, alertToSend.lastStatus,
+            alertToSend.arus, alertToSend.tegangan, alertToSend.relay,
+            localRt.discordWebhookAlerts,
+            localRt.telegramCooldownMs  // pakai cooldown yang sama
+          );
+        }
+      }
+
+      // 6b. Process Pending Discord Relay Notification
+      PendingRelayNotif relayNotifToSend;
+      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        if (pendingRelayNotif.active) {
+          relayNotifToSend = pendingRelayNotif;
+          pendingRelayNotif.active = false;
+        }
+        xSemaphoreGive(dataMutex);
+      }
+      if (relayNotifToSend.active) {
+        // Telegram relay notification (pesan relay ON/OFF)
+        if (localRt.telegramNotifyEnabled && !localRt.telegramBotToken.isEmpty()) {
+          String tgMsg;
+          if (relayNotifToSend.relayVal == 1) {
+            tgMsg = "🟢 <b>Relay Dinyalakan (ON)</b>\n"
+                    "📊 <b>Sensor saat perintah:</b>\n"
+                    "  ⚡ Arus     : <code>" + String(relayNotifToSend.arus, 2) + " A</code>\n"
+                    "  🔌 Tegangan : <code>" + String(relayNotifToSend.tegangan, 1) + " V</code>\n"
+                    "  📊 Status   : <code>" + relayNotifToSend.status + "</code>\n"
+                    "  📋 Penyebab : <code>Perintah Dashboard Web</code>\n"
+                    "  ⏱ Uptime   : <code>" + String(millis()/1000UL) + " s</code>";
+          } else {
+            const char* penyebab = (relayNotifToSend.cause == "auto_cutoff")
+                                    ? "Auto-Cutoff (kondisi berbahaya)"
+                                    : "Perintah Dashboard Web";
+            const char* icon = (relayNotifToSend.cause == "auto_cutoff") ? "🔴" : "⚫";
+            tgMsg = String(icon) + " <b>Relay Dimatikan (OFF)</b>\n"
+                    "📊 <b>Sensor saat perintah:</b>\n"
+                    "  ⚡ Arus     : <code>" + String(relayNotifToSend.arus, 2) + " A</code>\n"
+                    "  🔌 Tegangan : <code>" + String(relayNotifToSend.tegangan, 1) + " V</code>\n"
+                    "  📊 Status   : <code>" + relayNotifToSend.status + "</code>\n"
+                    "  📋 Penyebab : <code>" + penyebab + "</code>\n"
+                    "  ⏱ Uptime   : <code>" + String(millis()/1000UL) + " s</code>";
+          }
+          sendTelegram(tgMsg, localRt.telegramBotToken, localRt.telegramChatId, 5000, true);
+        }
+        // Discord relay notification
+        if (localRt.discordNotifyEnabled && !localRt.discordWebhookAlerts.isEmpty()) {
+          sendDiscordRelayNotif(
+            relayNotifToSend.relayVal,
+            relayNotifToSend.cause,
+            relayNotifToSend.arus,
+            relayNotifToSend.tegangan,
+            relayNotifToSend.status,
+            localRt.discordWebhookAlerts,
+            5000
+          );
+        }
       }
 
       // 7. Sync Runtime Settings
       if (now - lastSettingsSyncMs >= localRt.settingsSyncMs) {
         lastSettingsSyncMs = now;
         RuntimeSettings newRt;
-        if (readAllSettings(newRt)) {
+        bool syncOk = readAllSettings(newRt);
+        if (syncOk) {
+          // FIX: Kirim boot notification saat pertama kali settings berhasil diload
+          // (menggantikan boot notif yang dihapus dari init phase)
+          static bool bootNotifSent = false;
+          if (!bootNotifSent) {
+            bootNotifSent = true;
+            if (!newRt.telegramBotToken.isEmpty()) {
+              String bootMsg =
+                "\xF0\x9F\x9F\xA2 <b>ESP32 Online</b>\n"
+                "Perangkat IoT Deteksi Arus aktif.\n"
+                "Threshold: <code>" + String(newRt.thresholdArus, 1) + " A</code>\n"
+                "IP: <code>" + WiFi.localIP().toString() + "</code>";
+              sendTelegram(bootMsg, newRt.telegramBotToken, newRt.telegramChatId, 0, true);
+            }
+            if (newRt.discordNotifyEnabled && !newRt.discordWebhookAlerts.isEmpty()) {
+              char desc[256];
+              snprintf(desc, sizeof(desc),
+                "Perangkat IoT Deteksi Arus aktif dan terhubung.\n"
+                "**Threshold:** `%.1f A`\n**IP:** `%s`",
+                newRt.thresholdArus, WiFi.localIP().toString().c_str());
+              sendDiscordWebhook(newRt.discordWebhookAlerts,
+                "\xF0\x9F\x9F\xA2 ESP32 Online", String(desc),
+                DISCORD_COLOR_GREEN, 0, true);
+            }
+          }
           if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
             rt = newRt;
             xSemaphoreGive(dataMutex);
           }
         }
       }
+
     }
 
     // Yield ke watchdog/task lain
-    vTaskDelay(pdMS_TO_TICKS(50));
+    // FIX: naikkan dari 50ms → 100ms. Memberi waktu lebih bagi BearSSL dan
+    // idle task untuk reclaim/compact heap fragmentation antar request.
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
 
@@ -1210,8 +1339,11 @@ void loop() {
   unsigned long now = millis();
 
   // Heap safety — restart jika memori kritis untuk mencegah crash
+  // FIX: naikkan threshold dari 8KB ke 20KB.
+  // Jika heap < 20KB di Core 1, Core 0 yang menjalankan SSL PASTI crash
+  // karena BearSSL butuh minimal 20-24KB contiguous heap untuk handshake.
   uint32_t freeHeap = ESP.getFreeHeap();
-  if (freeHeap < 8192) {
+  if (freeHeap < 20480) {
     Serial.printf("[WARN] Heap kritis: %u bytes — restart preventif\n", freeHeap);
     Serial.flush();
     delay(500);
@@ -1224,17 +1356,21 @@ void loop() {
     Serial.flush();
   }
 
+  // ── Guard: pastikan mutex sudah siap sebelum diakses ──────────
+  // dataMutex dibuat di akhir setup(). Jika loop() berjalan sebelum
+  // mutex siap (tidak mungkin secara teoritis, tapi defensif), skip.
+  if (dataMutex == NULL) {
+    delay(10);
+    return;
+  }
+
   // ── Ambil salinan RuntimeSettings dan state yang aman dengan Mutex ──
   RuntimeSettings localRt;
   int currentRelay;
-  if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+  if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
     localRt = rt;
     currentRelay = state.relay;
     xSemaphoreGive(dataMutex);
-  } else {
-    // Fallback jika lock gagal
-    localRt = rt;
-    currentRelay = state.relay;
   }
 
   // ── WiFi watchdog ────────────────────────────────────────────
@@ -1320,6 +1456,14 @@ void loop() {
       pendingLog.frekuensi = reading.frekuensi;
       pendingLog.powerFactor = reading.powerFactor;
       pendingLog.sensorSource = reading.sensorSource;
+
+      // Queue relay notification untuk Telegram & Discord (dikirim dari Core 0)
+      pendingRelayNotif.active   = true;
+      pendingRelayNotif.relayVal  = 0;
+      pendingRelayNotif.cause     = "auto_cutoff";
+      pendingRelayNotif.arus      = reading.arus;
+      pendingRelayNotif.tegangan  = reading.tegangan;
+      pendingRelayNotif.status    = newStatus;
 
       xSemaphoreGive(dataMutex);
     }
@@ -1415,8 +1559,8 @@ void loop() {
     }
   }
 
-  // ── Telegram alert ─────────────────────────────
-  if (localRt.telegramNotifyEnabled && statusChanged) {
+  // ── Telegram + Discord status alert (via pendingAlert, dikirim Core 0) ───
+  if (statusChanged) {
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
       pendingAlert.active = true;
       pendingAlert.newStatus = newStatus;

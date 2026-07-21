@@ -9,7 +9,8 @@ import { loadClientConfig } from './client-config.js';
 import { getDbPrefix, isTempAccount } from './auth.js';
 import { ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-const DEVICE_STALE_MS = 15000;
+const DEVICE_STALE_MS = 30000;
+
 
 function trimBase(u) {
   return String(u || '').replace(/\/+$/, '');

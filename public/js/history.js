@@ -145,7 +145,7 @@ function getFrequency(log = {}) {
 }
 
 function getSource(log = {}) {
-  return log.source || log.sumber || log.mode || '—';
+  return log.source || log.sumber || log.mode || (isTempAccount() ? 'SIM' : 'CLOUD');
 }
 
 function getRelayText(log = {}) {
@@ -156,30 +156,30 @@ function getRelayText(log = {}) {
 // ─── Status chip ─────────────────────────────────────────────
 function statusChip(status) {
   const safeStatus = normalizeStatus(status);
-  const map = {
-    NORMAL:  ['#86efac', 'rgba(22,163,74,.14)'],
-    WARNING: ['#fde68a', 'rgba(245,158,11,.14)'],
-    LEAKAGE: ['#fed7aa', 'rgba(249,115,22,.16)'],
-    DANGER:  ['#fecaca', 'rgba(220,38,38,.24)'],
-  };
-  const [color, bg] = map[safeStatus] || ['#94a3b8', 'rgba(148,163,184,.15)'];
-  return `<span style="color:${color};background:${bg};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.04em;">${escapeHtml(safeStatus)}</span>`;
+  return `<span class="status-badge status-${safeStatus}">${escapeHtml(safeStatus)}</span>`;
 }
 
-function renderEmptyLogRow(colspan, detail = false) {
-  const helper = detail
-    ? 'Detail audit akan muncul setelah histori tersedia.'
-    : 'Data terbaru akan muncul saat perangkat mengirim histori.';
+function renderEmptyLogRow(colspan) {
   return `
-    <tr class="history-log-empty-row">
+    <tr class="log-row mini-log-empty-row">
       <td colspan="${colspan}">
-        <div class="mini-log-empty-state history-log-empty-state">
+        <div class="mini-log-empty-state">
           <span class="material-symbols-rounded" aria-hidden="true">history</span>
           <strong>Belum ada log</strong>
-          <small>${helper}</small>
+          <small>Data terbaru akan muncul saat perangkat mengirim histori.</small>
         </div>
       </td>
     </tr>
+  `;
+}
+
+function renderDetailEmpty() {
+  return `
+    <div class="mini-log-empty">
+      <span class="material-symbols-rounded" aria-hidden="true">history</span>
+      <strong>Belum ada log</strong>
+      <small>Detail audit akan muncul setelah histori tersedia.</small>
+    </div>
   `;
 }
 
@@ -196,21 +196,20 @@ function renderSummaryTable(logs) {
 
   summaryTbody.innerHTML = logs.map(l => {
     const power = derivePower(l);
+    const safeStatus = normalizeStatus(l.status);
     return `
-    <tr>
-      <td data-label="Waktu" class="td-mono text-sm">${escapeHtml(fmtTime(l.waktu))}</td>
-      <td data-label="Beban" class="td-mono">
-        <span class="history-load-values">
-          <span class="history-val-arus">${Number(l.arus || 0).toFixed(2)} A</span>
-          <span class="history-val-sep">/</span>
-          <span class="history-val-teg">${Number(l.tegangan || 0).toFixed(1)} V</span>
-          <span class="history-val-sep">/</span>
-          <span class="history-val-daya">${power.active.toFixed(1)} W</span>
-        </span>
+    <tr class="log-row log-status-${safeStatus}">
+      <td class="log-time" data-label="Waktu">${escapeHtml(fmtTime(l.waktu ?? l.timestamp))}</td>
+      <td class="log-values" data-label="Beban">
+        <span class="log-val-arus">${Number(l.arus || 0).toFixed(2)} A</span>
+        <span class="log-val-sep">·</span>
+        <span class="log-val-teg">${Number(l.tegangan || 0).toFixed(1)} V</span>
+        <span class="log-val-sep">·</span>
+        <span class="log-val-daya">${power.active.toFixed(0)} W</span>
       </td>
-      <td data-label="Status">${statusChip(l.status || '—')}</td>
-      <td data-label="Relay" class="td-mono">${getRelayText(l)}</td>
-      <td data-label="Sumber" class="text-sm text-muted">${escapeHtml(getSource(l))}</td>
+      <td class="log-status" data-label="Status">${statusChip(safeStatus)}</td>
+      <td class="log-relay" data-label="Relay">${getRelayText(l)}</td>
+      <td class="log-source" data-label="Sumber">${escapeHtml(getSource(l))}</td>
     </tr>
   `;
   }).join('');
@@ -219,26 +218,34 @@ function renderSummaryTable(logs) {
 function renderDetailTable(logs) {
   if (!detailTbody) return;
   if (logs.length === 0) {
-    detailTbody.innerHTML = renderEmptyLogRow(11, true);
+    detailTbody.innerHTML = renderDetailEmpty();
     return;
   }
 
   detailTbody.innerHTML = logs.map(l => {
     const power = derivePower(l);
+    const safeStatus = normalizeStatus(l.status);
     return `
-    <tr>
-      <td data-label="Waktu" class="td-mono text-sm">${escapeHtml(fmtTime(l.waktu))}</td>
-      <td data-label="Arus (A)" class="td-mono">${Number(l.arus || 0).toFixed(2)} A</td>
-      <td data-label="Tegangan (V)" class="td-mono">${Number(l.tegangan || 0).toFixed(1)} V</td>
-      <td data-label="Daya Aktif (W)" class="td-mono">${power.active.toFixed(1)} W</td>
-      <td data-label="Energi" class="td-mono">${getEnergy(l).toFixed(3)} kWh</td>
-      <td data-label="PF" class="td-mono">${getPowerFactor(l).toFixed(2)}</td>
-      <td data-label="Frekuensi" class="td-mono">${getFrequency(l).toFixed(1)} Hz</td>
-      <td data-label="Apparent (VA)" class="td-mono">${power.apparent.toFixed(1)} VA</td>
-      <td data-label="Status">${statusChip(l.status || '—')}</td>
-      <td data-label="Relay" class="td-mono">${getRelayText(l)}</td>
-      <td data-label="Sumber" class="text-sm text-muted">${escapeHtml(getSource(l))}</td>
-    </tr>
+    <article class="mini-log-detail-row log-status-${safeStatus}">
+      <div class="mini-detail-main">
+        <span class="mini-detail-label">Waktu</span>
+        <strong>${escapeHtml(fmtTime(l.waktu ?? l.timestamp))}</strong>
+      </div>
+      <div class="mini-detail-metrics">
+        <span class="mini-detail-metric metric-arus"><em>Arus</em><strong>${Number(l.arus || 0).toFixed(2)} A</strong></span>
+        <span class="mini-detail-metric metric-tegangan"><em>Tegangan</em><strong>${Number(l.tegangan || 0).toFixed(1)} V</strong></span>
+        <span class="mini-detail-metric metric-daya"><em>Daya Aktif</em><strong>${power.active.toFixed(0)} W</strong></span>
+        <span class="mini-detail-metric metric-energi"><em>Energi</em><strong>${getEnergy(l).toFixed(3)} kWh</strong></span>
+        <span class="mini-detail-metric metric-pf"><em>PF</em><strong>${getPowerFactor(l).toFixed(2)}</strong></span>
+        <span class="mini-detail-metric metric-freq"><em>Frekuensi</em><strong>${getFrequency(l).toFixed(1)} Hz</strong></span>
+        <span class="mini-detail-metric metric-va"><em>Apparent</em><strong>${power.apparent.toFixed(0)} VA</strong></span>
+      </div>
+      <div class="mini-detail-state">
+        ${statusChip(safeStatus)}
+        <span class="mini-detail-pill">Relay ${escapeHtml(getRelayText(l))}</span>
+        <span class="mini-detail-source">${escapeHtml(getSource(l))}</span>
+      </div>
+    </article>
   `;
   }).join('');
 }
@@ -304,10 +311,7 @@ function loadLogs() {
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
       <div class="spinner"></div> Memuat data log...
     </div></td></tr>`;
-  const loadingDetail = `<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text-secondary);">
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-      <div class="spinner"></div> Memuat data log...
-    </div></td></tr>`;
+  const loadingDetail = `<div class="mini-log-empty"><div class="spinner"></div><span>Memuat data log...</span></div>`;
   if (summaryTbody) summaryTbody.innerHTML = loadingSummary;
   if (detailTbody) detailTbody.innerHTML = loadingDetail;
 

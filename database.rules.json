@@ -122,8 +122,8 @@
     "commands": {
       ".read": "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
       "relay": {
-        ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",
-        ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)"
+        ".write": "auth != null && auth.token.isTempAccount !== true && (root.child('users').child(auth.uid).child('role').val() === 'admin' || auth.token.email === 'listrik.iot.device@gmail.com')",
+        ".validate": "!newData.exists() || (newData.isNumber() && (newData.val() === 0 || newData.val() === 1))"
       }
     },
 

@@ -1,3 +1,7 @@
+# Temp / backup
+.codex_tmp/
+*.bak
+
 # Logs
 logs
 *.log

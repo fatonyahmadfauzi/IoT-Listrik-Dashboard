@@ -175,7 +175,7 @@
         ]
       }
     </script>
-    <link rel="stylesheet" href="/css/style.min.css?v=20260512-historylogfix1" />
+    <link rel="stylesheet" href="/css/style.min.css?v=20260722-log-parity1" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -328,15 +328,15 @@
         </div>
       </div>
 
-      <!-- Filter + export -->
+      <!-- Log experience (shared visual system with Dashboard) -->
       <div id="historyLogsCard" class="section-card glass mini-log-card">
-        <div class="section-header mini-log-header history-log-header">
+        <div class="section-header mini-log-header">
           <div>
             <div class="section-title">Log terkini</div>
-            <p class="mini-log-subtitle history-log-subtitle">Ringkas untuk pantauan cepat, detail untuk audit parameter listrik.</p>
+            <p class="mini-log-subtitle">Ringkas untuk pantauan cepat, detail untuk audit parameter listrik.</p>
           </div>
-          <div class="mini-log-actions history-log-actions" aria-label="Tampilan log terkini">
-            <span class="history-log-count text-xs text-muted">15 entri terakhir</span>
+          <div class="mini-log-actions" aria-label="Tampilan log terkini">
+            <span id="logCount" class="text-xs text-muted">Memuat log...</span>
             <div class="mini-log-tabs" role="tablist" aria-label="Tampilan log terkini">
               <button
                 type="button"
@@ -373,8 +373,8 @@
           <button id="exportBtn" class="btn btn-ghost btn-sm"><span class="material-symbols-rounded">download</span>Export CSV</button>
         </div>
 
-        <div id="historySummaryPanel" class="table-wrap mini-log-panel history-log-panel">
-          <table class="history-table history-summary-table">
+        <div id="historySummaryPanel" class="table-wrap mini-log-panel">
+          <table class="mini-logs">
             <thead>
               <tr>
                 <th>Waktu</th>
@@ -394,31 +394,13 @@
           </table>
         </div>
 
-        <div id="historyDetailPanel" class="table-wrap mini-log-panel history-log-panel" hidden>
-          <table class="history-table history-detail-table">
-            <thead>
-              <tr>
-                <th>Waktu</th>
-                <th>Arus (A)</th>
-                <th>Tegangan (V)</th>
-                <th>Daya Aktif (W)</th>
-                <th>Energi (kWh)</th>
-                <th>PF</th>
-                <th>Frekuensi</th>
-                <th>Apparent (VA)</th>
-                <th>Status</th>
-                <th>Relay</th>
-                <th>Sumber</th>
-              </tr>
-            </thead>
-            <tbody id="historyTbody">
-              <tr>
-                <td colspan="11" style="text-align:center;padding:32px;color:var(--text-secondary);">
-                  Memuat data...
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div id="historyDetailPanel" class="mini-log-panel mini-log-detail-panel" hidden>
+          <div class="mini-log-scroll-hint">
+            Detail menampilkan parameter lengkap untuk pengecekan audit.
+          </div>
+          <div id="historyTbody" class="mini-log-detail-list">
+            <div class="mini-log-empty">Memuat data...</div>
+          </div>
         </div>
         <p class="text-xs text-muted mt-8">Menampilkan entri log sesuai filter tanggal dan status. Data diperbarui realtime.</p>
       </div>

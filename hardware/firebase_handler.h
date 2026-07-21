@@ -1,10 +1,10 @@
-/**
+﻿/**
  * firebase_handler.h — Firebase RTDB Read/Write Operations
- * ─────────────────────────────────────────────────────────────────────
+ * ————————————————————————————————————————————————————————————————————————————————
  * Uses: Firebase ESP Client library by Mobizt
  *
  * Install via Arduino Library Manager:
- *   Search "Firebase ESP Client" → install by Mobizt
+ *   Search "Firebase ESP Client" † install by Mobizt
  *   (Also installs ArduinoJson as dependency)
  *
  * KEY CHANGE from previous version:
@@ -13,7 +13,14 @@
  *
  *   readAllSettings() now reads ALL /settings fields into a RuntimeSettings
  *   struct, including Telegram credentials and calibration factors.
- * ─────────────────────────────────────────────────────────────────────
+ *
+ * CRITICAL FIX — Single FirebaseData:
+ *   Menggunakan SATU FirebaseData object (fbData) untuk SEMUA operasi.
+ *   Multiple FirebaseData object † masing-masing alokasi ~5KB static buffer
+ *   † heap fragmentasi † MaxBlock < 60KB † SSL handshake ke-2 NULL crash.
+ *   Karena SEMUA operasi Firebase berjalan di Core 0 secara SERIAL (satu task),
+ *   satu FirebaseData object cukup dan aman.
+ * ————————————————————————————————————————————————————————————————————————————————
  */
 
 #ifndef FIREBASE_HANDLER_H
@@ -22,9 +29,9 @@
 #include <Arduino.h>
 #include "config.h"
 
-// ═══════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════════ 
 // SKIP_FIREBASE MODE — All Firebase functions become safe no-ops
-// ═══════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════════ 
 #ifdef SKIP_FIREBASE
 
 // Stub FirebaseData so main.ino compiles (it references fbBootstrapData)
@@ -36,7 +43,7 @@ struct FirebaseData {
   String jsonString()  { return "{}"; }
 };
 static FirebaseData fbData;
-static FirebaseData fbBootstrapData;
+static FirebaseData fbBootstrapData;   // kept for compatibility
 
 void initFirebase(const char*, const char*, const char*, const char*) {
   Serial.println("[Firebase] SKIP_FIREBASE aktif — Firebase DINONAKTIFKAN");
@@ -57,239 +64,277 @@ bool updateAutoLearningStatus(const String&, const String&, bool, const String& 
 bool writeAutoLearningResult(const String&, unsigned long, float, float, float, float, float, float, bool) { return false; }
 
 #else
-// ═══════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════════ 
 // NORMAL MODE — Full Firebase implementation
-// ═══════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════════ 
 
 #include <Firebase_ESP_Client.h>
+#include <HTTPClient.h>          // FIX: untuk writeMonitorData persistent HTTP
+#include <WiFiClientSecure.h>    // FIX: untuk persistent SSL connection
+#include <esp_task_wdt.h>        // FIX: WDT reset saat blocking HTTP
 
-// ── Firebase global objects ───────────────────────────────────
-// Declared here, defined once — main.ino must NOT re-declare these.
-FirebaseData   fbData;
-FirebaseData   fbBootstrapData;
+
+// ——— Firebase global objects —————————————————————————————————————————————————————
+// SATU FirebaseData object untuk semua operasi (serialized di Core 0).
+// Ini mencegah fragmentasi heap akibat multiple static SSL buffer allocation.
+static bool s_fbTokenReady = false;  // Set true saat token_status_ready
+
+// Static buffers agar fbConfig.api_key / database_url tidak corrupt setelah initFirebase() return.
+static char s_fbApiKey[136]    = {};
+static char s_fbDbUrl[136]     = {};
+static char s_fbEmail[72]      = {};
+static char s_fbPassword[72]   = {};
+FirebaseData   fbData;            // semua operasi RTDB (monitor, log, relay, settings, bootstrap)
+FirebaseData   fbBootstrapData;   // alias Ã¢â‚¬â€ digunakan oleh fungsi bootstrap di main.ino (sama dengan fbData)
 FirebaseAuth   fbAuth;
 FirebaseConfig fbConfig;
 
-// ─── Firebase token callback (plain function, not lambda) ─────
-// Using a regular function avoids potential heap issues from
-// std::function allocation on ESP32's limited memory.
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Firebase token callback Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 void firebaseTokenStatusCallback(TokenInfo info) {
   if (info.status == token_status_error) {
     Serial.println("[Firebase] Token error.");
   } else if (info.status == token_status_ready) {
-    Serial.println("[Firebase] Auth token ready ✓");
+    s_fbTokenReady = true;
+    Serial.println("[Firebase] Auth token ready");
   }
 }
 
-// ─── initFirebase() ───────────────────────────────────────────
-/**
- * Initialize Firebase connection using RUNTIME parameters loaded
- * from NVS (not compile-time #defines).
- *
- * Call ONCE in setup() after WiFi is connected.
- *
- * @param apiKey    Firebase project API key (from NVS/bootstrap)
- * @param dbUrl     Firebase RTDB URL (from NVS/bootstrap)
- * @param email     IoT device email (from NVS/bootstrap)
- * @param password  IoT device password (from NVS/bootstrap)
- */
-void initFirebase(const String& apiKey,
-                  const String& dbUrl,
-                  const String& email,
-                  const String& password) {
+void initFirebase(const char* apiKey, const char* dbUrl, const char* email, const char* password) {
+  strlcpy(s_fbApiKey, apiKey, sizeof(s_fbApiKey));
+  strlcpy(s_fbDbUrl, dbUrl, sizeof(s_fbDbUrl));
+  strlcpy(s_fbEmail, email, sizeof(s_fbEmail));
+  strlcpy(s_fbPassword, password, sizeof(s_fbPassword));
 
-  fbConfig.api_key      = apiKey;
-  fbConfig.database_url = dbUrl;
-  fbAuth.user.email     = email;
-  fbAuth.user.password  = password;
+  fbConfig.api_key = s_fbApiKey;
+  fbConfig.database_url = s_fbDbUrl;
+  fbAuth.user.email = s_fbEmail;
+  fbAuth.user.password = s_fbPassword;
 
   fbConfig.token_status_callback = firebaseTokenStatusCallback;
+  fbConfig.fcs.download_buffer_size = 4096;
+  fbConfig.fcs.upload_buffer_size = 1024;
 
   Firebase.begin(&fbConfig, &fbAuth);
-  // Dihapus untuk mencegah bentrok dengan WiFiManager dan watchdog manual di loop()
-  // Firebase.reconnectWiFi(true);
-
-  // Buffer tuning AFTER begin() — internal state must be initialized first
-  fbData.setBSSLBufferSize(4096, 1024);
-  fbData.setResponseSize(4096);
-  fbBootstrapData.setBSSLBufferSize(4096, 1024);
-  fbBootstrapData.setResponseSize(2048);
-
-  delay(100);  // let Firebase internal tasks initialize
-  yield();
-
-  Serial.printf("[Firebase] Inisialisasi: %s\n", dbUrl);
+  Firebase.reconnectWiFi(true);
 }
 
-// ─── isFirebaseReady() ────────────────────────────────────────
 bool isFirebaseReady() {
-  return Firebase.ready();
+  return Firebase.ready() && s_fbTokenReady;
 }
 
-bool isFirebasePathMissing(const String& reason) {
-  return reason.indexOf("path not exist") != -1 ||
-         reason.indexOf("Path not exist") != -1 ||
-         reason.indexOf("path is not exist") != -1;
+// Threshold 50KB memberi buffer aman di atas minimum SSL (~40KB).
+#define FB_HEAP_GUARD(label) \
+  do { \
+    uint32_t _fh  = ESP.getFreeHeap(); \
+    uint32_t _mb  = ESP.getMaxAllocHeap(); \
+    if (_fh < 30000 || _mb < 25000) { \
+      Serial.printf("[Firebase] HEAP LOW (free=%u max=%u) -- needs 30K free + 25K block, Ã¢â‚¬â€ skip %s\n", _fh, _mb, label); \
+      return false; \
+    } \
+  } while(0)
+
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Persistent HTTP client untuk writeMonitorData Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// FIX DEFINITIF: Gunakan HTTPClient langsung dengan WiFiClientSecure
+// persistent (setReuse=true) agar SSL handshake hanya terjadi SEKALI.
+//
+// Masalah sebelumnya: Firebase.RTDB.updateNode membuka koneksi SSL baru
+// untuk setiap call setelah server menutup keep-alive. Heap terfragmentasi
+// setelah 2 koneksi SSL Ã¢â€ â€™ SSL handshake ke-3 gagal alokasi Ã¢â€ â€™ NULL Ã¢â€ â€™ crash.
+//
+// Solusi: Satu WiFiClientSecure persistent Ã¢â€ â€™ SSL session digunakan ulang Ã¢â€ â€™
+// tidak ada heap allocation baru untuk SSL handshake setelah call pertama.
+static WiFiClientSecure _wcsRTDB;
+static HTTPClient       _httpRTDB;
+static bool             _rtdbConnected = false;
+static unsigned long    _rtdbLastMs    = 0;
+
+// Helper: Pastikan DB URL tidak berakhiran slash agar tidak terjadi double slash (//) yg bikin 401
+// Persistent HTTP client untuk Firebase GET/DELETE (settings, relay)
+static WiFiClientSecure _wcsFbReq;
+static HTTPClient       _httpFbReq;
+static bool             _fbReqConnected = false;
+static unsigned long    _fbReqLastMs    = 0;
+
+static String _getBaseUrl() {
+  String b = String(s_fbDbUrl);
+  if (b.endsWith("/")) b.remove(b.length() - 1);
+  return b;
 }
 
-// ─── writeMonitorData() ───────────────────────────────────────
-/**
- * Write realtime sensor data to /listrik in Firebase.
- * Only the IoT device email account may write to these paths
- * (enforced by database.rules.json).
- *
- * @param arus      Current RMS (A)
- * @param tegangan  Voltage RMS (V)
- * @param status    Status string: NORMAL|WARNING|DANGER
- * @param relay     Relay state: 0=OFF, 1=ON
- * @return true on success
- */
+// Helper: HTTP request ke Firebase RTDB dengan PERSISTENT CONNECTION
+static bool _fbHttpRequest(const char* method, const char* path,
+                            const char* body, String* respOut = nullptr) {
+  const char* token = Firebase.getToken();
+  if (!token || strlen(token) < 20) return false;
+  
+  String url = _getBaseUrl() + path + ".json?auth=" + String(token);
+  
+  unsigned long now = millis();
+  bool needReinit = !_fbReqConnected || (now - _fbReqLastMs > 25000UL);
+  if (needReinit) {
+    _httpFbReq.end();
+    _wcsFbReq.setInsecure();
+    _httpFbReq.setReuse(true);
+    _fbReqConnected = false;
+  }
+  
+  if (!_httpFbReq.begin(_wcsFbReq, url)) {
+    _fbReqConnected = false;
+    return false;
+  }
+  
+  _httpFbReq.addHeader("Content-Type", "application/json");
+  _httpFbReq.setTimeout(10000);
+  
+  int code = -1;
+  if (strcmp(method, "GET") == 0) code = _httpFbReq.GET();
+  else if (strcmp(method, "DELETE") == 0) code = _httpFbReq.sendRequest("DELETE");
+  else { String b = body ? body : "{}"; code = _httpFbReq.sendRequest(method, b); }
+  
+  _fbReqLastMs = millis();
+  if (code < 0) _fbReqConnected = false; // FIX: force re-init on connection error
+  bool ok = (code == 200);
+  // FIX: Beri waktu bagi lwIP dan BearSSL untuk membersihkan buffer tcp_recved
+  // setelah menerima respon JSON, untuk mencegah StoreProhibited crash
+  // saat melakukan banyak fetch beruntun (seperti di bootstrap).
+  vTaskDelay(pdMS_TO_TICKS(20));
+  if (code == 200) {
+    _fbReqConnected = true;
+    if (respOut) *respOut = _httpFbReq.getString();
+  } else {
+    Serial.printf("[Firebase] %s %s => %d\n", method, path, code);
+    _httpFbReq.end();
+    _fbReqConnected = false;
+  }
+  return ok;
+}
+
 bool writeMonitorData(float arus, float tegangan, float dayaW,
                       float apparentPowerVa, float energiKwh,
                       float freqHz, float powerFactor,
                       const String& status, int relay,
                       const String& sensorSource = "PZEM-004T") {
   if (!isFirebaseReady()) return false;
-
-  FirebaseJson json;
-  json.set("arus",          arus);
-  json.set("tegangan",      tegangan);
-  json.set("daya",          apparentPowerVa); // Backward-compatible: apparent power (VA)
-  json.set("daya_w",        dayaW);           // Active power from PZEM when available
-  json.set("apparent_power", apparentPowerVa);
-  json.set("energi_kwh",    energiKwh);
-  json.set("frekuensi",     freqHz);
-  json.set("power_factor",  powerFactor);
-  json.set("sensor_source",  sensorSource);
-  json.set("status",        status);
-  json.set("relay",         relay);
-  json.set("updated_at",    String(millis()));
-
-  bool ok = Firebase.RTDB.updateNode(&fbData, "/listrik", &json);
-  if (!ok) {
-    Serial.println("[Firebase] writeMonitorData gagal: " + fbData.errorReason());
+  Serial.printf("[Firebase] writeMonitorData heap: %u maxBlk: %u\n",
+                ESP.getFreeHeap(), ESP.getMaxAllocHeap());
+  const char* token = Firebase.getToken();
+  if (!token || strlen(token) < 20) { Serial.println("[Firebase] token belum siap"); return false; }
+  char json[600];
+  snprintf(json, sizeof(json),
+    "{\"arus\":%.2f,\"tegangan\":%.1f,\"daya\":%.1f,\"daya_w\":%.1f,"
+    "\"apparent_power\":%.1f,\"energi_kwh\":%.4f,\"frekuensi\":%.1f,"
+    "\"power_factor\":%.2f,\"sensor_source\":\"%s\",\"status\":\"%s\",\"relay\":%d}",
+    arus, tegangan, apparentPowerVa, dayaW, apparentPowerVa, energiKwh, freqHz, powerFactor,
+    sensorSource.c_str(), status.c_str(), relay);
+  
+  String url = _getBaseUrl() + "/listrik.json?auth=" + String(token);
+  Serial.printf("[Firebase] HTTP PATCH URL (first 80 chars): %.80s...\n", url.c_str());
+  
+  unsigned long now = millis();
+  bool needReinit = !_rtdbConnected || (now - _rtdbLastMs > 25000UL);
+  if (needReinit) {
+    _httpRTDB.end();
+    _wcsRTDB.setInsecure();
+    _httpRTDB.setReuse(true);
+    _rtdbConnected = false;
+    Serial.println("[Firebase] RTDB: membuka koneksi HTTP baru");
   }
-  return ok;
+  if (!_httpRTDB.begin(_wcsRTDB, url)) {
+    Serial.println("[Firebase] writeMonitorData: HTTP begin gagal");
+    _rtdbConnected = false;
+    return false;
+  }
+  _httpRTDB.addHeader("Content-Type", "application/json");
+  _httpRTDB.setTimeout(10000);
+  int code = _httpRTDB.sendRequest("PATCH", String(json));
+  _rtdbLastMs = millis();
+  if (code == 200) { _rtdbConnected = true; return true; }
+  Serial.printf("[Firebase] writeMonitorData gagal: HTTP %d\n", code);
+  _httpRTDB.end();
+  _rtdbConnected = false;
+  return false;
 }
 
-// ─── writeLog() ───────────────────────────────────────────────
-/**
- * Append one log entry to /logs using Firebase push (auto-key).
- *
- * @param arus      Current (A)
- * @param tegangan  Voltage (V)
- * @param status    Status string
- * @param relay     Relay state
- * @param source    "esp32" | "auto_cutoff" | "web_command"
- * @return true on success
- */
 bool writeLog(float arus, float tegangan,
               const String& status, int relay,
               const String& source,
-              float dayaW = 0.0f,
-              float apparentPowerVa = 0.0f,
-              float energiKwh = 0.0f,
-              float freqHz = 50.0f,
+              float dayaW = 0.0f, float apparentPowerVa = 0.0f,
+              float energiKwh = 0.0f, float freqHz = 50.0f,
               float powerFactor = 0.85f,
               const String& sensorSource = "PZEM-004T") {
   if (!isFirebaseReady()) return false;
-
-  FirebaseJson json;
+  FB_HEAP_GUARD("writeLog");
+  const char* token = Firebase.getToken();
+  if (!token || strlen(token) < 20) return false;
   if (apparentPowerVa <= 0.0f) apparentPowerVa = arus * tegangan;
   if (dayaW <= 0.0f) dayaW = apparentPowerVa * powerFactor;
-
-  json.set("arus",           arus);
-  json.set("tegangan",       tegangan);
-  json.set("daya",           apparentPowerVa);
-  json.set("daya_w",         dayaW);
-  json.set("apparent_power", apparentPowerVa);
-  json.set("energi_kwh",     energiKwh);
-  json.set("frekuensi",      freqHz);
-  json.set("power_factor",   powerFactor);
-  json.set("sensor_source",  sensorSource);
-  json.set("status",         status);
-  json.set("relay",          relay);
-  json.set("waktu",          String(millis()));
-  json.set("source",         source);
-
-  bool ok = Firebase.RTDB.pushJSON(&fbData, "/logs", &json);
-  if (!ok) {
-    Serial.println("[Firebase] writeLog gagal: " + fbData.errorReason());
-  } else {
-    Serial.println("[Firebase] Log → " + status + " (" + source + ")");
-  }
-  return ok;
+  char jsonStr[600];
+  snprintf(jsonStr, sizeof(jsonStr),
+    "{\"arus\":%.2f,\"tegangan\":%.1f,\"daya\":%.1f,\"daya_w\":%.1f,"
+    "\"apparent_power\":%.1f,\"energi_kwh\":%.4f,\"frekuensi\":%.1f,"
+    "\"power_factor\":%.2f,\"sensor_source\":\"%s\","
+    "\"status\":\"%s\",\"relay\":%d,\"waktu\":\"%s\",\"source\":\"%s\"}",
+    arus, tegangan, apparentPowerVa, dayaW, apparentPowerVa, energiKwh, freqHz, powerFactor,
+    sensorSource.c_str(), status.c_str(), relay, String(millis()).c_str(), source.c_str());
+  
+  String url = _getBaseUrl() + "/logs.json?auth=" + String(token);
+  
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  if (http.begin(client, url)) {
+    http.addHeader("Content-Type", "application/json");
+    int code = http.POST(String(jsonStr));
+    http.end();
+    if (code == 200) { Serial.println("[Firebase] Log -> " + status + " (" + source + ")"); return true; }
+    Serial.printf("[Firebase] writeLog gagal HTTP %d\n", code);
+  } else { Serial.println("[Firebase] writeLog HTTP begin gagal"); }
+  return false;
 }
 
-// ─── readRelayCommand() ───────────────────────────────────────
-/**
- * Read /commands/relay to get the command set by the web admin.
- * The IoT device then applies this to the physical relay and confirms
- * the actual state back to /listrik/relay.
- *
- * @param outRelay  Output: relay value read (0 or 1)
- * @return true on success
- */
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ readRelayCommand() Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 bool readRelayCommand(int& outRelay) {
   if (!isFirebaseReady()) return false;
-
-  bool ok = Firebase.RTDB.getInt(&fbData, "/commands/relay");
+  FB_HEAP_GUARD("readRelayCommand");
+  String resp;
+  bool ok = _fbHttpRequest("GET", "/commands/relay", nullptr, &resp);
   if (ok) {
-    outRelay = fbData.intData() == 1 ? 1 : 0;
-  } else {
-    String reason = fbData.errorReason();
-    if (!isFirebasePathMissing(reason)) {
-      Serial.println("[Firebase] readRelayCommand gagal: " + reason);
-    }
+    resp.trim();
+    if (resp == "null" || resp == "" || resp == "false") return false;
+    outRelay = (resp.toInt() == 1) ? 1 : 0;
   }
   return ok;
 }
 
-// ─── updateRelayState() ────────────────────────────────────────
-/**
- * Write confirmed relay state back to /listrik/relay so the web
- * dashboard reflects the actual hardware state (e.g. after auto-cutoff).
- */
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ updateRelayState() Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 bool updateRelayState(int relayVal) {
   if (!isFirebaseReady()) return false;
-  bool ok = Firebase.RTDB.setInt(&fbData, "/listrik/relay", relayVal);
-  if (!ok) {
-    Serial.println("[Firebase] updateRelayState gagal: " + fbData.errorReason());
-  }
+  char b[20];
+  snprintf(b, sizeof(b), "{\"relay\":%d}", relayVal);
+  return _fbHttpRequest("PATCH", "/listrik", b);
+}
+
+bool clearRelayCommand() {
+  if (!isFirebaseReady()) return false;
+  bool ok = _fbHttpRequest("DELETE", "/commands/relay", nullptr);
+  if (ok) Serial.println("[Firebase] /commands/relay cleared OK");
   return ok;
 }
 
-// ─── readAllSettings() ────────────────────────────────────────
-/**
- * Read ALL runtime settings from Firebase /settings into a
- * RuntimeSettings struct. Called periodically so web changes
- * take effect without firmware re-upload.
- *
- * Fields read:
- *   thresholdArus, buzzerEnabled, autoCutoffEnabled,
- *   telegramBotToken, telegramChatId (supports comma-separated IDs),
- *   arusCalibration, teganganCalibration,
- *   realtimeStreamEnabled, sendIntervalMs,
- *   autoLearning/*
- *
- * If /settings does not exist yet, the struct values remain at
- * their default (as declared in config.h RuntimeSettings).
- *
- * @param out  RuntimeSettings struct to populate
- * @return true if Firebase returned data
- */
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ readAllSettings() Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 bool readAllSettings(RuntimeSettings& out) {
   if (!isFirebaseReady()) return false;
+  FB_HEAP_GUARD("readAllSettings");
 
-  bool ok = Firebase.RTDB.getJSON(&fbData, "/settings");
-  if (!ok) {
-    Serial.println("[Firebase] readAllSettings gagal: " + fbData.errorReason());
-    return false;
-  }
+  String resp;
+  bool ok = _fbHttpRequest("GET", "/settings", nullptr, &resp);
+  if (!ok) return false;
+  resp.trim();
+  if (resp == "null" || resp == "") return false;
 
   FirebaseJson    json;
   FirebaseJsonData val;
-  json.setJsonData(fbData.jsonString());
+  json.setJsonData(resp);
 
   // Numeric thresholds
   if (json.get(val, "thresholdArus")     && val.typeNum == FirebaseJson::JSON_FLOAT)
@@ -322,14 +367,22 @@ bool readAllSettings(RuntimeSettings& out) {
   // Timing
   if (json.get(val, "sendIntervalMs") && val.intValue > 0)
     out.sendIntervalMs = (unsigned long)val.intValue;
+  if (json.get(val, "settingsSyncMs") && val.intValue > 0)
+    out.settingsSyncMs = (unsigned long)val.intValue;
 
-  // Telegram credentials (strings)
+  // Telegram
   if (json.get(val, "telegramBotToken") && !val.stringValue.isEmpty())
     out.telegramBotToken = val.stringValue;
   if (json.get(val, "telegramChatId")   && !val.stringValue.isEmpty())
     out.telegramChatId = val.stringValue;
 
-  // Auto Learning Beban Normal
+  // Discord
+  if (json.get(val, "discord/webhookAlerts") && !val.stringValue.isEmpty())
+    out.discordWebhookAlerts = val.stringValue;
+  if (json.get(val, "discord/enabled"))
+    out.discordNotifyEnabled = (val.stringValue == "true" || val.intValue == 1);
+
+  // Auto Learning
   if (json.get(val, "autoLearning/active"))
     out.autoLearningActive = (val.stringValue == "true" || val.intValue == 1);
   if (json.get(val, "autoLearning/requestId"))
@@ -348,12 +401,13 @@ bool readAllSettings(RuntimeSettings& out) {
     out.autoLearningApplyToThreshold = (val.stringValue == "true" || val.intValue == 1);
 
   Serial.printf(
-    "[Firebase] Settings synced → thr=%.1fA warn%%=%.0f PF=%.2f f=%.0fHz "
-    "cal_I=%.3f cal_V=%.2f stream=%d sendMs=%lu buzzer=%d cutoff=%d TG=%s learn=%d\n",
+    "[Firebase] Settings synced Ã¢â€ â€™ thr=%.1fA warn%%=%.0f PF=%.2f f=%.0fHz "
+    "cal_I=%.3f cal_V=%.2f stream=%d sendMs=%lu buzzer=%d cutoff=%d TG=%s DC=%s learn=%d\n",
     out.thresholdArus, out.warningPercent, out.powerFactorEstimate, out.frequencyHz,
     out.arusCalibration, out.teganganCalibration,
     out.realtimeStreamEnabled, out.sendIntervalMs, out.buzzerEnabled, out.autoCutoffEnabled,
-    out.telegramBotToken.isEmpty() ? "unconfigured" : "configured",
+    out.telegramBotToken.isEmpty()      ? "unconfigured" : "configured",
+    out.discordWebhookAlerts.isEmpty()  ? "unconfigured" : "configured",
     out.autoLearningActive
   );
   return true;
@@ -372,10 +426,9 @@ bool updateAutoLearningStatus(const String& requestId,
   json.set("deviceUpdatedAt", String(millis()));
   if (!message.isEmpty()) json.set("message", message);
 
-  bool ok = Firebase.RTDB.updateNode(&fbData, "/settings/autoLearning", &json);
-  if (!ok) {
-    Serial.println("[Firebase] updateAutoLearningStatus gagal: " + fbData.errorReason());
-  }
+  String jsonStr;
+  json.toString(jsonStr);
+  bool ok = _fbHttpRequest("PATCH", "/settings/autoLearning", jsonStr.c_str());
   return ok;
 }
 
@@ -407,16 +460,16 @@ bool writeAutoLearningResult(const String& requestId,
     ? "Learning selesai. Threshold arus diperbarui oleh perangkat."
     : "Learning selesai. Threshold arus tidak diubah otomatis.");
 
-  bool resultOk = Firebase.RTDB.updateNode(&fbData, "/settings/autoLearning", &json);
-  if (!resultOk) {
-    Serial.println("[Firebase] writeAutoLearningResult gagal: " + fbData.errorReason());
-  }
+  String jsonStr;
+  json.toString(jsonStr);
+  bool resultOk = _fbHttpRequest("PATCH", "/settings/autoLearning", jsonStr.c_str());
 
   bool thresholdOk = true;
   if (applyToThreshold) {
-    thresholdOk = Firebase.RTDB.setFloat(&fbData, "/settings/thresholdArus", learnedThresholdArus);
+    char thrBody[40];
+    snprintf(thrBody, sizeof(thrBody), "{\"thresholdArus\":%.2f}", learnedThresholdArus);
+    thresholdOk = _fbHttpRequest("PATCH", "/settings", thrBody);
     if (!thresholdOk) {
-      Serial.println("[Firebase] apply learned threshold gagal: " + fbData.errorReason());
       updateAutoLearningStatus(requestId, "complete", false,
         "Learning selesai, tetapi threshold gagal diperbarui.");
     }
@@ -424,6 +477,51 @@ bool writeAutoLearningResult(const String& requestId,
   return resultOk && thresholdOk;
 }
 
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Bootstrap helper functions Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// Semua bootstrap operations menggunakan fbData (bukan fbBootstrapData terpisah)
+// karena semua berjalan di Core 0 secara serial.
+
+String bootstrapChildPath(const char* child) {
+  return String("/settings/deviceBootstrap/") + child;
+}
+
+bool readBootstrapBoolChild(const char* child, bool& out) {
+  const String path = bootstrapChildPath(child);
+  String resp;
+  bool ok = _fbHttpRequest("GET", path.c_str(), nullptr, &resp);
+  if (!ok) return false;
+  resp.trim();
+  resp.toLowerCase();
+  if (resp == "null" || resp == "") return false;
+  out = (resp == "true" || resp == "1");
+  return true;
+}
+
+bool readBootstrapStringChild(const char* child, String& out) {
+  const String path = bootstrapChildPath(child);
+  String resp;
+  bool ok = _fbHttpRequest("GET", path.c_str(), nullptr, &resp);
+  if (!ok) return false;
+  resp.trim();
+  if (resp == "null" || resp == "") return false;
+  if (resp.startsWith(""") && resp.endsWith("""))
+    resp = resp.substring(1, resp.length() - 1);
+  out = resp;
+  return true;
+}
+
+bool writeBootstrapStatusString(const char* child, const String& value) {
+  if (!isFirebaseReady()) return false;
+  String path = bootstrapChildPath(child);
+  String jsonVal = "\"" + value + "\"";
+  return _fbHttpRequest("PUT", path.c_str(), jsonVal.c_str());
+}
+
+bool writeBootstrapStatusBool(const char* child, bool value) {
+  if (!isFirebaseReady()) return false;
+  String path = bootstrapChildPath(child);
+  return _fbHttpRequest("PUT", path.c_str(), value ? "true" : "false");
+}
 #endif // SKIP_FIREBASE
 
 #endif // FIREBASE_HANDLER_H

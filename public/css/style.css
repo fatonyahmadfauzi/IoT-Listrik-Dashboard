@@ -10186,6 +10186,308 @@ html.lenis, html.lenis body {
   }
 }
 
+/* Final log parity guard: legacy History selectors above must not diverge
+   from the Dashboard component at narrower breakpoints. */
+:is(#miniLogsCard, #historyLogsCard) .mini-log-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .section-title {
+  color: var(--text-primary) !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.25 !important;
+  text-transform: none !important;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .mini-log-actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  :is(#miniLogsCard, #historyLogsCard) {
+    gap: 14px !important;
+    padding: 16px !important;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-actions > .text-xs,
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-tabs {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  :is(#miniLogsCard, #historyLogsCard) {
+    padding: 14px !important;
+  }
+}
+
+/* =============================================================
+   Unified log experience
+   Dashboard and Riwayat Log intentionally share the same summary
+   table, detail cards, tabs, and responsive breakpoints.
+   ============================================================= */
+:is(#miniLogsCard, #historyLogsCard),
+:is(#miniLogsCard, #historyLogsCard) * {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+:is(#miniLogsCard, #historyLogsCard) {
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .mini-log-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .section-title {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .mini-log-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .mini-log-actions > .text-xs {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .mini-log-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(76px, 1fr));
+  width: auto;
+  min-width: 174px;
+  max-width: 100%;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .mini-log-tab {
+  min-width: 0;
+  width: 100%;
+}
+
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs {
+  width: 100%;
+  table-layout: fixed;
+}
+
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(1),
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(1) { width: 22%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(2),
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(2) { width: 36%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(3),
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(3) { width: 16%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(4),
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(4) { width: 12%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(5),
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(5) { width: 14%; }
+
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-values {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-val-arus { color: var(--green-light); }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-val-teg { color: var(--primary-light); }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-val-daya { color: var(--yellow-light); }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-val-sep { color: rgba(148, 163, 184, 0.42); }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-relay,
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-source {
+  color: var(--text-secondary);
+  font-family: var(--font-data);
+  font-weight: 800;
+}
+
+@media (max-width: 768px) {
+  :is(#miniLogsCard, #historyLogsCard) {
+    padding: 16px;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-subtitle {
+    font-size: 11px;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-actions > .text-xs {
+    width: 100%;
+    white-space: normal;
+    text-align: left;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-tabs {
+    width: 100%;
+    min-width: 0;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) {
+    overflow: visible !important;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs {
+    display: block;
+    width: 100%;
+    border: 0;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs thead {
+    display: none;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-row {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "time status"
+      "vals vals"
+      "relay source";
+    min-height: 84px;
+    padding: 12px 13px !important;
+    column-gap: 12px;
+    row-gap: 9px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-left: 3px solid rgba(100, 116, 139, 0.34);
+    border-radius: var(--radius-md) !important;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.58), rgba(15, 23, 42, 0.48));
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-row td {
+    display: flex !important;
+    align-items: center;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-row td::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-row td[colspan] {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 104px;
+    display: grid !important;
+    place-items: center;
+    text-align: center;
+    padding: 14px !important;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-time {
+    grid-area: time;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-values {
+    grid-area: vals;
+    gap: 6px;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-status {
+    grid-area: status;
+    justify-content: flex-end;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-relay {
+    grid-area: relay;
+    font-size: 11px;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-source {
+    grid-area: source;
+    justify-content: flex-end;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  :is(#miniLogsCard, #historyLogsCard) {
+    padding: 14px;
+  }
+
+  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-row {
+    padding: 11px 12px !important;
+  }
+}
+
 /* History log mobile spacing final pass. */
 #historyLogsCard > p.text-xs.text-muted.mt-8 {
   margin-top: 2px !important;
@@ -11481,5 +11783,67 @@ html.lenis, html.lenis body {
 @media (max-width: 360px) {
   .main-content {
     --app-responsive-gutter: 10px;
+  }
+}
+
+/* Final log parity guard: overrides remaining legacy History selectors. */
+:is(#miniLogsCard, #historyLogsCard) .mini-log-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .section-title {
+  color: var(--text-primary) !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.25 !important;
+  text-transform: none !important;
+}
+
+:is(#miniLogsCard, #historyLogsCard) .mini-log-actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  :is(#miniLogsCard, #historyLogsCard) {
+    gap: 14px !important;
+    padding: 16px !important;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-actions > .text-xs,
+  :is(#miniLogsCard, #historyLogsCard) .mini-log-tabs {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (max-width: 420px) {
+  :is(#miniLogsCard, #historyLogsCard) {
+    padding: 14px !important;
   }
 }

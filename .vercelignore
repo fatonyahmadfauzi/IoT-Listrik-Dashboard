@@ -54,3 +54,12 @@ android-app/keystore/
 # Script sampah dan temporary files
 /*.py
 /temp_*.html
+
+# Temp directories & backup files
+.codex_tmp/
+.agents/
+.tmp/
+test-results/
+dist-public/
+*.bak
+*.tmp

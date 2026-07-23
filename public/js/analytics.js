@@ -369,7 +369,12 @@ function createStatusChart(canvas) {
       cutout: "62%",
       animation: { duration: 260 },
       plugins: {
-        legend: { display: false },
+        legend: {
+          labels: {
+            color: COLORS.text,
+            boxWidth: 14,
+          },
+        },
         tooltip: {
           backgroundColor: COLORS.surface,
           borderColor: "rgba(255,255,255,0.14)",
@@ -395,7 +400,12 @@ function createSnapshotChart(canvas) {
       maintainAspectRatio: false,
       animation: { duration: 240 },
       plugins: {
-        legend: { display: false },
+        legend: {
+          labels: {
+            color: COLORS.text,
+            boxWidth: 14,
+          },
+        },
         tooltip: {
           backgroundColor: COLORS.surface,
           borderColor: "rgba(255,255,255,0.14)",
@@ -673,7 +683,7 @@ function updateSnapshotChart(latest, stats) {
   snapshotChart.data.labels = items.map((item) => item.label);
   snapshotChart.data.datasets = [
     {
-      label: "Snapshot",
+      label: "Snapshot terakhir",
       data: items.map((item) => Math.max(0, Math.min(100, (item.value / item.ref) * 100))),
       rawValues: items.map((item) => `${item.value.toFixed(item.unit === "kWh" ? 3 : item.unit === "" ? 2 : 1)}${item.unit ? ` ${item.unit}` : ""}`),
       backgroundColor: items.map((item) => `${item.color}cc`),

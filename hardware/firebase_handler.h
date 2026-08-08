@@ -161,6 +161,11 @@ static String _getBaseUrl() {
   return b;
 }
 
+void releaseFirebaseHttpConnection() {
+  if (_rtdbConnected) { _httpRTDB.end(); _wcsRTDB.stop(); _rtdbConnected = false; }
+  if (_fbReqConnected) { _httpFbReq.end(); _wcsFbReq.stop(); _fbReqConnected = false; }
+}
+
 // Helper: HTTP request ke Firebase RTDB dengan PERSISTENT CONNECTION
 static bool _fbHttpRequest(const char* method, const char* path,
                             const char* body, String* respOut = nullptr) {
@@ -261,7 +266,8 @@ bool writeLog(float arus, float tegangan,
               float dayaW = 0.0f, float apparentPowerVa = 0.0f,
               float energiKwh = 0.0f, float freqHz = 50.0f,
               float powerFactor = 0.85f,
-              const String& sensorSource = "PZEM-004T") {
+              const String& sensorSource = "PZEM-004T",
+              long uptimeSeconds = 0) {
   if (!isFirebaseReady()) return false;
   FB_HEAP_GUARD("writeLog");
   const char* token = Firebase.getToken();
@@ -273,9 +279,9 @@ bool writeLog(float arus, float tegangan,
     "{\"arus\":%.2f,\"tegangan\":%.1f,\"daya\":%.1f,\"daya_w\":%.1f,"
     "\"apparent_power\":%.1f,\"energi_kwh\":%.4f,\"frekuensi\":%.1f,"
     "\"power_factor\":%.2f,\"sensor_source\":\"%s\","
-    "\"status\":\"%s\",\"relay\":%d,\"waktu\":\"%s\",\"source\":\"%s\"}",
+    "\"status\":\"%s\",\"relay\":%d,\"waktu\":\"%s\",\"source\":\"%s\",\"uptime_s\":%ld}",
     arus, tegangan, apparentPowerVa, dayaW, apparentPowerVa, energiKwh, freqHz, powerFactor,
-    sensorSource.c_str(), status.c_str(), relay, String(millis()).c_str(), source.c_str());
+    sensorSource.c_str(), status.c_str(), relay, String(millis()).c_str(), source.c_str(), uptimeSeconds);
   
   String url = _getBaseUrl() + "/logs.json?auth=" + String(token);
   

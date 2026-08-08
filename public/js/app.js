@@ -322,17 +322,26 @@ function formatLogRelay(value) {
   return "—";
 }
 
-function formatLogSource(row) {
+function formatLogMeterSource(row) {
   const raw =
-    row?.source ??
-    row?.sumber ??
-    row?.mode ??
-    row?.endpoint ??
-    row?.dataSource ??
+    row?.sensor_source ??
+    row?.sensorSource ??
+    row?.meter_source ??
+    row?.meterSource ??
     "";
-  const source = String(raw || "").trim().toUpperCase();
+  const source = String(raw || "").trim();
   if (source) return source;
-  return isTempAccount() ? "SIM" : "CLOUD";
+  return isTempAccount() ? "Simulator" : "PZEM-004T";
+}
+
+function formatLogEvent(row) {
+  const raw = row?.source ?? row?.sumber ?? row?.mode ?? row?.endpoint ?? row?.dataSource ?? "";
+  return String(raw || "").trim().toUpperCase();
+}
+
+function formatLogUptime(row) {
+  const seconds = Number(row?.uptime_s ?? row?.uptimeSeconds ?? row?.uptime);
+  return Number.isFinite(seconds) && seconds >= 0 ? `${Math.floor(seconds)} s` : "—";
 }
 
 function getLogActivePower(row) {
@@ -363,7 +372,7 @@ function renderMiniLogsEmpty() {
   if (elMiniLogs) {
     elMiniLogs.innerHTML =
       `<tr class="log-row mini-log-empty-row">
-        <td colspan="5">
+        <td colspan="6">
           <div class="mini-log-empty-state">
             <span class="material-symbols-rounded">history</span>
             <strong>Belum ada log</strong>
@@ -388,7 +397,9 @@ function renderMiniLogDetailRows(rows) {
     .map((r) => {
       const safeStatus = normalizeStatus(r.status);
       const relay = formatLogRelay(r.relay);
-      const source = formatLogSource(r);
+      const source = formatLogMeterSource(r);
+      const event = formatLogEvent(r);
+      const uptime = formatLogUptime(r);
       return `<article class="mini-log-detail-row log-status-${safeStatus}">
         <div class="mini-detail-main">
           <span class="mini-detail-label">Waktu</span>
@@ -406,7 +417,9 @@ function renderMiniLogDetailRows(rows) {
         <div class="mini-detail-state">
           <span class="status-badge status-${safeStatus}">${safeStatus}</span>
           <span class="mini-detail-pill">Relay ${escapeHtml(relay)}</span>
-          <span class="mini-detail-source">${escapeHtml(source)}</span>
+          <span class="mini-detail-source">Sumber ${escapeHtml(source)}</span>
+          <span class="mini-detail-pill">Uptime ${escapeHtml(uptime)}</span>
+          ${event ? `<span class="mini-detail-pill">Log ${escapeHtml(event)}</span>` : ""}
         </div>
       </article>`;
     })
@@ -458,13 +471,15 @@ function startMiniLogsListener() {
       .map((r) => {
         const safeStatus = normalizeStatus(r.status);
         const relay = formatLogRelay(r.relay);
-        const source = formatLogSource(r);
+        const source = formatLogMeterSource(r);
+        const uptime = formatLogUptime(r);
         return `<tr class="log-row log-status-${safeStatus}">
       <td class="log-time" data-label="Waktu">${escapeHtml(formatLogTime(r.waktu ?? r.timestamp))}</td>
-      <td class="log-values" data-label="Beban"><span class="log-val-arus">${num(r.arus).toFixed(2)} A</span><span class="log-val-sep">·</span><span class="log-val-teg">${num(r.tegangan).toFixed(1)} V</span><span class="log-val-sep">·</span><span class="log-val-daya">${getLogActivePower(r).toFixed(0)} W</span></td>
+      <td class="log-values" data-label="Beban"><div class="beban-values" style="display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center;"><span class="log-val-arus" style="white-space: nowrap;">${num(r.arus).toFixed(2)} A <span class="log-val-sep" style="opacity:0.5; margin-left:2px;">·</span></span><span class="log-val-teg" style="white-space: nowrap;">${num(r.tegangan).toFixed(1)} V <span class="log-val-sep" style="opacity:0.5; margin-left:2px;">·</span></span><span class="log-val-daya" style="white-space: nowrap;">${getLogActivePower(r).toFixed(0)} W</span></div></td>
       <td class="log-status" data-label="Status"><span class="status-badge status-${safeStatus}">${safeStatus}</span></td>
       <td class="log-relay" data-label="Relay">${escapeHtml(relay)}</td>
       <td class="log-source" data-label="Sumber">${escapeHtml(source)}</td>
+      <td class="log-uptime" data-label="Uptime">${escapeHtml(uptime)}</td>
     </tr>`;
       })
       .join("");

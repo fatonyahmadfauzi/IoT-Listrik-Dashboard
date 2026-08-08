@@ -81,12 +81,102 @@ function derivePowerMetrics(raw = {}) {
   return {
     activePower: Number.isFinite(activePower) ? activePower : 0,
     apparentPower: Number.isFinite(apparentPower) ? apparentPower : 0,
+    pf: Number.isFinite(pf) ? pf : 0.85,
   };
 }
 
 function formatPowerLabel(raw = {}) {
   const { activePower, apparentPower } = derivePowerMetrics(raw);
   return `${activePower.toFixed(1)} W / ${apparentPower.toFixed(1)} VA`;
+}
+
+function formatMetricValue(value, digits = 2) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toFixed(digits) : '-';
+}
+
+function relayIsOn(value) {
+  return value === true || value === 1 || String(value ?? '').trim().toUpperCase() === 'ON';
+}
+
+function formatTelemetryTimestamp(value) {
+  if (value === undefined || value === null || value === '') return waktuId();
+  const numeric = Number(value);
+  const date = Number.isFinite(numeric) && numeric > 100000000000
+    ? new Date(numeric)
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  });
+}
+
+function getRealtimeTelemetry(raw = {}) {
+  const power = derivePowerMetrics(raw);
+  const status = String(raw.status || 'NORMAL').trim().toUpperCase() || 'NORMAL';
+  return {
+    arus: formatMetricValue(raw.arus, 2),
+    tegangan: formatMetricValue(raw.tegangan, 1),
+    dayaAktif: formatMetricValue(power.activePower, 1),
+    dayaSemu: formatMetricValue(power.apparentPower, 1),
+    energi: formatMetricValue(raw.energi_kwh, 3),
+    frekuensi: formatMetricValue(raw.frekuensi, 1),
+    powerFactor: formatMetricValue(power.pf, 2),
+    relay: relayIsOn(raw.relay) ? 'ON (beban aktif)' : 'OFF (beban diputus)',
+    status,
+    sensorSource: String(raw.sensor_source ?? raw.source ?? 'Simulator / PZEM-004T').trim() || 'Simulator / PZEM-004T',
+    updatedAt: formatTelemetryTimestamp(raw.updated_at ?? raw.updatedAt ?? raw.timestamp),
+  };
+}
+
+function buildRealtimeDiscordFields(raw = {}) {
+  const data = getRealtimeTelemetry(raw);
+  return [
+    { name: '⚡ Arus', value: `${data.arus} A`, inline: true },
+    { name: '🔋 Tegangan', value: `${data.tegangan} V`, inline: true },
+    { name: '💡 Daya Aktif', value: `${data.dayaAktif} W`, inline: true },
+    { name: '🔌 Daya Semu', value: `${data.dayaSemu} VA`, inline: true },
+    { name: '🔆 Energi', value: `${data.energi} kWh`, inline: true },
+    { name: '📊 Power Factor', value: data.powerFactor, inline: true },
+    { name: '📡 Frekuensi', value: `${data.frekuensi} Hz`, inline: true },
+    { name: '🔌 Relay', value: data.relay, inline: true },
+    { name: `${statusEmoji(data.status)} Status`, value: data.status, inline: true },
+    { name: '🧭 Sumber meter', value: data.sensorSource, inline: true },
+    { name: '⏱ Waktu pembacaan', value: data.updatedAt, inline: false },
+  ];
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildRealtimeTelegramMessage(title, raw = {}, uid = '', description = '') {
+  const data = getRealtimeTelemetry(raw);
+  return [
+    `${statusEmoji(data.status)} <b>${escapeHtml(title)}</b>`,
+    description ? escapeHtml(description) : '',
+    '',
+    '📡 <b>Snapshot data realtime</b>',
+    `⚡ Arus: <b>${data.arus} A</b>`,
+    `🔋 Tegangan: <b>${data.tegangan} V</b>`,
+    `💡 Daya aktif: <b>${data.dayaAktif} W</b>`,
+    `🔌 Daya semu: <b>${data.dayaSemu} VA</b>`,
+    `🔆 Energi: <b>${data.energi} kWh</b>`,
+    `📊 Power factor: <b>${data.powerFactor}</b>`,
+    `📡 Frekuensi: <b>${data.frekuensi} Hz</b>`,
+    `🔌 Relay: <b>${data.relay}</b>`,
+    `${statusEmoji(data.status)} Status: <b>${data.status}</b>`,
+    `🧭 Sumber meter: <code>${escapeHtml(data.sensorSource)}</code>`,
+    `⏱ Pembacaan: <code>${escapeHtml(data.updatedAt)}</code>`,
+    uid ? `<i>Session: ${escapeHtml(uid.slice(0, 12))}...</i>` : '',
+  ].filter(Boolean).join('\n');
 }
 
 // ── Helper: Kirim Discord Embed ────────────────────────────────────────────
@@ -279,7 +369,6 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
   }
 
   const d = listrikData || {};
-  const power = derivePowerMetrics(d);
 
   console.log(`\n[Sim] [${uid.slice(0,8)}] Status: ${prevStatus} → ${currentStatus}`);
   console.log(`  Config: telegram=${!!(cfg.telegramBotToken)}, discord.enabled=${cfg.discord?.enabled}, discord.webhookAlerts=${!!(cfg.discord?.webhookAlerts)}`);
@@ -297,16 +386,10 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
         ? '⚠️ **OVERCURRENT TERDETEKSI!** Relay diputuskan otomatis.'
         : isRecovery
         ? '✅ Kondisi kelistrikan simulator kembali **NORMAL**.'
-        : `Status berubah dari \`${prevStatus}\` → \`${currentStatus}\``,
+      : `Status berubah dari \`${prevStatus}\` → \`${currentStatus}\``,
       color: statusColor(currentStatus),
       fields: [
-        { name: '⚡ Arus',         value: `${d.arus         ?? '-'} A`,   inline: true },
-        { name: '🔋 Tegangan',     value: `${d.tegangan     ?? '-'} V`,   inline: true },
-        { name: '💡 Daya Aktif',   value: `${power.activePower.toFixed(1)} W`, inline: true },
-        { name: '🔌 Daya Semu',    value: `${power.apparentPower.toFixed(1)} VA`, inline: true },
-        { name: '🔌 Relay',        value: d.relay ? 'ON' : 'OFF',         inline: true },
-        { name: '📡 Frekuensi',    value: `${d.frekuensi    ?? '-'} Hz`,  inline: true },
-        { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`,     inline: true },
+        ...buildRealtimeDiscordFields(d),
         { name: '🆔 Session',      value: `\`${uid.slice(0,12)}...\``,   inline: false },
       ],
       footer: { text: `IoT Listrik Simulator • ${waktuId()}` },
@@ -324,6 +407,10 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
       title: '🪫 [SIM] Relay DIMATIKAN (Auto-Cutoff)',
       description: 'Relay diputus otomatis karena overcurrent terdeteksi.',
       color: 0xED4245,
+      fields: [
+        ...buildRealtimeDiscordFields(d),
+        { name: '🆔 Session', value: `\`${uid.slice(0,12)}...\``, inline: false },
+      ],
       footer: { text: `IoT Listrik Simulator • ${waktuId()}` },
     };
     await sendDiscordEmbed(cfg.discord.webhookRelay, embed);
@@ -335,26 +422,18 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
   const tgChatIds = getTelegramChatIds(cfg);
 
   if (tgEnabled && tgToken && tgChatIds.length > 0) {
-    let msg = '';
-    if (currentStatus === 'DANGER') {
-      msg = `🔴 <b>[SIMULATOR] BAHAYA KRITIS!</b>\n` +
-        `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
-        `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
-        `🔌 Relay: <b>OFF (Auto Cutoff)</b>\n` +
-        `🕐 ${waktuId()}\n` +
-        `<i>Session: ${uid.slice(0,12)}...</i>`;
-    } else if (currentStatus === 'WARNING') {
-      msg = `🟡 <b>[SIMULATOR] Peringatan Arus Tinggi</b>\n` +
-        `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
-        `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
-        `🕐 ${waktuId()}`;
-    } else if (isRecovery) {
-      msg = `🟢 <b>[SIMULATOR] Status Kembali Normal</b>\n` +
-        `⚡ Arus: ${d.arus ?? '-'} A\n` +
-        `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
-        `🕐 ${waktuId()}`;
-    }
-    if (msg) {
+    if (currentStatus === 'DANGER' || currentStatus === 'WARNING' || isRecovery) {
+      const title = currentStatus === 'DANGER'
+        ? '[SIMULATOR] BAHAYA KRITIS!'
+        : currentStatus === 'WARNING'
+        ? '[SIMULATOR] Peringatan Arus Tinggi'
+        : '[SIMULATOR] Status Kembali Normal';
+      const description = currentStatus === 'DANGER'
+        ? 'Overcurrent terdeteksi dan relay diputuskan otomatis.'
+        : currentStatus === 'WARNING'
+        ? 'Arus mendekati atau melewati batas peringatan.'
+        : 'Kondisi kelistrikan simulator kembali normal.';
+      const msg = buildRealtimeTelegramMessage(title, d, uid, description);
       const ok = await sendTelegram(tgToken, tgChatIds, msg);
       console.log(`  [Telegram] ${ok ? '✅ Terkirim' : '❌ Gagal'}`);
     }
@@ -486,13 +565,7 @@ function setupListenersForUid(uid) {
           title: `📊 [SIM] Telemetri Real-Time`,
           color: currentStatus === 'DANGER' ? 0xED4245 : currentStatus === 'WARNING' ? 0xFEE75C : 0x5865F2,
           fields: [
-            { name: '⚡ Arus',         value: `${d.arus         ?? '-'} A`,   inline: true },
-            { name: '🔋 Tegangan',     value: `${d.tegangan     ?? '-'} V`,   inline: true },
-            { name: '💡 Daya Aktif',   value: `${formatPowerLabel(d)}`, inline: true },
-            { name: '🔌 Relay',        value: d.relay ? 'ON' : 'OFF',         inline: true },
-            { name: '📡 Frekuensi',    value: `${d.frekuensi    ?? '-'} Hz`,  inline: true },
-            { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`,     inline: true },
-            { name: `${statusEmoji(currentStatus)} Status`, value: currentStatus, inline: true },
+            ...buildRealtimeDiscordFields(d),
             { name: '🆔 Session',      value: `\`${uid.slice(0,12)}...\``,    inline: false },
           ],
           footer: { text: `IoT Listrik Simulator • Monitoring • ${waktuId()}` },
@@ -502,17 +575,10 @@ function setupListenersForUid(uid) {
           .catch(() => {});
       }
 
-      // Kirim summary data ke Telegram saat streaming jika ada token
-      // Hanya kirim jika ada data streaming aktif (arus > 0)
+      // Kirim snapshot detail Telegram juga saat pembacaan 0 A agar status idle tetap terbaca.
       const telegramChatIds = getTelegramChatIds(cfg);
-      if (cfg.telegramNotifyEnabled !== false && cfg.telegramBotToken && telegramChatIds.length > 0 && d.arus) {
-        const msg = `📊 <b>[SIM] Data Telemetri</b>\n` +
-          `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
-          `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
-          `💡 Daya: ${formatPowerLabel(d)}\n` +
-          `${statusEmoji(currentStatus)} Status: <b>${currentStatus}</b>\n` +
-          `🕐 ${waktuId()}\n` +
-          `<i>Session: ${uid.slice(0,12)}...</i>`;
+      if (cfg.telegramNotifyEnabled !== false && cfg.telegramBotToken && telegramChatIds.length > 0) {
+        const msg = buildRealtimeTelegramMessage('[SIM] Data Telemetri', d, uid);
         sendTelegram(cfg.telegramBotToken, telegramChatIds, msg)
           .then(ok => { if (ok) console.log(`[Monitor] [${uid.slice(0,8)}] Telegram data ✅`); })
           .catch(() => {});

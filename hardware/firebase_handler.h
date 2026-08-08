@@ -1,4 +1,4 @@
-﻿/**
+/**
  * firebase_handler.h — Firebase RTDB Read/Write Operations
  * ————————————————————————————————————————————————————————————————————————————————
  * Uses: Firebase ESP Client library by Mobizt
@@ -85,11 +85,11 @@ static char s_fbDbUrl[136]     = {};
 static char s_fbEmail[72]      = {};
 static char s_fbPassword[72]   = {};
 FirebaseData   fbData;            // semua operasi RTDB (monitor, log, relay, settings, bootstrap)
-FirebaseData   fbBootstrapData;   // alias Ã¢â‚¬â€ digunakan oleh fungsi bootstrap di main.ino (sama dengan fbData)
+FirebaseData   fbBootstrapData;   // alias -- digunakan oleh fungsi bootstrap di main.ino (sama dengan fbData)
 FirebaseAuth   fbAuth;
 FirebaseConfig fbConfig;
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Firebase token callback Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// --- Firebase token callback ------------------------------------------------
 void firebaseTokenStatusCallback(TokenInfo info) {
   if (info.status == token_status_error) {
     Serial.println("[Firebase] Token error.");
@@ -128,20 +128,20 @@ bool isFirebaseReady() {
     uint32_t _fh  = ESP.getFreeHeap(); \
     uint32_t _mb  = ESP.getMaxAllocHeap(); \
     if (_fh < 30000 || _mb < 25000) { \
-      Serial.printf("[Firebase] HEAP LOW (free=%u max=%u) -- needs 30K free + 25K block, Ã¢â‚¬â€ skip %s\n", _fh, _mb, label); \
+      Serial.printf("[Firebase] HEAP LOW (free=%u max=%u) -- needs 30K free + 25K block, skip %s\n", _fh, _mb, label); \
       return false; \
     } \
   } while(0)
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Persistent HTTP client untuk writeMonitorData Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// --- Persistent HTTP client untuk writeMonitorData --------------------------
 // FIX DEFINITIF: Gunakan HTTPClient langsung dengan WiFiClientSecure
 // persistent (setReuse=true) agar SSL handshake hanya terjadi SEKALI.
 //
 // Masalah sebelumnya: Firebase.RTDB.updateNode membuka koneksi SSL baru
 // untuk setiap call setelah server menutup keep-alive. Heap terfragmentasi
-// setelah 2 koneksi SSL Ã¢â€ â€™ SSL handshake ke-3 gagal alokasi Ã¢â€ â€™ NULL Ã¢â€ â€™ crash.
+// setelah 2 koneksi SSL -> SSL handshake ke-3 gagal alokasi -> NULL -> crash.
 //
-// Solusi: Satu WiFiClientSecure persistent Ã¢â€ â€™ SSL session digunakan ulang Ã¢â€ â€™
+// Solusi: Satu WiFiClientSecure persistent -> SSL session digunakan ulang ->
 // tidak ada heap allocation baru untuk SSL handshake setelah call pertama.
 static WiFiClientSecure _wcsRTDB;
 static HTTPClient       _httpRTDB;
@@ -292,7 +292,7 @@ bool writeLog(float arus, float tegangan,
   return false;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ readRelayCommand() Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// --- readRelayCommand() -----------------------------------------------------
 bool readRelayCommand(int& outRelay) {
   if (!isFirebaseReady()) return false;
   FB_HEAP_GUARD("readRelayCommand");
@@ -306,7 +306,7 @@ bool readRelayCommand(int& outRelay) {
   return ok;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ updateRelayState() Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// --- updateRelayState() -----------------------------------------------------
 bool updateRelayState(int relayVal) {
   if (!isFirebaseReady()) return false;
   char b[20];
@@ -321,7 +321,7 @@ bool clearRelayCommand() {
   return ok;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ readAllSettings() Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// --- readAllSettings() ------------------------------------------------------
 bool readAllSettings(RuntimeSettings& out) {
   if (!isFirebaseReady()) return false;
   FB_HEAP_GUARD("readAllSettings");
@@ -401,7 +401,7 @@ bool readAllSettings(RuntimeSettings& out) {
     out.autoLearningApplyToThreshold = (val.stringValue == "true" || val.intValue == 1);
 
   Serial.printf(
-    "[Firebase] Settings synced Ã¢â€ â€™ thr=%.1fA warn%%=%.0f PF=%.2f f=%.0fHz "
+    "[Firebase] Settings synced -> thr=%.1fA warn%%=%.0f PF=%.2f f=%.0fHz "
     "cal_I=%.3f cal_V=%.2f stream=%d sendMs=%lu buzzer=%d cutoff=%d TG=%s DC=%s learn=%d\n",
     out.thresholdArus, out.warningPercent, out.powerFactorEstimate, out.frequencyHz,
     out.arusCalibration, out.teganganCalibration,
@@ -477,7 +477,7 @@ bool writeAutoLearningResult(const String& requestId,
   return resultOk && thresholdOk;
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Bootstrap helper functions Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// --- Bootstrap helper functions ---------------------------------------------
 // Semua bootstrap operations menggunakan fbData (bukan fbBootstrapData terpisah)
 // karena semua berjalan di Core 0 secara serial.
 

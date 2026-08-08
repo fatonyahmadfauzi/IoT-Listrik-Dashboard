@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/sidebarDrawer"
+    android:layout_width="304dp"
+    android:layout_height="match_parent"
+    android:layout_gravity="start"
+    android:background="@color/bg_surface"
+    android:elevation="20dp"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="22dp"
+    android:paddingBottom="18dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="8dp"
+        android:paddingBottom="24dp">
+
+        <LinearLayout
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:background="@drawable/bg_drawer_avatar"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="IoT Listrik"
+                android:src="@drawable/ic_bolt"
+                android:tint="@color/text_primary" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IoT Listrik"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:text="Monitor System"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/btnDrawerDashboard"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_dashboard"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Dashboard"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/btnDrawerHistory"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_history"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Riwayat Log"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/btnDrawerAnalytics"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_chart"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Analytics"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="18dp"
+        android:background="#1FFFFFFF" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_glass"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvDrawerAvatar"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_drawer_avatar"
+            android:gravity="center"
+            android:text="?"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvDrawerEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="—"
+                android:textColor="@color/text_primary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDrawerRole"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_log_tabs_container"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:text="Memuat..."
+                android:textColor="@color/text_secondary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnDrawerLogout"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="#263B82F6"
+        android:drawablePadding="8dp"
+        android:drawableStart="@drawable/ic_logout"
+        android:drawableTint="@color/text_primary"
+        android:text="Logout"
+        android:textAllCaps="false"
+        android:textColor="@color/text_primary"
+        android:textStyle="bold" />
+
+</LinearLayout>

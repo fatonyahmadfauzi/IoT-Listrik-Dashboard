@@ -2,27 +2,62 @@ package com.iot.listrik.ui.main
 
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
+import android.app.DatePickerDialog
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
+import android.text.TextUtils
 import android.util.Log
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import android.widget.Toast
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.components.YAxis
+import com.github.mikephil.charting.components.Legend
+import com.github.mikephil.charting.components.MarkerView
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.formatter.ValueFormatter
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.utils.MPPointF
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import com.google.firebase.messaging.FirebaseMessaging
 import com.iot.listrik.R
 import com.iot.listrik.data.model.HistoryLog
 import com.iot.listrik.databinding.ActivityMainBinding
+import com.iot.listrik.databinding.PageAnalyticsBinding
+import com.iot.listrik.databinding.PageHistoryBinding
+import com.iot.listrik.databinding.ViewSidebarDrawerBinding
 import com.iot.listrik.ui.auth.LoginActivity
 import com.iot.listrik.service.AlarmForegroundService
+import java.io.OutputStreamWriter
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -30,15 +65,44 @@ class MainActivity : AppCompatActivity() {
     private val db = FirebaseDatabase.getInstance()
 
     private var chartTimeIndex = 0f
-    private val maxDataPoints = 20
+    private val maxDataPoints = 30
+    private val chartLabels = mutableMapOf<Float, String>()
 
     private lateinit var historyAdapter: HistoryAdapter
+    private lateinit var historyPageAdapter: HistoryAdapter
+    private lateinit var historyPageBinding: PageHistoryBinding
+    private lateinit var analyticsPageBinding: PageAnalyticsBinding
+    private lateinit var drawerBinding: ViewSidebarDrawerBinding
     private val historyList = mutableListOf<HistoryLog>()
-    private val arusHistory = mutableListOf<Float>()
-    private val tegHistory = mutableListOf<Float>()
+    private val allLogsList = mutableListOf<HistoryLog>()
+    private var historyVisibleLogs: List<HistoryLog> = emptyList()
+    private var analyticsVisibleLogs: List<HistoryLog> = emptyList()
+    private val historyChartLabels = mutableMapOf<Float, String>()
+    private val analyticsChartLabels = mutableMapOf<Float, String>()
+    private val analyticsSnapshotLabels = mutableListOf<String>()
+    private val analyticsSnapshotRawValues = mutableListOf<String>()
+
+    private enum class AppPage { DASHBOARD, HISTORY, ANALYTICS }
+    private enum class LogRange { ALL, TODAY, LAST_7_DAYS, LAST_30_DAYS, CUSTOM_DATE }
+    private var currentPage = AppPage.DASHBOARD
+    private var historyRange = LogRange.ALL
+    private var analyticsRange = LogRange.ALL
+    private var historySelectedDate: LocalDate? = null
+    private var analyticsSelectedDate: LocalDate? = null
+    private var historyStatusFilter = "ALL"
+    private var latestRealtimeLog: HistoryLog? = null
+    private var pendingCsvLogs: List<HistoryLog> = emptyList()
+
+    private val dashboardLogLimit = 15
+    private val historyLogLimit = 1000
+    private val historyChartLimit = 50
+    private val analyticsTrendLimit = 60
 
     private var currentStatusColor = Color.parseColor("#2eea72")
     private var lastStatus = ""
+    private var lastDeviceStatus = "NORMAL"
+    private var lastRelayState: Int? = null
+    private var pendingRelayValue: Int? = null
     private var dangerPulseAnimator: ValueAnimator? = null
 
     // Keep listener references so we can detach them and avoid duplicate callbacks.
@@ -56,7 +120,8 @@ class MainActivity : AppCompatActivity() {
     private var isTempAccount = false
     private var pathPrefix = ""
     private var sessionTimer: android.os.CountDownTimer? = null
-    private val deviceStaleMs = 15000L
+    // Selaras dengan indikator dashboard web: heartbeat dianggap stale setelah 30 detik.
+    private val deviceStaleMs = 30000L
     private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val presenceCheckRunnable = object : Runnable {
         override fun run() {
@@ -68,18 +133,27 @@ class MainActivity : AppCompatActivity() {
     private val renderHistoryRunnable = Runnable { doRenderHistory() }
     private var firebaseConnected = true
     private var lastDeviceHeartbeatAt = 0L
+    private var lastDeviceUpdatedAt = 0L
     private var lastUpdatedMarker: Long? = null
     private var lastSensorSignature = ""
     private var lastResetMarker: String? = null
     private var watchStartedAt = System.currentTimeMillis()
     private val sessionPrefs by lazy { getSharedPreferences("iot_listrik_session", MODE_PRIVATE) }
     private val notificationPrefs by lazy { getSharedPreferences("iot_listrik_notifications", MODE_PRIVATE) }
+    private val exportCsvLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        if (uri != null) writeHistoryCsv(uri, pendingCsvLogs)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
             binding = ActivityMainBinding.inflate(layoutInflater)
             setContentView(binding.root)
+            historyPageBinding = PageHistoryBinding.bind(findViewById(R.id.historyPage))
+            analyticsPageBinding = PageAnalyticsBinding.bind(findViewById(R.id.analyticsPage))
+            drawerBinding = ViewSidebarDrawerBinding.bind(findViewById(R.id.sidebarDrawer))
 
             // Request POST_NOTIFICATIONS for Android 13+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -90,32 +164,98 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            binding.btnLogout.setOnClickListener {
-                // Stop alarm supaya tidak lanjut bunyi setelah logout
-                AlarmForegroundService.stop(this)
-                clearNotificationTopics()
-                auth.signOut()
-                startActivity(Intent(this, LoginActivity::class.java))
-                finish()
+            setupSidebar()
+
+            binding.btnRelayOn.setOnClickListener { setRelay(1) }
+            binding.btnRelayOff.setOnClickListener { setRelay(0) }
+            binding.btnTestNotification.setOnClickListener { sendTestNotification() }
+            binding.btnResetChartZoom.setOnClickListener { resetChartZoom() }
+            binding.btnLogSummary.setOnClickListener {
+                selectLogMode(HistoryAdapter.DisplayMode.SUMMARY)
             }
-
-            binding.btnRelayOn?.setOnClickListener { setRelay(1) }
-            binding.btnRelayOff?.setOnClickListener { setRelay(0) }
-
-            binding.btnDemoNormal?.setOnClickListener { triggerDemoMode("NORMAL") }
-            binding.btnDemoWarning?.setOnClickListener { triggerDemoMode("WARNING") }
-            binding.btnDemoDanger?.setOnClickListener { triggerDemoMode("DANGER") }
+            binding.btnLogDetail.setOnClickListener {
+                selectLogMode(HistoryAdapter.DisplayMode.DETAIL)
+            }
 
             setupChart()
             setupRecyclerView()
+            setupHistoryPage()
+            setupAnalyticsPage()
+            selectLogMode(HistoryAdapter.DisplayMode.SUMMARY)
+            showPage(AppPage.DASHBOARD, closeDrawer = false)
 
             // Default: sembunyikan kontrol write sampai role diketahui.
-            binding.relaySection?.visibility = View.GONE
-            binding.demoSection?.visibility = View.GONE
+            binding.relaySection.visibility = View.GONE
         } catch (e: Exception) {
             Log.e("MainActivity", "onCreate failed", e)
             Toast.makeText(this, "Initialization error: ${e.message}", Toast.LENGTH_LONG).show()
             finish()
+        }
+    }
+
+    private fun setupSidebar() {
+        binding.btnMenu.setOnClickListener {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+        drawerBinding.btnDrawerDashboard.setOnClickListener { showPage(AppPage.DASHBOARD) }
+        drawerBinding.btnDrawerHistory.setOnClickListener { showPage(AppPage.HISTORY) }
+        drawerBinding.btnDrawerAnalytics.setOnClickListener { showPage(AppPage.ANALYTICS) }
+        drawerBinding.btnDrawerLogout.setOnClickListener { performLogout() }
+    }
+
+    private fun showPage(page: AppPage, closeDrawer: Boolean = true) {
+        currentPage = page
+        binding.dashboardPage.visibility = if (page == AppPage.DASHBOARD) View.VISIBLE else View.GONE
+        historyPageBinding.root.visibility = if (page == AppPage.HISTORY) View.VISIBLE else View.GONE
+        analyticsPageBinding.root.visibility = if (page == AppPage.ANALYTICS) View.VISIBLE else View.GONE
+
+        binding.tvPageTitle.text = when (page) {
+            AppPage.DASHBOARD -> "Dashboard Monitoring"
+            AppPage.HISTORY -> "Riwayat Log"
+            AppPage.ANALYTICS -> "Analytics Overview"
+        }
+        drawerBinding.btnDrawerDashboard.isSelected = page == AppPage.DASHBOARD
+        drawerBinding.btnDrawerHistory.isSelected = page == AppPage.HISTORY
+        drawerBinding.btnDrawerAnalytics.isSelected = page == AppPage.ANALYTICS
+
+        when (page) {
+            AppPage.HISTORY -> applyHistoryFilters()
+            AppPage.ANALYTICS -> applyAnalyticsFilters()
+            AppPage.DASHBOARD -> Unit
+        }
+        if (closeDrawer) binding.drawerLayout.closeDrawer(GravityCompat.START)
+    }
+
+    private fun performLogout() {
+        // Stop alarm supaya tidak lanjut bunyi setelah logout.
+        AlarmForegroundService.stop(this)
+        clearNotificationTopics()
+        auth.signOut()
+        startActivity(Intent(this, LoginActivity::class.java))
+        finish()
+    }
+
+    private fun updateDrawerAccount() {
+        val email = auth.currentUser?.email?.trim().orEmpty().ifBlank {
+            if (isTempAccount) "Akun demo" else "Pengguna IoT"
+        }
+        drawerBinding.tvDrawerEmail.text = email
+        drawerBinding.tvDrawerAvatar.text = email.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+        drawerBinding.tvDrawerRole.text = when {
+            isTempAccount -> "Demo"
+            isAdmin -> "Admin"
+            else -> "User"
+        }
+    }
+
+    @Deprecated("Use OnBackPressedDispatcher in a future migration")
+    override fun onBackPressed() {
+        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        } else if (currentPage != AppPage.DASHBOARD) {
+            showPage(AppPage.DASHBOARD, closeDrawer = false)
+        } else {
+            super.onBackPressed()
         }
     }
 
@@ -190,6 +330,8 @@ class MainActivity : AppCompatActivity() {
 
             isTempAccount = isTemp
             pathPrefix = if (isTemp) "sim/${user.uid}/" else ""
+            historyAdapter.setDefaultSource(if (isTemp) "SIM" else "CLOUD")
+            historyPageAdapter.setDefaultSource(if (isTemp) "SIM" else "CLOUD")
             syncNotificationTopics(user.uid, isTemp)
 
             if (isTemp && expiresAt != null) {
@@ -206,6 +348,8 @@ class MainActivity : AppCompatActivity() {
             attachListeners()
         }.addOnFailureListener {
             pathPrefix = ""
+            historyAdapter.setDefaultSource("CLOUD")
+            historyPageAdapter.setDefaultSource("CLOUD")
             syncNotificationTopics(user.uid, false)
             fetchRoleAndApplyUi(user.uid)
             attachListeners()
@@ -299,14 +443,9 @@ class MainActivity : AppCompatActivity() {
             binding.tempBadgeContainer.visibility = View.GONE
         }
 
-        if (isAdmin) {
-            binding.relaySection.visibility = View.VISIBLE
-            binding.demoSection.visibility = View.VISIBLE
-        } else {
-            binding.relaySection.visibility = View.GONE
-            binding.demoSection.visibility = View.GONE
-        }
+        binding.relaySection.visibility = if (isAdmin) View.VISIBLE else View.GONE
 
+        updateDrawerAccount()
         updateRelayControls()
     }
 
@@ -429,10 +568,58 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateRelayControls() {
         val canControl = isAdmin && !isTempAccount && currentConnectionLabel() == "Connected"
-        binding.btnRelayOn.isEnabled = canControl
-        binding.btnRelayOff.isEnabled = canControl
-        binding.btnRelayOn.alpha = if (canControl) 1f else 0.55f
-        binding.btnRelayOff.alpha = if (canControl) 1f else 0.55f
+        val relayIsOn = lastRelayState == 1
+        val relayIsOff = lastRelayState == 0
+        val commandPending = pendingRelayValue != null
+
+        // Sama seperti dashboard web: tombol untuk state yang sudah aktif dinonaktifkan,
+        // sementara kedua tombol terkunci saat koneksi belum siap atau perintah sedang dikirim.
+        val canTurnOn = canControl && !commandPending && !relayIsOn
+        val canTurnOff = canControl && !commandPending && !relayIsOff
+        binding.btnRelayOn.isEnabled = canTurnOn
+        binding.btnRelayOff.isEnabled = canTurnOff
+        binding.btnRelayOn.alpha = if (canTurnOn) 1f else 0.55f
+        binding.btnRelayOff.alpha = if (canTurnOff) 1f else 0.55f
+
+        binding.tvRelayControlHint.text = when {
+            commandPending -> "Mengirim perintah relay dan menunggu konfirmasi perangkat."
+            !canControl -> relayBlockedReason()
+            lastDeviceStatus == "WARNING" || lastDeviceStatus == "DANGER" ->
+                "Kondisi $lastDeviceStatus — relay dikunci OFF. Perbaiki kondisi lebih dulu, lalu nyalakan kembali."
+            relayIsOff -> "Relay dimatikan. Tekan Nyalakan Relay untuk mengaktifkan kembali beban."
+            relayIsOn -> "Perangkat terhubung. Auto-cutoff aktif saat kondisi listrik tidak aman."
+            else -> "Menunggu status relay dari perangkat."
+        }
+    }
+
+    private fun renderRelayState(state: Int?) {
+        lastRelayState = state
+        if (state != null && state == pendingRelayValue) pendingRelayValue = null
+
+        val color = when (state) {
+            1 -> Color.parseColor("#2eea72")
+            0 -> Color.parseColor("#ef4444")
+            else -> Color.parseColor("#94a3b8")
+        }
+        binding.tvRelayState.text = when (state) {
+            1 -> "ON"
+            0 -> "OFF"
+            else -> "—"
+        }
+        binding.relayIndicator.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(color)
+        }
+        updateRelayControls()
+    }
+
+    private fun parseRelayState(value: Any?): Int? {
+        val raw = value?.toString()?.trim()?.uppercase(Locale.ROOT).orEmpty()
+        return when {
+            value == true || raw == "1" || raw == "ON" -> 1
+            value == false || raw == "0" || raw == "OFF" -> 0
+            else -> null
+        }
     }
 
     private fun refreshPresenceUi() {
@@ -444,37 +631,201 @@ class MainActivity : AppCompatActivity() {
             else -> Color.parseColor("#ef4444")
         }
 
-        binding.tvConnectionState.text = label
+        val isOnline = label == "Connected"
+        binding.tvEndpointBadge.text = if (isTempAccount) "SIM" else "CLOUD"
+        binding.tvConnectionState.text = if (isOnline) "Device Online" else label
         binding.tvConnectionState.setTextColor(color)
-        binding.tvDataSource.text = if (label == "Connected") "CLOUD" else "CLOUD • $label"
+        binding.tvHeartbeatText.text = if (isOnline) "Heartbeat aktif" else "Tanpa heartbeat"
+        binding.tvHeartbeatText.setTextColor(
+            if (isOnline) Color.parseColor("#2eea72") else Color.parseColor("#a8b3c7")
+        )
+        val updatedTime = lastDeviceUpdatedAt.takeIf(::isLikelyEpochMs)?.let {
+            SimpleDateFormat("HH:mm:ss", Locale("id", "ID")).format(Date(it))
+        }
+        binding.tvLastUpdated.text = updatedTime?.let { "Update terakhir: $it" } ?: "Update terakhir: -"
         updateRelayControls()
     }
 
     private fun setupChart() {
-        val chart = binding.lineChart
+        configureChart(binding.lineChart, "Belum ada data realtime.")
+        configureChart(binding.detailLineChart, "Belum ada metrik pendukung.")
+        configureChart(binding.electricalLineChart, "Belum ada metrik pendukung.")
+    }
+
+    private fun configureChart(
+        chart: LineChart,
+        noDataText: String,
+        labels: Map<Float, String> = chartLabels,
+        showBuiltInLegend: Boolean = true
+    ) {
         chart.description.isEnabled = false
         chart.setDrawGridBackground(false)
         chart.setDrawBorders(false)
-        chart.axisRight.isEnabled = false
-        chart.legend.textColor = Color.WHITE
-        
-        // Add No Data text placeholder
-        chart.setNoDataText("Belum ada riwayat statistik.")
+        chart.setTouchEnabled(true)
+        chart.isDragEnabled = true
+        chart.setScaleEnabled(true)
+        chart.setPinchZoom(true)
+        chart.isHighlightPerTapEnabled = true
+        chart.isHighlightPerDragEnabled = true
+        chart.setDrawMarkers(true)
+        chart.legend.apply {
+            isEnabled = showBuiltInLegend
+            textColor = Color.parseColor("#cbd5e1")
+            textSize = 10f
+            form = Legend.LegendForm.CIRCLE
+            formSize = 7f
+            xEntrySpace = 12f
+            yEntrySpace = 4f
+            verticalAlignment = Legend.LegendVerticalAlignment.TOP
+            horizontalAlignment = Legend.LegendHorizontalAlignment.CENTER
+            orientation = Legend.LegendOrientation.HORIZONTAL
+            setDrawInside(false)
+        }
+        chart.marker = DashboardChartMarkerView(chart.context, labels, chart)
+
+        chart.setNoDataText(noDataText)
         chart.setNoDataTextColor(Color.parseColor("#9ca3af"))
-        
+
         val xAxis = chart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
-        xAxis.textColor = Color.LTGRAY
-        xAxis.setDrawGridLines(false)
+        xAxis.textColor = Color.parseColor("#94a3b8")
+        xAxis.setDrawGridLines(true)
+        xAxis.gridColor = Color.parseColor("#12FFFFFF")
         xAxis.setAvoidFirstLastClipping(true)
+        xAxis.granularity = 1f
+        xAxis.labelCount = 5
+        xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String = labels[value] ?: ""
+        }
 
         val yAxis = chart.axisLeft
-        yAxis.textColor = Color.LTGRAY
+        yAxis.textColor = Color.parseColor("#cbd5e1")
         yAxis.setDrawGridLines(true)
         yAxis.gridColor = Color.parseColor("#33FFFFFF")
         yAxis.axisMinimum = 0f
+        yAxis.setDrawAxisLine(true)
+        yAxis.axisLineColor = Color.parseColor("#3DFFFFFF")
+
+        chart.axisRight.isEnabled = true
+        chart.axisRight.textColor = Color.parseColor("#cbd5e1")
+        chart.axisRight.setDrawGridLines(false)
+        chart.axisRight.axisMinimum = 0f
+        chart.axisRight.setDrawAxisLine(true)
+        chart.axisRight.axisLineColor = Color.parseColor("#3DFFFFFF")
 
         chart.invalidate()
+    }
+
+    private fun renderChartIndicators(container: LinearLayout, specs: List<ChartSetSpec>) {
+        container.removeAllViews()
+        specs.forEachIndexed { index, spec ->
+            val item = LinearLayout(this).apply {
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                ).apply {
+                    if (index > 0) marginStart = dp(6)
+                }
+            }
+            val dot = View(this).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(spec.color)
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(8), dp(8))
+            }
+            val label = TextView(this).apply {
+                text = spec.label
+                setTextColor(Color.parseColor("#94a3b8"))
+                textSize = 10f
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                ).apply { marginStart = dp(5) }
+            }
+            item.addView(dot)
+            item.addView(label)
+            container.addView(item)
+        }
+    }
+
+    private class DashboardChartMarkerView(
+        context: android.content.Context,
+        private val labels: Map<Float, String>,
+        private val chart: LineChart
+    ) : MarkerView(context, R.layout.view_chart_marker) {
+        private val titleView: TextView = findViewById(R.id.tvChartMarkerTitle)
+        private val valueView: TextView = findViewById(R.id.tvChartMarkerValue)
+
+        override fun refreshContent(e: Entry?, highlight: Highlight?) {
+            val entry = e ?: return
+            val series = chart.data
+                ?.getDataSetByIndex(highlight?.dataSetIndex ?: 0)
+                ?.label
+                .orEmpty()
+            titleView.text = labels[entry.x] ?: "Data riwayat"
+            valueView.text = "$series · ${formatValue(series, entry.y)}"
+            super.refreshContent(e, highlight)
+        }
+
+        override fun getOffset(): MPPointF = MPPointF(
+            -(width / 2f),
+            -height.toFloat() - 10f
+        )
+
+        private fun formatValue(series: String, value: Float): String = when {
+            series.contains("Energi", ignoreCase = true) -> String.format(Locale.US, "%.3f kWh", value)
+            series.contains("Power Factor", ignoreCase = true) -> String.format(Locale.US, "%.2f", value)
+            series.contains("Frekuensi", ignoreCase = true) -> String.format(Locale.US, "%.1f Hz", value)
+            series.contains("Apparent", ignoreCase = true) -> String.format(Locale.US, "%.0f VA", value)
+            series.contains("Tegangan", ignoreCase = true) -> String.format(Locale.US, "%.1f V", value)
+            series.contains("Daya", ignoreCase = true) -> String.format(Locale.US, "%.0f W", value)
+            series.contains("Arus", ignoreCase = true) -> String.format(Locale.US, "%.2f A", value)
+            else -> String.format(Locale.US, "%.2f", value)
+        }
+    }
+
+    private class SnapshotChartMarkerView(
+        context: android.content.Context,
+        private val labels: List<String>,
+        private val rawValues: List<String>
+    ) : MarkerView(context, R.layout.view_chart_marker) {
+        private val titleView: TextView = findViewById(R.id.tvChartMarkerTitle)
+        private val valueView: TextView = findViewById(R.id.tvChartMarkerValue)
+
+        override fun refreshContent(e: Entry?, highlight: Highlight?) {
+            val entry = e ?: return
+            val index = entry.x.toInt()
+            titleView.text = labels.getOrNull(index) ?: "Snapshot metrik"
+            valueView.text = rawValues.getOrNull(index)
+                ?: String.format(Locale.US, "%.1f%%", entry.y)
+            super.refreshContent(e, highlight)
+        }
+
+        override fun getOffset(): MPPointF = MPPointF(
+            -(width / 2f),
+            -height.toFloat() - 10f
+        )
+    }
+
+    private fun resetChartZoom() {
+        listOf(binding.lineChart, binding.detailLineChart, binding.electricalLineChart).forEach { chart ->
+            chart.fitScreen()
+            chart.setVisibleXRangeMaximum(maxDataPoints.toFloat())
+            chart.data?.let { data ->
+                val lastX = data.getDataSetByIndex(0)?.getEntryForIndex(
+                    (data.getDataSetByIndex(0)?.entryCount ?: 1) - 1
+                )?.x ?: 0f
+                chart.moveViewToX(lastX)
+            }
+            chart.invalidate()
+        }
     }
 
     private fun setupRecyclerView() {
@@ -484,6 +835,692 @@ class MainActivity : AppCompatActivity() {
             adapter = historyAdapter
         }
     }
+
+    private fun setupHistoryPage() {
+        historyPageAdapter = HistoryAdapter(emptyList())
+        historyPageBinding.rvHistoryPage.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = historyPageAdapter
+        }
+        configureChart(
+            historyPageBinding.historyLineChart,
+            "Belum ada data riwayat.",
+            historyChartLabels,
+            showBuiltInLegend = false
+        )
+        configureChart(
+            historyPageBinding.historyEnergyPfChart,
+            "Belum ada metrik pendukung.",
+            historyChartLabels,
+            showBuiltInLegend = false
+        )
+        configureChart(
+            historyPageBinding.historyFrequencyApparentChart,
+            "Belum ada metrik pendukung.",
+            historyChartLabels,
+            showBuiltInLegend = false
+        )
+
+        val statuses = listOf("Semua Status", "NORMAL", "WARNING", "LEAKAGE", "DANGER")
+        historyPageBinding.spHistoryStatus.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            statuses
+        )
+        historyPageBinding.spHistoryStatus.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                historyStatusFilter = if (position == 0) "ALL" else statuses[position]
+                applyHistoryFilters()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+
+        historyPageBinding.btnHistoryFilterAll.setOnClickListener { setHistoryRange(LogRange.ALL) }
+        historyPageBinding.btnHistoryFilterToday.setOnClickListener { setHistoryRange(LogRange.TODAY) }
+        historyPageBinding.btnHistoryFilter7d.setOnClickListener { setHistoryRange(LogRange.LAST_7_DAYS) }
+        historyPageBinding.btnHistoryFilter30d.setOnClickListener { setHistoryRange(LogRange.LAST_30_DAYS) }
+        historyPageBinding.btnHistoryFilterDate.setOnClickListener { showDatePicker(forAnalytics = false) }
+        historyPageBinding.btnHistoryLogSummary.setOnClickListener {
+            selectHistoryPageLogMode(HistoryAdapter.DisplayMode.SUMMARY)
+        }
+        historyPageBinding.btnHistoryLogDetail.setOnClickListener {
+            selectHistoryPageLogMode(HistoryAdapter.DisplayMode.DETAIL)
+        }
+        historyPageBinding.btnHistoryExport.setOnClickListener { requestHistoryCsvExport() }
+        selectHistoryPageLogMode(HistoryAdapter.DisplayMode.SUMMARY)
+        updateHistoryFilterControls()
+    }
+
+    private fun setupAnalyticsPage() {
+        configureChart(
+            analyticsPageBinding.analyticsTrendChart,
+            "Belum ada data analytics.",
+            analyticsChartLabels,
+            showBuiltInLegend = false
+        )
+        configureChart(
+            analyticsPageBinding.analyticsEnergyPfChart,
+            "Belum ada metrik pendukung.",
+            analyticsChartLabels,
+            showBuiltInLegend = false
+        )
+        configureChart(
+            analyticsPageBinding.analyticsFrequencyApparentChart,
+            "Belum ada metrik pendukung.",
+            analyticsChartLabels,
+            showBuiltInLegend = false
+        )
+        configureStatusPieChart(analyticsPageBinding.analyticsStatusChart)
+        configureSnapshotChart(analyticsPageBinding.analyticsSnapshotChart)
+        renderChartIndicators(analyticsPageBinding.analyticsTrendLegend, mainChartSpecs())
+        renderChartIndicators(analyticsPageBinding.analyticsEnergyPfLegend, detailChartSpecs())
+        renderChartIndicators(
+            analyticsPageBinding.analyticsFrequencyApparentLegend,
+            electricalChartSpecs()
+        )
+        updateAnalyticsStatusChart(emptyMap())
+        updateAnalyticsSnapshotChart(null, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+        analyticsPageBinding.btnAnalyticsFilterAll.setOnClickListener { setAnalyticsRange(LogRange.ALL) }
+        analyticsPageBinding.btnAnalyticsFilterToday.setOnClickListener { setAnalyticsRange(LogRange.TODAY) }
+        analyticsPageBinding.btnAnalyticsFilter7d.setOnClickListener { setAnalyticsRange(LogRange.LAST_7_DAYS) }
+        analyticsPageBinding.btnAnalyticsFilter30d.setOnClickListener { setAnalyticsRange(LogRange.LAST_30_DAYS) }
+        analyticsPageBinding.btnAnalyticsFilterDate.setOnClickListener { showDatePicker(forAnalytics = true) }
+        updateAnalyticsFilterControls()
+    }
+
+    private fun selectLogMode(mode: HistoryAdapter.DisplayMode) {
+        historyAdapter.setDisplayMode(mode)
+        val isDetail = mode == HistoryAdapter.DisplayMode.DETAIL
+        binding.btnLogSummary.isSelected = !isDetail
+        binding.btnLogDetail.isSelected = isDetail
+        binding.tvLogDetailHint.visibility = if (isDetail) View.VISIBLE else View.GONE
+    }
+
+    private fun setHistoryRange(range: LogRange) {
+        historyRange = range
+        if (range != LogRange.CUSTOM_DATE) historySelectedDate = null
+        applyHistoryFilters()
+    }
+
+    private fun setAnalyticsRange(range: LogRange) {
+        analyticsRange = range
+        if (range != LogRange.CUSTOM_DATE) analyticsSelectedDate = null
+        applyAnalyticsFilters()
+    }
+
+    private fun showDatePicker(forAnalytics: Boolean) {
+        val selected = if (forAnalytics) analyticsSelectedDate else historySelectedDate
+        val initial = selected ?: LocalDate.now()
+        DatePickerDialog(
+            this,
+            { _, year, month, dayOfMonth ->
+                val picked = LocalDate.of(year, month + 1, dayOfMonth)
+                if (forAnalytics) {
+                    analyticsSelectedDate = picked
+                    analyticsRange = LogRange.CUSTOM_DATE
+                    applyAnalyticsFilters()
+                } else {
+                    historySelectedDate = picked
+                    historyRange = LogRange.CUSTOM_DATE
+                    applyHistoryFilters()
+                }
+            },
+            initial.year,
+            initial.monthValue - 1,
+            initial.dayOfMonth
+        ).show()
+    }
+
+    private fun selectHistoryPageLogMode(mode: HistoryAdapter.DisplayMode) {
+        historyPageAdapter.setDisplayMode(mode)
+        val isDetail = mode == HistoryAdapter.DisplayMode.DETAIL
+        historyPageBinding.btnHistoryLogSummary.isSelected = !isDetail
+        historyPageBinding.btnHistoryLogDetail.isSelected = isDetail
+        historyPageBinding.tvHistoryDetailHint.visibility = if (isDetail) View.VISIBLE else View.GONE
+    }
+
+    private fun requestHistoryCsvExport() {
+        if (historyVisibleLogs.isEmpty()) {
+            showToast("Tidak ada data untuk diekspor.")
+            return
+        }
+        pendingCsvLogs = historyVisibleLogs.toList()
+        val fileDate = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        exportCsvLauncher.launch("riwayat-log-$fileDate.csv")
+    }
+
+    private fun writeHistoryCsv(uri: Uri, logs: List<HistoryLog>) {
+        try {
+            val output = contentResolver.openOutputStream(uri)
+                ?: throw IllegalStateException("Lokasi file tidak dapat dibuka.")
+            OutputStreamWriter(output, Charsets.UTF_8).use { writer ->
+                writer.write('\uFEFF'.toString())
+                writer.write(
+                    listOf(
+                        "Waktu",
+                        "Arus (A)",
+                        "Tegangan (V)",
+                        "Daya Aktif (W)",
+                        "Energi (kWh)",
+                        "Power Factor",
+                        "Frekuensi (Hz)",
+                        "Apparent (VA)",
+                        "Status",
+                        "Relay",
+                        "Sumber"
+                    ).joinToString(",")
+                )
+                writer.write("\n")
+                logs.forEach { log ->
+                    val arus = logNumber(log.arus)
+                    val tegangan = logNumber(log.tegangan)
+                    val row = listOf(
+                        formatLogDateTime(log),
+                        String.format(Locale.US, "%.2f", arus),
+                        String.format(Locale.US, "%.1f", tegangan),
+                        String.format(Locale.US, "%.0f", logActivePower(log)),
+                        String.format(Locale.US, "%.3f", logEnergy(log)),
+                        String.format(Locale.US, "%.2f", logPowerFactor(log)),
+                        String.format(Locale.US, "%.1f", logFrequency(log)),
+                        String.format(Locale.US, "%.0f", logApparentPower(log, arus, tegangan)),
+                        normalizeLogStatus(log.status),
+                        logRelayLabel(log),
+                        logSourceLabel(log)
+                    ).joinToString(",") { csvValue(it) }
+                    writer.write(row)
+                    writer.write("\n")
+                }
+                writer.flush()
+            }
+            showToast("Riwayat log berhasil diekspor ke CSV.")
+        } catch (error: Exception) {
+            Log.e("MainActivity", "CSV export failed", error)
+            showToast("Gagal mengekspor CSV: ${error.message ?: "kesalahan tidak diketahui"}")
+        } finally {
+            pendingCsvLogs = emptyList()
+        }
+    }
+
+    private fun csvValue(value: String): String = "\"${value.replace("\"", "\"\"")}\""
+
+    private fun applyHistoryFilters() {
+        val dateLogs = allLogsList.filter { matchesRange(it, historyRange, historySelectedDate) }
+        historyVisibleLogs = if (historyStatusFilter == "ALL") {
+            dateLogs
+        } else {
+            dateLogs.filter { normalizeLogStatus(it.status) == historyStatusFilter }
+        }
+
+        updateHistoryFilterControls(dateLogs)
+        historyPageBinding.tvHistoryLogCount.text = "${historyVisibleLogs.size} log"
+        historyPageBinding.tvHistoryPageEmpty.visibility =
+            if (historyVisibleLogs.isEmpty()) View.VISIBLE else View.GONE
+        historyPageBinding.rvHistoryPage.visibility =
+            if (historyVisibleLogs.isEmpty()) View.GONE else View.VISIBLE
+        historyPageAdapter.updateData(historyVisibleLogs)
+        renderLogCharts(
+            historyPageBinding.historyLineChart,
+            historyPageBinding.historyEnergyPfChart,
+            historyPageBinding.historyFrequencyApparentChart,
+            historyVisibleLogs,
+            historyChartLimit,
+            historyChartLabels
+        )
+    }
+
+    private fun applyAnalyticsFilters() {
+        val dateLogs = allLogsList.filter { matchesRange(it, analyticsRange, analyticsSelectedDate) }
+        analyticsVisibleLogs = dateLogs.sortedWith(
+            compareBy<HistoryLog> { logTimestamp(it) }.thenBy { it.key.orEmpty() }
+        )
+        updateAnalyticsFilterControls(dateLogs)
+
+        val currents = analyticsVisibleLogs.map { logNumber(it.arus) }
+        val voltages = analyticsVisibleLogs.map { logNumber(it.tegangan) }
+        val activePowers = analyticsVisibleLogs.map { logActivePower(it) }
+        val energies = analyticsVisibleLogs.map { logEnergy(it) }
+        val powerFactors = analyticsVisibleLogs.map { logPowerFactor(it) }
+        val frequencies = analyticsVisibleLogs.map { logFrequency(it) }
+        val apparentPowers = analyticsVisibleLogs.map { log ->
+            logApparentPower(log, logNumber(log.arus), logNumber(log.tegangan))
+        }
+        val statusCounts = linkedMapOf("NORMAL" to 0, "WARNING" to 0, "LEAKAGE" to 0, "DANGER" to 0)
+        analyticsVisibleLogs.forEach { log ->
+            val status = normalizeLogStatus(log.status)
+            if (statusCounts.containsKey(status)) statusCounts[status] = (statusCounts[status] ?: 0) + 1
+        }
+
+        val avgCurrent = averageValue(currents)
+        val minCurrent = minValue(currents)
+        val maxCurrent = maxValue(currents)
+        val avgVoltage = averageValue(voltages)
+        val minVoltage = minValue(voltages)
+        val maxVoltage = maxValue(voltages)
+        val avgPower = averageValue(activePowers)
+        val peakPower = maxValue(activePowers)
+        val avgApparent = averageValue(apparentPowers)
+        val peakApparent = maxValue(apparentPowers)
+        val maxEnergy = maxValue(energies)
+        val avgPf = averageValue(powerFactors)
+        val avgFreq = averageValue(frequencies)
+        val energyLast = if (energies.isNotEmpty()) energies.last() else maxEnergy
+        val latest = analyticsVisibleLogs.lastOrNull() ?: latestRealtimeLog
+        val latestStatus = latest?.let { normalizeLogStatus(it.status) } ?: "UNKNOWN"
+        val riskCount = (statusCounts["WARNING"] ?: 0) +
+            (statusCounts["LEAKAGE"] ?: 0) + (statusCounts["DANGER"] ?: 0)
+
+        analyticsPageBinding.tvAnalyticsLatestStatus.text = latestStatus
+        analyticsPageBinding.tvAnalyticsLatestStatus.setTextColor(statusColor(latestStatus))
+        analyticsPageBinding.tvAnalyticsUpdatedAt.text = latest?.let { formatLogDateTime(it) } ?: "Menunggu data"
+        analyticsPageBinding.tvAnalyticsAvgCurrent.text = String.format(Locale.US, "%.2f A", avgCurrent)
+        analyticsPageBinding.tvAnalyticsCurrentRange.text = String.format(
+            Locale.US,
+            "Min %.2f A · Max %.2f A",
+            minCurrent,
+            maxCurrent
+        )
+        analyticsPageBinding.tvAnalyticsAvgVoltage.text = String.format(Locale.US, "%.1f V", avgVoltage)
+        analyticsPageBinding.tvAnalyticsVoltageRange.text = String.format(
+            Locale.US,
+            "Min %.1f V · Max %.1f V",
+            minVoltage,
+            maxVoltage
+        )
+        analyticsPageBinding.tvAnalyticsPeakPower.text = String.format(Locale.US, "%.0f W", peakPower)
+        analyticsPageBinding.tvAnalyticsAvgPower.text = String.format(Locale.US, "Rata-rata %.0f W", avgPower)
+        analyticsPageBinding.tvAnalyticsEnergy.text = String.format(Locale.US, "%.3f kWh", energyLast)
+        analyticsPageBinding.tvAnalyticsSamples.text = "${analyticsVisibleLogs.size} sampel histori"
+        analyticsPageBinding.tvAnalyticsAvgPf.text = String.format(Locale.US, "%.2f", avgPf)
+        analyticsPageBinding.tvAnalyticsAvgFreq.text = String.format(Locale.US, "%.1f Hz", avgFreq)
+        analyticsPageBinding.tvAnalyticsPeakApparent.text = String.format(Locale.US, "%.0f VA", peakApparent)
+        analyticsPageBinding.tvAnalyticsAvgApparent.text = String.format(Locale.US, "Rata-rata %.0f VA", avgApparent)
+        analyticsPageBinding.tvAnalyticsRiskCount.text = riskCount.toString()
+
+        renderLogCharts(
+            analyticsPageBinding.analyticsTrendChart,
+            analyticsPageBinding.analyticsEnergyPfChart,
+            analyticsPageBinding.analyticsFrequencyApparentChart,
+            analyticsVisibleLogs,
+            analyticsTrendLimit,
+            analyticsChartLabels
+        )
+        updateAnalyticsStatusChart(statusCounts)
+        updateAnalyticsSnapshotChart(
+            latest,
+            maxCurrent,
+            maxVoltage,
+            peakPower,
+            maxEnergy,
+            peakApparent
+        )
+    }
+
+    private fun updateHistoryFilterControls(dateLogs: List<HistoryLog> = allLogsList.filter {
+        matchesRange(it, historyRange, historySelectedDate)
+    }) {
+        updateRangeButtons(
+            historyPageBinding.btnHistoryFilterAll,
+            historyPageBinding.btnHistoryFilterToday,
+            historyPageBinding.btnHistoryFilter7d,
+            historyPageBinding.btnHistoryFilter30d,
+            historyRange
+        )
+        historyPageBinding.btnHistoryFilterDate.text = dateButtonLabel(historyRange, historySelectedDate)
+        historyPageBinding.tvHistoryFilterCount.text = "${dateLogs.size} log"
+        historyPageBinding.tvHistoryFilterSummary.text = buildRangeSummary(
+            historyRange,
+            historySelectedDate,
+            allLogsList
+        )
+    }
+
+    private fun updateAnalyticsFilterControls(dateLogs: List<HistoryLog> = allLogsList.filter {
+        matchesRange(it, analyticsRange, analyticsSelectedDate)
+    }) {
+        updateRangeButtons(
+            analyticsPageBinding.btnAnalyticsFilterAll,
+            analyticsPageBinding.btnAnalyticsFilterToday,
+            analyticsPageBinding.btnAnalyticsFilter7d,
+            analyticsPageBinding.btnAnalyticsFilter30d,
+            analyticsRange
+        )
+        analyticsPageBinding.btnAnalyticsFilterDate.text = dateButtonLabel(analyticsRange, analyticsSelectedDate)
+        analyticsPageBinding.tvAnalyticsFilterCount.text = "${dateLogs.size} log"
+        analyticsPageBinding.tvAnalyticsFilterSummary.text = buildRangeSummary(
+            analyticsRange,
+            analyticsSelectedDate,
+            allLogsList
+        )
+    }
+
+    private fun updateRangeButtons(
+        allButton: View,
+        todayButton: View,
+        sevenDaysButton: View,
+        thirtyDaysButton: View,
+        range: LogRange
+    ) {
+        allButton.isSelected = range == LogRange.ALL
+        todayButton.isSelected = range == LogRange.TODAY
+        sevenDaysButton.isSelected = range == LogRange.LAST_7_DAYS
+        thirtyDaysButton.isSelected = range == LogRange.LAST_30_DAYS
+    }
+
+    private fun dateButtonLabel(range: LogRange, selected: LocalDate?): String {
+        return if (range == LogRange.CUSTOM_DATE && selected != null) {
+            selected.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy", Locale("id", "ID")))
+        } else {
+            "Pilih tanggal log"
+        }
+    }
+
+    private fun buildRangeSummary(range: LogRange, selected: LocalDate?, logs: List<HistoryLog>): String {
+        val rangeLabel = when (range) {
+            LogRange.ALL -> "Semua data tersedia"
+            LogRange.TODAY -> "Hari ini"
+            LogRange.LAST_7_DAYS -> "7 hari terakhir"
+            LogRange.LAST_30_DAYS -> "30 hari terakhir"
+            LogRange.CUSTOM_DATE -> selected?.format(
+                java.time.format.DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale("id", "ID"))
+            ) ?: "Periode terpilih"
+        }
+        return "$rangeLabel · ${logs.mapNotNull { logDate(it) }.toSet().size} tanggal berdata"
+    }
+
+    private fun matchesRange(log: HistoryLog, range: LogRange, selected: LocalDate?): Boolean {
+        if (range == LogRange.ALL) return true
+        val logDate = logDate(log) ?: return false
+        val today = LocalDate.now()
+        return when (range) {
+            LogRange.ALL -> true
+            LogRange.TODAY -> logDate == today
+            LogRange.LAST_7_DAYS -> logDate >= today.minusDays(6) && logDate <= today
+            LogRange.LAST_30_DAYS -> logDate >= today.minusDays(29) && logDate <= today
+            LogRange.CUSTOM_DATE -> logDate == selected
+        }
+    }
+
+    private fun logDate(log: HistoryLog): LocalDate? {
+        val timestamp = logTimestamp(log)
+        if (timestamp <= 0L) return null
+        return runCatching {
+            Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
+        }.getOrNull()
+    }
+
+    private fun configureStatusPieChart(chart: PieChart) {
+        chart.description.isEnabled = false
+        chart.legend.isEnabled = false
+        chart.setUsePercentValues(false)
+        chart.isDrawHoleEnabled = true
+        chart.holeRadius = 58f
+        chart.transparentCircleRadius = 62f
+        chart.setHoleColor(Color.TRANSPARENT)
+        chart.setCenterTextColor(Color.LTGRAY)
+        chart.setCenterTextSize(12f)
+        chart.setDrawEntryLabels(false)
+        chart.setNoDataText("Belum ada log.")
+        chart.setNoDataTextColor(Color.parseColor("#9ca3af"))
+    }
+
+    private fun configureSnapshotChart(chart: BarChart) {
+        chart.description.isEnabled = false
+        chart.legend.isEnabled = false
+        chart.setDrawGridBackground(false)
+        chart.setDrawBorders(false)
+        chart.setTouchEnabled(true)
+        chart.isDragEnabled = true
+        chart.setScaleEnabled(false)
+        chart.isHighlightPerTapEnabled = true
+        chart.setDrawMarkers(true)
+        chart.marker = SnapshotChartMarkerView(
+            chart.context,
+            analyticsSnapshotLabels,
+            analyticsSnapshotRawValues
+        )
+        chart.setNoDataText("Menunggu data snapshot.")
+        chart.setNoDataTextColor(Color.parseColor("#9ca3af"))
+
+        chart.xAxis.apply {
+            position = XAxis.XAxisPosition.BOTTOM
+            textColor = Color.LTGRAY
+            setDrawGridLines(false)
+            granularity = 1f
+            labelCount = 7
+            valueFormatter = object : ValueFormatter() {
+                override fun getFormattedValue(value: Float): String =
+                    analyticsSnapshotLabels.getOrNull(value.toInt()) ?: ""
+            }
+        }
+        chart.axisLeft.apply {
+            textColor = Color.LTGRAY
+            axisMinimum = 0f
+            axisMaximum = 100f
+            setDrawGridLines(true)
+            gridColor = Color.parseColor("#33FFFFFF")
+        }
+        chart.axisRight.isEnabled = false
+    }
+
+    private fun renderLogCharts(
+        mainChart: LineChart,
+        detailChart: LineChart,
+        electricalChart: LineChart,
+        logs: List<HistoryLog>,
+        limit: Int,
+        labels: MutableMap<Float, String>
+    ) {
+        val selected = logs.sortedWith(
+            compareBy<HistoryLog> { logTimestamp(it) }.thenBy { it.key.orEmpty() }
+        ).takeLast(limit)
+        labels.clear()
+        selected.forEachIndexed { index, log -> labels[index.toFloat()] = chartLabelFor(log) }
+
+        renderLogChartSeries(mainChart, mainChartSpecs(), selected) { log ->
+            val arus = logNumber(log.arus)
+            val tegangan = logNumber(log.tegangan)
+            listOf(arus.toFloat(), tegangan.toFloat(), logActivePower(log).toFloat())
+        }
+        renderLogChartSeries(detailChart, detailChartSpecs(), selected) { log ->
+            listOf(logEnergy(log).toFloat(), logPowerFactor(log).toFloat())
+        }
+        renderLogChartSeries(electricalChart, electricalChartSpecs(), selected) { log ->
+            val arus = logNumber(log.arus)
+            val tegangan = logNumber(log.tegangan)
+            listOf(logFrequency(log).toFloat(), logApparentPower(log, arus, tegangan).toFloat())
+        }
+    }
+
+    private fun renderLogChartSeries(
+        chart: LineChart,
+        specs: List<ChartSetSpec>,
+        logs: List<HistoryLog>,
+        values: (HistoryLog) -> List<Float>
+    ) {
+        if (logs.isEmpty()) {
+            chart.clear()
+            chart.invalidate()
+            return
+        }
+        val data = LineData()
+        specs.forEach { data.addDataSet(createSet(it)) }
+        logs.forEachIndexed { index, log ->
+            values(log).forEachIndexed { dataSetIndex, value ->
+                data.addEntry(Entry(index.toFloat(), value), dataSetIndex)
+            }
+        }
+        chart.data = data
+        chart.notifyDataSetChanged()
+        chart.setVisibleXRangeMaximum(logs.size.coerceAtLeast(1).toFloat())
+        chart.moveViewToX((logs.size - 1).toFloat())
+        chart.invalidate()
+    }
+
+    private fun updateAnalyticsStatusChart(statusCounts: Map<String, Int>) {
+        val labels = listOf("NORMAL", "WARNING", "LEAKAGE", "DANGER")
+        val colors = listOf(
+            Color.parseColor("#22c55e"),
+            Color.parseColor("#fcd34d"),
+            Color.parseColor("#fb923c"),
+            Color.parseColor("#ef4444")
+        )
+        val counts = labels.map { statusCounts[it] ?: 0 }
+        val total = counts.sum()
+        val chart = analyticsPageBinding.analyticsStatusChart
+        if (total == 0) {
+            chart.clear()
+            chart.centerText = "Belum ada log"
+        } else {
+            val entries = labels.mapIndexed { index, label -> PieEntry(counts[index].toFloat(), label) }
+            val dataSet = PieDataSet(entries, "").apply {
+                this.colors = colors
+                sliceSpace = 2f
+                selectionShift = 4f
+                setDrawValues(false)
+            }
+            chart.data = PieData(dataSet)
+            chart.centerText = "$total log"
+        }
+        chart.invalidate()
+        renderAnalyticsStatusLegend(labels, counts, colors, total)
+    }
+
+    private fun renderAnalyticsStatusLegend(
+        labels: List<String>,
+        counts: List<Int>,
+        colors: List<Int>,
+        total: Int
+    ) {
+        val container = analyticsPageBinding.analyticsStatusLegend
+        container.removeAllViews()
+        val safeTotal = total.coerceAtLeast(1)
+        labels.forEachIndexed { index, label ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(6) }
+            }
+            val left = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            val dot = View(this).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(colors[index])
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginEnd = dp(8) }
+            }
+            val labelView = TextView(this).apply {
+                text = label
+                setTextColor(Color.parseColor("#cbd5e1"))
+                textSize = 12f
+            }
+            val percentage = (counts[index] * 100f / safeTotal).toInt()
+            val valueView = TextView(this).apply {
+                text = "${counts[index]}  ${percentage}%"
+                setTextColor(Color.WHITE)
+                textSize = 12f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+            }
+            left.addView(dot)
+            left.addView(labelView)
+            row.addView(left)
+            row.addView(valueView)
+            container.addView(row)
+        }
+    }
+
+    private fun updateAnalyticsSnapshotChart(
+        latest: HistoryLog?,
+        maxCurrent: Double,
+        maxVoltage: Double,
+        peakPower: Double,
+        maxEnergy: Double,
+        peakApparent: Double
+    ) {
+        val log = latest
+        val arus = log?.let { logNumber(it.arus) } ?: 0.0
+        val tegangan = log?.let { logNumber(it.tegangan) } ?: 0.0
+        val dayaAktif = log?.let { logActivePower(it) } ?: 0.0
+        val energi = log?.let { logEnergy(it) } ?: 0.0
+        val pf = log?.let { logPowerFactor(it) } ?: 0.0
+        val frekuensi = log?.let { logFrequency(it) } ?: 0.0
+        val apparent = log?.let { logApparentPower(it, arus, tegangan) } ?: 0.0
+        val labels = listOf("Arus", "Tegangan", "Daya", "Energi", "PF", "Frekuensi", "Apparent")
+        val values = listOf(arus, tegangan, dayaAktif, energi, pf, frekuensi, apparent)
+        val references = listOf(
+            maxOf(maxCurrent, 10.0, arus),
+            maxOf(maxVoltage, 260.0, tegangan),
+            maxOf(peakPower, 2200.0, dayaAktif),
+            maxOf(maxEnergy, 1.0, energi),
+            1.0,
+            65.0,
+            maxOf(peakApparent, 2200.0, apparent)
+        )
+        val colors = listOf(
+            Color.parseColor("#22c55e"),
+            Color.parseColor("#60a5fa"),
+            Color.parseColor("#fcd34d"),
+            Color.parseColor("#a78bfa"),
+            Color.parseColor("#38bdf8"),
+            Color.parseColor("#fb923c"),
+            Color.parseColor("#fb923c")
+        )
+        analyticsSnapshotLabels.clear()
+        analyticsSnapshotLabels.addAll(labels)
+        analyticsSnapshotRawValues.clear()
+        analyticsSnapshotRawValues.addAll(
+            listOf(
+                String.format(Locale.US, "%.2f A", arus),
+                String.format(Locale.US, "%.1f V", tegangan),
+                String.format(Locale.US, "%.0f W", dayaAktif),
+                String.format(Locale.US, "%.3f kWh", energi),
+                String.format(Locale.US, "%.2f", pf),
+                String.format(Locale.US, "%.1f Hz", frekuensi),
+                String.format(Locale.US, "%.0f VA", apparent)
+            )
+        )
+        val entries = values.mapIndexed { index, value ->
+            BarEntry(index.toFloat(), ((value / references[index]) * 100.0).coerceIn(0.0, 100.0).toFloat())
+        }
+        val dataSet = BarDataSet(entries, "Snapshot terakhir").apply {
+            this.colors = colors
+            setDrawValues(false)
+        }
+        analyticsPageBinding.analyticsSnapshotChart.apply {
+            data = BarData(dataSet).apply { barWidth = 0.62f }
+            xAxis.axisMinimum = -0.5f
+            xAxis.axisMaximum = labels.size - 0.5f
+            notifyDataSetChanged()
+            invalidate()
+        }
+    }
+
+    private fun averageValue(values: List<Double>): Double {
+        val clean = values.filter { it.isFinite() }
+        return if (clean.isEmpty()) 0.0 else clean.sum() / clean.size
+    }
+
+    private fun minValue(values: List<Double>): Double = values.filter { it.isFinite() }.minOrNull() ?: 0.0
+
+    private fun maxValue(values: List<Double>): Double = values.filter { it.isFinite() }.maxOrNull() ?: 0.0
+
+    private fun statusColor(status: String): Int = when (status) {
+        "NORMAL" -> Color.parseColor("#22c55e")
+        "WARNING" -> Color.parseColor("#fcd34d")
+        "LEAKAGE" -> Color.parseColor("#fb923c")
+        "DANGER" -> Color.parseColor("#ef4444")
+        else -> Color.parseColor("#94a3b8")
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun startConnectionListener() {
         if (connectedListener != null) return
@@ -529,6 +1566,7 @@ class MainActivity : AppCompatActivity() {
                 val resetByAdmin = snapshot.child("reset_by_admin").getValue(Boolean::class.java) ?: false
                 val resetAt = snapshot.child("reset_at").getValue(String::class.java) ?: ""
                 val resetNote = snapshot.child("reset_note").getValue(String::class.java) ?: ""
+                val relayState = parseRelayState(snapshot.child("relay").value)
 
                 registerDeviceHeartbeat(
                     updatedAt = updatedAt,
@@ -545,18 +1583,42 @@ class MainActivity : AppCompatActivity() {
                     notifyAdminReset(resetAt, resetNote)
                 }
 
-                binding.tvStatus.text = status
-                binding.tvArus.text = String.format("%.2f", arus)
-                binding.tvTegangan.text = String.format("%.1f", tegangan)
-                binding.tvDayaW.text = String.format("%.0f", dayaW)
-                binding.tvEnergiKwh.text = String.format("%.3f", energi)
+                lastDeviceStatus = normalizeLogStatus(status)
+                lastDeviceUpdatedAt = updatedAt.takeIf(::isLikelyEpochMs) ?: 0L
+                binding.tvStatus.text = lastDeviceStatus
+                binding.tvArus.text = String.format("%.2f A", arus)
+                binding.tvTegangan.text = String.format("%.1f V", tegangan)
+                binding.tvDayaW.text = String.format("%.0f W", dayaW)
+                binding.tvEnergiKwh.text = String.format("%.3f kWh", energi)
                 binding.tvPowerFactor.text = String.format("%.2f", pf)
                 binding.tvFrekuensi.text = String.format("%.0f Hz", frekuensi)
                 binding.tvApparentPower.text = String.format("%.0f VA", apparent)
+                latestRealtimeLog = HistoryLog(
+                    arus = arus,
+                    tegangan = tegangan,
+                    status = lastDeviceStatus,
+                    relay = relayState,
+                    waktu = updatedAt.takeIf { it > 0L } ?: System.currentTimeMillis(),
+                    daya_w = dayaW,
+                    daya = apparent,
+                    energi_kwh = energi,
+                    frekuensi = frekuensi,
+                    power_factor = pf
+                )
                 refreshPresenceUi()
+                renderRelayState(relayState)
 
-                updateStatusColor(status)
-                addChartEntry(arus.toFloat(), tegangan.toFloat())
+                updateStatusColor(lastDeviceStatus)
+                addChartEntry(
+                    arus = arus.toFloat(),
+                    tegangan = tegangan.toFloat(),
+                    dayaAktif = dayaW.toFloat(),
+                    energi = energi.toFloat(),
+                    powerFactor = pf.toFloat(),
+                    frekuensi = frekuensi.toFloat(),
+                    apparent = apparent.toFloat()
+                )
+                if (currentPage == AppPage.ANALYTICS) applyAnalyticsFilters()
             }
             override fun onCancelled(error: DatabaseError) { }
         }
@@ -568,10 +1630,11 @@ class MainActivity : AppCompatActivity() {
 
         historyByKey.clear()
         historyList.clear()
+        allLogsList.clear()
         binding.tvHistoryEmpty.visibility = View.VISIBLE
         binding.rvHistory.visibility = View.GONE
 
-        val logsQuery = db.getReference("${pathPrefix}logs").orderByKey().limitToLast(15)
+        val logsQuery = db.getReference("${pathPrefix}logs").orderByKey().limitToLast(historyLogLimit)
         historyQuery = logsQuery
         historyChildListener = object : ChildEventListener {
             override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
@@ -616,11 +1679,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun doRenderHistory() {
+        allLogsList.clear()
+        allLogsList.addAll(
+            historyByKey.values.sortedWith(
+                compareByDescending<HistoryLog> { logTimestamp(it) }.thenByDescending { it.key.orEmpty() }
+            )
+        )
         historyList.clear()
-        val keysDesc = historyByKey.keys.sortedDescending()
-        for (k in keysDesc) {
-            historyByKey[k]?.let { historyList.add(it) }
-        }
+        historyList.addAll(allLogsList.take(dashboardLogLimit))
 
         val wasEmpty = binding.tvHistoryEmpty.visibility == View.VISIBLE
         if (historyList.isEmpty()) {
@@ -634,27 +1700,188 @@ class MainActivity : AppCompatActivity() {
             if (wasEmpty) binding.rvHistory.smoothScrollToPosition(0)
         }
 
-        // Batch-populate chart only once (when chart has no data yet)
-        val chart = binding.lineChart
-        if (chart.data == null && historyList.isNotEmpty()) {
-            val toPlot = historyList.take(maxDataPoints).reversed()
+        // Gunakan log sebagai bootstrap grafik hanya bila stream realtime belum memberi titik data.
+        val chartHasData = (binding.lineChart.data?.entryCount ?: 0) > 0
+        if (!chartHasData && allLogsList.isNotEmpty()) {
+            val toPlot = allLogsList.take(maxDataPoints).reversed()
             for (log in toPlot) {
-                val arus = (log.arus as? Number)?.toFloat() ?: 0f
-                val teg = (log.tegangan as? Number)?.toFloat() ?: 0f
-                addChartEntryBatch(arus, teg)
+                val arus = logNumber(log.arus).toFloat()
+                val tegangan = logNumber(log.tegangan).toFloat()
+                val daya = logActivePower(log).toFloat()
+                val energi = logEnergy(log).toFloat()
+                val pf = logPowerFactor(log).toFloat()
+                val frekuensi = logFrequency(log).toFloat()
+                val apparent = logApparentPower(log, arus.toDouble(), tegangan.toDouble()).toFloat()
+                addChartEntryBatch(
+                    arus = arus,
+                    tegangan = tegangan,
+                    dayaAktif = daya,
+                    energi = energi,
+                    powerFactor = pf,
+                    frekuensi = frekuensi,
+                    apparent = apparent,
+                    label = chartLabelFor(log)
+                )
             }
-            // Single chart redraw after all entries added
-            chart.data?.notifyDataChanged()
-            chart.notifyDataSetChanged()
-            chart.setVisibleXRangeMaximum(maxDataPoints.toFloat())
-            chart.moveViewToX(chart.data?.entryCount?.toFloat() ?: 0f)
+            refreshAllCharts()
+        }
+
+        // Halaman Riwayat dan Analytics memakai sumber log yang sama seperti web (hingga 1000 entri).
+        // Tetap render saat halaman belum aktif agar isi sudah siap saat dipilih dari sidebar.
+        applyHistoryFilters()
+        applyAnalyticsFilters()
+    }
+
+    private fun logNumber(value: Any?): Double = when (value) {
+        is Number -> value.toDouble()
+        else -> value?.toString()?.toDoubleOrNull() ?: 0.0
+    }
+
+    private fun firstLogValue(vararg values: Any?): Any? = values.firstOrNull {
+        when (it) {
+            null -> false
+            is String -> it.isNotBlank()
+            else -> true
         }
     }
 
+    private fun logActivePower(log: HistoryLog): Double = logNumber(
+        firstLogValue(log.daya_w, log.active_power, log.activePower, log.power_w, log.dayaAktif, log.daya)
+    )
+
+    private fun logEnergy(log: HistoryLog): Double = logNumber(
+        firstLogValue(log.energi_kwh, log.energy_kwh, log.energy, log.energi, log.kwh)
+    )
+
+    private fun logPowerFactor(log: HistoryLog): Double {
+        val raw = firstLogValue(log.power_factor, log.powerFactor, log.pf)
+        return if (raw == null) 0.85 else logNumber(raw)
+    }
+
+    private fun logFrequency(log: HistoryLog): Double = logNumber(
+        firstLogValue(log.frekuensi, log.frequency, log.hz)
+    )
+
+    private fun logApparentPower(log: HistoryLog, arus: Double, tegangan: Double): Double {
+        val direct = firstLogValue(
+            log.apparent_power,
+            log.apparentPower,
+            log.apparent,
+            log.apparent_va,
+            log.daya_va,
+            log.va,
+            log.daya
+        )
+        return if (direct != null) logNumber(direct) else arus * tegangan
+    }
+
+    private fun normalizeLogStatus(raw: String?): String = when (
+        raw?.trim()?.uppercase(Locale.ROOT) ?: "NORMAL"
+    ) {
+        "NORMAL" -> "NORMAL"
+        "WARNING" -> "WARNING"
+        "LEAKAGE" -> "LEAKAGE"
+        "DANGER" -> "DANGER"
+        else -> "UNKNOWN"
+    }
+
+    private fun logRelayLabel(log: HistoryLog): String {
+        val raw = firstLogValue(log.relay, log.relayStatus, log.relay_status)
+        val text = raw?.toString()?.trim()?.uppercase(Locale.ROOT).orEmpty()
+        return when {
+            raw == 1 || raw == true || text == "1" || text == "ON" -> "ON"
+            raw == 0 || raw == false || text == "0" || text == "OFF" -> "OFF"
+            else -> "—"
+        }
+    }
+
+    private fun logSourceLabel(log: HistoryLog): String {
+        val source = firstLogValue(log.source, log.sumber, log.mode, log.endpoint, log.dataSource)
+            ?.toString()
+            ?.trim()
+            ?.uppercase(Locale.ROOT)
+        return source?.ifBlank { if (isTempAccount) "SIM" else "CLOUD" }
+            ?: if (isTempAccount) "SIM" else "CLOUD"
+    }
+
+    private fun logTimestamp(log: HistoryLog): Long {
+        val raw = firstLogValue(log.waktu, log.timestamp, log.updated_at, log.createdAt, log.created_at) ?: return 0L
+        val numeric = when (raw) {
+            is Number -> raw.toLong()
+            else -> raw.toString().trim().toLongOrNull()
+        }
+        if (numeric != null && numeric > 0L) return numeric
+
+        val text = raw.toString().trim()
+        if (text.isBlank()) return 0L
+        runCatching { Instant.parse(text).toEpochMilli() }.getOrNull()?.let { return it }
+
+        val localMatch = Regex(
+            "^(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4}),?\\s+(\\d{1,2})[.:](\\d{1,2})(?:[.:](\\d{1,2}))?"
+        ).find(text)
+        if (localMatch != null) {
+            val groups = localMatch.groupValues
+            val day = groups[1].toIntOrNull() ?: return 0L
+            val month = groups[2].toIntOrNull() ?: return 0L
+            var year = groups[3].toIntOrNull() ?: return 0L
+            if (year < 100) year += 2000
+            val hour = groups[4].toIntOrNull() ?: 0
+            val minute = groups[5].toIntOrNull() ?: 0
+            val second = groups.getOrNull(6)?.toIntOrNull() ?: 0
+            return runCatching {
+                LocalDate.of(year, month, day)
+                    .atTime(hour, minute, second)
+                    .atZone(ZoneId.systemDefault())
+                    .toInstant()
+                    .toEpochMilli()
+            }.getOrDefault(0L)
+        }
+
+        val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss",
+            "dd/MM/yyyy HH:mm:ss",
+            "dd-MM-yyyy HH:mm:ss",
+            "dd/MM/yyyy, HH:mm:ss",
+            "dd-MM-yyyy, HH:mm:ss"
+        )
+        for (pattern in patterns) {
+            val parsed = runCatching {
+                SimpleDateFormat(pattern, Locale("id", "ID")).apply { isLenient = false }.parse(text)
+            }.getOrNull()
+            if (parsed != null) return parsed.time
+        }
+        return 0L
+    }
+
+    private fun formatLogDateTime(log: HistoryLog): String {
+        val timestamp = logTimestamp(log)
+        if (timestamp > 0L) {
+            return SimpleDateFormat("dd/MM/yyyy, HH:mm:ss", Locale("id", "ID")).format(Date(timestamp))
+        }
+        return firstLogValue(log.waktu, log.timestamp, log.updated_at, log.createdAt, log.created_at)
+            ?.toString()
+            ?.trim()
+            ?.ifBlank { "—" }
+            ?: "—"
+    }
+
+    private fun chartLabelFor(log: HistoryLog): String {
+        val epoch = logTimestamp(log)
+        if (epoch > 0L) return SimpleDateFormat("HH:mm:ss", Locale("id", "ID")).format(Date(epoch))
+        val text = firstLogValue(log.waktu, log.timestamp, log.updated_at, log.createdAt, log.created_at)
+            ?.toString()
+            ?.trim()
+            .orEmpty()
+        val match = Regex("T(\\d{2}:\\d{2}:\\d{2})").find(text)
+        return match?.groupValues?.getOrNull(1) ?: text.takeLast(8).ifBlank { "—" }
+    }
+
     private fun updateStatusColor(status: String) {
+        binding.tvStatusSummary.text = statusSummaryFor(status)
+        binding.tvStatusHint.text = statusHintFor(status)
         if (status == lastStatus) return
-        
-        // --- 🚨 TRIGGER ALARM LOKAL UNTUK DEMO 🚨 ---
+
         val dangerStatuses = setOf("WARNING", "LEAKAGE", "DANGER")
         val isDanger = dangerStatuses.contains(status)
         val wasDanger = dangerStatuses.contains(lastStatus)
@@ -724,6 +1951,22 @@ class MainActivity : AppCompatActivity() {
         colorAnimation.start()
     }
 
+    private fun statusSummaryFor(status: String): String = when (status) {
+        "DANGER" -> "Bahaya — gangguan ekstrem"
+        "LEAKAGE" -> "Indikasi kebocoran arus"
+        "WARNING" -> "Peringatan — mendekati batas"
+        "UNKNOWN" -> "Status belum dikenali"
+        else -> "Sistem stabil"
+    }
+
+    private fun statusHintFor(status: String): String = when (status) {
+        "DANGER" -> "Auto-cutoff dan notifikasi bahaya diprioritaskan. Periksa beban, kabel, dan kondisi perangkat sebelum menyalakan relay kembali."
+        "LEAKAGE" -> "Sistem membaca indikasi arus bocor atau arus abnormal. Periksa isolasi, sambungan, dan kondisi beban sebelum relay dinyalakan kembali."
+        "WARNING" -> "Arus mendekati ambang batas. Pantau perubahan beban dan pastikan konsumsi masih sesuai kapasitas uji."
+        "UNKNOWN" -> "Status belum dikenali. Tunggu data berikutnya atau periksa koneksi perangkat."
+        else -> "Data realtime dibaca dari perangkat dan dievaluasi berdasarkan ambang sistem."
+    }
+
     private fun startDangerPulse() {
         dangerPulseAnimator = ValueAnimator.ofFloat(1f, 0.65f)
         dangerPulseAnimator?.duration = 1000
@@ -735,116 +1978,159 @@ class MainActivity : AppCompatActivity() {
         dangerPulseAnimator?.start()
     }
 
-    /**
-     * Ensures chart DataSets exist; returns (setArus, setTeg).
-     */
-    private fun ensureChartSets(): Pair<LineDataSet, LineDataSet> {
-        val chart = binding.lineChart
-        var data = chart.data
-        if (data == null) {
-            data = LineData()
-            chart.data = data
+    private data class ChartSetSpec(
+        val label: String,
+        val color: Int,
+        val axis: YAxis.AxisDependency,
+        val filled: Boolean = true
+    )
+
+    private fun ensureChartSets(chart: LineChart, specs: List<ChartSetSpec>): List<LineDataSet> {
+        val data = chart.data ?: LineData().also { chart.data = it }
+        specs.forEachIndexed { index, spec ->
+            if (data.getDataSetByIndex(index) == null) {
+                data.addDataSet(createSet(spec))
+            }
         }
+        return specs.indices.map { data.getDataSetByIndex(it) as LineDataSet }
+    }
+
+    private fun createSet(spec: ChartSetSpec): LineDataSet {
+        return LineDataSet(null, spec.label).apply {
+            axisDependency = spec.axis
+            color = spec.color
+            setCircleColor(spec.color)
+            lineWidth = 2f
+            circleRadius = 3.4f
+            circleHoleRadius = 1.4f
+            circleHoleColor = Color.parseColor("#111820")
+            fillAlpha = 34
+            fillColor = spec.color
+            highLightColor = Color.WHITE
+            valueTextColor = Color.WHITE
+            valueTextSize = 9f
+            setDrawCircles(true)
+            setDrawCircleHole(true)
+            setDrawHighlightIndicators(true)
+            setDrawValues(false)
+            setDrawFilled(spec.filled)
+            mode = LineDataSet.Mode.CUBIC_BEZIER
+        }
+    }
+
+    private fun mainChartSpecs() = listOf(
+        ChartSetSpec("Arus (A)", Color.parseColor("#2eea72"), YAxis.AxisDependency.LEFT),
+        ChartSetSpec("Tegangan (V)", Color.parseColor("#7dd3fc"), YAxis.AxisDependency.RIGHT),
+        ChartSetSpec("Daya Aktif (W)", Color.parseColor("#fee58a"), YAxis.AxisDependency.RIGHT, false)
+    )
+
+    private fun detailChartSpecs() = listOf(
+        ChartSetSpec("Energi (kWh)", Color.parseColor("#c084fc"), YAxis.AxisDependency.LEFT),
+        ChartSetSpec("Power Factor", Color.parseColor("#7dd3fc"), YAxis.AxisDependency.RIGHT)
+    )
+
+    private fun electricalChartSpecs() = listOf(
+        ChartSetSpec("Frekuensi (Hz)", Color.parseColor("#7dd3fc"), YAxis.AxisDependency.LEFT),
+        ChartSetSpec("Apparent (VA)", Color.parseColor("#fb923c"), YAxis.AxisDependency.RIGHT)
+    )
+
+    private fun addChartEntry(
+        arus: Float,
+        tegangan: Float,
+        dayaAktif: Float,
+        energi: Float,
+        powerFactor: Float,
+        frekuensi: Float,
+        apparent: Float
+    ) {
+        addChartSample(
+            arus,
+            tegangan,
+            dayaAktif,
+            energi,
+            powerFactor,
+            frekuensi,
+            apparent,
+            SimpleDateFormat("HH:mm:ss", Locale("id", "ID")).format(Date()),
+            redraw = true
+        )
+    }
+
+    private fun addChartEntryBatch(
+        arus: Float,
+        tegangan: Float,
+        dayaAktif: Float,
+        energi: Float,
+        powerFactor: Float,
+        frekuensi: Float,
+        apparent: Float,
+        label: String
+    ) {
+        addChartSample(
+            arus,
+            tegangan,
+            dayaAktif,
+            energi,
+            powerFactor,
+            frekuensi,
+            apparent,
+            label,
+            redraw = false
+        )
+    }
+
+    private fun addChartSample(
+        arus: Float,
+        tegangan: Float,
+        dayaAktif: Float,
+        energi: Float,
+        powerFactor: Float,
+        frekuensi: Float,
+        apparent: Float,
+        label: String,
+        redraw: Boolean
+    ) {
+        val x = chartTimeIndex
+        chartLabels[x] = label
+
+        val mainSets = ensureChartSets(binding.lineChart, mainChartSpecs())
+        val detailSets = ensureChartSets(binding.detailLineChart, detailChartSpecs())
+        val electricalSets = ensureChartSets(binding.electricalLineChart, electricalChartSpecs())
+        val trimOldest = (mainSets.firstOrNull()?.entryCount ?: 0) >= maxDataPoints
+
+        addEntries(binding.lineChart, mainSets, x, listOf(arus, tegangan, dayaAktif))
+        addEntries(binding.detailLineChart, detailSets, x, listOf(energi, powerFactor))
+        addEntries(binding.electricalLineChart, electricalSets, x, listOf(frekuensi, apparent))
+
+        if (trimOldest) chartLabels.remove(x - maxDataPoints)
+        chartTimeIndex++
         binding.tvChartLoading.visibility = View.GONE
-
-        var setArus = data.getDataSetByIndex(0) as LineDataSet?
-        var setTeg = data.getDataSetByIndex(1) as LineDataSet?
-
-        if (setArus == null) {
-            setArus = createSet("Arus (A)", Color.parseColor("#2eea72"))
-            data.addDataSet(setArus)
-        }
-        if (setTeg == null) {
-            setTeg = createSet("Tegangan (V)", Color.parseColor("#7dd3fc"))
-            setTeg.axisDependency = com.github.mikephil.charting.components.YAxis.AxisDependency.RIGHT
-            chart.axisRight.isEnabled = true
-            chart.axisRight.textColor = Color.LTGRAY
-            chart.axisRight.setDrawGridLines(false)
-            data.addDataSet(setTeg)
-        }
-        return Pair(setArus, setTeg)
+        if (redraw) refreshAllCharts()
     }
 
-    /**
-     * Add a chart entry AND immediately redraw. Used for real-time streaming updates.
-     */
-    private fun addChartEntry(arus: Float, tegangan: Float) {
-        val chart = binding.lineChart
-        val (setArus, setTeg) = ensureChartSets()
-        val data = chart.data!!
+    private fun addEntries(
+        chart: LineChart,
+        sets: List<LineDataSet>,
+        x: Float,
+        values: List<Float>
+    ) {
+        val data = chart.data ?: return
+        values.forEachIndexed { index, value -> data.addEntry(Entry(x, value), index) }
 
-        data.addEntry(Entry(chartTimeIndex, arus), 0)
-        data.addEntry(Entry(chartTimeIndex, tegangan), 1)
-        chartTimeIndex++
-
-        if (setArus.entryCount > maxDataPoints) {
-            setArus.removeFirst()
-            setTeg.removeFirst()
-            chart.xAxis.axisMinimum = setArus.getEntryForIndex(0).x
+        if ((sets.firstOrNull()?.entryCount ?: 0) > maxDataPoints) {
+            sets.forEach { it.removeFirst() }
+            chart.xAxis.axisMinimum = sets.first().getEntryForIndex(0).x
         }
-
-        data.notifyDataChanged()
-        chart.notifyDataSetChanged()
-        chart.setVisibleXRangeMaximum(maxDataPoints.toFloat())
-        chart.moveViewToX(data.entryCount.toFloat())
-
-        updateChartStats(arus, tegangan)
     }
 
-    /**
-     * Add a chart entry WITHOUT redrawing. Used during batch population.
-     * Caller must call chart.notifyDataSetChanged() after all entries are added.
-     */
-    private fun addChartEntryBatch(arus: Float, tegangan: Float) {
-        val chart = binding.lineChart
-        val (setArus, setTeg) = ensureChartSets()
-        val data = chart.data!!
-
-        data.addEntry(Entry(chartTimeIndex, arus), 0)
-        data.addEntry(Entry(chartTimeIndex, tegangan), 1)
-        chartTimeIndex++
-
-        if (setArus.entryCount > maxDataPoints) {
-            setArus.removeFirst()
-            setTeg.removeFirst()
-            chart.xAxis.axisMinimum = setArus.getEntryForIndex(0).x
+    private fun refreshAllCharts() {
+        val lastX = (chartTimeIndex - 1f).coerceAtLeast(0f)
+        listOf(binding.lineChart, binding.detailLineChart, binding.electricalLineChart).forEach { chart ->
+            chart.data?.notifyDataChanged()
+            chart.notifyDataSetChanged()
+            chart.setVisibleXRangeMaximum(maxDataPoints.toFloat())
+            chart.moveViewToX(lastX)
         }
-
-        updateChartStats(arus, tegangan)
-    }
-
-    private fun updateChartStats(arus: Float, tegangan: Float) {
-        arusHistory.add(arus)
-        tegHistory.add(tegangan)
-        if (arusHistory.size > maxDataPoints) arusHistory.removeAt(0)
-        if (tegHistory.size > maxDataPoints) tegHistory.removeAt(0)
-
-        val avgArus = arusHistory.average()
-        val maxArus = arusHistory.maxOrNull() ?: 0f
-        val avgTeg = tegHistory.average()
-        val maxTeg = tegHistory.maxOrNull() ?: 0f
-
-        binding.tvAvgArus.text = String.format("%.2f A", avgArus)
-        binding.tvMaxArus.text = String.format("%.2f A", maxArus)
-        binding.tvAvgTeg.text = String.format("%.1f V", avgTeg)
-        binding.tvMaxTeg.text = String.format("%.1f V", maxTeg)
-    }
-
-    private fun createSet(label: String, colorRGB: Int): LineDataSet {
-        val set = LineDataSet(null, label)
-        set.axisDependency = com.github.mikephil.charting.components.YAxis.AxisDependency.LEFT
-        set.color = colorRGB
-        set.setCircleColor(colorRGB)
-        set.lineWidth = 2f
-        set.circleRadius = 3f
-        set.fillAlpha = 65
-        set.fillColor = colorRGB
-        set.highLightColor = Color.WHITE
-        set.valueTextColor = Color.WHITE
-        set.valueTextSize = 9f
-        set.setDrawValues(false)
-        set.mode = LineDataSet.Mode.CUBIC_BEZIER // Smooth line
-        return set
     }
 
     private fun setRelay(value: Int) {
@@ -858,34 +2144,34 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        db.getReference("${pathPrefix}commands/relay")
-            .setValue(value)
-            .addOnFailureListener { e ->
-                val msg = e.message ?: "Gagal mengirim perintah relay."
-                showToast("Gagal mengirim perintah relay: $msg")
-            }
-    }
-
-    private fun triggerDemoMode(state: String) {
-        if (!isAdmin || isTempAccount) {
-            showToast("Demo mode hanya tersedia untuk admin.")
+        if (value == 1 && (lastDeviceStatus == "WARNING" || lastDeviceStatus == "DANGER")) {
+            showToast("Perintah ON ditolak: kondisi $lastDeviceStatus. Perbaiki kondisi listrik lebih dulu.")
             return
         }
 
-        // Force fully overriding the RTDB so FCM Web and Cloud Functions will catch it instantly
-        // Wait, Cloud Functions requires it to hit /listrik/status!
-        db.getReference("${pathPrefix}listrik/status").setValue(state)
-        
-        // Let's also enforce dummy data to look more realistic if needed,
-        // although real ESP will overwrite it. Temporary override is enough for demo.
-        if (state == "DANGER") {
-            db.getReference("${pathPrefix}listrik/arus").setValue(3.45)
-            db.getReference("${pathPrefix}listrik/tegangan").setValue(180.0)
-        } else if (state == "WARNING") {
-            db.getReference("${pathPrefix}listrik/arus").setValue(1.15)
-        } else {
-            db.getReference("${pathPrefix}listrik/arus").setValue(0.45)
-        }
+        if (pendingRelayValue != null) return
+        pendingRelayValue = value
+        updateRelayControls()
+
+        db.getReference("${pathPrefix}commands/relay")
+            .setValue(value)
+            .addOnSuccessListener {
+                showToast("Perintah relay ${if (value == 1) "ON" else "OFF"} dikirim")
+                // Firebase menerima perintah lebih cepat daripada perangkat menerapkan state.
+                // Lepas kunci setelah timeout bila tidak ada konfirmasi /listrik/relay.
+                uiHandler.postDelayed({
+                    if (pendingRelayValue == value) {
+                        pendingRelayValue = null
+                        updateRelayControls()
+                    }
+                }, 8000)
+            }
+            .addOnFailureListener { e ->
+                pendingRelayValue = null
+                updateRelayControls()
+                val msg = e.message ?: "Gagal mengirim perintah relay."
+                showToast("Gagal mengirim perintah relay: $msg")
+            }
     }
 
     private fun triggerLocalNotification(title: String, message: String) {
@@ -924,6 +2210,24 @@ class MainActivity : AppCompatActivity() {
             .setAutoCancel(true)
 
         notificationManager.notify(1001, notificationBuilder.build())
+    }
+
+    private fun sendTestNotification() {
+        if (
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+            showToast("Izinkan notifikasi Android, lalu coba lagi.")
+            return
+        }
+
+        triggerInfoNotification(
+            "Test Notifikasi IoT",
+            "Notifikasi aplikasi aktif pada perangkat ini."
+        )
+        showToast("Test notifikasi dikirim.")
     }
 
     private fun triggerInfoNotification(title: String, message: String) {

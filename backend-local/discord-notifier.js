@@ -650,6 +650,92 @@ function formatPowerLabel(raw = {}) {
   return `${formatMetricValue(activePower, 1)} W / ${formatMetricValue(apparentPower, 1)} VA`;
 }
 
+function relayIsOn(value) {
+  return value === true || value === 1 || String(value ?? '').trim().toUpperCase() === 'ON';
+}
+
+function formatTelemetryTimestamp(value) {
+  if (value === undefined || value === null || value === '') return waktu();
+
+  const numeric = Number(value);
+  const date = Number.isFinite(numeric) && numeric > 100000000000
+    ? new Date(numeric)
+    : new Date(value);
+
+  if (!Number.isNaN(date.getTime())) {
+    return date.toLocaleString('id-ID', {
+      timeZone: JAKARTA_TZ,
+      dateStyle: 'short',
+      timeStyle: 'medium',
+    });
+  }
+
+  return String(value);
+}
+
+function getRealtimeTelemetry(raw = {}) {
+  const power = derivePowerMetrics(raw);
+  const status = String(raw.status || 'NORMAL').trim().toUpperCase() || 'NORMAL';
+  const sensorSource = String(raw.sensor_source ?? raw.source ?? 'PZEM-004T').trim() || 'PZEM-004T';
+
+  return {
+    arus: formatMetricValue(raw.arus, 2),
+    tegangan: formatMetricValue(raw.tegangan, 1),
+    dayaAktif: formatMetricValue(power.activePower, 1),
+    dayaSemu: formatMetricValue(power.apparentPower, 1),
+    energi: formatMetricValue(raw.energi_kwh, 3),
+    frekuensi: formatMetricValue(raw.frekuensi, 1),
+    powerFactor: formatMetricValue(power.pf, 2),
+    relay: relayIsOn(raw.relay) ? 'ON (beban aktif)' : 'OFF (beban diputus)',
+    status,
+    sensorSource,
+    updatedAt: formatTelemetryTimestamp(raw.updated_at ?? raw.updatedAt ?? raw.timestamp),
+  };
+}
+
+function buildRealtimeDiscordFields(raw = {}) {
+  const data = getRealtimeTelemetry(raw);
+  return [
+    { name: '⚡ Arus', value: `${data.arus} A`, inline: true },
+    { name: '🔋 Tegangan', value: `${data.tegangan} V`, inline: true },
+    { name: '💡 Daya Aktif', value: `${data.dayaAktif} W`, inline: true },
+    { name: '🔌 Daya Semu', value: `${data.dayaSemu} VA`, inline: true },
+    { name: '🔆 Energi', value: `${data.energi} kWh`, inline: true },
+    { name: '📊 Power Factor', value: data.powerFactor, inline: true },
+    { name: '📡 Frekuensi', value: `${data.frekuensi} Hz`, inline: true },
+    { name: '🔌 Relay', value: data.relay, inline: true },
+    { name: `${statusEmoji(data.status)} Status`, value: data.status, inline: true },
+    { name: '🧭 Sumber meter', value: data.sensorSource, inline: true },
+    { name: '⏱ Waktu pembacaan', value: data.updatedAt, inline: false },
+  ];
+}
+
+function escapeHtml(value) {
+  return escapeXml(value);
+}
+
+function buildRealtimeTelegramMessage(title, raw = {}, description = '') {
+  const data = getRealtimeTelemetry(raw);
+  const lines = [
+    `${statusEmoji(data.status)} <b>${escapeHtml(title)}</b>`,
+    description ? escapeHtml(description) : '',
+    '',
+    '📡 <b>Snapshot data realtime</b>',
+    `⚡ Arus: <b>${data.arus} A</b>`,
+    `🔋 Tegangan: <b>${data.tegangan} V</b>`,
+    `💡 Daya aktif: <b>${data.dayaAktif} W</b>`,
+    `🔌 Daya semu: <b>${data.dayaSemu} VA</b>`,
+    `🔆 Energi: <b>${data.energi} kWh</b>`,
+    `📊 Power factor: <b>${data.powerFactor}</b>`,
+    `📡 Frekuensi: <b>${data.frekuensi} Hz</b>`,
+    `🔌 Relay: <b>${data.relay}</b>`,
+    `${statusEmoji(data.status)} Status: <b>${data.status}</b>`,
+    `🧭 Sumber meter: <code>${escapeHtml(data.sensorSource)}</code>`,
+    `⏱ Pembacaan: <code>${escapeHtml(data.updatedAt)}</code>`,
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
 function normalizeArchiveRecord(raw = {}) {
   const recordedAt = Number(raw.recordedAt || raw.timestamp || 0);
   const recordedDate = Number.isFinite(recordedAt) && recordedAt > 0
@@ -776,6 +862,7 @@ function statusColor(s) {
   switch ((s || '').toUpperCase()) {
     case 'DANGER':  return 0xED4245;
     case 'WARNING': return 0xFEE75C;
+    case 'LEAKAGE': return 0xF97316;
     case 'NORMAL':  return 0x57F287;
     default:        return 0x5865F2;
   }
@@ -784,6 +871,7 @@ function statusEmoji(s) {
   switch ((s || '').toUpperCase()) {
     case 'DANGER':  return '🔴';
     case 'WARNING': return '🟡';
+    case 'LEAKAGE': return '🟠';
     case 'NORMAL':  return '🟢';
     default:        return '🔵';
   }
@@ -793,12 +881,18 @@ function waktu() {
 }
 
 function buildMonitoringSummary(d = {}) {
+  const data = getRealtimeTelemetry(d);
   return [
-    `Arus ${d.arus ?? '-'} A`,
-    `Tegangan ${d.tegangan ?? '-'} V`,
-    `Daya ${formatPowerLabel(d)}`,
-    `Relay ${d.relay ? 'ON' : 'OFF'}`,
-    `Status ${d.status ?? 'NORMAL'}`,
+    `Arus ${data.arus} A`,
+    `Tegangan ${data.tegangan} V`,
+    `Daya aktif ${data.dayaAktif} W`,
+    `Daya semu ${data.dayaSemu} VA`,
+    `Energi ${data.energi} kWh`,
+    `PF ${data.powerFactor}`,
+    `Frekuensi ${data.frekuensi} Hz`,
+    `Relay ${data.relay}`,
+    `Status ${data.status}`,
+    `Sumber ${data.sensorSource}`,
   ].join(' • ');
 }
 
@@ -1059,7 +1153,6 @@ db.ref('/listrik/status').on('value', async (snap) => {
   // Ambil semua data listrik
   const listrikSnap = await db.ref('/listrik').get();
   const d = listrikSnap.val() || {};
-  const power = derivePowerMetrics(d);
 
   const isBahaya = status === 'DANGER';
   const isPulih  = status === 'NORMAL' && (prev === 'DANGER' || prev === 'WARNING');
@@ -1072,15 +1165,7 @@ db.ref('/listrik/status').on('value', async (snap) => {
       ? '✅ Kondisi kelistrikan telah kembali **NORMAL**.'
       : `Status berubah dari \`${prev}\` → \`${status}\``,
     color:  statusColor(status),
-    fields: [
-      { name: '⚡ Arus',        value: `${d.arus       ?? '-'} A`,  inline: true },
-      { name: '🔋 Tegangan',    value: `${d.tegangan   ?? '-'} V`,  inline: true },
-      { name: '💡 Daya Aktif',  value: `${formatMetricValue(power.activePower, 1)} W`, inline: true },
-      { name: '🔌 Daya Semu',   value: `${formatMetricValue(power.apparentPower, 1)} VA`, inline: true },
-      { name: '🔌 Relay',       value: d.relay ? 'ON' : 'OFF',      inline: true },
-      { name: '📡 Frekuensi',   value: `${d.frekuensi  ?? '-'} Hz`, inline: true },
-      { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`, inline: true },
-    ],
+    fields: buildRealtimeDiscordFields(d),
     footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
     thumbnail: { url: 'https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png' },
   };
@@ -1100,6 +1185,8 @@ db.ref('/listrik/relay').on('value', async (snap) => {
   if (prev === null) return;
 
   console.log(`[Relay] ${prev} → ${relay}`);
+  const listrikSnap = await db.ref('/listrik').get();
+  const d = listrikSnap.val() || {};
   const embed = {
     title:       relay ? '🔌 Relay DINYALAKAN' : '🪫 Relay DIMATIKAN',
     description: `Relay berubah ke posisi **${relay ? 'ON' : 'OFF'}**.`,
@@ -1107,6 +1194,7 @@ db.ref('/listrik/relay').on('value', async (snap) => {
     fields: [
       { name: 'Sebelumnya', value: prev  ? 'ON' : 'OFF', inline: true },
       { name: 'Sekarang',   value: relay ? 'ON' : 'OFF', inline: true },
+      ...buildRealtimeDiscordFields({ ...d, relay }),
     ],
     footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
   };
@@ -1189,46 +1277,26 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
     });
   }
 
-  if (now - lastMonitoringSent < 5 * 60 * 1000) return; // rate limit 5 mins
-  if (!discordConfig.webhookMonitoring) return;
   lastMonitoringSent = now;
 
   const embed = {
     title: '📊 Update Data Monitoring Listrik',
     color: statusColor(d.status),
-    fields: [
-      { name: '⚡ Arus',         value: `${d.arus         ?? '-'} A`,   inline: true },
-      { name: '🔋 Tegangan',     value: `${d.tegangan     ?? '-'} V`,   inline: true },
-      { name: '💡 Daya Aktif',   value: `${formatMetricValue(power.activePower, 1)} W`, inline: true },
-      { name: '🔌 Daya Semu',    value: `${formatMetricValue(power.apparentPower, 1)} VA`, inline: true },
-      { name: '🔌 Relay',        value: d.relay ? 'ON' : 'OFF',         inline: true },
-      { name: '📡 Frekuensi',    value: `${d.frekuensi    ?? '-'} Hz`,  inline: true },
-      { name: '📊 Power Factor', value: `${d.power_factor ?? '-'}`,     inline: true },
-      { name: '🔆 Energi',       value: `${d.energi_kwh   ?? '-'} kWh`, inline: true },
-      { name: '🔴 Status',       value: `${statusEmoji(d.status)} ${d.status ?? '-'}`, inline: true },
-    ],
+    fields: buildRealtimeDiscordFields(d),
     footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
     thumbnail: { url: 'https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png' },
   };
 
-  await sendEmbed(discordConfig.webhookMonitoring, embed);
+  const notificationTasks = [];
+  if (discordConfig.enabled !== false && discordConfig.webhookMonitoring) {
+    notificationTasks.push(sendEmbed(discordConfig.webhookMonitoring, embed));
+  }
   await broadcastPhysicalSystemEvent({
     event: 'monitoring_update',
     title: embed.title,
     message: buildMonitoringSummary(d),
     severity: 'info',
-    telegramMessage:
-      `📊 <b>Update Data Monitoring Listrik</b>\n` +
-      `⚡ Arus: <b>${d.arus ?? '-'} A</b>\n` +
-      `🔋 Tegangan: ${d.tegangan ?? '-'} V\n` +
-      `💡 Daya Aktif: ${formatMetricValue(power.activePower, 1)} W\n` +
-      `🔌 Daya Semu: ${formatMetricValue(power.apparentPower, 1)} VA\n` +
-      `🔌 Relay: <b>${d.relay ? 'ON' : 'OFF'}</b>\n` +
-      `📡 Frekuensi: ${d.frekuensi ?? '-'} Hz\n` +
-      `📊 Power Factor: ${d.power_factor ?? '-'}\n` +
-      `🔆 Energi: ${d.energi_kwh ?? '-'} kWh\n` +
-      `${statusEmoji(d.status)} Status: <b>${d.status ?? 'NORMAL'}</b>\n` +
-      `🕐 ${waktu()}`,
+    telegramMessage: buildRealtimeTelegramMessage('Update Data Monitoring Listrik', d),
     payload: {
       metrics: {
         arus: d.arus ?? 0,
@@ -1244,6 +1312,7 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
       },
     },
   });
+  await Promise.allSettled(notificationTasks);
 });
 
 // ════════════════════════════════════════════════════════════════════════

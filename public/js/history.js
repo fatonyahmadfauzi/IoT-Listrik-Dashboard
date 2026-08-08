@@ -144,8 +144,24 @@ function getFrequency(log = {}) {
   return metricNumber(log.frekuensi ?? log.frequency ?? log.freq);
 }
 
-function getSource(log = {}) {
-  return log.source || log.sumber || log.mode || (isTempAccount() ? 'SIM' : 'CLOUD');
+function getMeterSource(log = {}) {
+  const value = log.sensor_source ?? log.sensorSource ?? log.meter_source ?? log.meterSource;
+  const source = String(value ?? '').trim();
+  return source || (isTempAccount() ? 'Simulator' : 'PZEM-004T');
+}
+
+function getLogType(log = {}) {
+  return String(log.source ?? log.sumber ?? log.mode ?? '').trim().toUpperCase();
+}
+
+function getUptime(log = {}) {
+  const seconds = Number(log.uptime_s ?? log.uptimeSeconds ?? log.uptime);
+  return Number.isFinite(seconds) && seconds >= 0 ? Math.floor(seconds) : null;
+}
+
+function formatUptime(log = {}) {
+  const seconds = getUptime(log);
+  return seconds === null ? '—' : `${seconds} s`;
 }
 
 function getRelayText(log = {}) {
@@ -187,7 +203,7 @@ function renderDetailEmpty() {
 function renderSummaryTable(logs) {
   if (!summaryTbody) return;
   if (logs.length === 0) {
-    summaryTbody.innerHTML = renderEmptyLogRow(5);
+    summaryTbody.innerHTML = renderEmptyLogRow(6);
     if (countEl) countEl.textContent = '0 log';
     return;
   }
@@ -201,15 +217,16 @@ function renderSummaryTable(logs) {
     <tr class="log-row log-status-${safeStatus}">
       <td class="log-time" data-label="Waktu">${escapeHtml(fmtTime(l.waktu ?? l.timestamp))}</td>
       <td class="log-values" data-label="Beban">
-        <span class="log-val-arus">${Number(l.arus || 0).toFixed(2)} A</span>
-        <span class="log-val-sep">·</span>
-        <span class="log-val-teg">${Number(l.tegangan || 0).toFixed(1)} V</span>
-        <span class="log-val-sep">·</span>
-        <span class="log-val-daya">${power.active.toFixed(0)} W</span>
+        <div class="beban-values" style="display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center;">
+          <span class="log-val-arus" style="white-space: nowrap;">${Number(l.arus || 0).toFixed(2)} A <span class="log-val-sep" style="opacity:0.5; margin-left:2px;">·</span></span>
+          <span class="log-val-teg" style="white-space: nowrap;">${Number(l.tegangan || 0).toFixed(1)} V <span class="log-val-sep" style="opacity:0.5; margin-left:2px;">·</span></span>
+          <span class="log-val-daya" style="white-space: nowrap;">${power.active.toFixed(0)} W</span>
+        </div>
       </td>
       <td class="log-status" data-label="Status">${statusChip(safeStatus)}</td>
       <td class="log-relay" data-label="Relay">${getRelayText(l)}</td>
-      <td class="log-source" data-label="Sumber">${escapeHtml(getSource(l))}</td>
+      <td class="log-source" data-label="Sumber">${escapeHtml(getMeterSource(l))}</td>
+      <td class="log-uptime" data-label="Uptime">${escapeHtml(formatUptime(l))}</td>
     </tr>
   `;
   }).join('');
@@ -243,7 +260,9 @@ function renderDetailTable(logs) {
       <div class="mini-detail-state">
         ${statusChip(safeStatus)}
         <span class="mini-detail-pill">Relay ${escapeHtml(getRelayText(l))}</span>
-        <span class="mini-detail-source">${escapeHtml(getSource(l))}</span>
+        <span class="mini-detail-source">Sumber ${escapeHtml(getMeterSource(l))}</span>
+        <span class="mini-detail-pill">Uptime ${escapeHtml(formatUptime(l))}</span>
+        ${getLogType(l) ? `<span class="mini-detail-pill">Log ${escapeHtml(getLogType(l))}</span>` : ''}
       </div>
     </article>
   `;
@@ -338,7 +357,7 @@ function exportCSV() {
   const rowsSource = visibleLogs.length ? visibleLogs : (dateFilter ? dateLogs : allLogs);
   if (rowsSource.length === 0) { showToast('Tidak ada data untuk diekspor', 'warning'); return; }
 
-  const header = ['Waktu', 'Arus (A)', 'Tegangan (V)', 'Daya Aktif (W)', 'Energi (kWh)', 'Power Factor', 'Frekuensi (Hz)', 'Apparent (VA)', 'Status', 'Relay', 'Sumber'];
+  const header = ['Waktu', 'Arus (A)', 'Tegangan (V)', 'Daya Aktif (W)', 'Energi (kWh)', 'Power Factor', 'Frekuensi (Hz)', 'Apparent (VA)', 'Status', 'Relay', 'Sumber meter', 'Uptime (s)', 'Jenis log'];
   const rows   = rowsSource.map(l => {
     const power = derivePower(l);
     return [
@@ -352,7 +371,9 @@ function exportCSV() {
       power.apparent.toFixed(1),
       l.status || '',
       getRelayText(l),
-      getSource(l),
+       getMeterSource(l),
+       getUptime(l) ?? '',
+       getLogType(l),
     ];
   });
 

@@ -71,6 +71,7 @@ struct DeviceState {
   String sensorSource    = "PZEM-004T";
   String status          = "NORMAL";
   int    relay           = 1;         // physical relay state
+  bool   meterValid      = false;     // true setelah PZEM memberi pembacaan valid
 };
 DeviceState state;
 String lastStatus = "NORMAL";  // previous iteration status for change detection
@@ -113,9 +114,12 @@ unsigned long lastRelayCheckMs     = 0;
 unsigned long lastLogMs            = 0;
 unsigned long lastPeriodicLogMs    = 0;  // Periodic log timer (independent of status change)
 unsigned long lastBootstrapCheckMs = 0;
+unsigned long lastLogRetryMs       = 0;
+unsigned long lastRealtimeNotifyMs = 0;
 
-// Interval log periodik — log ke /logs setiap 5 menit meski kondisi stabil
-static const unsigned long PERIODIC_LOG_INTERVAL_MS = 300000UL;  // 5 menit
+// Log audit setiap menit agar tabel/analytics tetap terisi tanpa membanjiri RTDB.
+static const unsigned long PERIODIC_LOG_INTERVAL_MS = 60000UL;   // 1 menit
+static const unsigned long LOG_RETRY_INTERVAL_MS    = 10000UL;   // 10 detik
 bool firstLoopTrace = true;
 
 // FreeRTOS
@@ -136,7 +140,15 @@ struct PendingLog {
   float frekuensi = 0;
   float powerFactor = 0;
   String sensorSource = "";
+  unsigned long uptimeSeconds = 0;
 } pendingLog;
+
+// Log yang gagal tidak boleh dibuang. Core 0 akan mengirimnya ulang sebelum
+// mengambil event baru dari pendingLog, sehingga data histori tetap utuh saat
+// koneksi Firebase terputus sesaat.
+PendingLog retryLog;
+bool initialHistoryQueued  = false;
+bool initialHistoryWritten = false;
 
 struct PendingAlert {
   bool active = false;
@@ -144,7 +156,13 @@ struct PendingAlert {
   String lastStatus = "";
   float arus = 0;
   float tegangan = 0;
+  float dayaW = 0;
+  float apparentPowerVa = 0;
+  float energiKwh = 0;
+  float frekuensi = 0;
+  float powerFactor = 0;
   int relay = 0;
+  String sensorSource = "";
 } pendingAlert;
 
 // Flag untuk auto-cutoff relay sync: Core 1 set flag, Core 0 kirim ke Firebase
@@ -160,7 +178,13 @@ struct PendingRelayNotif {
   String cause = "";        // "web_command" atau "auto_cutoff"
   float arus = 0;
   float tegangan = 0;
+  float dayaW = 0;
+  float apparentPowerVa = 0;
+  float energiKwh = 0;
+  float frekuensi = 0;
+  float powerFactor = 0;
   String status = "";
+  String sensorSource = "";
 } pendingRelayNotif;
 
 static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000UL;
@@ -618,10 +642,15 @@ void sampleAutoLearning(unsigned long now) {
   if (autoLearning.lastSampleMs != 0 && (now - autoLearning.lastSampleMs < AUTO_LEARNING_SAMPLE_MS)) {
     return;
   }
-  autoLearning.lastSampleMs = now;
+  DeviceState learningState;
+  if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) != pdTRUE) return;
+  learningState = state;
+  xSemaphoreGive(dataMutex);
+  if (!learningState.meterValid) return;
 
-  float currentA = state.arus;
-  float powerW = state.dayaW;
+  autoLearning.lastSampleMs = now;
+  float currentA = learningState.arus;
+  float powerW = learningState.dayaW;
   if (currentA < 0.0f || isnan(currentA)) currentA = 0.0f;
   if (powerW < 0.0f || isnan(powerW)) powerW = 0.0f;
 
@@ -778,15 +807,29 @@ void initLCD() {
   delay(50);
   scanI2CBus();
 
-  // Auto-detect LCD address: try primary (0x27), fallback to secondary (0x3F)
+  // Auto-detect address. Beberapa backpack LCD memakai 0x26, bukan hanya
+  // 0x27/0x3F, sehingga alamat itu harus dipilih sebelum lcd.init().
   byte detectedAddr = 0;
-  Wire.beginTransmission(LCD_ADDR_PRIMARY);
-  if (Wire.endTransmission() == 0) {
-    detectedAddr = LCD_ADDR_PRIMARY;
-  } else {
-    Wire.beginTransmission(LCD_ADDR_SECONDARY);
+  const byte lcdCandidates[] = {
+    LCD_ADDR_PRIMARY, LCD_ADDR_SECONDARY, LCD_ADDR_TERTIARY
+  };
+  for (byte candidate : lcdCandidates) {
+    Wire.beginTransmission(candidate);
     if (Wire.endTransmission() == 0) {
-      detectedAddr = LCD_ADDR_SECONDARY;
+      detectedAddr = candidate;
+      break;
+    }
+  }
+
+  // Fallback untuk backpack compatible yang memakai alamat lain di rentang
+  // PCF8574. PZEM memakai UART, jadi tidak berbenturan dengan sensor meter.
+  if (detectedAddr == 0) {
+    for (byte addr = 0x20; addr <= 0x3F; addr++) {
+      Wire.beginTransmission(addr);
+      if (Wire.endTransmission() == 0) {
+        detectedAddr = addr;
+        break;
+      }
     }
   }
 
@@ -1005,6 +1048,7 @@ void firebaseTaskCore0(void *pvParameters) {
 
   for (;;) {
     unsigned long now = millis();
+    bool realtimeNotifyDue = false;
 
     // Log heap setiap 30 detik
     if (now - lastHeapLogMs >= 30000) {
@@ -1031,12 +1075,18 @@ void firebaseTaskCore0(void *pvParameters) {
       // Read state with Mutex
       DeviceState localState;
       RuntimeSettings localRt;
-      if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
-        localState = state;
-        localRt = rt;
-        xSemaphoreGive(dataMutex);
-      }
-      // 2. Process pending relay sync from Core 1 (auto-cutoff)
+       if (xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
+         localState = state;
+         localRt = rt;
+         xSemaphoreGive(dataMutex);
+       }
+
+       // Semua request Firebase, termasuk status/hasil Auto Learning, wajib
+       // dijalankan pada Core 0. Ini mencegah koneksi RTDB bersama berbenturan
+       // dengan polling relay, realtime, dan penulisan log.
+       handleAutoLearning(now);
+
+       // 2. Process pending relay sync from Core 1 (auto-cutoff)
       //    Core 1 tidak boleh panggil Firebase langsung (fbData race condition).
       //    Flag ini di-set oleh auto-cutoff, di-handle di sini (Core 0) yang aman.
       {
@@ -1081,18 +1131,21 @@ void firebaseTaskCore0(void *pvParameters) {
               state.relay = 0;
               relayApplied = true;
 
-              pendingLog.active = true;
-              pendingLog.arus = state.arus;
-              pendingLog.tegangan = state.tegangan;
-              pendingLog.status = state.status;
-              pendingLog.relay = 0;
-              pendingLog.cause = "web_command";
-              pendingLog.dayaW = state.dayaW;
-              pendingLog.apparentPowerVa = state.apparentPowerVa;
-              pendingLog.energiKwh = state.energiKwh;
-              pendingLog.frekuensi = state.frekuensi;
-              pendingLog.powerFactor = state.powerFactor;
-              pendingLog.sensorSource = state.sensorSource;
+              if (state.meterValid) {
+                pendingLog.active = true;
+                pendingLog.arus = state.arus;
+                pendingLog.tegangan = state.tegangan;
+                pendingLog.status = state.status;
+                pendingLog.relay = 0;
+                pendingLog.cause = "web_command";
+                pendingLog.dayaW = state.dayaW;
+                pendingLog.apparentPowerVa = state.apparentPowerVa;
+                pendingLog.energiKwh = state.energiKwh;
+                pendingLog.frekuensi = state.frekuensi;
+                pendingLog.powerFactor = state.powerFactor;
+                pendingLog.sensorSource = state.sensorSource;
+                pendingLog.uptimeSeconds = millis() / 1000UL;
+              }
               localState = state;
               xSemaphoreGive(dataMutex);
             }
@@ -1106,7 +1159,13 @@ void firebaseTaskCore0(void *pvParameters) {
                 pendingRelayNotif.cause     = "web_command";
                 pendingRelayNotif.arus      = localState.arus;
                 pendingRelayNotif.tegangan  = localState.tegangan;
+                pendingRelayNotif.dayaW = localState.dayaW;
+                pendingRelayNotif.apparentPowerVa = localState.apparentPowerVa;
+                pendingRelayNotif.energiKwh = localState.energiKwh;
+                pendingRelayNotif.frekuensi = localState.frekuensi;
+                pendingRelayNotif.powerFactor = localState.powerFactor;
                 pendingRelayNotif.status    = localState.status;
+                pendingRelayNotif.sensorSource = localState.sensorSource;
                 xSemaphoreGive(dataMutex);
               }
             }
@@ -1127,21 +1186,24 @@ void firebaseTaskCore0(void *pvParameters) {
               if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 saveRelayStateToNvs(1);
                 setRelay(1);
-                state.relay = 1;
-                relayApplied = true;
+              state.relay = 1;
+              relayApplied = true;
 
-                pendingLog.active = true;
-                pendingLog.arus = state.arus;
-                pendingLog.tegangan = state.tegangan;
-                pendingLog.status = state.status;
-                pendingLog.relay = 1;
-                pendingLog.cause = "web_command";
-                pendingLog.dayaW = state.dayaW;
-                pendingLog.apparentPowerVa = state.apparentPowerVa;
-                pendingLog.energiKwh = state.energiKwh;
-                pendingLog.frekuensi = state.frekuensi;
-                pendingLog.powerFactor = state.powerFactor;
-                pendingLog.sensorSource = state.sensorSource;
+                if (state.meterValid) {
+                  pendingLog.active = true;
+                  pendingLog.arus = state.arus;
+                  pendingLog.tegangan = state.tegangan;
+                  pendingLog.status = state.status;
+                  pendingLog.relay = 1;
+                  pendingLog.cause = "web_command";
+                  pendingLog.dayaW = state.dayaW;
+                  pendingLog.apparentPowerVa = state.apparentPowerVa;
+                  pendingLog.energiKwh = state.energiKwh;
+                  pendingLog.frekuensi = state.frekuensi;
+                  pendingLog.powerFactor = state.powerFactor;
+                  pendingLog.sensorSource = state.sensorSource;
+                  pendingLog.uptimeSeconds = millis() / 1000UL;
+                }
                 localState = state;
                 xSemaphoreGive(dataMutex);
               }
@@ -1155,7 +1217,13 @@ void firebaseTaskCore0(void *pvParameters) {
                   pendingRelayNotif.cause     = "web_command";
                   pendingRelayNotif.arus      = localState.arus;
                   pendingRelayNotif.tegangan  = localState.tegangan;
+                  pendingRelayNotif.dayaW = localState.dayaW;
+                  pendingRelayNotif.apparentPowerVa = localState.apparentPowerVa;
+                  pendingRelayNotif.energiKwh = localState.energiKwh;
+                  pendingRelayNotif.frekuensi = localState.frekuensi;
+                  pendingRelayNotif.powerFactor = localState.powerFactor;
                   pendingRelayNotif.status    = localState.status;
+                  pendingRelayNotif.sensorSource = localState.sensorSource;
                   xSemaphoreGive(dataMutex);
                 }
               }
@@ -1172,19 +1240,56 @@ void firebaseTaskCore0(void *pvParameters) {
       if (now - lastSendMs >= effectiveSendInterval) {
         lastSendMs = now;
         if (localRt.realtimeStreamEnabled) {
-          bool monitorOk = writeMonitorData(localState.arus, localState.tegangan, localState.dayaW,
-                                            localState.apparentPowerVa, localState.energiKwh,
-                                            localState.frekuensi, localState.powerFactor,
-                                            localState.status, localState.relay, localState.sensorSource);
-          Serial.printf("[Monitor] src=%s I=%.2fA V=%.1fV P=%.1fW S=%.1fVA PF=%.2f f=%.1fHz status=%s relay=%d\n",
-                        localState.sensorSource.c_str(), localState.arus, localState.tegangan,
-                        localState.dayaW, localState.apparentPowerVa, localState.powerFactor,
-                        localState.frekuensi, localState.status.c_str(), localState.relay);
-          // FIX: Yield 500ms setelah Firebase call agar BearSSL dapat cleanup
-          // SSL context sebelum call berikutnya. Tanpa ini, heap MaxBlock bisa
-          // habis karena SSL buffer belum dibebaskan oleh allocator.
-          if (monitorOk) {
-            vTaskDelay(pdMS_TO_TICKS(500));
+          if (!localState.meterValid) {
+            // Jangan timpa dashboard dengan 0/NORMAL ketika PZEM kehilangan
+            // komunikasi. Telemetry terakhir akan menjadi stale/offline sampai
+            // pembacaan meter kembali valid, yang jauh lebih aman untuk relay.
+            Serial.println("[Monitor] PZEM tidak valid — telemetry realtime dan log ditunda.");
+          } else {
+            bool monitorOk = writeMonitorData(localState.arus, localState.tegangan, localState.dayaW,
+                                              localState.apparentPowerVa, localState.energiKwh,
+                                              localState.frekuensi, localState.powerFactor,
+                                              localState.status, localState.relay, localState.sensorSource);
+            Serial.printf("[Monitor] src=%s I=%.2fA V=%.1fV P=%.1fW S=%.1fVA PF=%.2f f=%.1fHz status=%s relay=%d\n",
+                          localState.sensorSource.c_str(), localState.arus, localState.tegangan,
+                          localState.dayaW, localState.apparentPowerVa, localState.powerFactor,
+                          localState.frekuensi, localState.status.c_str(), localState.relay);
+            if (monitorOk) {
+              if (localRt.realtimeNotifyEnabled &&
+                  (lastRealtimeNotifyMs == 0 ||
+                   now - lastRealtimeNotifyMs >= localRt.realtimeNotifyIntervalMs)) {
+                realtimeNotifyDue = true;
+              }
+
+              // Buat satu snapshot histori segera setelah perangkat berhasil
+              // mengirim realtime. Hindari log dummy saat PZEM masih boot atau
+              // pembacaannya belum valid, agar histori sama dengan /listrik.
+              if (!initialHistoryQueued && !initialHistoryWritten &&
+                  xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+                if (!pendingLog.active) {
+                  pendingLog.active          = true;
+                  pendingLog.arus            = localState.arus;
+                  pendingLog.tegangan        = localState.tegangan;
+                  pendingLog.status          = localState.status;
+                  pendingLog.relay           = localState.relay;
+                  pendingLog.cause           = "initial_snapshot";
+                  pendingLog.dayaW           = localState.dayaW;
+                  pendingLog.apparentPowerVa = localState.apparentPowerVa;
+                  pendingLog.energiKwh       = localState.energiKwh;
+                  pendingLog.frekuensi       = localState.frekuensi;
+                  pendingLog.powerFactor     = localState.powerFactor;
+                  pendingLog.sensorSource    = localState.sensorSource;
+                  pendingLog.uptimeSeconds   = millis() / 1000UL;
+                  initialHistoryQueued       = true;
+                }
+                xSemaphoreGive(dataMutex);
+              }
+
+              // FIX: Yield 500ms setelah Firebase call agar BearSSL dapat cleanup
+              // SSL context sebelum call berikutnya. Tanpa ini, heap MaxBlock bisa
+              // habis karena SSL buffer belum dibebaskan oleh allocator.
+              vTaskDelay(pdMS_TO_TICKS(500));
+            }
           }
         }
 
@@ -1192,17 +1297,34 @@ void firebaseTaskCore0(void *pvParameters) {
 
       // 5. Process Pending Logs
       PendingLog logToSend;
-      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-        if (pendingLog.active) {
-          logToSend = pendingLog;
-          pendingLog.active = false;
+      if (lastLogRetryMs == 0 || now - lastLogRetryMs >= LOG_RETRY_INTERVAL_MS) {
+        if (retryLog.active) {
+          logToSend = retryLog;
+          retryLog.active = false;
+        } else if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+          if (pendingLog.active) {
+            logToSend = pendingLog;
+            pendingLog.active = false;
+          }
+          xSemaphoreGive(dataMutex);
         }
-        xSemaphoreGive(dataMutex);
       }
       if (logToSend.active) {
-        writeLog(logToSend.arus, logToSend.tegangan, logToSend.status, logToSend.relay, logToSend.cause.c_str(),
-                 logToSend.dayaW, logToSend.apparentPowerVa, logToSend.energiKwh,
-                 logToSend.frekuensi, logToSend.powerFactor, logToSend.sensorSource);
+        bool logWritten = writeLog(logToSend.arus, logToSend.tegangan, logToSend.status,
+                                    logToSend.relay, logToSend.cause.c_str(),
+                                    logToSend.dayaW, logToSend.apparentPowerVa, logToSend.energiKwh,
+                                   logToSend.frekuensi, logToSend.powerFactor, logToSend.sensorSource,
+                                   logToSend.uptimeSeconds);
+        if (logWritten) {
+          lastLogRetryMs = 0;
+          if (logToSend.cause == "initial_snapshot") initialHistoryWritten = true;
+        } else {
+          retryLog = logToSend;
+          retryLog.active = true;
+          lastLogRetryMs = now;
+          Serial.printf("[Firebase] Log akan dicoba lagi dalam %lu detik (%s)\n",
+                        LOG_RETRY_INTERVAL_MS / 1000UL, logToSend.cause.c_str());
+        }
       }
 
       // 6. Process Pending Alerts
@@ -1215,20 +1337,32 @@ void firebaseTaskCore0(void *pvParameters) {
         xSemaphoreGive(dataMutex);
       }
       if (alertToSend.active) {
+        const bool canSendTelegram = localRt.telegramNotifyEnabled &&
+                                     !localRt.telegramBotToken.isEmpty() &&
+                                     !localRt.telegramChatId.isEmpty();
+        const bool canSendDiscord = localRt.discordNotifyEnabled &&
+                                    !localRt.discordWebhookAlerts.isEmpty();
+        if (canSendTelegram || canSendDiscord) releaseFirebaseHttpConnection();
         // Telegram status alert
-        if (localRt.telegramNotifyEnabled) {
+        if (canSendTelegram) {
           sendAlertIfNeeded(
             alertToSend.newStatus, alertToSend.lastStatus,
-            alertToSend.arus, alertToSend.tegangan, alertToSend.relay,
+            alertToSend.arus, alertToSend.tegangan,
+            alertToSend.dayaW, alertToSend.apparentPowerVa,
+            alertToSend.energiKwh, alertToSend.frekuensi, alertToSend.powerFactor,
+            alertToSend.relay, alertToSend.sensorSource,
             localRt.telegramBotToken, localRt.telegramChatId,
             localRt.telegramCooldownMs
           );
         }
         // Discord status alert
-        if (localRt.discordNotifyEnabled && !localRt.discordWebhookAlerts.isEmpty()) {
+        if (canSendDiscord) {
           sendDiscordStatusAlert(
             alertToSend.newStatus, alertToSend.lastStatus,
-            alertToSend.arus, alertToSend.tegangan, alertToSend.relay,
+            alertToSend.arus, alertToSend.tegangan,
+            alertToSend.dayaW, alertToSend.apparentPowerVa,
+            alertToSend.energiKwh, alertToSend.frekuensi, alertToSend.powerFactor,
+            alertToSend.relay, alertToSend.sensorSource,
             localRt.discordWebhookAlerts,
             localRt.telegramCooldownMs  // pakai cooldown yang sama
           );
@@ -1245,40 +1379,37 @@ void firebaseTaskCore0(void *pvParameters) {
         xSemaphoreGive(dataMutex);
       }
       if (relayNotifToSend.active) {
+        const bool canSendTelegram = localRt.telegramNotifyEnabled &&
+                                     !localRt.telegramBotToken.isEmpty() &&
+                                     !localRt.telegramChatId.isEmpty();
+        const bool canSendDiscord = localRt.discordNotifyEnabled &&
+                                    !localRt.discordWebhookAlerts.isEmpty();
+        if (canSendTelegram || canSendDiscord) releaseFirebaseHttpConnection();
         // Telegram relay notification (pesan relay ON/OFF)
-        if (localRt.telegramNotifyEnabled && !localRt.telegramBotToken.isEmpty()) {
-          String tgMsg;
-          if (relayNotifToSend.relayVal == 1) {
-            tgMsg = "🟢 <b>Relay Dinyalakan (ON)</b>\n"
-                    "📊 <b>Sensor saat perintah:</b>\n"
-                    "  ⚡ Arus     : <code>" + String(relayNotifToSend.arus, 2) + " A</code>\n"
-                    "  🔌 Tegangan : <code>" + String(relayNotifToSend.tegangan, 1) + " V</code>\n"
-                    "  📊 Status   : <code>" + relayNotifToSend.status + "</code>\n"
-                    "  📋 Penyebab : <code>Perintah Dashboard Web</code>\n"
-                    "  ⏱ Uptime   : <code>" + String(millis()/1000UL) + " s</code>";
-          } else {
-            const char* penyebab = (relayNotifToSend.cause == "auto_cutoff")
-                                    ? "Auto-Cutoff (kondisi berbahaya)"
-                                    : "Perintah Dashboard Web";
-            const char* icon = (relayNotifToSend.cause == "auto_cutoff") ? "🔴" : "⚫";
-            tgMsg = String(icon) + " <b>Relay Dimatikan (OFF)</b>\n"
-                    "📊 <b>Sensor saat perintah:</b>\n"
-                    "  ⚡ Arus     : <code>" + String(relayNotifToSend.arus, 2) + " A</code>\n"
-                    "  🔌 Tegangan : <code>" + String(relayNotifToSend.tegangan, 1) + " V</code>\n"
-                    "  📊 Status   : <code>" + relayNotifToSend.status + "</code>\n"
-                    "  📋 Penyebab : <code>" + penyebab + "</code>\n"
-                    "  ⏱ Uptime   : <code>" + String(millis()/1000UL) + " s</code>";
-          }
+        if (canSendTelegram) {
+          String tgMsg = buildRelayMessage(
+            relayNotifToSend.relayVal, relayNotifToSend.cause,
+            relayNotifToSend.arus, relayNotifToSend.tegangan,
+            relayNotifToSend.dayaW, relayNotifToSend.apparentPowerVa,
+            relayNotifToSend.energiKwh, relayNotifToSend.frekuensi, relayNotifToSend.powerFactor,
+            relayNotifToSend.status, relayNotifToSend.sensorSource
+          );
           sendTelegram(tgMsg, localRt.telegramBotToken, localRt.telegramChatId, 5000, true);
         }
         // Discord relay notification
-        if (localRt.discordNotifyEnabled && !localRt.discordWebhookAlerts.isEmpty()) {
+        if (canSendDiscord) {
           sendDiscordRelayNotif(
             relayNotifToSend.relayVal,
             relayNotifToSend.cause,
             relayNotifToSend.arus,
             relayNotifToSend.tegangan,
+            relayNotifToSend.dayaW,
+            relayNotifToSend.apparentPowerVa,
+            relayNotifToSend.energiKwh,
+            relayNotifToSend.frekuensi,
+            relayNotifToSend.powerFactor,
             relayNotifToSend.status,
+            relayNotifToSend.sensorSource,
             localRt.discordWebhookAlerts,
             5000
           );
@@ -1296,7 +1427,13 @@ void firebaseTaskCore0(void *pvParameters) {
           static bool bootNotifSent = false;
           if (!bootNotifSent) {
             bootNotifSent = true;
-            if (!newRt.telegramBotToken.isEmpty()) {
+            const bool canSendTelegram = newRt.telegramNotifyEnabled &&
+                                         !newRt.telegramBotToken.isEmpty() &&
+                                         !newRt.telegramChatId.isEmpty();
+            const bool canSendDiscord = newRt.discordNotifyEnabled &&
+                                        !newRt.discordWebhookAlerts.isEmpty();
+            if (canSendTelegram || canSendDiscord) releaseFirebaseHttpConnection();
+            if (canSendTelegram) {
               String bootMsg =
                 "\xF0\x9F\x9F\xA2 <b>ESP32 Online</b>\n"
                 "Perangkat IoT Deteksi Arus aktif.\n"
@@ -1304,7 +1441,7 @@ void firebaseTaskCore0(void *pvParameters) {
                 "IP: <code>" + WiFi.localIP().toString() + "</code>";
               sendTelegram(bootMsg, newRt.telegramBotToken, newRt.telegramChatId, 0, true);
             }
-            if (newRt.discordNotifyEnabled && !newRt.discordWebhookAlerts.isEmpty()) {
+            if (canSendDiscord) {
               char desc[256];
               snprintf(desc, sizeof(desc),
                 "Perangkat IoT Deteksi Arus aktif dan terhubung.\n"
@@ -1319,6 +1456,43 @@ void firebaseTaskCore0(void *pvParameters) {
             rt = newRt;
             xSemaphoreGive(dataMutex);
           }
+        }
+      }
+
+      // Snapshot berkala yang lengkap untuk pemantauan jarak jauh. Interval
+      // minimum default 60 detik agar Telegram/Discord tidak terkena spam atau
+      // rate-limit, namun tetap mencerminkan data meter terbaru.
+      if (realtimeNotifyDue) {
+        const bool canSendTelegram = localRt.telegramNotifyEnabled &&
+                                     !localRt.telegramBotToken.isEmpty() &&
+                                     !localRt.telegramChatId.isEmpty();
+        const bool canSendDiscord = localRt.discordNotifyEnabled &&
+                                    !localRt.discordWebhookAlerts.isEmpty();
+        if (canSendTelegram || canSendDiscord) {
+          releaseFirebaseHttpConnection();
+          if (canSendTelegram) {
+            String telemetryMessage = buildRealtimeMessage(
+              localState.arus, localState.tegangan,
+              localState.dayaW, localState.apparentPowerVa,
+              localState.energiKwh, localState.frekuensi, localState.powerFactor,
+              localState.status, localState.relay, localState.sensorSource
+            );
+            sendTelegram(telemetryMessage, localRt.telegramBotToken,
+                         localRt.telegramChatId, localRt.realtimeNotifyIntervalMs);
+          }
+          if (canSendDiscord) {
+            String title, description;
+            buildDiscordRealtimeEmbed(
+              localState.arus, localState.tegangan,
+              localState.dayaW, localState.apparentPowerVa,
+              localState.energiKwh, localState.frekuensi, localState.powerFactor,
+              localState.status, localState.relay, localState.sensorSource,
+              title, description
+            );
+            sendDiscordWebhook(localRt.discordWebhookAlerts, title, description,
+                               DISCORD_COLOR_BLUE, localRt.realtimeNotifyIntervalMs);
+          }
+          lastRealtimeNotifyMs = now;
         }
       }
 
@@ -1410,9 +1584,8 @@ void loop() {
   }
 
   // ── Auto Learning ───────────────────────────────────────────
-  if (trace) { Serial.println("[Loop] 3. Auto learning..."); Serial.flush(); }
-  handleAutoLearning(now);
-  if (trace) { Serial.println("[Loop] 3. Auto learning OK"); Serial.flush(); }
+  // Status dan hasilnya diproses oleh firebaseTaskCore0 agar HTTP RTDB hanya
+  // dipakai dari satu core. Core 1 tetap membaca PZEM untuk sampel berikutnya.
 
   // ── Determine status using RUNTIME threshold ─────────────────
   if (trace) { Serial.println("[Loop] 4. Determine status..."); Serial.flush(); }
@@ -1425,7 +1598,8 @@ void loop() {
   // Trigger jika: autoCutoffEnabled AND (WARNING atau DANGER) AND relay masih ON.
   // Setelah cutoff, set relayLockedOff sehingga relay TIDAK nyala otomatis
   // meskipun kondisi kembali NORMAL — hanya perintah ON dari web yang bisa clear lock.
-  bool shouldAutoCutoff = localRt.autoCutoffEnabled
+  bool shouldAutoCutoff = reading.valid
+                           && localRt.autoCutoffEnabled
                           && (newStatus == "DANGER" || newStatus == "WARNING")
                           && currentRelay == 1;
 
@@ -1456,6 +1630,7 @@ void loop() {
       pendingLog.frekuensi = reading.frekuensi;
       pendingLog.powerFactor = reading.powerFactor;
       pendingLog.sensorSource = reading.sensorSource;
+      pendingLog.uptimeSeconds = now / 1000UL;
 
       // Queue relay notification untuk Telegram & Discord (dikirim dari Core 0)
       pendingRelayNotif.active   = true;
@@ -1463,7 +1638,13 @@ void loop() {
       pendingRelayNotif.cause     = "auto_cutoff";
       pendingRelayNotif.arus      = reading.arus;
       pendingRelayNotif.tegangan  = reading.tegangan;
+      pendingRelayNotif.dayaW = reading.dayaW;
+      pendingRelayNotif.apparentPowerVa = reading.apparentPowerVa;
+      pendingRelayNotif.energiKwh = reading.energiKwh;
+      pendingRelayNotif.frekuensi = reading.frekuensi;
+      pendingRelayNotif.powerFactor = reading.powerFactor;
       pendingRelayNotif.status    = newStatus;
+      pendingRelayNotif.sensorSource = reading.sensorSource;
 
       xSemaphoreGive(dataMutex);
     }
@@ -1482,6 +1663,7 @@ void loop() {
     state.powerFactor     = reading.powerFactor;
     state.sensorSource    = reading.sensorSource;
     state.status          = newStatus;
+    state.meterValid      = reading.valid;
     // state.relay already accurate from previous operations
     xSemaphoreGive(dataMutex);
   }
@@ -1518,7 +1700,7 @@ void loop() {
   #endif
 
   // ── Log on status change ──────────────────────────────────────
-  if (statusChanged && (now - lastLogMs > 2000)) {
+  if (reading.valid && statusChanged && (now - lastLogMs > 2000)) {
     lastLogMs = now;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
       pendingLog.active = true;
@@ -1533,12 +1715,13 @@ void loop() {
       pendingLog.frekuensi = reading.frekuensi;
       pendingLog.powerFactor = reading.powerFactor;
       pendingLog.sensorSource = reading.sensorSource;
+      pendingLog.uptimeSeconds = now / 1000UL;
       xSemaphoreGive(dataMutex);
     }
   }
 
-  // ── Periodic log (every 5 minutes regardless of status change) ──
-  if (now - lastPeriodicLogMs >= PERIODIC_LOG_INTERVAL_MS) {
+  // ── Periodic log (every minute while the PZEM value is valid) ──
+  if (reading.valid && now - lastPeriodicLogMs >= PERIODIC_LOG_INTERVAL_MS) {
     lastPeriodicLogMs = now;
     if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
       if (!pendingLog.active) {  // Jangan timpa event log yang belum terkirim
@@ -1554,6 +1737,7 @@ void loop() {
         pendingLog.frekuensi    = reading.frekuensi;
         pendingLog.powerFactor  = reading.powerFactor;
         pendingLog.sensorSource = reading.sensorSource;
+        pendingLog.uptimeSeconds = now / 1000UL;
       }
       xSemaphoreGive(dataMutex);
     }
@@ -1567,7 +1751,13 @@ void loop() {
       pendingAlert.lastStatus = lastStatus;
       pendingAlert.arus = reading.arus;
       pendingAlert.tegangan = reading.tegangan;
+      pendingAlert.dayaW = reading.dayaW;
+      pendingAlert.apparentPowerVa = reading.apparentPowerVa;
+      pendingAlert.energiKwh = reading.energiKwh;
+      pendingAlert.frekuensi = reading.frekuensi;
+      pendingAlert.powerFactor = reading.powerFactor;
       pendingAlert.relay = currentRelay;
+      pendingAlert.sensorSource = reading.sensorSource;
       xSemaphoreGive(dataMutex);
     }
   }

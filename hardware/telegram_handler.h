@@ -142,7 +142,11 @@ bool sendTelegram(const String& message,
  * @return String   HTML-formatted message
  */
 String buildAlertMessage(const String& status,
-                          float arus, float tegangan, int relay) {
+                          const String& previousStatus,
+                          float arus, float tegangan,
+                          float dayaW, float apparentPowerVa,
+                          float energiKwh, float frekuensi, float powerFactor,
+                          int relay, const String& sensorSource) {
   const char* emoji;
   const char* title;
 
@@ -150,17 +154,27 @@ String buildAlertMessage(const String& status,
   else if (status == "WARNING") { emoji = "ðŸ””"; title = "<b>Peringatan Arus Mendekati Batas</b>"; }
   else                          { emoji = "âœ…"; title = "<b>Sistem Kembali NORMAL</b>"; }
 
-  char buf[512];
+  char buf[896];
   snprintf(buf, sizeof(buf),
     "%s %s\n\n"
-    "ðŸ“Š <b>Data Sensor:</b>\n"
+    "Status sebelumnya: <code>%s -> %s</code>\n"
+    "<b>Snapshot Data Realtime:</b>\n"
     "  âš¡ Arus     : <code>%.2f A</code>\n"
     "  ðŸ”Œ Tegangan : <code>%.1f V</code>\n"
+    "  Daya aktif : <code>%.1f W</code>\n"
+    "  Daya semu  : <code>%.1f VA</code>\n"
+    "  Energi     : <code>%.4f kWh</code>\n"
+    "  PF         : <code>%.2f</code>\n"
+    "  Frekuensi  : <code>%.1f Hz</code>\n"
     "  ðŸ” Relay    : <code>%s</code>\n\n"
+    "Sumber meter: <code>%s</code>\n"
     "â± Uptime: <code>%lu s</code>",
     emoji, title,
+    previousStatus.c_str(), status.c_str(),
     arus, tegangan,
+    dayaW, apparentPowerVa, energiKwh, powerFactor, frekuensi,
     relay == 1 ? "ON" : "OFF",
+    sensorSource.c_str(),
     millis() / 1000UL
   );
 
@@ -185,18 +199,89 @@ String buildAlertMessage(const String& status,
  * @param chatId      One or more IDs from RuntimeSettings.telegramChatId
  * @param cooldownMs  From RuntimeSettings.telegramCooldownMs
  */
+String buildRelayMessage(int relayVal, const String& cause,
+                         float arus, float tegangan,
+                         float dayaW, float apparentPowerVa,
+                         float energiKwh, float frekuensi, float powerFactor,
+                         const String& status, const String& sensorSource) {
+  const char* icon = relayVal == 1
+    ? "\xF0\x9F\x9F\xA2"
+    : (cause == "auto_cutoff" ? "\xF0\x9F\x94\xB4" : "\xE2\x9A\xAB");
+  const char* title = relayVal == 1
+    ? "Relay Dinyalakan (ON)"
+    : (cause == "auto_cutoff" ? "Relay Dimatikan Otomatis (Auto-Cutoff)" : "Relay Dimatikan (OFF)");
+  const char* causeText = cause == "auto_cutoff"
+    ? "Auto-Cutoff (kondisi berbahaya)"
+    : (cause == "web_command" ? "Perintah Dashboard Web" : cause.c_str());
+
+  char buf[896];
+  snprintf(buf, sizeof(buf),
+    "%s <b>%s</b>\n\n"
+    "<b>Snapshot data realtime saat perintah:</b>\n"
+    "  Arus       : <code>%.2f A</code>\n"
+    "  Tegangan   : <code>%.1f V</code>\n"
+    "  Daya aktif : <code>%.1f W</code>\n"
+    "  Daya semu  : <code>%.1f VA</code>\n"
+    "  Energi     : <code>%.4f kWh</code>\n"
+    "  PF         : <code>%.2f</code>\n"
+    "  Frekuensi  : <code>%.1f Hz</code>\n"
+    "  Status     : <code>%s</code>\n"
+    "  Penyebab   : <code>%s</code>\n"
+    "  Sumber meter: <code>%s</code>\n"
+    "  Uptime     : <code>%lu s</code>",
+    icon, title,
+    arus, tegangan, dayaW, apparentPowerVa, energiKwh, powerFactor, frekuensi,
+    status.c_str(), causeText, sensorSource.c_str(), millis() / 1000UL
+  );
+  return String(buf);
+}
+
+String buildRealtimeMessage(float arus, float tegangan,
+                            float dayaW, float apparentPowerVa,
+                            float energiKwh, float frekuensi, float powerFactor,
+                            const String& status, int relay,
+                            const String& sensorSource) {
+  char buf[896];
+  snprintf(buf, sizeof(buf),
+    "\xF0\x9F\x93\xA1 <b>Data Realtime Listrik</b>\n\n"
+    "Status      : <code>%s</code>\n"
+    "Arus        : <code>%.2f A</code>\n"
+    "Tegangan    : <code>%.1f V</code>\n"
+    "Daya aktif  : <code>%.1f W</code>\n"
+    "Daya semu   : <code>%.1f VA</code>\n"
+    "Energi      : <code>%.4f kWh</code>\n"
+    "Power factor: <code>%.2f</code>\n"
+    "Frekuensi   : <code>%.1f Hz</code>\n"
+    "Relay       : <code>%s</code>\n"
+    "Sumber      : <code>%s</code>\n"
+    "Uptime      : <code>%lu s</code>",
+    status.c_str(), arus, tegangan, dayaW, apparentPowerVa,
+    energiKwh, powerFactor, frekuensi, relay == 1 ? "ON" : "OFF",
+    sensorSource.c_str(), millis() / 1000UL
+  );
+  return String(buf);
+}
+
 void sendAlertIfNeeded(const String& newStatus, const String& lastStatus,
-                        float arus, float tegangan, int relay,
+                        float arus, float tegangan,
+                        float dayaW, float apparentPowerVa,
+                        float energiKwh, float frekuensi, float powerFactor,
+                        int relay, const String& sensorSource,
                         const String& botToken, const String& chatId,
                         unsigned long cooldownMs) {
   bool shouldSend = false;
 
   if (newStatus == "DANGER"  && lastStatus != "DANGER")   shouldSend = true;
   if (newStatus == "WARNING" && lastStatus == "NORMAL")   shouldSend = true;
-  if (newStatus == "NORMAL"  && lastStatus == "DANGER")   shouldSend = true;
+  if (newStatus == "NORMAL"  && (lastStatus == "DANGER" || lastStatus == "WARNING" || lastStatus == "LEAKAGE")) shouldSend = true;
 
   if (shouldSend) {
-    String msg = buildAlertMessage(newStatus, arus, tegangan, relay);
+    String msg = buildAlertMessage(
+      newStatus, lastStatus,
+      arus, tegangan, dayaW, apparentPowerVa,
+      energiKwh, frekuensi, powerFactor,
+      relay, sensorSource
+    );
     sendTelegram(msg, botToken, chatId, cooldownMs);
   }
 }

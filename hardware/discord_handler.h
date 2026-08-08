@@ -130,8 +130,11 @@ bool sendDiscordWebhook(const String& webhookUrl,
 /**
  * Buat judul + deskripsi embed untuk notifikasi perubahan status.
  */
-void buildDiscordStatusEmbed(const String& status,
-                              float arus, float tegangan, int relay,
+void buildDiscordStatusEmbed(const String& status, const String& previousStatus,
+                              float arus, float tegangan,
+                              float dayaW, float apparentPowerVa,
+                              float energiKwh, float frekuensi, float powerFactor,
+                              int relay, const String& sensorSource,
                               String& outTitle, String& outDesc, uint32_t& outColor) {
   if (status == "DANGER") {
     outTitle = "ðŸš¨ BAHAYA â€” Arus â‰¥ Threshold!";
@@ -147,16 +150,53 @@ void buildDiscordStatusEmbed(const String& status,
     outColor = DISCORD_COLOR_GREEN;
   }
 
-  char buf[256];
+  char buf[896];
   snprintf(buf, sizeof(buf),
-    "**Data Sensor:**\n"
+    "**Status sebelumnya:** `%s -> %s`\n"
+    "**Snapshot data realtime:**\n"
     "âš¡ Arus     : `%.2f A`\n"
     "ðŸ”Œ Tegangan : `%.1f V`\n"
+    "Daya aktif : `%.1f W`\n"
+    "Daya semu  : `%.1f VA`\n"
+    "Energi     : `%.4f kWh`\n"
+    "PF         : `%.2f`\n"
+    "Frekuensi  : `%.1f Hz`\n"
     "ðŸ” Relay    : `%s`\n"
+    "Sumber meter: `%s`\n"
     "â± Uptime   : `%lu s`",
+    previousStatus.c_str(), status.c_str(),
     arus, tegangan,
+    dayaW, apparentPowerVa, energiKwh, powerFactor, frekuensi,
     relay == 1 ? "ON" : "OFF",
+    sensorSource.c_str(),
     millis() / 1000UL
+  );
+  outDesc = String(buf);
+}
+
+void buildDiscordRealtimeEmbed(float arus, float tegangan,
+                               float dayaW, float apparentPowerVa,
+                               float energiKwh, float frekuensi, float powerFactor,
+                               const String& status, int relay,
+                               const String& sensorSource,
+                               String& outTitle, String& outDesc) {
+  outTitle = "\xF0\x9F\x93\xA1 Data Realtime Listrik";
+  char buf[896];
+  snprintf(buf, sizeof(buf),
+    "**Status:** `%s`\n"
+    "**Arus:** `%.2f A`\n"
+    "**Tegangan:** `%.1f V`\n"
+    "**Daya aktif:** `%.1f W`\n"
+    "**Daya semu:** `%.1f VA`\n"
+    "**Energi:** `%.4f kWh`\n"
+    "**Power factor:** `%.2f`\n"
+    "**Frekuensi:** `%.1f Hz`\n"
+    "**Relay:** `%s`\n"
+    "**Sumber:** `%s`\n"
+    "**Uptime:** `%lu s`",
+    status.c_str(), arus, tegangan, dayaW, apparentPowerVa,
+    energiKwh, powerFactor, frekuensi, relay == 1 ? "ON" : "OFF",
+    sensorSource.c_str(), millis() / 1000UL
   );
   outDesc = String(buf);
 }
@@ -166,7 +206,10 @@ void buildDiscordStatusEmbed(const String& status,
  * Buat judul + deskripsi embed untuk notifikasi relay ON/OFF.
  */
 void buildDiscordRelayEmbed(int relayVal, const String& cause,
-                             float arus, float tegangan, const String& status,
+                             float arus, float tegangan,
+                             float dayaW, float apparentPowerVa,
+                             float energiKwh, float frekuensi, float powerFactor,
+                             const String& status, const String& sensorSource,
                              String& outTitle, String& outDesc, uint32_t& outColor) {
   if (relayVal == 1) {
     outTitle = "ðŸŸ¢ Relay Dinyalakan (ON)";
@@ -181,18 +224,26 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
     }
   }
 
-  char buf[300];
+  char buf[896];
   snprintf(buf, sizeof(buf),
     "**Data Sensor saat perintah:**\n"
     "âš¡ Arus     : `%.2f A`\n"
     "ðŸ”Œ Tegangan : `%.1f V`\n"
+    "Daya aktif : `%.1f W`\n"
+    "Daya semu  : `%.1f VA`\n"
+    "Energi     : `%.4f kWh`\n"
+    "PF         : `%.2f`\n"
+    "Frekuensi  : `%.1f Hz`\n"
     "ðŸ“Š Status   : `%s`\n"
     "ðŸ“‹ Penyebab : `%s`\n"
+    "Sumber meter: `%s`\n"
     "â± Uptime   : `%lu s`",
     arus, tegangan,
+    dayaW, apparentPowerVa, energiKwh, powerFactor, frekuensi,
     status.c_str(),
     cause == "auto_cutoff" ? "Auto-Cutoff (kondisi berbahaya)" :
     cause == "web_command"  ? "Perintah dari Dashboard Web"    : cause.c_str(),
+    sensorSource.c_str(),
     millis() / 1000UL
   );
   outDesc = String(buf);
@@ -204,20 +255,29 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
  * Hanya kirim saat transisi yang relevan (anti-spam).
  */
 void sendDiscordStatusAlert(const String& newStatus, const String& lastStatus,
-                             float arus, float tegangan, int relay,
+                             float arus, float tegangan,
+                             float dayaW, float apparentPowerVa,
+                             float energiKwh, float frekuensi, float powerFactor,
+                             int relay, const String& sensorSource,
                              const String& webhookUrl,
                              unsigned long cooldownMs) {
   bool shouldSend = false;
   if (newStatus == "DANGER"  && lastStatus != "DANGER")  shouldSend = true;
   if (newStatus == "LEAKAGE" && lastStatus != "LEAKAGE") shouldSend = true;
   if (newStatus == "WARNING" && lastStatus == "NORMAL")  shouldSend = true;
-  if (newStatus == "NORMAL"  && (lastStatus == "DANGER" || lastStatus == "LEAKAGE")) shouldSend = true;
+  if (newStatus == "NORMAL"  && (lastStatus == "DANGER" || lastStatus == "WARNING" || lastStatus == "LEAKAGE")) shouldSend = true;
 
   if (!shouldSend) return;
 
   String title, desc;
   uint32_t color;
-  buildDiscordStatusEmbed(newStatus, arus, tegangan, relay, title, desc, color);
+  buildDiscordStatusEmbed(
+    newStatus, lastStatus,
+    arus, tegangan, dayaW, apparentPowerVa,
+    energiKwh, frekuensi, powerFactor,
+    relay, sensorSource,
+    title, desc, color
+  );
   sendDiscordWebhook(webhookUrl, title, desc, color, cooldownMs);
 }
 
@@ -227,14 +287,23 @@ void sendDiscordStatusAlert(const String& newStatus, const String& lastStatus,
  * Dipanggil dari main.ino setelah relay command dieksekusi.
  */
 void sendDiscordRelayNotif(int relayVal, const String& cause,
-                            float arus, float tegangan, const String& status,
+                            float arus, float tegangan,
+                            float dayaW, float apparentPowerVa,
+                            float energiKwh, float frekuensi, float powerFactor,
+                            const String& status, const String& sensorSource,
                             const String& webhookUrl,
                             unsigned long cooldownMs = 5000) {
   if (webhookUrl.isEmpty()) return;
 
   String title, desc;
   uint32_t color;
-  buildDiscordRelayEmbed(relayVal, cause, arus, tegangan, status, title, desc, color);
+  buildDiscordRelayEmbed(
+    relayVal, cause,
+    arus, tegangan, dayaW, apparentPowerVa,
+    energiKwh, frekuensi, powerFactor,
+    status, sensorSource,
+    title, desc, color
+  );
   // Relay notification pakai cooldown pendek (5 detik) agar ON/OFF cepat terkirim
   sendDiscordWebhook(webhookUrl, title, desc, color, cooldownMs, true);
 }

@@ -10322,15 +10322,17 @@ html.lenis, html.lenis body {
 }
 
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(1),
-:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(1) { width: 22%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(1) { width: 18%; }
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(2),
-:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(2) { width: 36%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(2) { width: 31%; }
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(3),
-:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(3) { width: 16%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(3) { width: 14%; }
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(4),
-:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(4) { width: 12%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(4) { width: 10%; }
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(5),
-:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(5) { width: 14%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(5) { width: 17%; }
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs th:nth-child(6),
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .mini-logs td:nth-child(6) { width: 10%; }
 
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-values {
   display: inline-flex;
@@ -10344,7 +10346,8 @@ html.lenis, html.lenis body {
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-val-daya { color: var(--yellow-light); }
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-val-sep { color: rgba(148, 163, 184, 0.42); }
 :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-relay,
-:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-source {
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-source,
+:is(#miniLogsSummaryPanel, #historySummaryPanel) .log-uptime {
   color: var(--text-secondary);
   font-family: var(--font-data);
   font-weight: 800;
@@ -10413,11 +10416,12 @@ html.lenis, html.lenis body {
   :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-row {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "time status"
-      "vals vals"
-      "relay source";
-    min-height: 84px;
+     grid-template-areas:
+       "time status"
+       "vals vals"
+       "relay uptime"
+       "source source";
+     min-height: 106px;
     padding: 12px 13px !important;
     column-gap: 12px;
     row-gap: 9px;
@@ -10471,11 +10475,17 @@ html.lenis, html.lenis body {
     font-size: 11px;
   }
 
-  :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-source {
-    grid-area: source;
-    justify-content: flex-end;
-    font-size: 11px;
-  }
+   :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-source {
+     grid-area: source;
+     justify-content: flex-start;
+     font-size: 11px;
+   }
+
+   :is(#miniLogsSummaryPanel, #historySummaryPanel) .log-uptime {
+     grid-area: uptime;
+     justify-content: flex-end;
+     font-size: 11px;
+   }
 }
 
 @media (max-width: 420px) {

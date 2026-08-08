@@ -769,6 +769,7 @@ function normalizeArchiveRecord(raw = {}) {
     relay: Number(raw.relay ?? 0) === 1 ? 1 : 0,
     status: String(raw.status || 'NORMAL'),
     source: String(raw.source || 'hardware'),
+    sensor_source: String(raw.sensor_source ?? raw.sensorSource ?? 'PZEM-004T').trim() || 'PZEM-004T',
   };
 }
 
@@ -807,6 +808,7 @@ function buildDailyExcelBuffer(rows, dateKey) {
       <Cell><Data ss:Type="String">${escapeXml(row.relay ? 'ON' : 'OFF')}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(row.status)}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(row.source)}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(row.sensor_source)}</Data></Cell>
     </Row>
   `).join('');
 
@@ -853,6 +855,7 @@ function buildDailyExcelBuffer(rows, dateKey) {
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Relay</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Status</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Sumber</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Sumber Meter</Data></Cell>
         </Row>
         ${dataRowsXml}
       </Table>
@@ -920,6 +923,7 @@ async function archivePhysicalTelemetrySnapshot(d = {}) {
     relay: d.relay ? 1 : 0,
     status: String(d.status || 'NORMAL'),
     source: 'hardware',
+    sensor_source: String(d.sensor_source ?? 'PZEM-004T').trim() || 'PZEM-004T',
   };
   await db.ref(`${DAILY_ARCHIVE_ROOT}/${dateKey}`).push(payload);
   return payload;

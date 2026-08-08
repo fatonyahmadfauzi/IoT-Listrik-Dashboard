@@ -693,9 +693,9 @@ function getRealtimeTelemetry(raw = {}) {
   };
 }
 
-function buildRealtimeDiscordFields(raw = {}) {
+function buildRealtimeDiscordFields(raw = {}, logSource = null) {
   const data = getRealtimeTelemetry(raw);
-  return [
+  const fields = [
     { name: '⚡ Arus', value: `${data.arus} A`, inline: true },
     { name: '🔋 Tegangan', value: `${data.tegangan} V`, inline: true },
     { name: '💡 Daya Aktif', value: `${data.dayaAktif} W`, inline: true },
@@ -706,15 +706,19 @@ function buildRealtimeDiscordFields(raw = {}) {
     { name: '🔌 Relay', value: data.relay, inline: true },
     { name: `${statusEmoji(data.status)} Status`, value: data.status, inline: true },
     { name: '🧭 Sumber meter', value: data.sensorSource, inline: true },
-    { name: '⏱ Waktu pembacaan', value: data.updatedAt, inline: false },
   ];
+  if (logSource) {
+    fields.push({ name: '📝 Tipe', value: String(logSource).toUpperCase(), inline: true });
+  }
+  fields.push({ name: '⏱ Waktu pembacaan', value: data.updatedAt, inline: false });
+  return fields;
 }
 
 function escapeHtml(value) {
   return escapeXml(value);
 }
 
-function buildRealtimeTelegramMessage(title, raw = {}, description = '') {
+function buildRealtimeTelegramMessage(title, raw = {}, description = '', logSource = null) {
   const data = getRealtimeTelemetry(raw);
   const lines = [
     `${statusEmoji(data.status)} <b>${escapeHtml(title)}</b>`,
@@ -731,6 +735,7 @@ function buildRealtimeTelegramMessage(title, raw = {}, description = '') {
     `🔌 Relay: <b>${data.relay}</b>`,
     `${statusEmoji(data.status)} Status: <b>${data.status}</b>`,
     `🧭 Sumber meter: <code>${escapeHtml(data.sensorSource)}</code>`,
+    logSource ? `📝 Tipe: <code>${escapeHtml(String(logSource).toUpperCase())}</code>` : '',
     `⏱ Pembacaan: <code>${escapeHtml(data.updatedAt)}</code>`,
   ];
   return lines.filter(Boolean).join('\n');
@@ -1282,7 +1287,7 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
   const embed = {
     title: '📊 Update Data Monitoring Listrik',
     color: statusColor(d.status),
-    fields: buildRealtimeDiscordFields(d),
+    fields: buildRealtimeDiscordFields(d, 'PERIODIC'),
     footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
     thumbnail: { url: 'https://iot-listrik-dashboard.vercel.app/assets/icons/icon-192x192.png' },
   };
@@ -1296,7 +1301,7 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
     title: embed.title,
     message: buildMonitoringSummary(d),
     severity: 'info',
-    telegramMessage: buildRealtimeTelegramMessage('Update Data Monitoring Listrik', d),
+    telegramMessage: buildRealtimeTelegramMessage('Update Data Monitoring Listrik', d, '', 'PERIODIC'),
     payload: {
       metrics: {
         arus: d.arus ?? 0,

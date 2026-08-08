@@ -1,4 +1,4 @@
-﻿/**
+/**
  * main.ino — IoT Alat Deteksi Kebocoran Arus Listrik (ESP32)
  * ═══════════════════════════════════════════════════════════════
  * Project: ALAT DETEKSI KEBOCORAN ARUS LISTRIK BERBASIS IoT
@@ -1240,12 +1240,8 @@ void firebaseTaskCore0(void *pvParameters) {
       if (now - lastSendMs >= effectiveSendInterval) {
         lastSendMs = now;
         if (localRt.realtimeStreamEnabled) {
-          if (!localState.meterValid) {
-            // Jangan timpa dashboard dengan 0/NORMAL ketika PZEM kehilangan
-            // komunikasi. Telemetry terakhir akan menjadi stale/offline sampai
-            // pembacaan meter kembali valid, yang jauh lebih aman untuk relay.
-            Serial.println("[Monitor] PZEM tidak valid — telemetry realtime dan log ditunda.");
-          } else {
+          // Selalu update dashboard, termasuk saat SENSOR_ERROR agar web & notifikasi tahu
+          // bahwa sensor putus (angka akan 0 dan status = SENSOR_ERROR).
             bool monitorOk = writeMonitorData(localState.arus, localState.tegangan, localState.dayaW,
                                               localState.apparentPowerVa, localState.energiKwh,
                                               localState.frekuensi, localState.powerFactor,
@@ -1290,7 +1286,6 @@ void firebaseTaskCore0(void *pvParameters) {
               // habis karena SSL buffer belum dibebaskan oleh allocator.
               vTaskDelay(pdMS_TO_TICKS(500));
             }
-          }
         }
 
       }
@@ -1589,8 +1584,7 @@ void loop() {
 
   // ── Determine status using RUNTIME threshold ─────────────────
   if (trace) { Serial.println("[Loop] 4. Determine status..."); Serial.flush(); }
-  String newStatus = determineStatus(reading.arus, localRt.thresholdArus,
-                                      localRt.warningPercent);
+  String newStatus = reading.valid ? determineStatus(reading.arus, localRt.thresholdArus, localRt.warningPercent) : "SENSOR_ERROR";
   if (trace) { Serial.printf("[Loop] 4. Status OK: %s\n", newStatus.c_str()); Serial.flush(); }
   bool statusChanged = (newStatus != lastStatus);
 

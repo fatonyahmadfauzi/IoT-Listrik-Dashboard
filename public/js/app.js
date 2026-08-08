@@ -91,6 +91,7 @@ function getStatusLabel(status) {
   if (status === "DANGER") return "Bahaya — gangguan ekstrem";
   if (status === "LEAKAGE") return "Indikasi kebocoran arus";
   if (status === "WARNING") return "Peringatan — mendekati batas";
+  if (status === "SENSOR_ERROR") return "Sensor tidak terbaca";
   if (status === "UNKNOWN") return "Status belum dikenali";
   return "Sistem stabil";
 }
@@ -105,6 +106,9 @@ function getStatusHint(status) {
   if (status === "WARNING") {
     return "Arus mendekati ambang batas. Pantau perubahan beban dan pastikan konsumsi masih sesuai kapasitas uji.";
   }
+  if (status === "SENSOR_ERROR") {
+    return "Sensor PZEM-004T tidak memberikan data. Periksa kabel TX/RX, sumber daya 5V, dan koneksi GND. Relay tetap menyala sesuai kondisi terakhir.";
+  }
   if (status === "UNKNOWN") {
     return "Status belum dikenali. Tunggu data berikutnya atau periksa koneksi perangkat.";
   }
@@ -113,7 +117,7 @@ function getStatusHint(status) {
 
 function normalizeStatus(status) {
   const value = String(status || "NORMAL").toUpperCase();
-  return ["NORMAL", "WARNING", "LEAKAGE", "DANGER"].includes(value)
+  return ["NORMAL", "WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR"].includes(value)
     ? value
     : "UNKNOWN";
 }
@@ -133,6 +137,7 @@ function renderStatus(status) {
       "status-WARNING",
       "status-LEAKAGE",
       "status-DANGER",
+      "status-SENSOR_ERROR",
       "status-UNKNOWN",
       "status-pulse-danger",
     );
@@ -144,7 +149,7 @@ function renderStatus(status) {
     }
   }
   if (elAlertPulse) {
-    if (safeStatus === "DANGER" || safeStatus === "LEAKAGE" || safeStatus === "WARNING") {
+    if (safeStatus === "DANGER" || safeStatus === "LEAKAGE" || safeStatus === "WARNING" || safeStatus === "SENSOR_ERROR") {
       elAlertPulse.classList.remove("hidden");
     } else {
       elAlertPulse.classList.add("hidden");
@@ -190,7 +195,7 @@ function renderConnectionMeta(m) {
   // Re-render tombol relay sesuai state terakhir + status koneksi
   if (lastRelayVal !== -1) renderRelay(lastRelayVal);
   if (elRelayHint) {
-    const statusUnsafe = lastDeviceStatus === "WARNING" || lastDeviceStatus === "DANGER";
+    const statusUnsafe = lastDeviceStatus === "WARNING" || lastDeviceStatus === "DANGER" || lastDeviceStatus === "SENSOR_ERROR";
     if (!relayControlAllowed) {
       elRelayHint.textContent = relayControlReason;
     } else if (statusUnsafe) {

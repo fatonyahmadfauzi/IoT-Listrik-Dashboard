@@ -626,6 +626,26 @@ body.page-bg {
   background: var(--status-danger-soft);
   border-color: rgba(220, 38, 38, 0.3);
 }
+.safety-status-panel.status-SENSOR_ERROR {
+  --safety-pulse-rest: rgba(107, 114, 128, 0.12);
+  --safety-pulse-peak: rgba(107, 114, 128, 0.22);
+  border-color: rgba(107, 114, 128, 0.44);
+  background:
+    linear-gradient(135deg, rgba(107, 114, 128, 0.14), rgba(255, 255, 255, 0.04) 42%),
+    var(--glass-bg);
+  box-shadow:
+    0 18px 48px rgba(107, 114, 128, 0.12),
+    inset 0 1px 0 var(--card-shine);
+}
+.safety-status-panel.status-SENSOR_ERROR::before {
+  background: #6b7280;
+  box-shadow: 0 0 24px rgba(107, 114, 128, 0.4);
+}
+.safety-status-panel.status-SENSOR_ERROR .safety-status-icon {
+  color: #9ca3af;
+  background: rgba(107, 114, 128, 0.14);
+  border-color: rgba(107, 114, 128, 0.3);
+}
 .device-meta-panel {
   display: grid;
   gap: 16px;
@@ -799,6 +819,15 @@ body.page-bg {
 .status-DANGER::before {
   background: var(--status-danger);
   animation-duration: 0.45s;
+}
+.status-SENSOR_ERROR {
+  background: rgba(107, 114, 128, 0.16);
+  color: #9ca3af;
+  border: 1px solid rgba(107, 114, 128, 0.38);
+}
+.status-SENSOR_ERROR::before {
+  background: #6b7280;
+  animation-duration: 0.8s;
 }
 .status-UNKNOWN {
   background: rgba(148, 163, 184, 0.12);

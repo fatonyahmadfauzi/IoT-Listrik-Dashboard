@@ -101,6 +101,7 @@ function getStatusLabel(status) {
   if (status === 'LEAKAGE') return 'Indikasi arus bocor';
   if (status === 'DANGER') return 'Bahaya - arus abnormal';
   if (status === 'WARNING') return 'Periksa beban';
+  if (status === 'SENSOR_ERROR') return 'Sensor tidak terbaca';
   return 'Sistem stabil';
 }
 
@@ -115,7 +116,7 @@ function escapeHtml(value) {
 
 function normalizeStatus(status) {
   const value = String(status || 'NORMAL').toUpperCase();
-  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'].includes(value) ? value : 'UNKNOWN';
+  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
 }
 
 function derivePower(log = {}) {

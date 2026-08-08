@@ -427,14 +427,14 @@ function checkAndNotify(status, arus, tegangan) {
   status = status || 'NORMAL';
 
   // Always evaluate siren state based on current status
-  if (status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER') {
+  if (status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER' || status === 'SENSOR_ERROR') {
     // Requires page interaction first! (browser policy)
     playWebSiren();
   } else {
     stopWebSiren();
   }
 
-  const isDanger = status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER';
+  const isDanger = status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER' || status === 'SENSOR_ERROR';
   if (!isDanger) {
     // Recovery handling + stop repeats
     if (status === 'NORMAL' && lastNotifiedStatus && lastNotifiedStatus !== 'NORMAL') {
@@ -483,6 +483,13 @@ function checkAndNotify(status, arus, tegangan) {
       `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V\nArus mendekati batas threshold.`,
       '/icons/icon-192.png',
       'warning-alert'
+    );
+  } else if (status === 'SENSOR_ERROR') {
+    sendNotification(
+      '<iconify-icon icon="lucide:wifi-off"></iconify-icon> Sensor PZEM Tidak Terbaca!',
+      `Sensor PZEM-004T gagal memberikan data.\nPeriksa kabel TX/RX, 5V, dan GND.`,
+      '/icons/icon-192.png',
+      'sensor-error-alert'
     );
   }
 

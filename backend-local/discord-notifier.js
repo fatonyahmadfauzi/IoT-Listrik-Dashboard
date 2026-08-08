@@ -876,6 +876,7 @@ function statusColor(s) {
     case 'WARNING': return 0xFEE75C;
     case 'LEAKAGE': return 0xF97316;
     case 'NORMAL':  return 0x57F287;
+    case 'SENSOR_ERROR': return 0x808080;
     default:        return 0x5865F2;
   }
 }
@@ -885,6 +886,7 @@ function statusEmoji(s) {
     case 'WARNING': return '🟡';
     case 'LEAKAGE': return '🟠';
     case 'NORMAL':  return '🟢';
+    case 'SENSOR_ERROR': return '⚠️';
     default:        return '🔵';
   }
 }

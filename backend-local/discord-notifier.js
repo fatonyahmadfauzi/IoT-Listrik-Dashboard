@@ -1466,17 +1466,60 @@ db.ref('/logs').orderByKey().limitToLast(1).on('child_added', async (snap) => {
   if (!log || !discordConfig.webhookLogs) return;
 
   console.log(`[Log] Entri baru: ${logId}`);
-  const embed = {
-    title:       '📋 Aktivitas Log Baru',
-    description: log.message || log.pesan || log.keterangan || `Log ID: ${logId}`,
-    color:       0x99AAB5,
-    fields: [
-      log.type  && { name: 'Tipe',     value: String(log.type),  inline: true },
-      log.user  && { name: 'Pengguna', value: String(log.user),  inline: true },
-      log.value !== undefined && { name: 'Nilai',   value: String(log.value), inline: true },
-    ].filter(Boolean),
-    footer: { text: `IoT Listrik Dashboard • ${waktu()} • ID: ${logId.slice(-6)}` },
-  };
+
+  // Determine if this is a telemetry log (has arus/tegangan) or a system log
+  const hasTelemetry = log.arus !== undefined || log.tegangan !== undefined;
+
+  let embed;
+  if (hasTelemetry) {
+    // Rich telemetry log (from hardware periodic / status_change / relay)
+    const power = derivePowerMetrics(log);
+    const status = String(log.status || 'NORMAL').trim().toUpperCase() || 'NORMAL';
+    const logSource = String(log.source ?? log.sumber ?? log.mode ?? '').trim().toUpperCase() || '—';
+    const meterSource = String(log.sensor_source ?? log.sensorSource ?? 'PZEM-004T').trim() || 'PZEM-004T';
+    const relayRaw = log.relay;
+    const relayText = (relayRaw === 1 || relayRaw === true || String(relayRaw).toUpperCase() === 'ON' || String(relayRaw) === '1')
+      ? 'ON' : (relayRaw === 0 || relayRaw === false || String(relayRaw).toUpperCase() === 'OFF' || String(relayRaw) === '0')
+      ? 'OFF' : '—';
+
+    const statusColor = status === 'DANGER' ? 0xE74C3C
+      : status === 'WARNING' ? 0xF1C40F
+      : status === 'LEAKAGE' ? 0xE67E22
+      : status === 'NORMAL' ? 0x2ECC71
+      : 0x99AAB5;
+
+    embed = {
+      title: `📋 Log Baru — ${logSource}`,
+      color: statusColor,
+      fields: [
+        { name: '⚡ Arus',         value: `${formatMetricValue(log.arus, 2)} A`,  inline: true },
+        { name: '🔋 Tegangan',     value: `${formatMetricValue(log.tegangan, 1)} V`, inline: true },
+        { name: '💡 Daya Aktif',   value: `${formatMetricValue(power.activePower, 1)} W`, inline: true },
+        { name: '🔌 Daya Semu',   value: `${formatMetricValue(power.apparentPower, 1)} VA`, inline: true },
+        { name: '🔆 Energi',      value: `${formatMetricValue(log.energi_kwh, 3)} kWh`, inline: true },
+        { name: '📊 Power Factor', value: formatMetricValue(power.pf, 2), inline: true },
+        { name: '📡 Frekuensi',   value: `${formatMetricValue(log.frekuensi, 1)} Hz`, inline: true },
+        { name: '🔌 Relay',       value: relayText, inline: true },
+        { name: `${statusEmoji(status)} Status`, value: status, inline: true },
+        { name: '📝 Tipe Log',    value: logSource, inline: true },
+        { name: '🧭 Sumber Meter', value: meterSource, inline: true },
+      ],
+      footer: { text: `IoT Listrik Dashboard • ${waktu()} • ID: ${logId.slice(-6)}` },
+    };
+  } else {
+    // System / generic log (non-telemetry)
+    embed = {
+      title:       '📋 Aktivitas Log Baru',
+      description: log.message || log.pesan || log.keterangan || `Log ID: ${logId}`,
+      color:       0x99AAB5,
+      fields: [
+        log.type  && { name: 'Tipe',     value: String(log.type),  inline: true },
+        log.user  && { name: 'Pengguna', value: String(log.user),  inline: true },
+        log.value !== undefined && { name: 'Nilai',   value: String(log.value), inline: true },
+      ].filter(Boolean),
+      footer: { text: `IoT Listrik Dashboard • ${waktu()} • ID: ${logId.slice(-6)}` },
+    };
+  }
   await sendEmbed(discordConfig.webhookLogs, embed);
 });
 

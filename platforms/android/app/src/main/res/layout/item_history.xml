@@ -98,6 +98,16 @@
                 android:paddingVertical="4dp"
                 android:textSize="10sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvHistMeterSource"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:paddingHorizontal="9dp"
+                android:paddingVertical="4dp"
+                android:textSize="10sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
@@ -370,6 +380,16 @@
 
             <TextView
                 android:id="@+id/tvDetailSource"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="7dp"
+                android:paddingHorizontal="9dp"
+                android:paddingVertical="4dp"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvDetailMeterSource"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="7dp"

@@ -53,6 +53,7 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
         val waktu = formatTime(firstValue(log.waktu, log.timestamp, log.updated_at, log.createdAt, log.created_at))
         val relay = relayLabel(firstValue(log.relay, log.relayStatus, log.relay_status))
         val source = sourceLabel(log)
+        val meterSource = meterSourceLabel(log)
 
         binding.tvHistTime.text = waktu
         binding.tvHistValues.text = String.format(
@@ -68,6 +69,8 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
         applyMetaStyle(binding.tvHistRelay)
         binding.tvHistSource.text = source
         applyMetaStyle(binding.tvHistSource)
+        binding.tvHistMeterSource.text = meterSource
+        applyMetaStyle(binding.tvHistMeterSource)
 
         binding.tvDetailTime.text = waktu
         binding.tvDetailStatus.text = status
@@ -83,6 +86,8 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
         applyMetaStyle(binding.tvDetailRelay)
         binding.tvDetailSource.text = source
         applyMetaStyle(binding.tvDetailSource)
+        binding.tvDetailMeterSource.text = meterSource
+        applyMetaStyle(binding.tvDetailMeterSource)
     }
 
     override fun getItemCount() = logs.size
@@ -168,6 +173,12 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
     private fun sourceLabel(log: HistoryLog): String {
         val raw = firstValue(log.source, log.sumber, log.mode, log.endpoint, log.dataSource)
         return raw?.toString()?.trim()?.uppercase(Locale.ROOT)?.ifBlank { defaultSource } ?: defaultSource
+    }
+
+    private fun meterSourceLabel(log: HistoryLog): String {
+        val raw = firstValue(log.sensor_source, log.sensorSource, log.meter_source, log.meterSource)
+        val value = raw?.toString()?.trim()?.ifBlank { null }
+        return value ?: "PZEM-004T"
     }
 
     private fun formatTime(raw: Any?): String {

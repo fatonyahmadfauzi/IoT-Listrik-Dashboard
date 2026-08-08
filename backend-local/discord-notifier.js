@@ -770,6 +770,8 @@ function normalizeArchiveRecord(raw = {}) {
     status: String(raw.status || 'NORMAL'),
     source: String(raw.source || 'hardware'),
     sensor_source: String(raw.sensor_source ?? raw.sensorSource ?? 'PZEM-004T').trim() || 'PZEM-004T',
+    uptime: Number(raw.uptime_s ?? raw.uptimeSeconds ?? raw.uptime ?? 0),
+    jenis_log: String(raw.jenis_log ?? raw.mode ?? raw.source ?? 'PERIODIC'),
   };
 }
 
@@ -801,14 +803,15 @@ function buildDailyExcelBuffer(rows, dateKey) {
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.arus, 2))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.tegangan, 1))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.daya, 1))}</Data></Cell>
-      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.apparent_power, 1))}</Data></Cell>
-      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.frekuensi, 1))}</Data></Cell>
-      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.power_factor, 2))}</Data></Cell>
       <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.energi_kwh, 3))}</Data></Cell>
-      <Cell><Data ss:Type="String">${escapeXml(row.relay ? 'ON' : 'OFF')}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.power_factor, 2))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.frekuensi, 1))}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(formatMetricValue(row.apparent_power, 1))}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(row.status)}</Data></Cell>
-      <Cell><Data ss:Type="String">${escapeXml(row.source)}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(row.relay ? 'ON' : 'OFF')}</Data></Cell>
       <Cell><Data ss:Type="String">${escapeXml(row.sensor_source)}</Data></Cell>
+      <Cell><Data ss:Type="Number">${escapeXml(row.uptime || 0)}</Data></Cell>
+      <Cell><Data ss:Type="String">${escapeXml(row.jenis_log)}</Data></Cell>
     </Row>
   `).join('');
 
@@ -848,14 +851,15 @@ function buildDailyExcelBuffer(rows, dateKey) {
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Arus (A)</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Tegangan (V)</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Daya Aktif (W)</Data></Cell>
-          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Daya Semu (VA)</Data></Cell>
-          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Frekuensi (Hz)</Data></Cell>
-          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Power Factor</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Energi (kWh)</Data></Cell>
-          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Relay</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Power Factor</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Frekuensi (Hz)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Daya Semu (VA)</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Status</Data></Cell>
-          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Sumber</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Relay</Data></Cell>
           <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Sumber Meter</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Uptime (s)</Data></Cell>
+          <Cell ss:StyleID="TableHeader"><Data ss:Type="String">Jenis Log</Data></Cell>
         </Row>
         ${dataRowsXml}
       </Table>
@@ -922,8 +926,10 @@ async function archivePhysicalTelemetrySnapshot(d = {}) {
     power_factor: Number(d.power_factor ?? 0),
     relay: d.relay ? 1 : 0,
     status: String(d.status || 'NORMAL'),
-    source: 'hardware',
+    source: 'PERIODIC',
     sensor_source: String(d.sensor_source ?? 'PZEM-004T').trim() || 'PZEM-004T',
+    uptime_s: Number(d.uptime_s ?? d.uptimeSeconds ?? d.uptime ?? 0),
+    jenis_log: 'PERIODIC',
   };
   await db.ref(`${DAILY_ARCHIVE_ROOT}/${dateKey}`).push(payload);
   return payload;

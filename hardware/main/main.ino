@@ -848,6 +848,11 @@ void initLCD() {
 }
 
 void updateLCD() {
+  if (!state.meterValid) {
+    lcdPrintLine(0, "SENSOR ERROR!");
+    lcdPrintLine(1, state.relay ? "Relay: ON" : "Relay: OFF");
+    return;
+  }
   char line1[17];
   char line2[17];
   snprintf(line1, sizeof(line1), "I:%4.2fA V:%3.0f", state.arus, state.tegangan);

@@ -576,6 +576,8 @@ void connectWithPortal() {
     Serial.println(F("[WiFi] ║  IP  : 192.168.4.1               ║"));
     Serial.println(F("[WiFi] ╚══════════════════════════════════╝"));
     #ifdef USE_LCD
+      // Reset LCD untuk menghindari glitch/garbled text akibat lonjakan tegangan (EMI) saat WiFi AP menyala
+      lcd.init();
       // Baris 0: Nama AP (potong jika > 16 char)
       char lcdAP[17];
       snprintf(lcdAP, sizeof(lcdAP), "%-16s", AP_SSID);

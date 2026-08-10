@@ -178,6 +178,7 @@ static bool _fbHttpRequest(const char* method, const char* path,
   bool needReinit = !_fbReqConnected || (now - _fbReqLastMs > 25000UL);
   if (needReinit) {
     _httpFbReq.end();
+    _wcsFbReq.stop();
     _wcsFbReq.setInsecure();
     _httpFbReq.setReuse(true);
     _fbReqConnected = false;
@@ -239,6 +240,7 @@ bool writeMonitorData(float arus, float tegangan, float dayaW,
   bool needReinit = !_rtdbConnected || (now - _rtdbLastMs > 25000UL);
   if (needReinit) {
     _httpRTDB.end();
+    _wcsRTDB.stop(); // Bersihkan socket lama untuk cegah crash di koneksi berikutnya
     _wcsRTDB.setInsecure();
     _httpRTDB.setReuse(true);
     _rtdbConnected = false;

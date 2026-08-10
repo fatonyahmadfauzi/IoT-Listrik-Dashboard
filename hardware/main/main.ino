@@ -848,6 +848,12 @@ void initLCD() {
 }
 
 void updateLCD() {
+  static bool wasMeterValid = true;
+  if (state.meterValid != wasMeterValid) {
+    lcd.init(); // Re-init LCD to fix out-of-sync HD44780 controller caused by EMI/noise
+    wasMeterValid = state.meterValid;
+  }
+
   if (!state.meterValid) {
     lcdPrintLine(0, "SENSOR ERROR!");
     lcdPrintLine(1, state.relay ? "Relay: ON" : "Relay: OFF");

@@ -162,8 +162,13 @@ static String _getBaseUrl() {
 }
 
 void releaseFirebaseHttpConnection() {
-  if (_rtdbConnected) { _httpRTDB.end(); _wcsRTDB.stop(); _rtdbConnected = false; }
-  if (_fbReqConnected) { _httpFbReq.end(); _wcsFbReq.stop(); _fbReqConnected = false; }
+  _httpRTDB.end();
+  _wcsRTDB.stop();
+  _rtdbConnected = false;
+  
+  _httpFbReq.end();
+  _wcsFbReq.stop();
+  _fbReqConnected = false;
 }
 
 // Helper: HTTP request ke Firebase RTDB dengan PERSISTENT CONNECTION

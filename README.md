@@ -39,6 +39,10 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 - Build pipeline untuk Android APK, Windows MSI/Setup/Portable, dan CLI binaries.
 - **Telegram Admin Tools**: multi Chat ID/Group ID, jumlah penerima aktif, test pesan, hubungkan bot, serta command `/pause` dan `/resume` per chat.
 - **Discord Admin Tools**: 5 tujuan webhook (alerts, relay, monitoring, daily report, logs), status bot, ringkasan server, jumlah member/online/ban, ban/unban user.
+- **Halaman Analytics**: ringkasan statistik histori log — min/max/rata-rata arus, tegangan, daya, tren sensor dalam grafik, distribusi status (NORMAL/WARNING/DANGER), dan snapshot parameter listrik terkini. Tersedia di Web PWA (/app/analytics) dan Windows Desktop.
+- **Filter Tanggal Log**: kalender interaktif di halaman Riwayat dan Analytics — tanggal tanpa data dinonaktifkan otomatis, semua filter (grafik, tabel ringkas, tabel detail, export CSV) diperbarui serentak.
+- **Mode Koneksi LOCAL / CLOUD / AUTO**: sumber data realtime dapat dikonfigurasi dari Settings. Mode AUTO menggunakan Firebase langsung dan fallback otomatis ke local REST backend (ackend-local/server.js) jika Firebase tidak terjangkau.
+- **LCD 1602 I2C opsional** pada firmware ESP32: tampilkan arus, tegangan, status, dan relay langsung di layar fisik. Aktifkan dengan #define USE_LCD di config.h.
 - Ring buffer log 4 slot di firmware ESP32 — event log tidak lagi saling menimpa saat beberapa trigger terjadi bersamaan (status change + periodic + auto-cutoff + web_command).
 - Kolom **Sumber Meter** (contoh: `PZEM-004T`) dan **Uptime** (`5521 s`) kini konsisten di seluruh platform: Web, Android, Windows Desktop, dan Terminal CLI.
 - Export CSV halaman Riwayat mencakup kolom Sumber Meter dan Uptime.
@@ -59,12 +63,16 @@ ESP32 + PZEM-004T + Relay/Kontaktor
      (/listrik, /logs, /settings, /settings/discord, /settings/telegramRecipients, /users)
   -> Client apps:
      - Web dashboard (public/js/*.js, public/css/*.css, PWA)
-     - Android native app (Kotlin)   → platforms/android/
+       • Dashboard, Riwayat Log, Analytics, Settings, Telegram, Discord, Users
+     - Android native app (Kotlin)    → platforms/android/
      - Windows desktop app (Electron) → platforms/electron/
-     - Terminal OS (Bash/CMD)         → platforms/cli-node/ & cli-python/
+       • Dashboard, Riwayat Log, Analytics, Settings (Telegram, Discord)
+     - Terminal CLI (Bash/CMD)        → platforms/cli-node/ & cli-python/
   -> Backend/API:
      - Vercel Serverless Functions (/api/*.js)
-     - Local notifier backend (backend-local/discord-notifier.js)
+       • OTP email, backup DB, Discord bot, Telegram action
+     - Local REST backend (backend-local/server.js) — fallback mode LOCAL/AUTO
+     - Local notifier  (backend-local/discord-notifier.js & sim-notifier.js)
 ```
 
 ## Struktur Project
@@ -82,24 +90,33 @@ ESP32 + PZEM-004T + Relay/Kontaktor
 ├── hardware/                      # Firmware ESP32 (C++ Arduino)
 │   ├── config.example.h           # Template konfigurasi (commit-safe)
 │   ├── config.h                   # Konfigurasi aktif (di-ignore git)
-│   └── main/                      # Sketch utama
+│   ├── sensors.h                  # Pembacaan PZEM-004T & logika status
+│   ├── firebase_handler.h         # HTTPS REST ke Firebase RTDB
+│   ├── telegram_handler.h         # Notifikasi Telegram Bot
+│   ├── discord_handler.h          # Notifikasi Discord Webhook
+│   └── main/                      # Sketch utama (loop, FreeRTOS dual-core)
 │
 ├── platforms/                     # Aplikasi per-platform
 │   ├── android/                   # Android native (Kotlin/Gradle)
 │   ├── electron/                  # Windows desktop (Electron + React/TS)
-│   ├── cli-node/                  # Terminal UI & download utility (Node.js)
-│   └── cli-python/                # Terminal UI varian (Python)
+│   │   └── src/components/        # Dashboard, History, Analytics, Settings, Login
+│   ├── cli-node/                  # Terminal CLI + download utility (Node.js/pkg)
+│   │   ├── index.js               # CLI utama (live stream, log, relay, settings)
+│   │   ├── download-cli.js        # Download binary CLI untuk semua platform
+│   │   └── node-source/           # Source untuk install.sh Linux/Mac/Termux
+│   └── cli-python/                # Terminal CLI varian (Python/PyInstaller)
 │
 ├── public/                        # Web — Landing page & halaman publik (Vercel)
 │   ├── app/                       # PWA shell — halaman auth-required
 │   │   │                          # (scope terpisah agar tidak bentrok dengan web publik)
 │   │   ├── login.html
-│   │   ├── dashboard.html
-│   │   ├── history.html
-│   │   ├── settings.html
-│   │   ├── telegram.html
-│   │   ├── discord.html
-│   │   ├── users.html
+│   │   ├── dashboard.html         # Monitoring realtime + mini log
+│   │   ├── history.html           # Riwayat log + filter tanggal + export CSV
+│   │   ├── analytics.html         # Statistik, tren, distribusi status
+│   │   ├── settings.html          # Sensor, kalibrasi, stream, auto-learning, bootstrap
+│   │   ├── telegram.html          # Multi Chat ID, pause/resume, test pesan
+│   │   ├── discord.html           # Webhook per channel, bot tools
+│   │   ├── users.html             # Manajemen pengguna dan role
 │   │   ├── manifest.json          # PWA manifest untuk /app/ scope
 │   │   └── sw.js                  # Service worker scope /app/
 │   ├── assets/icons/              # App icons (PWA & favicon)
@@ -108,36 +125,68 @@ ESP32 + PZEM-004T + Relay/Kontaktor
 │   │   ├── downloads.css          # Halaman download
 │   │   └── features.css           # Halaman features
 │   ├── js/                        # JavaScript modules (shared)
-│   │   ├── components/            # Web components (navbar, footer)
-│   │   ├── firebase-config.js
-│   │   ├── app.js
-│   │   ├── auth.js
-│   │   ├── charts.js
-│   │   ├── history.js
-│   │   ├── hybrid-listrik.js
-│   │   ├── notifications.js
-│   │   ├── settings.js
-│   │   ├── simulator.js
-│   │   ├── client-config.js
-│   │   ├── pwa-guard.js
-│   │   └── version-manager.js
+│   │   ├── components/            # Web components (navbar.js, footer.js)
+│   │   ├── firebase-config.js     # Inisialisasi Firebase SDK
+│   │   ├── app.js                 # Dashboard: realtime + mini log
+│   │   ├── auth.js                # Auth, role, getDbPrefix, isTempAccount
+│   │   ├── analytics.js           # Halaman Analytics: statistik & grafik histori
+│   │   ├── charts.js              # Chart.js helpers (realtime & histori)
+│   │   ├── date-filter.js         # Filter tanggal interaktif untuk log & analytics
+│   │   ├── history.js             # Halaman Riwayat: tabel log + filter + CSV
+│   │   ├── hybrid-listrik.js      # Mode koneksi LOCAL/CLOUD/AUTO + failover
+│   │   ├── notifications.js       # Web Push, toast, audio alarm
+│   │   ├── settings.js            # Halaman Settings admin
+│   │   ├── simulator.js           # PWA Simulator: kontrol virtual ESP32
+│   │   ├── simulator-control.js   # Panel kontrol simulator
+│   │   ├── simulator-landing.js   # Landing page simulator
+│   │   ├── client-config.js       # Konfigurasi mode LOCAL/CLOUD/AUTO (localStorage)
+│   │   ├── pwa-guard.js           # Guard redirect halaman app/
+│   │   ├── app-header.js          # Header bar realtime (status + waktu)
+│   │   ├── version-manager.js     # Deteksi & notifikasi versi baru
+│   │   ├── scroll-reveal.js       # Animasi scroll reveal landing page
+│   │   ├── cinematic-parallax.js  # Efek parallax landing page
+│   │   └── speed-insights.js      # Vercel Speed Insights
 │   ├── downloads/                 # Binary installer cache (di-ignore Vercel & git)
+│   │   ├── cli/                   # CLI binaries + install.sh + node-source/
+│   │   └── windows/               # Windows EXE/MSI cache
 │   ├── app-version.json           # Salinan versi untuk browser (sync via script)
 │   ├── index.html                 # Landing page
-│   ├── features.html
-│   ├── downloads.html
-│   ├── telegram.html              # Konfigurasi Telegram admin
-│   ├── discord.html               # Konfigurasi Discord admin
-│   ├── users.html                 # Manajemen pengguna admin
-│   ├── pwa-simulator.html
+│   ├── features.html              # Halaman fitur produk
+│   ├── downloads.html             # Halaman unduhan semua platform
+│   ├── pwa-simulator.html         # Landing PWA Simulator virtual
+│   ├── 404.html                   # Halaman 404 custom
 │   ├── manifest.json              # PWA manifest untuk scope /
 │   └── service-worker.js          # Service worker scope /
 │
-├── api/                           # Vercel Serverless API (OTP, backup, Discord bot, Telegram action)
-├── backend-local/                 # Local Node.js Notifier (discord-notifier.js & sim-notifier.js)
+├── api/                           # Vercel Serverless Functions
+│   ├── ban-discord-user.js        # Ban user Discord via Bot
+│   ├── unban-discord-user.js      # Unban user Discord
+│   ├── get-discord-bot-status.js  # Status & info server Discord Bot
+│   ├── save-discord-bot-config.js # Simpan konfigurasi Discord Bot ke RTDB
+│   ├── confirm-live-reset.js      # Konfirmasi reset /listrik (validasi nama)
+│   ├── confirm-monitoring-wipe.js # Konfirmasi hapus /listrik + /logs (OTP)
+│   ├── request-live-reset-otp.js  # Kirim OTP email untuk reset realtime
+│   ├── request-monitoring-wipe-otp.js # Kirim OTP email untuk hapus monitoring
+│   ├── send-database-backup-email.js  # Backup RTDB + rules ke email admin
+│   ├── telegram-admin-action.js   # Telegram admin: profile, test, multi-chat
+│   ├── create-temp-account.js     # Buat akun demo sementara (PWA Simulator)
+│   └── cleanup.js                 # Pembersihan data kedaluwarsa (cron)
+├── backend-local/                 # Local Node.js backend (mode LOCAL/AUTO)
+│   ├── server.js                  # REST API /api/listrik & /api/logs + FCM push
+│   ├── discord-notifier.js        # Notifier Discord & Telegram (hardware)
+│   └── sim-notifier.js            # Notifier Discord & Telegram (simulator)
 ├── firebase-redirect/             # Firebase Hosting fallback → redirect ke Vercel
 ├── functions/                     # Firebase Cloud Functions (Node.js)
-├── scripts/                       # Automation scripts (lihat scripts/README.md)
+│   └── index.js                   # Trigger Cloud Functions
+├── scripts/                       # Automation scripts PowerShell
+│   ├── build-all-release.ps1      # Build semua platform sekaligus
+│   ├── build-android-release.ps1  # Build APK release Android
+│   ├── build-cli-release.ps1      # Build CLI Node.js + Python executable
+│   ├── build-release-for-web.ps1  # Build + signing semua aset untuk Vercel
+│   ├── build-all-signed-selfsigned.ps1 # Build dengan self-signed certificate
+│   ├── generate-android-keystore.ps1   # Generate keystore APK
+│   ├── sync-app-version.ps1       # Sinkronisasi app-version.json root → public/
+│   └── upload-release.ps1         # Upload semua aset ke GitHub Releases
 │
 ├── CHANGELOG.md                   # Riwayat perubahan per-versi
 ├── CONTRIBUTING.md                # Panduan kontribusi

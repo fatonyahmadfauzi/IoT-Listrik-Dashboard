@@ -215,6 +215,10 @@ export const useDataStore = create<DataStore>((set) => {
                   const apparent_power = Number(raw?.apparent_power ?? raw?.daya ?? arus * tegangan);
                   const daya = Number(raw?.daya_w ?? apparent_power * pf);
 
+                  const sensor_source = String(raw?.sensor_source ?? raw?.sensorSource ?? '');
+                  const rawUptime = raw?.uptime_s ?? raw?.uptimeSeconds ?? raw?.uptime;
+                  const uptime_s = Number.isFinite(Number(rawUptime)) ? Number(rawUptime) : null;
+
                   return {
                     id: key,
                     ...raw,
@@ -224,6 +228,8 @@ export const useDataStore = create<DataStore>((set) => {
                     relay,
                     apparent_power,
                     daya,
+                    sensor_source,
+                    uptime_s,
                   };
                 })
                 // Prefer sorting by real timestamp, fallback to key order.

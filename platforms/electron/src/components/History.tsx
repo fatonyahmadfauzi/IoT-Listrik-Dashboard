@@ -75,6 +75,16 @@ function asSource(log: any) {
   return String(log?.source || log?.sumber || 'CLOUD').toUpperCase();
 }
 
+function getMeterSource(log: any, fallback = 'PZEM-004T') {
+  const raw = String(log?.sensor_source ?? log?.sensorSource ?? '').trim();
+  return raw || fallback;
+}
+
+function formatUptime(log: any) {
+  const seconds = Number(log?.uptime_s ?? log?.uptimeSeconds ?? log?.uptime);
+  return Number.isFinite(seconds) && seconds >= 0 ? `${Math.floor(seconds)} s` : '\u2014';
+}
+
 export function History() {
   const { logs } = useDataStore();
   const [filterStatus, setFilterStatus] = useState<StatusFilter>('');
@@ -254,6 +264,8 @@ export function History() {
       'Status',
       'Relay',
       'Sumber',
+      'Sumber Meter',
+      'Uptime (s)',
     ];
     const rows = visibleLogs.map((log) => [
       formatTime(log.timestamp),
@@ -267,6 +279,8 @@ export function History() {
       normalizeStatus(log.status),
       relayLabel(Boolean(log.relay)),
       asSource(log),
+      getMeterSource(log),
+      formatUptime(log),
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
@@ -376,6 +390,8 @@ export function History() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Relay</th>
                   <th className="px-4 py-3">Sumber</th>
+                  <th className="px-4 py-3">Sumber Meter</th>
+                  <th className="px-4 py-3">Uptime</th>
                 </tr>
               ) : (
                 <tr>
@@ -390,6 +406,8 @@ export function History() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Relay</th>
                   <th className="px-4 py-3">Sumber</th>
+                  <th className="px-4 py-3">Sumber Meter</th>
+                  <th className="px-4 py-3">Uptime</th>
                 </tr>
               )}
             </thead>
@@ -409,6 +427,8 @@ export function History() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">{relayLabel(Boolean(log.relay))}</td>
                       <td className="whitespace-nowrap px-4 py-3">{asSource(log)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{getMeterSource(log)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatUptime(log)}</td>
                     </tr>
                   ) : (
                     <tr key={log.id}>
@@ -427,12 +447,14 @@ export function History() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">{relayLabel(Boolean(log.relay))}</td>
                       <td className="whitespace-nowrap px-4 py-3">{asSource(log)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{getMeterSource(log)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">{formatUptime(log)}</td>
                     </tr>
                   )
                 )
               ) : (
                 <tr>
-                  <td colSpan={logMode === 'summary' ? 5 : 11} className="px-4 py-10">
+                  <td colSpan={logMode === 'summary' ? 7 : 13} className="px-4 py-10">
                     <div className="flex flex-col items-center justify-center text-center text-slate-400">
                       <HistoryIcon className="h-9 w-9" />
                       <p className="mt-2 text-base font-semibold text-slate-200">Belum ada log</p>

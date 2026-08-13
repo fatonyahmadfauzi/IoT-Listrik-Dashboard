@@ -1,5 +1,7 @@
 # Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time
 
+![Version](https://img.shields.io/badge/versi-1.1.0-blue) ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20Windows%20%7C%20CLI-brightgreen) ![License](https://img.shields.io/badge/lisensi-MIT-green) ![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange)
+
 > **Skripsi S1 — Program Studi Teknik Informatika**
 > Universitas Bina Insani, Bekasi — 2026
 
@@ -37,6 +39,9 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 - Build pipeline untuk Android APK, Windows MSI/Setup/Portable, dan CLI binaries.
 - **Telegram Admin Tools**: multi Chat ID/Group ID, jumlah penerima aktif, test pesan, hubungkan bot, serta command `/pause` dan `/resume` per chat.
 - **Discord Admin Tools**: 5 tujuan webhook (alerts, relay, monitoring, daily report, logs), status bot, ringkasan server, jumlah member/online/ban, ban/unban user.
+- Ring buffer log 4 slot di firmware ESP32 — event log tidak lagi saling menimpa saat beberapa trigger terjadi bersamaan (status change + periodic + auto-cutoff + web_command).
+- Kolom **Sumber Meter** (contoh: `PZEM-004T`) dan **Uptime** (`5521 s`) kini konsisten di seluruh platform: Web, Android, Windows Desktop, dan Terminal CLI.
+- Export CSV halaman Riwayat mencakup kolom Sumber Meter dan Uptime.
 
 ## Catatan Logika Deteksi
 
@@ -209,6 +214,17 @@ Untuk membuat release versi baru:
 # 4. Upload ke GitHub Releases
 .\scripts\upload-release.ps1 -Version v1.0.0
 ```
+
+## Kompatibilitas Platform
+
+| Platform | Download | Status |
+|----------|----------|--------|
+| Web PWA | [iot-listrik-dashboard.vercel.app](https://iot-listrik-dashboard.vercel.app) | ✅ Live |
+| Android APK | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
+| Windows Setup/Portable/MSI | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
+| CLI Node.js (Win x64) | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
+| CLI Python (Win x64) | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
+| CLI Linux/Mac/Termux | `curl -sL https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh \| bash` | ✅ v1.1.0 |
 
 ## Setup Awal
 
@@ -484,6 +500,8 @@ Catatan:
 - **Build Electron gagal file lock**: tutup proses yang mengunci file, bersihkan `platforms/electron/dist/`, jalankan build ulang.
 - **APK unsigned**: pastikan `keystore.properties` ada di `platforms/android/keystore/` dan path signing benar.
 - **PWA tidak load offline**: pastikan `service-worker.js` tetap di `public/` root (bukan di subfolder).
+- **Log tabel kosong di dashboard/APK**: Pastikan firmware ESP32 sudah diflash versi terbaru. Penyebab utama: `$other` validator Firebase rules sebelumnya menolak field `timestamp` (number) dari ESP32. Sudah diperbaiki di `database.rules.json` v1.1.0.
+- **Waktu tampil `-` di CLI**: Update CLI ke v1.1.0. Versi lama membaca field `timestamp` yang tidak ada di `/listrik` — seharusnya `updated_at`.
 
 ## Catatan Pengembangan
 

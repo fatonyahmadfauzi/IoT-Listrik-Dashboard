@@ -7,6 +7,33 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
+## [1.1.0] — 2026-08-14
+
+### Added
+- Kolom **Sumber Meter** (contoh: `PZEM-004T`) dan **Uptime** (contoh: `5521 s`) kini tampil di tabel log ringkas dan detail pada seluruh platform: Web dashboard (mini log & halaman riwayat), Android APK, Windows Desktop (Electron), CLI Node.js, dan CLI Python.
+- Export CSV halaman Riwayat di Web dan Windows Desktop kini menyertakan kolom Sumber Meter dan Uptime.
+- Serial log `[LogBuf]` di firmware ESP32 dengan informasi cause, status, jumlah buffer tersisa, dan pesan error untuk memudahkan debug log yang gagal terkirim.
+
+### Fixed
+- **Bug kritis — log tabel kosong**: Field `timestamp` yang dikirim ESP32 (`{".sv":"timestamp"}`) di-expand Firebase menjadi Number, tapi validator `$other` di `database.rules.json` hanya menerima String — menyebabkan **seluruh write log ditolak Firebase secara diam-diam**. Diperbaiki dengan menambahkan rule eksplisit untuk field `timestamp` dan memperluas `$other` agar menerima Number dan Boolean.
+- **Firmware ESP32 — single-slot `pendingLog` diganti ring buffer 4 slot**: Event log tidak lagi saling menimpa saat beberapa trigger terjadi bersamaan (status change + auto-cutoff + periodic + initial_snapshot). Buffer overwrite slot terlama jika penuh.
+- **Firmware ESP32 — retry log memblokir slot baru**: Logika consume di Step 5 dipisah — `retryLog` diproses hanya saat cooldown habis, tidak memblokir `logBuf` baru. Ditambah pressure valve: kirim slot terlama jika buffer ≥ 3/4 penuh.
+- **Firmware ESP32 — periodic log bisa di-skip**: Guard `if (!pendingLog.active)` dihapus dari periodic log — sekarang periodic push selalu masuk ke ring buffer tanpa syarat.
+- **Firmware ESP32 — mutex timeout terlalu pendek**: Timeout `xSemaphoreTake` dinaikkan dari 10ms ke 50ms (Core 0) dan 30ms (Core 1) untuk mencegah race condition pada `initial_snapshot` yang menyebabkan log pertama tidak pernah terkirim.
+- **Web dashboard — error handler hilang di listener `/logs`**: `onValue` di `app.js` tidak punya error callback — PERMISSION_DENIED ditelan diam-diam, tabel kosong tanpa pesan. Sekarang menampilkan pesan error di tabel.
+- **Android — `onCancelled` kosong di 3 Firebase listener**: Connection, dashboard, dan history listener tidak melaporkan error Firebase. Sekarang menampilkan `Log.e` + Toast dengan pesan yang informatif.
+- **CLI — Waktu tampil `-` di live stream**: `renderLiveMonitoring` membaca `data.timestamp` yang tidak ada di path `/listrik` Firebase. Diperbaiki ke `data.updated_at` dengan fallback `timestamp` dan `waktu`, diformat ke locale `id-ID`.
+- **CLI Linux/Mac/Termux — log tampil `undefined`**: File `node-source/index.js` yang dipakai `install.sh` adalah versi lama yang membaca `item.message` dan `item.type` — field yang tidak ada di data Firebase. Disync dengan versi terbaru yang menampilkan 6 kolom lengkap.
+- **Halaman download — semua tombol mengarah ke v1.0.0**: File `app-version.json` yang di-fetch JS untuk override URL tombol masih berisi v1.0.0 meskipun HTML sudah diupdate. Diperbaiki ke v1.1.0.
+
+### Changed
+- `app-version.json` diperbarui ke v1.1.0 dengan URL download semua aset mengarah ke GitHub Releases v1.1.0.
+- Label menu `[2]` di CLI Node.js dan Python diperbarui dari `"Catatan Log Terakhir"` ke `"Riwayat Log (20 entri)"`.
+- Limit tampil log CLI dinaikkan dari 5 entri ke 20 entri.
+- `store.ts` Electron mengekstrak `sensor_source` dan `uptime_s` dari raw Firebase data untuk ditampilkan di tabel.
+
+---
+
 ## [Unreleased]
 
 ### Added
@@ -18,15 +45,15 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 - Laporan harian Excel otomatis dikirim ke Telegram dan Discord jika ada data monitoring baru dalam 24 jam.
 - Device bootstrap dan kontrol stream realtime perangkat, termasuk pause/resume stream dan pengaturan delay kirim data.
 - Penyamaan fitur Web/PWA dan Windows Desktop untuk halaman Telegram, Discord, Pengguna, Settings, dan notifikasi admin.
-- Validator lokal gratis `npm run validate` sebagai pengganti GitHub Actions CI, termasuk pengecekan HTML, asset, manifest, rewrite Vercel, JSON config, Cloud Functions, dan API serverless.
+- Validator lokal gratis `npm run validate` sebagai pengganti GitHub Actions CI.
 
 ### Changed
-- Notifikasi backend diseragamkan agar event yang dikirim ke Discord juga dapat dikirim ke Telegram dan notifikasi UI sesuai konfigurasi.
-- Halaman public `/`, `/features`, dan `/downloads` dirapikan agar padding, card, tombol, dan font lebih konsisten di desktop maupun mobile.
-- Manifest PWA dan rewrite simulator diperbaiki agar seluruh referensi lokal valid.
+- Notifikasi backend diseragamkan agar event yang dikirim ke Discord juga dapat dikirim ke Telegram.
+- Halaman public dirapikan konsistensi padding, card, tombol, dan font.
+- Manifest PWA dan rewrite simulator diperbaiki.
 
 ### Removed
-- GitHub Actions CI dihapus karena akun GitHub yang terkunci billing membuat job tidak bisa berjalan. Validasi diganti dengan script lokal `npm run validate`.
+- GitHub Actions CI dihapus karena akun GitHub yang terkunci billing.
 
 ---
 
@@ -56,5 +83,6 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
+[1.1.0]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.0.0
-[Unreleased]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.1.0...HEAD

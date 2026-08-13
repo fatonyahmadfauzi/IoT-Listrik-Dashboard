@@ -141,11 +141,52 @@ struct PendingLog {
   float powerFactor = 0;
   String sensorSource = "";
   unsigned long uptimeSeconds = 0;
-} pendingLog;
+};
 
-// Log yang gagal tidak boleh dibuang. Core 0 akan mengirimnya ulang sebelum
-// mengambil event baru dari pendingLog, sehingga data histori tetap utuh saat
-// koneksi Firebase terputus sesaat.
+// ── Ring buffer log (Core 1 produce, Core 0 consume) ─────────────────────────
+// Menggantikan single-slot pendingLog. 4 slot cukup untuk menampung burst event
+// (status-change + auto-cutoff + periodic + initial_snapshot) tanpa saling timpa.
+// Akses selalu dilindungi dataMutex.
+static const uint8_t LOG_BUF_SIZE = 4;
+struct LogRingBuf {
+  PendingLog slots[LOG_BUF_SIZE];
+  uint8_t head = 0;   // index slot berikutnya untuk push
+  uint8_t count = 0;  // jumlah slot terisi
+
+  // Tambahkan entri ke buffer. Jika penuh, timpa slot terlama (head - count)
+  // agar event terkini tidak terbuang. Return true jika tidak ada yang dibuang.
+  bool push(const PendingLog& entry) {
+    bool dropped = false;
+    if (count == LOG_BUF_SIZE) {
+      // Buffer penuh — buang slot terlama (overwrite oldest)
+      dropped = true;
+      Serial.printf("[LogBuf] Buffer penuh! Slot lama (%s) dibuang untuk beri tempat event baru (%s)\n",
+                    slots[head].cause.c_str(), entry.cause.c_str());
+    } else {
+      count++;
+    }
+    slots[head] = entry;
+    slots[head].active = true;
+    head = (head + 1) % LOG_BUF_SIZE;
+    return !dropped;
+  }
+
+  // Ambil entri tertua (FIFO). Return false jika kosong.
+  bool pop(PendingLog& out) {
+    if (count == 0) return false;
+    uint8_t tail = (head - count + LOG_BUF_SIZE) % LOG_BUF_SIZE;
+    out = slots[tail];
+    slots[tail].active = false;
+    count--;
+    return true;
+  }
+
+  bool empty() const { return count == 0; }
+  uint8_t size() const { return count; }
+} logBuf;
+
+// retryLog: entri yang sudah di-pop tapi gagal terkirim.
+// Dipisahkan dari logBuf agar retry tidak memblokir slot baru.
 PendingLog retryLog;
 bool initialHistoryQueued  = false;
 bool initialHistoryWritten = false;
@@ -1145,19 +1186,21 @@ void firebaseTaskCore0(void *pvParameters) {
               relayApplied = true;
 
               if (state.meterValid) {
-                pendingLog.active = true;
-                pendingLog.arus = state.arus;
-                pendingLog.tegangan = state.tegangan;
-                pendingLog.status = state.status;
-                pendingLog.relay = 0;
-                pendingLog.cause = "web_command";
-                pendingLog.dayaW = state.dayaW;
-                pendingLog.apparentPowerVa = state.apparentPowerVa;
-                pendingLog.energiKwh = state.energiKwh;
-                pendingLog.frekuensi = state.frekuensi;
-                pendingLog.powerFactor = state.powerFactor;
-                pendingLog.sensorSource = state.sensorSource;
-                pendingLog.uptimeSeconds = millis() / 1000UL;
+                PendingLog entry;
+                entry.active = true;
+                entry.arus = state.arus;
+                entry.tegangan = state.tegangan;
+                entry.status = state.status;
+                entry.relay = 0;
+                entry.cause = "web_command";
+                entry.dayaW = state.dayaW;
+                entry.apparentPowerVa = state.apparentPowerVa;
+                entry.energiKwh = state.energiKwh;
+                entry.frekuensi = state.frekuensi;
+                entry.powerFactor = state.powerFactor;
+                entry.sensorSource = state.sensorSource;
+                entry.uptimeSeconds = millis() / 1000UL;
+                logBuf.push(entry);
               }
               localState = state;
               xSemaphoreGive(dataMutex);
@@ -1203,19 +1246,21 @@ void firebaseTaskCore0(void *pvParameters) {
               relayApplied = true;
 
                 if (state.meterValid) {
-                  pendingLog.active = true;
-                  pendingLog.arus = state.arus;
-                  pendingLog.tegangan = state.tegangan;
-                  pendingLog.status = state.status;
-                  pendingLog.relay = 1;
-                  pendingLog.cause = "web_command";
-                  pendingLog.dayaW = state.dayaW;
-                  pendingLog.apparentPowerVa = state.apparentPowerVa;
-                  pendingLog.energiKwh = state.energiKwh;
-                  pendingLog.frekuensi = state.frekuensi;
-                  pendingLog.powerFactor = state.powerFactor;
-                  pendingLog.sensorSource = state.sensorSource;
-                  pendingLog.uptimeSeconds = millis() / 1000UL;
+                  PendingLog entry;
+                  entry.active = true;
+                  entry.arus = state.arus;
+                  entry.tegangan = state.tegangan;
+                  entry.status = state.status;
+                  entry.relay = 1;
+                  entry.cause = "web_command";
+                  entry.dayaW = state.dayaW;
+                  entry.apparentPowerVa = state.apparentPowerVa;
+                  entry.energiKwh = state.energiKwh;
+                  entry.frekuensi = state.frekuensi;
+                  entry.powerFactor = state.powerFactor;
+                  entry.sensorSource = state.sensorSource;
+                  entry.uptimeSeconds = millis() / 1000UL;
+                  logBuf.push(entry);
                 }
                 localState = state;
                 xSemaphoreGive(dataMutex);
@@ -1274,23 +1319,23 @@ void firebaseTaskCore0(void *pvParameters) {
               // mengirim realtime. Hindari log dummy saat PZEM masih boot atau
               // pembacaannya belum valid, agar histori sama dengan /listrik.
               if (!initialHistoryQueued && !initialHistoryWritten &&
-                  xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-                if (!pendingLog.active) {
-                  pendingLog.active          = true;
-                  pendingLog.arus            = localState.arus;
-                  pendingLog.tegangan        = localState.tegangan;
-                  pendingLog.status          = localState.status;
-                  pendingLog.relay           = localState.relay;
-                  pendingLog.cause           = "initial_snapshot";
-                  pendingLog.dayaW           = localState.dayaW;
-                  pendingLog.apparentPowerVa = localState.apparentPowerVa;
-                  pendingLog.energiKwh       = localState.energiKwh;
-                  pendingLog.frekuensi       = localState.frekuensi;
-                  pendingLog.powerFactor     = localState.powerFactor;
-                  pendingLog.sensorSource    = localState.sensorSource;
-                  pendingLog.uptimeSeconds   = millis() / 1000UL;
-                  initialHistoryQueued       = true;
-                }
+                  xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+                PendingLog entry;
+                entry.active          = true;
+                entry.arus            = localState.arus;
+                entry.tegangan        = localState.tegangan;
+                entry.status          = localState.status;
+                entry.relay           = localState.relay;
+                entry.cause           = "initial_snapshot";
+                entry.dayaW           = localState.dayaW;
+                entry.apparentPowerVa = localState.apparentPowerVa;
+                entry.energiKwh       = localState.energiKwh;
+                entry.frekuensi       = localState.frekuensi;
+                entry.powerFactor     = localState.powerFactor;
+                entry.sensorSource    = localState.sensorSource;
+                entry.uptimeSeconds   = millis() / 1000UL;
+                logBuf.push(entry);
+                initialHistoryQueued  = true;
                 xSemaphoreGive(dataMutex);
               }
 
@@ -1304,19 +1349,42 @@ void firebaseTaskCore0(void *pvParameters) {
       }
 
       // 5. Process Pending Logs
+      // ── Prioritas kirim: retryLog (gagal sebelumnya) DULU, lalu ambil dari ring buffer.
+      // retryLog dan logBuf diproses terpisah: retry yang masih dalam cooldown tidak
+      // memblokir slot baru dari ring buffer yang sudah siap dikirim.
       PendingLog logToSend;
-      if (lastLogRetryMs == 0 || now - lastLogRetryMs >= LOG_RETRY_INTERVAL_MS) {
-        if (retryLog.active) {
-          logToSend = retryLog;
-          retryLog.active = false;
-        } else if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-          if (pendingLog.active) {
-            logToSend = pendingLog;
-            pendingLog.active = false;
+      bool retryReady = retryLog.active &&
+                        (lastLogRetryMs == 0 || now - lastLogRetryMs >= LOG_RETRY_INTERVAL_MS);
+      if (retryReady) {
+        // Kirim ulang entri yang gagal sebelumnya
+        logToSend = retryLog;
+        retryLog.active = false;
+        Serial.printf("[LogBuf] Retry log: %s (uptime %lus)\n",
+                      logToSend.cause.c_str(), logToSend.uptimeSeconds);
+      } else if (!retryLog.active) {
+        // Tidak ada retry pending — ambil dari ring buffer (FIFO)
+        if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+          logBuf.pop(logToSend);
+          if (!logBuf.empty()) {
+            Serial.printf("[LogBuf] %u entri masih menunggu di buffer\n", logBuf.size());
           }
           xSemaphoreGive(dataMutex);
         }
       }
+      // Jika retryLog masih dalam cooldown, cek apakah ring buffer sudah terlalu penuh
+      // (>= 3 dari 4 slot) — kalau iya, kirim slot terlama sekarang untuk hindari overwrite.
+      else {
+        if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+          bool bufPressure = (logBuf.size() >= LOG_BUF_SIZE - 1);
+          if (bufPressure) {
+            logBuf.pop(logToSend);
+            Serial.printf("[LogBuf] Buffer tekanan tinggi (%u/%u) — kirim slot terlama (%s) tanpa tunggu retry cooldown\n",
+                          logBuf.size() + 1, LOG_BUF_SIZE, logToSend.cause.c_str());
+          }
+          xSemaphoreGive(dataMutex);
+        }
+      }
+
       if (logToSend.active) {
         bool logWritten = writeLog(logToSend.arus, logToSend.tegangan, logToSend.status,
                                     logToSend.relay, logToSend.cause.c_str(),
@@ -1325,19 +1393,23 @@ void firebaseTaskCore0(void *pvParameters) {
                                    logToSend.uptimeSeconds);
         if (logWritten) {
           lastLogRetryMs = 0;
+          Serial.printf("[LogBuf] Log terkirim: cause=%s status=%s I=%.2fA (buf remaining: %u)\n",
+                        logToSend.cause.c_str(), logToSend.status.c_str(),
+                        logToSend.arus, logBuf.size());
           if (logToSend.cause == "initial_snapshot") initialHistoryWritten = true;
         } else {
           retryLog = logToSend;
           retryLog.active = true;
           lastLogRetryMs = now;
-          Serial.printf("[Firebase] Log akan dicoba lagi dalam %lu detik (%s)\n",
-                        LOG_RETRY_INTERVAL_MS / 1000UL, logToSend.cause.c_str());
+          Serial.printf("[LogBuf] ❌ Log GAGAL, retry dalam %lu detik (cause=%s, buf: %u/%u)\n",
+                        LOG_RETRY_INTERVAL_MS / 1000UL, logToSend.cause.c_str(),
+                        logBuf.size(), LOG_BUF_SIZE);
         }
       }
 
       // 6. Process Pending Alerts
       PendingAlert alertToSend;
-      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         if (pendingAlert.active) {
           alertToSend = pendingAlert;
           pendingAlert.active = false;
@@ -1379,7 +1451,7 @@ void firebaseTaskCore0(void *pvParameters) {
 
       // 6b. Process Pending Discord Relay Notification
       PendingRelayNotif relayNotifToSend;
-      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         if (pendingRelayNotif.active) {
           relayNotifToSend = pendingRelayNotif;
           pendingRelayNotif.active = false;
@@ -1625,19 +1697,23 @@ void loop() {
       pendingRelaySync.active = true;
       pendingRelaySync.relayVal = 0;
 
-      pendingLog.active = true;
-      pendingLog.arus = reading.arus;
-      pendingLog.tegangan = reading.tegangan;
-      pendingLog.status = newStatus;
-      pendingLog.relay = 0;
-      pendingLog.cause = "auto_cutoff";
-      pendingLog.dayaW = reading.dayaW;
-      pendingLog.apparentPowerVa = reading.apparentPowerVa;
-      pendingLog.energiKwh = g_energiKwh;
-      pendingLog.frekuensi = reading.frekuensi;
-      pendingLog.powerFactor = reading.powerFactor;
-      pendingLog.sensorSource = reading.sensorSource;
-      pendingLog.uptimeSeconds = now / 1000UL;
+      {
+        PendingLog entry;
+        entry.active = true;
+        entry.arus = reading.arus;
+        entry.tegangan = reading.tegangan;
+        entry.status = newStatus;
+        entry.relay = 0;
+        entry.cause = "auto_cutoff";
+        entry.dayaW = reading.dayaW;
+        entry.apparentPowerVa = reading.apparentPowerVa;
+        entry.energiKwh = g_energiKwh;
+        entry.frekuensi = reading.frekuensi;
+        entry.powerFactor = reading.powerFactor;
+        entry.sensorSource = reading.sensorSource;
+        entry.uptimeSeconds = now / 1000UL;
+        logBuf.push(entry);
+      }
 
       // Queue relay notification untuk Telegram & Discord (dikirim dari Core 0)
       pendingRelayNotif.active   = true;
@@ -1707,52 +1783,57 @@ void loop() {
   #endif
 
   // ── Log on status change ──────────────────────────────────────
-  if (reading.valid && statusChanged && (now - lastLogMs > 2000)) {
+  if (statusChanged && (now - lastLogMs > 2000)) {
     lastLogMs = now;
-    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-      pendingLog.active = true;
-      pendingLog.arus = reading.arus;
-      pendingLog.tegangan = reading.tegangan;
-      pendingLog.status = newStatus;
-      pendingLog.relay = currentRelay;
-      pendingLog.cause = "esp32";
-      pendingLog.dayaW = reading.dayaW;
-      pendingLog.apparentPowerVa = reading.apparentPowerVa;
-      pendingLog.energiKwh = g_energiKwh;
-      pendingLog.frekuensi = reading.frekuensi;
-      pendingLog.powerFactor = reading.powerFactor;
-      pendingLog.sensorSource = reading.sensorSource;
-      pendingLog.uptimeSeconds = now / 1000UL;
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(30)) == pdTRUE) {
+      PendingLog entry;
+      entry.active = true;
+      entry.arus = reading.arus;
+      entry.tegangan = reading.tegangan;
+      entry.status = newStatus;
+      entry.relay = currentRelay;
+      entry.cause = "esp32";
+      entry.dayaW = reading.dayaW;
+      entry.apparentPowerVa = reading.apparentPowerVa;
+      entry.energiKwh = g_energiKwh;
+      entry.frekuensi = reading.frekuensi;
+      entry.powerFactor = reading.powerFactor;
+      entry.sensorSource = reading.sensorSource;
+      entry.uptimeSeconds = now / 1000UL;
+      logBuf.push(entry);
       xSemaphoreGive(dataMutex);
     }
   }
 
   // ── Periodic log (every minute while the PZEM value is valid) ──
-  if (reading.valid && now - lastPeriodicLogMs >= PERIODIC_LOG_INTERVAL_MS) {
+  // Dengan ring buffer, periodic log selalu dipush — tidak ada lagi guard
+  // "!pendingLog.active" yang sebelumnya menyebabkan periodic log terlewat
+  // bila slot tunggal masih terisi event lain.
+  if (now - lastPeriodicLogMs >= PERIODIC_LOG_INTERVAL_MS) {
     lastPeriodicLogMs = now;
-    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
-      if (!pendingLog.active) {  // Jangan timpa event log yang belum terkirim
-        pendingLog.active       = true;
-        pendingLog.arus         = reading.arus;
-        pendingLog.tegangan     = reading.tegangan;
-        pendingLog.status       = newStatus;
-        pendingLog.relay        = currentRelay;
-        pendingLog.cause        = "periodic";
-        pendingLog.dayaW        = reading.dayaW;
-        pendingLog.apparentPowerVa = reading.apparentPowerVa;
-        pendingLog.energiKwh    = g_energiKwh;
-        pendingLog.frekuensi    = reading.frekuensi;
-        pendingLog.powerFactor  = reading.powerFactor;
-        pendingLog.sensorSource = reading.sensorSource;
-        pendingLog.uptimeSeconds = now / 1000UL;
-      }
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(30)) == pdTRUE) {
+      PendingLog entry;
+      entry.active        = true;
+      entry.arus          = reading.arus;
+      entry.tegangan      = reading.tegangan;
+      entry.status        = newStatus;
+      entry.relay         = currentRelay;
+      entry.cause         = "periodic";
+      entry.dayaW         = reading.dayaW;
+      entry.apparentPowerVa = reading.apparentPowerVa;
+      entry.energiKwh     = g_energiKwh;
+      entry.frekuensi     = reading.frekuensi;
+      entry.powerFactor   = reading.powerFactor;
+      entry.sensorSource  = reading.sensorSource;
+      entry.uptimeSeconds = now / 1000UL;
+      logBuf.push(entry);
       xSemaphoreGive(dataMutex);
     }
   }
 
   // ── Telegram + Discord status alert (via pendingAlert, dikirim Core 0) ───
   if (statusChanged) {
-    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+    if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(30)) == pdTRUE) {
       pendingAlert.active = true;
       pendingAlert.newStatus = newStatus;
       pendingAlert.lastStatus = lastStatus;

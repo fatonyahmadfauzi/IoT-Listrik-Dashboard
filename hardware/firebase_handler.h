@@ -133,23 +133,11 @@ bool isFirebaseReady() {
     } \
   } while(0)
 
-// --- Persistent HTTP client untuk writeMonitorData --------------------------
-// FIX DEFINITIF: Gunakan HTTPClient langsung dengan WiFiClientSecure
-// persistent (setReuse=true) agar SSL handshake hanya terjadi SEKALI.
-//
-// Masalah sebelumnya: Firebase.RTDB.updateNode membuka koneksi SSL baru
-// untuk setiap call setelah server menutup keep-alive. Heap terfragmentasi
-// setelah 2 koneksi SSL -> SSL handshake ke-3 gagal alokasi -> NULL -> crash.
-//
-// Solusi: Satu WiFiClientSecure persistent -> SSL session digunakan ulang ->
-// tidak ada heap allocation baru untuk SSL handshake setelah call pertama.
-static WiFiClientSecure _wcsRTDB;
-static HTTPClient       _httpRTDB;
-static bool             _rtdbConnected = false;
-static unsigned long    _rtdbLastMs    = 0;
-
-// Helper: Pastikan DB URL tidak berakhiran slash agar tidak terjadi double slash (//) yg bikin 401
-// Persistent HTTP client untuk Firebase GET/DELETE (settings, relay)
+// --- Satu persistent HTTP client untuk SEMUA Firebase operations -------------
+// FIX: Sebelumnya ada DUA koneksi SSL terpisah (_wcsRTDB dan _wcsFbReq).
+// ESP32 tidak mampu mempertahankan 2 koneksi SSL sekaligus dengan heap terbatas
+// -> salah satu selalu HTTP -1. Sekarang semua operasi (GET settings, PATCH
+// monitor data, dll) melalui SATU koneksi _httpFbReq/_wcsFbReq yang sama.
 static WiFiClientSecure _wcsFbReq;
 static HTTPClient       _httpFbReq;
 static bool             _fbReqConnected = false;
@@ -162,10 +150,6 @@ static String _getBaseUrl() {
 }
 
 void releaseFirebaseHttpConnection() {
-  _httpRTDB.end();
-  _wcsRTDB.stop();
-  _rtdbConnected = false;
-  
   _httpFbReq.end();
   _wcsFbReq.stop();
   _fbReqConnected = false;
@@ -226,45 +210,20 @@ bool writeMonitorData(float arus, float tegangan, float dayaW,
                       const String& status, int relay,
                       const String& sensorSource = "PZEM-004T") {
   if (!isFirebaseReady()) return false;
-  Serial.printf("[Firebase] writeMonitorData heap: %u maxBlk: %u\n",
-                ESP.getFreeHeap(), ESP.getMaxAllocHeap());
-  const char* token = Firebase.getToken();
-  if (!token || strlen(token) < 20) { Serial.println("[Firebase] token belum siap"); return false; }
-  char json[600];
+  FB_HEAP_GUARD("writeMonitorData");
+  if (apparentPowerVa <= 0.0f) apparentPowerVa = arus * tegangan;
+  if (dayaW <= 0.0f) dayaW = apparentPowerVa * powerFactor;
+  char json[640];
   snprintf(json, sizeof(json),
     "{\"arus\":%.2f,\"tegangan\":%.1f,\"daya\":%.1f,\"daya_w\":%.1f,"
     "\"apparent_power\":%.1f,\"energi_kwh\":%.4f,\"frekuensi\":%.1f,"
-    "\"power_factor\":%.2f,\"sensor_source\":\"%s\",\"status\":\"%s\",\"relay\":%d}",
+    "\"power_factor\":%.2f,\"sensor_source\":\"%s\",\"status\":\"%s\",\"relay\":%d,"
+    "\"updated_at\":{\".sv\":\"timestamp\"}}",
     arus, tegangan, apparentPowerVa, dayaW, apparentPowerVa, energiKwh, freqHz, powerFactor,
     sensorSource.c_str(), status.c_str(), relay);
-  
-  String url = _getBaseUrl() + "/listrik.json?auth=" + String(token);
-  Serial.printf("[Firebase] HTTP PATCH URL (first 80 chars): %.80s...\n", url.c_str());
-  
-  unsigned long now = millis();
-  bool needReinit = !_rtdbConnected || (now - _rtdbLastMs > 25000UL);
-  if (needReinit) {
-    _httpRTDB.end();
-    _wcsRTDB.stop(); // Bersihkan socket lama untuk cegah crash di koneksi berikutnya
-    _wcsRTDB.setInsecure();
-    _httpRTDB.setReuse(true);
-    _rtdbConnected = false;
-    Serial.println("[Firebase] RTDB: membuka koneksi HTTP baru");
-  }
-  if (!_httpRTDB.begin(_wcsRTDB, url)) {
-    Serial.println("[Firebase] writeMonitorData: HTTP begin gagal");
-    _rtdbConnected = false;
-    return false;
-  }
-  _httpRTDB.addHeader("Content-Type", "application/json");
-  _httpRTDB.setTimeout(10000);
-  int code = _httpRTDB.sendRequest("PATCH", String(json));
-  _rtdbLastMs = millis();
-  if (code == 200) { _rtdbConnected = true; return true; }
-  Serial.printf("[Firebase] writeMonitorData gagal: HTTP %d\n", code);
-  _httpRTDB.end();
-  _rtdbConnected = false;
-  return false;
+  bool ok = _fbHttpRequest("PATCH", "/listrik", json);
+  if (ok) Serial.printf("[Firebase] Monitor OK: status=%s relay=%d\n", status.c_str(), relay);
+  return ok;
 }
 
 bool writeLog(float arus, float tegangan,
@@ -277,32 +236,20 @@ bool writeLog(float arus, float tegangan,
               long uptimeSeconds = 0) {
   if (!isFirebaseReady()) return false;
   FB_HEAP_GUARD("writeLog");
-  const char* token = Firebase.getToken();
-  if (!token || strlen(token) < 20) return false;
   if (apparentPowerVa <= 0.0f) apparentPowerVa = arus * tegangan;
   if (dayaW <= 0.0f) dayaW = apparentPowerVa * powerFactor;
-  char jsonStr[600];
+  char jsonStr[640];
   snprintf(jsonStr, sizeof(jsonStr),
     "{\"arus\":%.2f,\"tegangan\":%.1f,\"daya\":%.1f,\"daya_w\":%.1f,"
     "\"apparent_power\":%.1f,\"energi_kwh\":%.4f,\"frekuensi\":%.1f,"
     "\"power_factor\":%.2f,\"sensor_source\":\"%s\","
-    "\"status\":\"%s\",\"relay\":%d,\"waktu\":\"%s\",\"source\":\"%s\",\"uptime_s\":%ld}",
+    "\"status\":\"%s\",\"relay\":%d,\"waktu\":{\".sv\":\"timestamp\"},\"timestamp\":{\".sv\":\"timestamp\"},\"source\":\"%s\",\"uptime_s\":%ld}",
     arus, tegangan, apparentPowerVa, dayaW, apparentPowerVa, energiKwh, freqHz, powerFactor,
-    sensorSource.c_str(), status.c_str(), relay, String(millis()).c_str(), source.c_str(), uptimeSeconds);
+    sensorSource.c_str(), status.c_str(), relay, source.c_str(), uptimeSeconds);
   
-  String url = _getBaseUrl() + "/logs.json?auth=" + String(token);
-  
-  WiFiClientSecure client;
-  client.setInsecure();
-  HTTPClient http;
-  if (http.begin(client, url)) {
-    http.addHeader("Content-Type", "application/json");
-    int code = http.POST(String(jsonStr));
-    http.end();
-    if (code == 200) { Serial.println("[Firebase] Log -> " + status + " (" + source + ")"); return true; }
-    Serial.printf("[Firebase] writeLog gagal HTTP %d\n", code);
-  } else { Serial.println("[Firebase] writeLog HTTP begin gagal"); }
-  return false;
+  bool ok = _fbHttpRequest("POST", "/logs", jsonStr);
+  if (ok) Serial.println("[Firebase] Log -> " + status + " (" + source + ")");
+  return ok;
 }
 
 // --- readRelayCommand() -----------------------------------------------------

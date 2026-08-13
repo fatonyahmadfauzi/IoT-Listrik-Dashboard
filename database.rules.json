@@ -113,8 +113,11 @@
         "source": {
           ".validate": "newData.isString() && newData.val().length <= 80"
         },
+        "timestamp": {
+          ".validate": "(newData.isNumber() && newData.val() >= 0) || (newData.isString() && newData.val().length <= 40)"
+        },
         "$other": {
-          ".validate": "newData.isString() && newData.val().length <= 200"
+          ".validate": "newData.isNumber() || (newData.isString() && newData.val().length <= 200) || newData.isBoolean()"
         }
       }
     },

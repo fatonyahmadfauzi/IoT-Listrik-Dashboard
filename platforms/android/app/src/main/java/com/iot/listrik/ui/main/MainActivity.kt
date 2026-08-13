@@ -1534,7 +1534,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 refreshPresenceUi()
             }
-            override fun onCancelled(error: DatabaseError) { }
+            override fun onCancelled(error: DatabaseError) {
+                Log.w("MainActivity", "Connection listener cancelled: ${error.code} ${error.message}")
+            }
         }
         connectedRef?.addValueEventListener(connectedListener!!)
     }
@@ -1620,7 +1622,12 @@ class MainActivity : AppCompatActivity() {
                 )
                 if (currentPage == AppPage.ANALYTICS) applyAnalyticsFilters()
             }
-            override fun onCancelled(error: DatabaseError) { }
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("MainActivity", "Dashboard listener cancelled: ${error.code} ${error.message}")
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Gagal memuat data: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
         dashboardRef?.addValueEventListener(dashboardListener!!)
     }
@@ -1658,7 +1665,18 @@ class MainActivity : AppCompatActivity() {
                 scheduleRenderHistory()
             }
 
-            override fun onCancelled(error: DatabaseError) { }
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("MainActivity", "History listener cancelled: ${error.code} ${error.message}")
+                runOnUiThread {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Gagal memuat riwayat log: ${if (error.code == DatabaseError.PERMISSION_DENIED) "Akses ditolak — coba login ulang." else error.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    binding.tvHistoryEmpty.visibility = View.VISIBLE
+                    binding.rvHistory.visibility = View.GONE
+                }
+            }
         }
         logsQuery.addChildEventListener(historyChildListener!!)
     }

@@ -489,8 +489,17 @@ function startMiniLogsListener() {
       })
       .join("");
     renderMiniLogDetailRows(rows);
+  }, (err) => {
+    console.error("[Logs] Firebase error:", err.code, err.message);
+    if (elMiniLogs) {
+      elMiniLogs.innerHTML = `<tr class="log-row">
+        <td colspan="6" style="text-align:center;padding:20px;color:var(--danger);">
+          <span class="material-symbols-rounded" style="vertical-align:middle;margin-right:6px;">error</span>
+          Gagal memuat log: ${err.code === "PERMISSION_DENIED" ? "Akses ditolak — coba login ulang." : err.message}
+        </td>
+      </tr>`;
+    }
   });
-
 }
 
 function startRealtimeListener() {

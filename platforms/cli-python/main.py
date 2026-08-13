@@ -270,54 +270,92 @@ def handle_logout():
 
 def view_logs():
     print_header()
-    console.print("[cyan]Memuat 5 log riwayat terakhir...\\n[/cyan]")
+    console.print("[cyan]Memuat 20 log riwayat terakhir...[/cyan]\n")
     try:
-        logs_data = db.child(f"{path_prefix}logs").order_by_key().limit_to_last(5).get(current_user['token'])
-        
+        from datetime import datetime
+        from rich.table import Table
+
+        logs_data = db.child(f"{path_prefix}logs").order_by_key().limit_to_last(20).get(current_user['token'])
+
         if logs_data.val():
             logs = logs_data.val()
+            entries = list(logs.items())
+            entries.reverse()  # terbaru di atas
 
-            # Header tabel
-            console.print(f"[bold cyan]{'Waktu':<22} {'Arus(A)':<10} {'Teg.(V)':<10} Status[/bold cyan]")
-            console.print("[dim]" + "-" * 58 + "[/dim]")
+            table = Table(
+                show_header=True,
+                header_style="bold cyan",
+                border_style="dim",
+                show_lines=False,
+            )
+            table.add_column("Waktu",        width=21, no_wrap=True)
+            table.add_column("Beban",        width=24, no_wrap=True)
+            table.add_column("Status",       width=9,  no_wrap=True)
+            table.add_column("Relay",        width=5,  no_wrap=True)
+            table.add_column("Sumber Meter", width=14, no_wrap=True)
+            table.add_column("Uptime",       width=10, no_wrap=True)
 
-            from datetime import datetime, timezone
-            for key, item in logs.items():
-                # Gunakan field 'waktu' (ISO string atau timestamp ms)
-                raw_waktu = item.get("waktu", "-")
+            for key, item in entries:
+                # Timestamp
+                raw_waktu = item.get("waktu") or item.get("timestamp")
                 waktu_str = "-"
-                if raw_waktu and raw_waktu != "-":
+                if raw_waktu:
                     try:
-                        if isinstance(raw_waktu, (int, float)):
-                            # timestamp milidetik
-                            waktu_str = datetime.fromtimestamp(raw_waktu / 1000).strftime("%d/%m/%Y %H:%M:%S")
+                        ms = float(raw_waktu)
+                        if ms > 1_000_000_000_000:
+                            waktu_str = datetime.fromtimestamp(ms / 1000).strftime("%d/%m/%Y %H:%M:%S")
                         else:
+                            waktu_str = str(raw_waktu)
+                    except (ValueError, TypeError):
+                        try:
                             waktu_str = datetime.fromisoformat(str(raw_waktu).replace('Z', '+00:00')).astimezone().strftime("%d/%m/%Y %H:%M:%S")
-                    except Exception:
-                        waktu_str = str(raw_waktu)
+                        except Exception:
+                            waktu_str = str(raw_waktu)
 
-                arus    = str(item.get("arus",     "-"))
-                teg     = str(item.get("tegangan", "-"))
-                status  = item.get("status", "-")
+                # Nilai sensor
+                arus   = float(item.get("arus",    0) or 0)
+                teg    = float(item.get("tegangan", 0) or 0)
+                pf     = float(item.get("power_factor", 0.85) or 0.85)
+                appar  = float(item.get("apparent_power") or item.get("daya") or arus * teg)
+                daya_w = float(item.get("daya_w") or appar * pf)
+                load_str = f"{arus:.2f}A / {teg:.1f}V / {daya_w:.0f}W"
 
+                # Status dengan warna
+                status = str(item.get("status", "NORMAL")).upper()
                 if status == "DANGER":
-                    status_str = f"[bold red]{status}[/bold red]"
+                    status_rich = f"[bold red]{status}[/bold red]"
                 elif status == "WARNING":
-                    status_str = f"[yellow]{status}[/yellow]"
+                    status_rich = f"[yellow]{status}[/yellow]"
+                elif status == "LEAKAGE":
+                    status_rich = f"[orange3]{status}[/orange3]"
                 else:
-                    status_str = f"[green]{status}[/green]"
+                    status_rich = f"[green]{status}[/green]"
 
-                console.print(
-                    f"[white]{waktu_str:<22}[/white] "
-                    f"[yellow]{arus:<10}[/yellow] "
-                    f"[blue]{teg:<10}[/blue] "
-                    f"{status_str}"
-                )
+                # Relay
+                relay_raw = item.get("relay", False)
+                relay_on  = relay_raw is True or str(relay_raw) == "1"
+                relay_str = "[bold green]ON[/bold green]" if relay_on else "[bold red]OFF[/bold red]"
+
+                # Sumber Meter
+                meter_source = str(item.get("sensor_source") or item.get("sensorSource") or "PZEM-004T").strip() or "PZEM-004T"
+
+                # Uptime
+                raw_uptime = item.get("uptime_s") or item.get("uptimeSeconds") or item.get("uptime")
+                try:
+                    uptime_num = float(raw_uptime) if raw_uptime is not None else None
+                    uptime_str = f"{int(uptime_num)} s" if uptime_num is not None and uptime_num >= 0 else "—"
+                except (ValueError, TypeError):
+                    uptime_str = "—"
+
+                table.add_row(waktu_str, load_str, status_rich, relay_str, meter_source, uptime_str)
+
+            console.print(table)
+            console.print(f"\n[dim]{len(entries)} entri ditampilkan.[/dim]")
         else:
             console.print("[dim]Belum ada catatan aktivitas.[/dim]")
     except Exception as e:
         console.print(f"[bold red]Kesalahan saat mengambil data: {str(e)}[/bold red]")
-    
+
     hold_for_enter()
 
 def toggle_relay():
@@ -446,7 +484,7 @@ def main_menu():
             "Pilih opsi:",
             choices=[
                 questionary.Choice("[1] Mengakses Live Monitoring", "live"),
-                questionary.Choice("[2] Catatan Log Terakhir", "log"),
+                questionary.Choice("[2] Riwayat Log (20 entri)", "log"),
                 questionary.Choice("[3] Kontrol Relay Power", "relay"),
                 questionary.Choice("[4] Keluar Sesi (Logout)", "logout"),
                 questionary.Choice("[0] Matikan Aplikasi (Exit)", "exit")

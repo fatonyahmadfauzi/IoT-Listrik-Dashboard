@@ -284,19 +284,82 @@ async function toggleRelay() {
 /** Lihat Log / History Kejadian */
 async function viewLogs() {
   printHeader();
-  console.log(chalk.cyan("Memuat 5 log riwayat terakhir...\n"));
+  console.log(chalk.cyan("Memuat 20 log riwayat terakhir...\n"));
   try {
-    const logQuery = query(ref(db, `${pathPrefix}/logs`), orderByKey(), limitToLast(5));
+    const logQuery = query(ref(db, `${pathPrefix}/logs`), orderByKey(), limitToLast(20));
     const snap = await get(logQuery);
-    
+
     if (snap.exists()) {
       const logs = snap.val();
-      Object.keys(logs).forEach(key => {
-        const item = logs[key];
-        const time = new Date(item.timestamp).toLocaleString();
-        const typeStr = item.type === 'alert' ? chalk.red('[ALERT]') : chalk.green('[INFO]');
-        console.log(`${chalk.gray(time)} ${typeStr} ${item.message}`);
+      const entries = Object.values(logs).reverse();
+
+      // Header
+      const w = { time: 22, load: 28, status: 10, relay: 6, source: 12, uptime: 10 };
+      console.log(
+        chalk.cyan.bold(
+          'Waktu'.padEnd(w.time) +
+          'Beban (A / V / W)'.padEnd(w.load) +
+          'Status'.padEnd(w.status) +
+          'Relay'.padEnd(w.relay) +
+          'Sumber Meter'.padEnd(w.source) +
+          'Uptime'
+        )
+      );
+      console.log(chalk.gray('─'.repeat(w.time + w.load + w.status + w.relay + w.source + w.uptime)));
+
+      entries.forEach(item => {
+        // Timestamp
+        const rawWaktu = item.waktu ?? item.timestamp;
+        let timeStr = '-';
+        if (rawWaktu) {
+          const ms = Number(rawWaktu);
+          if (Number.isFinite(ms) && ms > 1e12) {
+            timeStr = new Date(ms).toLocaleString('id-ID');
+          } else {
+            const parsed = Date.parse(String(rawWaktu));
+            if (Number.isFinite(parsed)) timeStr = new Date(parsed).toLocaleString('id-ID');
+          }
+        }
+
+        // Nilai sensor
+        const arus   = Number(item.arus   ?? 0);
+        const teg    = Number(item.tegangan ?? 0);
+        const pf     = Number(item.power_factor ?? 0.85);
+        const appar  = Number(item.apparent_power ?? item.daya ?? arus * teg);
+        const dayaW  = Number(item.daya_w ?? appar * pf);
+        const loadStr = `${arus.toFixed(2)}A / ${teg.toFixed(1)}V / ${dayaW.toFixed(0)}W`;
+
+        // Status
+        const status  = String(item.status || 'NORMAL').toUpperCase();
+        const colored = statusColor(status)(status.padEnd(w.status));
+
+        // Relay
+        const relayRaw = item.relay;
+        const relayOn  = relayRaw === true || Number(relayRaw) === 1;
+        const relayStr = relayOn ? chalk.green('ON') : chalk.red('OFF');
+
+        // Sumber Meter
+        const meterSource = String(item.sensor_source ?? item.sensorSource ?? 'PZEM-004T').trim() || 'PZEM-004T';
+
+        // Uptime
+        const rawUptime = item.uptime_s ?? item.uptimeSeconds ?? item.uptime;
+        const uptimeNum = Number(rawUptime);
+        const uptimeStr = Number.isFinite(uptimeNum) && uptimeNum >= 0
+          ? `${Math.floor(uptimeNum)} s`
+          : '—';
+
+        console.log(
+          chalk.white(timeStr.padEnd(w.time)) +
+          chalk.yellow(loadStr.padEnd(w.load)) +
+          colored +
+          relayStr.padEnd(w.relay + 6) +   // +6 karena chalk escape chars
+          chalk.white(meterSource.padEnd(w.source)) +
+          chalk.gray(uptimeStr)
+        );
       });
+
+      console.log(chalk.gray('\n' + '─'.repeat(88)));
+      console.log(chalk.gray(`${entries.length} entri ditampilkan.`));
     } else {
       console.log(chalk.gray("Belum ada catatan aktivitas."));
     }
@@ -408,7 +471,7 @@ async function mainMenu() {
         message: "Pilih opsi:",
         choices: [
           { name: "[1] Mengakses Live Monitoring", value: "live" },
-          { name: "[2] Catatan Log Terakhir", value: "log" },
+          { name: "[2] Riwayat Log (20 entri)", value: "log" },
           { name: "[3] Kontrol Relay Power", value: "relay" },
           { name: "[4] Keluar Sesi (Logout)", value: "logout" },
           { name: "[0] Matikan Aplikasi (Exit)", value: "exit" },

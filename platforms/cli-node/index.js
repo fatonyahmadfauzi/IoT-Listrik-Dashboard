@@ -191,7 +191,12 @@ function renderLiveMonitoring(data) {
   const apparentPower = Number(data.apparent_power ?? data.daya ?? 0);
   const activePower = Number(data.daya_w ?? (pf > 0 ? apparentPower * pf : 0));
 
-  console.log(`${chalk.blue("Waktu      :")} ${data.timestamp || "-"}`);
+  const rawUpdatedAt = data.updated_at ?? data.timestamp ?? data.waktu;
+  const updatedAtMs = Number(rawUpdatedAt);
+  const waktuStr = Number.isFinite(updatedAtMs) && updatedAtMs > 1e12
+    ? new Date(updatedAtMs).toLocaleString('id-ID')
+    : "-";
+  console.log(`${chalk.blue("Waktu      :")} ${chalk.white(waktuStr)}`);
   console.log(`${chalk.blue("Status     :")} ${statusColor(status)(status)}`);
   console.log(`${chalk.blue("Arus       :")} ${chalk.green(`${arus.toFixed(2)} A`)} ${chalk.gray("(PZEM-004T Meter)")}`);
   console.log(`${chalk.blue("Tegangan   :")} ${chalk.cyan(`${tegangan.toFixed(1)} V`)} ${chalk.gray("(PZEM-004T Meter)")}`);

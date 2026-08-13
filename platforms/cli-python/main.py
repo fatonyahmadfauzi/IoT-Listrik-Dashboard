@@ -418,7 +418,17 @@ def stream_handler(message):
         else:
             conn_str = f"[bold red]{connection}[/bold red]"
         console.print(f"[blue]Koneksi    :[/blue] {conn_str}")
-        console.print(f"[blue]Waktu      :[/blue] {full_data.get('timestamp', '-')}")
+        raw_updated_at = full_data.get("updated_at") or full_data.get("timestamp") or full_data.get("waktu")
+        try:
+            upd_ms = float(raw_updated_at) if raw_updated_at is not None else None
+            from datetime import datetime as _dt
+            if upd_ms and upd_ms > 1_000_000_000_000:
+                waktu_live = _dt.fromtimestamp(upd_ms / 1000).strftime("%d/%m/%Y %H:%M:%S")
+            else:
+                waktu_live = str(raw_updated_at) if raw_updated_at else "-"
+        except (ValueError, TypeError):
+            waktu_live = "-"
+        console.print(f"[blue]Waktu      :[/blue] {waktu_live}")
         console.print(f"[blue]Arus (A)   :[/blue] [white]{full_data.get('arus', '0')}[/white]")
         console.print(f"[blue]Tegangan(V):[/blue] [white]{full_data.get('tegangan', '0')}[/white]")
         console.print(f"[blue]Daya (VA)  :[/blue] [white]{full_data.get('apparent_power', full_data.get('daya', '0'))}[/white]")

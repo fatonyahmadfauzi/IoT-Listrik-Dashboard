@@ -19,11 +19,20 @@ cd IoT-Listrik-Dashboard
 ### 2. Setup Environment
 
 ```bash
-# Install dependencies root (Firebase Functions jika perlu)
+# Install dependencies root
+npm install
+
+# Firebase Functions (jika perlu)
 cd functions && npm install
 
-# Install dependencies backend-local (opsional)
+# Backend local (opsional)
 cd backend-local && npm install
+
+# Windows Desktop / Electron (jika perlu)
+cd platforms/electron && npm install
+
+# CLI Node.js (jika perlu)
+cd platforms/cli-node && npm install
 ```
 
 Lihat [README.md](README.md#setup-awal) untuk setup Firebase lengkap.
@@ -53,7 +62,7 @@ refactor: pisahkan CSS dashboard ke file terpisah
 git push origin fix/nama-bug
 ```
 
-Buka Pull Request ke branch `main` dengan deskripsi jelas tentang perubahan yang dilakukan.
+Buka Pull Request ke branch `master` dengan deskripsi jelas tentang perubahan yang dilakukan.
 
 ---
 
@@ -110,7 +119,7 @@ Gunakan [GitHub Issues](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboar
 **Environment:**
 - OS: Windows 11 / Android 14 / iOS 17
 - Browser: Chrome 124
-- Versi App: 1.0.0
+- Versi App: 1.1.0
 ```
 
 ---

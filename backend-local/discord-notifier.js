@@ -1158,6 +1158,8 @@ async function broadcastPhysicalSystemEvent({
 // LISTENER 1 — Status → #alerts
 // ════════════════════════════════════════════════════════════════════════
 let lastStatus = null;
+let lastStatusAlertSentAt = 0;
+const STATUS_ALERT_COOLDOWN_MS = 10000; // 10 detik — cegah duplikasi saat notifier restart
 db.ref('/listrik/status').on('value', async (snap) => {
   const status = snap.val();
   if (status === lastStatus) return;
@@ -1165,19 +1167,29 @@ db.ref('/listrik/status').on('value', async (snap) => {
   lastStatus   = status;
   if (prev === null) return; // skip nilai awal saat server baru start
 
+  // Dedup guard: jika alert yang sama dikirim dalam 10 detik terakhir, skip
+  const now = Date.now();
+  if (now - lastStatusAlertSentAt < STATUS_ALERT_COOLDOWN_MS) {
+    console.log(\`[Status] Dedup skip: \${prev} -> \${status} (terlalu cepat)\`);
+    return;
+  }
+  lastStatusAlertSentAt = now;
+
   console.log(`[Status] ${prev} → ${status}`);
 
   // Ambil semua data listrik
   const listrikSnap = await db.ref('/listrik').get();
   const d = listrikSnap.val() || {};
 
-  const isBahaya = status === 'DANGER';
-  const isPulih  = status === 'NORMAL' && (prev === 'DANGER' || prev === 'WARNING');
+  const isBahaya = status === 'DANGER' || status === 'SENSOR_ERROR';
+  const isPulih  = status === 'NORMAL' && (prev === 'DANGER' || prev === 'WARNING' || prev === 'SENSOR_ERROR' || prev === 'LEAKAGE');
 
   const embed = {
     title:       `${statusEmoji(status)} Status Kelistrikan: ${status}`,
     description: isBahaya
-      ? '⚠️ **KEBOCORAN ARUS TERDETEKSI!** Relay sedang diputuskan otomatis.'
+      ? (status === 'SENSOR_ERROR'
+        ? '⚠️ **SENSOR ERROR** — Pembacaan sensor gagal. Periksa koneksi PZEM-004T.'
+        : '⚠️ **KEBOCORAN ARUS TERDETEKSI!** Relay sedang diputuskan otomatis.')
       : isPulih
       ? '✅ Kondisi kelistrikan telah kembali **NORMAL**.'
       : `Status berubah dari \`${prev}\` → \`${status}\``,

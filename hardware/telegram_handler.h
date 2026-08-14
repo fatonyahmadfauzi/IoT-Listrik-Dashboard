@@ -1,5 +1,5 @@
 /**
- * telegram_handler.h â€” Telegram Bot Notification Handler
+ * telegram_handler.h — Telegram Bot Notification Handler
  * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * KEY CHANGE from previous version:
  *   Telegram Bot Token and Chat ID are no longer compile-time macros.
@@ -8,8 +8,8 @@
  *   reflashing the firmware.
  *
  * Required library:
- *   HTTPClient â€” built-in to ESP32 Arduino core (no install needed)
- *   UrlEncode  â€” search "URLEncode" by Masoud K in Arduino Library Manager
+ *   HTTPClient — built-in to ESP32 Arduino core (no install needed)
+ *   UrlEncode  — search "URLEncode" by Masoud K in Arduino Library Manager
  * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  */
 
@@ -76,7 +76,7 @@ bool sendTelegram(const String& message,
                   unsigned long cooldownMs = 30000,
                   bool          force      = false) {
 
-  // Validate credentials â€” silently skip if not configured
+  // Validate credentials — silently skip if not configured
   if (botToken.isEmpty() || chatId.isEmpty()) {
     Serial.println("[Telegram] Skip: token/chatId belum dikonfigurasi di Firebase /settings");
     return false;
@@ -150,10 +150,10 @@ String buildAlertMessage(const String& status,
   const char* emoji;
   const char* title;
 
-  if      (status == "DANGER")  { emoji = "ðŸš¨"; title = "<b>BAHAYA â€” ARUS â‰¥ THRESHOLD!</b>"; }
-  else if (status == "WARNING") { emoji = "ðŸ””"; title = "<b>Peringatan Arus Mendekati Batas</b>"; }
+  if      (status == "DANGER")  { emoji = "🚨"; title = "<b>BAHAYA — ARUS ≥ THRESHOLD!</b>"; }
+  else if (status == "WARNING") { emoji = "🔔"; title = "<b>Peringatan Arus Mendekati Batas</b>"; }
   else if (status == "SENSOR_ERROR") { emoji = "\xE2\x9A\xA0\xEF\xB8\x8F"; title = "<b>SENSOR ERROR \xE2\x80\x94 Pembacaan Sensor Gagal!</b>"; }
-  else                          { emoji = "âœ…"; title = "<b>Sistem Kembali NORMAL</b>"; }
+  else                          { emoji = "✅"; title = "<b>Sistem Kembali NORMAL</b>"; }
 
   char buf[896];
   snprintf(buf, sizeof(buf),

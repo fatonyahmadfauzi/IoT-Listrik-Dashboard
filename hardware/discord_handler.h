@@ -1,5 +1,5 @@
 /**
- * discord_handler.h â€” Discord Webhook Notification Handler
+ * discord_handler.h — Discord Webhook Notification Handler
  * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * Kirim notifikasi ke Discord via Webhook URL yang dikonfigurasi di
  * Firebase /settings/discord/webhookAlerts
@@ -10,8 +10,8 @@
  *   - Relay ON / OFF (oleh web command atau auto-cutoff)
  *
  * Required library:
- *   HTTPClient â€” built-in to ESP32 Arduino core (no install needed)
- *   ArduinoJson â€” install via Arduino Library Manager
+ *   HTTPClient — built-in to ESP32 Arduino core (no install needed)
+ *   ArduinoJson — install via Arduino Library Manager
  * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  */
 
@@ -73,7 +73,7 @@ bool sendDiscordWebhook(const String& webhookUrl,
     }
   }
 
-  // Build JSON payload â€” Discord embed format
+  // Build JSON payload — Discord embed format
   // Gunakan String manual agar tidak perlu ArduinoJson dependency
   String escapedTitle = title;
   String escapedDesc  = description;
@@ -137,19 +137,19 @@ void buildDiscordStatusEmbed(const String& status, const String& previousStatus,
                               int relay, const String& sensorSource,
                               String& outTitle, String& outDesc, uint32_t& outColor) {
   if (status == "DANGER") {
-    outTitle = "ðŸš¨ BAHAYA â€” Arus â‰¥ Threshold!";
+    outTitle = "🚨 BAHAYA — Arus ≥ Threshold!";
     outColor = DISCORD_COLOR_RED;
   } else if (status == "WARNING") {
-    outTitle = "ðŸ”” Peringatan â€” Arus Mendekati Batas";
+    outTitle = "🔔 Peringatan — Arus Mendekati Batas";
     outColor = DISCORD_COLOR_YELLOW;
   } else if (status == "LEAKAGE") {
-    outTitle = "âš ï¸  Kebocoran Arus Terdeteksi!";
+    outTitle = "⚠️  Kebocoran Arus Terdeteksi!";
     outColor = DISCORD_COLOR_ORANGE;
   } else if (status == "SENSOR_ERROR") {
-    outTitle = "âš ï¸  SENSOR ERROR \xE2\x80\x94 Pembacaan Sensor Gagal!";
+    outTitle = "⚠️  SENSOR ERROR \xE2\x80\x94 Pembacaan Sensor Gagal!";
     outColor = DISCORD_COLOR_GRAY;
   } else {
-    outTitle = "âœ… Sistem Kembali Normal";
+    outTitle = "✅ Sistem Kembali Normal";
     outColor = DISCORD_COLOR_GREEN;
   }
 
@@ -157,16 +157,16 @@ void buildDiscordStatusEmbed(const String& status, const String& previousStatus,
   snprintf(buf, sizeof(buf),
     "**Status sebelumnya:** `%s -> %s`\n"
     "**Snapshot data realtime:**\n"
-    "âš¡ Arus     : `%.2f A`\n"
-    "ðŸ”Œ Tegangan : `%.1f V`\n"
+    "⚡ Arus     : `%.2f A`\n"
+    "🔔 Tegangan : `%.1f V`\n"
     "Daya aktif : `%.1f W`\n"
     "Daya semu  : `%.1f VA`\n"
     "Energi     : `%.4f kWh`\n"
     "PF         : `%.2f`\n"
     "Frekuensi  : `%.1f Hz`\n"
-    "ðŸ” Relay    : `%s`\n"
+    "🔒 Relay    : `%s`\n"
     "Sumber meter: `%s`\n"
-    "â± Uptime   : `%lu s`",
+    "⏱ Uptime   : `%lu s`",
     previousStatus.c_str(), status.c_str(),
     arus, tegangan,
     dayaW, apparentPowerVa, energiKwh, powerFactor, frekuensi,
@@ -215,14 +215,14 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
                              const String& status, const String& sensorSource,
                              String& outTitle, String& outDesc, uint32_t& outColor) {
   if (relayVal == 1) {
-    outTitle = "ðŸŸ¢ Relay Dinyalakan (ON)";
+    outTitle = "🟢 Relay Dinyalakan (ON)";
     outColor = DISCORD_COLOR_BLUE;
   } else {
     if (cause == "auto_cutoff") {
-      outTitle = "ðŸ”´ Relay Dimatikan Otomatis (Auto-Cutoff)";
+      outTitle = "🔴 Relay Dimatikan Otomatis (Auto-Cutoff)";
       outColor = DISCORD_COLOR_RED;
     } else {
-      outTitle = "âš« Relay Dimatikan (OFF)";
+      outTitle = "⚫ Relay Dimatikan (OFF)";
       outColor = DISCORD_COLOR_GRAY;
     }
   }
@@ -231,7 +231,7 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
   snprintf(buf, sizeof(buf),
     "**Data Sensor saat perintah:**\n"
     "âš¡ Arus     : `%.2f A`\n"
-    "ðŸ”Œ Tegangan : `%.1f V`\n"
+    "🔔 Tegangan : `%.1f V`\n"
     "Daya aktif : `%.1f W`\n"
     "Daya semu  : `%.1f VA`\n"
     "Energi     : `%.4f kWh`\n"
@@ -240,7 +240,7 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
     "ðŸ“Š Status   : `%s`\n"
     "ðŸ“‹ Penyebab : `%s`\n"
     "Sumber meter: `%s`\n"
-    "â± Uptime   : `%lu s`",
+    "⏱ Uptime   : `%lu s`",
     arus, tegangan,
     dayaW, apparentPowerVa, energiKwh, powerFactor, frekuensi,
     status.c_str(),

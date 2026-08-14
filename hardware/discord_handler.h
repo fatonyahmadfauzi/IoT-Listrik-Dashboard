@@ -1,4 +1,4 @@
-﻿/**
+/**
  * discord_handler.h â€” Discord Webhook Notification Handler
  * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * Kirim notifikasi ke Discord via Webhook URL yang dikonfigurasi di
@@ -143,8 +143,11 @@ void buildDiscordStatusEmbed(const String& status, const String& previousStatus,
     outTitle = "ðŸ”” Peringatan â€” Arus Mendekati Batas";
     outColor = DISCORD_COLOR_YELLOW;
   } else if (status == "LEAKAGE") {
-    outTitle = "âš ï¸ Kebocoran Arus Terdeteksi!";
+    outTitle = "âš ï¸  Kebocoran Arus Terdeteksi!";
     outColor = DISCORD_COLOR_ORANGE;
+  } else if (status == "SENSOR_ERROR") {
+    outTitle = "âš ï¸  SENSOR ERROR \xE2\x80\x94 Pembacaan Sensor Gagal!";
+    outColor = DISCORD_COLOR_GRAY;
   } else {
     outTitle = "âœ… Sistem Kembali Normal";
     outColor = DISCORD_COLOR_GREEN;
@@ -262,10 +265,12 @@ void sendDiscordStatusAlert(const String& newStatus, const String& lastStatus,
                              const String& webhookUrl,
                              unsigned long cooldownMs) {
   bool shouldSend = false;
-  if (newStatus == "DANGER"  && lastStatus != "DANGER")  shouldSend = true;
-  if (newStatus == "LEAKAGE" && lastStatus != "LEAKAGE") shouldSend = true;
-  if (newStatus == "WARNING" && lastStatus == "NORMAL")  shouldSend = true;
-  if (newStatus == "NORMAL"  && (lastStatus == "DANGER" || lastStatus == "WARNING" || lastStatus == "LEAKAGE")) shouldSend = true;
+  if (newStatus == "DANGER"       && lastStatus != "DANGER")       shouldSend = true;
+  if (newStatus == "LEAKAGE"      && lastStatus != "LEAKAGE")      shouldSend = true;
+  if (newStatus == "WARNING"      && lastStatus == "NORMAL")       shouldSend = true;
+  if (newStatus == "SENSOR_ERROR" && lastStatus != "SENSOR_ERROR") shouldSend = true;
+  if (newStatus == "NORMAL"       && (lastStatus == "DANGER" || lastStatus == "WARNING" 
+                                      || lastStatus == "LEAKAGE" || lastStatus == "SENSOR_ERROR")) shouldSend = true;
 
   if (!shouldSend) return;
 

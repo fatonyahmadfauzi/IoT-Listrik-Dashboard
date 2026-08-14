@@ -64,7 +64,7 @@ public/downloads/cli/
 ### 4. Upload ke GitHub Release
 
 ```powershell
-.\scripts\upload-release.ps1 -Version v1.0.0
+.\scripts\upload-release.ps1 -Version v1.1.0
 ```
 
 Script ini mengganti asset pada release yang sama. Pastikan nama file di `app-version.json` dan `scripts/upload-release.ps1` konsisten dengan file yang ada di `public/downloads/`.
@@ -88,7 +88,7 @@ Halaman `/downloads` membaca `public/app-version.json` melalui `public/js/versio
 Download button akan diarahkan ke URL dalam `app-version.json`, misalnya:
 
 ```text
-https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.0.0/IoT-Listrik-Dashboard.apk
+https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/IoT-Listrik-Dashboard.apk
 ```
 
 ## Integrasi CLI

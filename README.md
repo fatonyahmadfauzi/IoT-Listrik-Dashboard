@@ -261,7 +261,7 @@ Untuk membuat release versi baru:
 .\scripts\build-release-for-web.ps1 -Secret <SECRET>
 
 # 4. Upload ke GitHub Releases
-.\scripts\upload-release.ps1 -Version v1.0.0
+.\scripts\upload-release.ps1 -Version v1.1.0
 ```
 
 ## Kompatibilitas Platform

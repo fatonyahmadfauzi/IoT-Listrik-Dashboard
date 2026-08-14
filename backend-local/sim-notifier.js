@@ -324,9 +324,11 @@ async function sendFCM(status, uid) {
     data: {
       action: status === 'DANGER' ? 'TRIGGER_ALARM' : 'STOP_ALARM',
       status,
-      title: status === 'DANGER' ? '🚨 BAHAYA SIM!' : '✅ Status Normal',
+      title: status === 'DANGER' ? '🚨 BAHAYA SIM!' : status === 'SENSOR_ERROR' ? '⚠️ SENSOR ERROR' : '✅ Status Normal',
       message: status === 'DANGER'
         ? `Simulator[${uid.slice(0,8)}]: Overcurrent terdeteksi!`
+        : status === 'SENSOR_ERROR'
+        ? `Simulator[${uid.slice(0,8)}]: Pembacaan sensor gagal!`
         : `Simulator[${uid.slice(0,8)}]: Kondisi kembali normal.`,
       uid,
       source: 'simulator',
@@ -377,8 +379,8 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
   console.log(`\n[Sim] [${uid.slice(0,8)}] Status: ${prevStatus} → ${currentStatus}`);
   console.log(`  Config: telegram=${!!(cfg.telegramBotToken)}, discord.enabled=${cfg.discord?.enabled}, discord.webhookAlerts=${!!(cfg.discord?.webhookAlerts)}`);
 
-  const isAlert    = currentStatus === 'DANGER' || currentStatus === 'WARNING';
-  const isRecovery = currentStatus === 'NORMAL' && (prevStatus === 'DANGER' || prevStatus === 'WARNING');
+  const isAlert    = currentStatus === 'DANGER' || currentStatus === 'WARNING' || currentStatus === 'SENSOR_ERROR';
+  const isRecovery = currentStatus === 'NORMAL' && (prevStatus === 'DANGER' || prevStatus === 'WARNING' || prevStatus === 'SENSOR_ERROR');
 
   // ── 1. Discord #alerts ─────────────────────────────────────────────────
   // Kirim jika ada webhook (enabled !== false = default aktif)
@@ -426,16 +428,20 @@ async function handleStatusChange(uid, currentStatus, prevStatus, listrikData, c
   const tgChatIds = getTelegramChatIds(cfg);
 
   if (tgEnabled && tgToken && tgChatIds.length > 0) {
-    if (currentStatus === 'DANGER' || currentStatus === 'WARNING' || isRecovery) {
+    if (isAlert || isRecovery) {
       const title = currentStatus === 'DANGER'
         ? '[SIMULATOR] BAHAYA KRITIS!'
         : currentStatus === 'WARNING'
         ? '[SIMULATOR] Peringatan Arus Tinggi'
+        : currentStatus === 'SENSOR_ERROR'
+        ? '[SIMULATOR] SENSOR ERROR!'
         : '[SIMULATOR] Status Kembali Normal';
       const description = currentStatus === 'DANGER'
         ? 'Overcurrent terdeteksi dan relay diputuskan otomatis.'
         : currentStatus === 'WARNING'
         ? 'Arus mendekati atau melewati batas peringatan.'
+        : currentStatus === 'SENSOR_ERROR'
+        ? 'Pembacaan sensor gagal atau tidak merespon.'
         : 'Kondisi kelistrikan simulator kembali normal.';
       const msg = buildRealtimeTelegramMessage(title, d, uid, description);
       const ok = await sendTelegram(tgToken, tgChatIds, msg);

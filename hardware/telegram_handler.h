@@ -1,4 +1,4 @@
-﻿/**
+/**
  * telegram_handler.h â€” Telegram Bot Notification Handler
  * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  * KEY CHANGE from previous version:
@@ -152,6 +152,7 @@ String buildAlertMessage(const String& status,
 
   if      (status == "DANGER")  { emoji = "ðŸš¨"; title = "<b>BAHAYA â€” ARUS â‰¥ THRESHOLD!</b>"; }
   else if (status == "WARNING") { emoji = "ðŸ””"; title = "<b>Peringatan Arus Mendekati Batas</b>"; }
+  else if (status == "SENSOR_ERROR") { emoji = "\xE2\x9A\xA0\xEF\xB8\x8F"; title = "<b>SENSOR ERROR \xE2\x80\x94 Pembacaan Sensor Gagal!</b>"; }
   else                          { emoji = "âœ…"; title = "<b>Sistem Kembali NORMAL</b>"; }
 
   char buf[896];
@@ -271,9 +272,11 @@ void sendAlertIfNeeded(const String& newStatus, const String& lastStatus,
                         unsigned long cooldownMs) {
   bool shouldSend = false;
 
-  if (newStatus == "DANGER"  && lastStatus != "DANGER")   shouldSend = true;
-  if (newStatus == "WARNING" && lastStatus == "NORMAL")   shouldSend = true;
-  if (newStatus == "NORMAL"  && (lastStatus == "DANGER" || lastStatus == "WARNING" || lastStatus == "LEAKAGE")) shouldSend = true;
+  if (newStatus == "DANGER"       && lastStatus != "DANGER")        shouldSend = true;
+  if (newStatus == "WARNING"      && lastStatus == "NORMAL")        shouldSend = true;
+  if (newStatus == "SENSOR_ERROR" && lastStatus != "SENSOR_ERROR") shouldSend = true;
+  if (newStatus == "NORMAL"       && (lastStatus == "DANGER" || lastStatus == "WARNING" 
+                                      || lastStatus == "LEAKAGE" || lastStatus == "SENSOR_ERROR")) shouldSend = true;
 
   if (shouldSend) {
     String msg = buildAlertMessage(

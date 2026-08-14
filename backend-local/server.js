@@ -166,9 +166,28 @@ statusRef.on('value', async (snapshot) => {
         } catch (error) {
             console.error('❌ FCM error:', error);
         }
+    } else if (currentStatus === 'SENSOR_ERROR') {
+        console.log('🚨 CRITICAL: Status is SENSOR_ERROR. Triggering FCM Push Alarm!');
+        const payload = {
+            topic: 'iot_alarms',
+            data: {
+                action: 'TRIGGER_ALARM',
+                status: 'SENSOR_ERROR',
+                title: 'SENSOR ERROR!',
+                message: '⚠️ Pembacaan Sensor Gagal (PZEM Terputus)!',
+                source: 'hardware',
+            },
+            android: { priority: 'high' },
+        };
+        try {
+            const response = await admin.messaging().send(payload);
+            console.log(`✅ FCM sent for SENSOR_ERROR. ID: ${response}`);
+        } catch (error) {
+            console.error('❌ FCM error:', error);
+        }
     }
 
-    if (currentStatus === 'NORMAL' && (previousStatus === 'DANGER' || previousStatus === 'WARNING')) {
+    if (currentStatus === 'NORMAL' && (previousStatus === 'DANGER' || previousStatus === 'WARNING' || previousStatus === 'SENSOR_ERROR')) {
         console.log('🟢 Status recovered to NORMAL. Triggering STOP FCM...');
         const payload = {
             topic: 'iot_alarms',

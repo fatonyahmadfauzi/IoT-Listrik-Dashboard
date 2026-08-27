@@ -145,3 +145,11 @@ test-msi-download.msi
 platforms/cli-node/build/
 
 public/downloads/cli/node-source/iot-listrik-dashboard-cli-*
+
+# Local agent/editor/QA artifacts — keep out of GitHub
+.agents/
+.tmp/
+.vscode/
+dist-public/
+test-results/
+~WRL*.tmp

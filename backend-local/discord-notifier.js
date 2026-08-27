@@ -32,7 +32,7 @@ if (!fs.existsSync(serviceAccountPath)) {
 
 admin.initializeApp({
   credential: admin.credential.cert(require(serviceAccountPath)),
-  databaseURL: 'https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app',
+  databaseURL: 'https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app',
 });
 
 const db = admin.database();
@@ -1170,7 +1170,7 @@ db.ref('/listrik/status').on('value', async (snap) => {
   // Dedup guard: jika alert yang sama dikirim dalam 10 detik terakhir, skip
   const now = Date.now();
   if (now - lastStatusAlertSentAt < STATUS_ALERT_COOLDOWN_MS) {
-    console.log(\`[Status] Dedup skip: \${prev} -> \${status} (terlalu cepat)\`);
+    console.log(`[Status] Dedup skip: ${prev} -> ${status} (terlalu cepat)`);
     return;
   }
   lastStatusAlertSentAt = now;
@@ -1575,3 +1575,4 @@ console.log('[Discord Notifier] Mendengarkan perubahan RTDB... (Ctrl+C untuk ber
 console.log('[Daily Report] Scheduler aktif — cek laporan harian setiap 5 menit.');
 console.log('[Telegram Commands] Polling aktif — cek /pause, /resume, /status, /help setiap 4 detik.');
 process.on('SIGINT', () => { console.log('\n[Discord Notifier] Dihentikan.'); process.exit(0); });
+

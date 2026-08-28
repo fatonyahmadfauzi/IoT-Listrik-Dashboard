@@ -1,5 +1,6 @@
 import { Bell, Clock, Cloud } from 'lucide-react';
-import { useDataStore } from '../lib/store';
+import { useEffect, useState } from 'react';
+import { useAuthStore, useDataStore } from '../lib/store';
 import { useStore } from '../store';
 
 type TopbarProps = {
@@ -9,7 +10,16 @@ type TopbarProps = {
 export function Topbar({ title }: TopbarProps) {
   const { notifications } = useStore();
   const { currentData, connectionMeta } = useDataStore();
-  const endpoint = String(connectionMeta?.endpointBadge || 'CLOUD');
+  const { isTempAccount, tempExpiresAt } = useAuthStore();
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    if (!isTempAccount || !tempExpiresAt) return;
+    const timer = window.setInterval(() => setClockTick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [isTempAccount, tempExpiresAt]);
+  const remainingSeconds = tempExpiresAt ? Math.max(0, Math.ceil((tempExpiresAt - Date.now()) / 1000)) : 0;
+  const demoCountdown = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
+  const endpoint = isTempAccount ? 'SIM' : String(connectionMeta?.endpointBadge || 'CLOUD');
   const connection = String(connectionMeta?.connection || 'Memeriksa perangkat...');
   const fallback = connectionMeta?.fallbackActive ? ' · FALLBACK' : '';
   const lastDeviceSeenAt = Number(connectionMeta?.lastDeviceSeenAt ?? 0);
@@ -48,6 +58,11 @@ export function Topbar({ title }: TopbarProps) {
       </h2>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         <div className="flex h-10 max-w-full items-center gap-2 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-900/75 px-3 shadow-lg sm:max-w-[640px]">
+          {isTempAccount && (
+            <span className="shrink-0 rounded-md border border-amber-400/45 bg-amber-500/15 px-2 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-amber-100">
+              DEMO {tempExpiresAt ? demoCountdown : ''}
+            </span>
+          )}
           <span className="shrink-0 rounded-md border border-blue-700/55 bg-blue-900/45 px-2 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-blue-200">
             {endpoint}
           </span>

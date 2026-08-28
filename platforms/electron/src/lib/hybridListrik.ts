@@ -184,7 +184,7 @@ export function startHybridListrik(
         meta({
           source: 'CLOUD',
           connection: getConnectionLabel(fbConnected),
-          endpointBadge: 'CLOUD',
+          endpointBadge: forceCloud ? 'SIM' : 'CLOUD',
           lastDeviceSeenAt: lastDataReceivedTime || null,
         });
         return;
@@ -209,7 +209,7 @@ export function startHybridListrik(
           source: 'CLOUD',
           connection: getConnectionLabel(true),
           fallbackActive: false,
-          endpointBadge: 'CLOUD',
+          endpointBadge: forceCloud ? 'SIM' : 'CLOUD',
           lastDeviceSeenAt: lastDataReceivedTime || null,
         });
       }
@@ -218,7 +218,7 @@ export function startHybridListrik(
         meta({
           source: 'CLOUD',
           connection: getConnectionLabel(true),
-          endpointBadge: 'CLOUD',
+          endpointBadge: forceCloud ? 'SIM' : 'CLOUD',
           lastDeviceSeenAt: lastDataReceivedTime || null,
         });
       }
@@ -270,7 +270,7 @@ export function startHybridListrik(
           source: 'CLOUD',
           connection: getConnectionLabel(true),
           fallbackActive: false,
-          endpointBadge: 'CLOUD',
+          endpointBadge: forceCloud ? 'SIM' : 'CLOUD',
           lastDeviceSeenAt: lastDataReceivedTime || null,
         });
       },
@@ -292,7 +292,7 @@ export function startHybridListrik(
           connection: getConnectionLabel(true),
           source: 'CLOUD',
           fallbackActive: false,
-          endpointBadge: 'CLOUD',
+          endpointBadge: forceCloud ? 'SIM' : 'CLOUD',
           lastDeviceSeenAt: lastDataReceivedTime || null,
         });
       }

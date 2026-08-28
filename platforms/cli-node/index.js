@@ -12,13 +12,13 @@ const os = require("os");
 const LEGACY_SESSION_FILE = path.join(os.homedir(), ".iot-listrik-session.json");
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD99N-FQdkTPNnNGY-fof6ijskxg0bzARc",
-  authDomain: "monitoring-listrik-719b1.firebaseapp.com",
-  databaseURL: "https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "monitoring-listrik-719b1",
-  storageBucket: "monitoring-listrik-719b1.firebasestorage.app",
-  messagingSenderId: "115654600721",
-  appId: "1:115654600721:web:6b971ee1c19be7e045a9b0",
+  apiKey: "AIzaSyBLr8oo64-ARn2TUuR6yj68Zi3MUR3qsRU",
+  authDomain: "iot-listrik-dashboard.firebaseapp.com",
+  databaseURL: "https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "iot-listrik-dashboard",
+  storageBucket: "iot-listrik-dashboard.firebasestorage.app",
+  messagingSenderId: "690684049171",
+  appId: "1:690684049171:web:b8953844f7512e69488ce6",
 };
 
 const app = initializeApp(firebaseConfig);
@@ -28,6 +28,8 @@ const db = getDatabase(app);
 const DEVICE_STALE_MS = 15000;
 let pathPrefix = "";
 let sessionTimeoutTimer = null;
+let isTempSession = false;
+let tempExpiresAt = null;
 let presenceListrikRef = null;
 let presenceConnRef = null;
 let firebaseConnected = true;
@@ -174,7 +176,7 @@ function renderLiveMonitoring(data) {
         : chalk.red;
 
   console.log(chalk.cyan.bold("=== Ringkasan Monitoring PZEM-004T ==="));
-  console.log(`${chalk.blue("Sumber     :")} ${chalk.white("CLOUD")}`);
+  console.log(`${chalk.blue("Sumber     :")} ${chalk.white(isTempSession ? "SIM" : "CLOUD")}`);
   console.log(`${chalk.blue("Koneksi    :")} ${connectionColor(connection)}`);
 
   if (!data) {
@@ -227,7 +229,10 @@ function printHeader() {
   console.log(chalk.gray("Pengembang: Fatony Ahmad Fauzi\n"));
   
   if (auth.currentUser) {
-    console.log(chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}\n`));
+    const remaining = tempExpiresAt ? Math.max(0, Math.ceil((tempExpiresAt - Date.now()) / 1000)) : 0;
+    const countdown = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
+    const badge = isTempSession ? chalk.bgYellow.black(` DEMO ${countdown} `) : chalk.gray(' USER ');
+    console.log(`${badge} ${chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}`)}\n`);
   }
 }
 
@@ -420,8 +425,10 @@ async function enforceLogin() {
 /** Memproses Custom Claims untuk Session Isolation */
 async function processUserClaims() {
   const result = await auth.currentUser.getIdTokenResult(true);
-  const isTemp = result.claims.isTempAccount === true;
-  const expiresAt = result.claims.expiresAt;
+  const isTemp = result.claims.isTempAccount === true || auth.currentUser.email?.trim().toLowerCase().startsWith('sim_') === true;
+  const expiresAt = Number(result.claims.expiresAt || 0) || null;
+  isTempSession = isTemp;
+  tempExpiresAt = expiresAt;
   
   if (isTemp) {
     pathPrefix = `sim/${auth.currentUser.uid}`;

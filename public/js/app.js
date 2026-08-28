@@ -161,9 +161,9 @@ function renderStatus(status) {
 
 function renderConnectionMeta(m) {
   if (!elEndpointBadge || !elConnState) return;
-  const b = m.endpointBadge || (m.source === "LOCAL" ? "LOCAL" : "CLOUD");
+  const b = isTempAccount() ? "SIM" : (m.endpointBadge || (m.source === "LOCAL" ? "LOCAL" : "CLOUD"));
   elEndpointBadge.textContent =
-    b === "FALLBACK" ? "FALLBACK" : b === "LOCAL" ? "LOCAL" : "CLOUD";
+    b === "SIM" ? "SIM" : b === "FALLBACK" ? "FALLBACK" : b === "LOCAL" ? "LOCAL" : "CLOUD";
   elEndpointBadge.className =
     "ep-badge " +
     (b === "LOCAL"
@@ -178,7 +178,7 @@ function renderConnectionMeta(m) {
     elHeartbeatText.textContent =
       rawConnection === "Connected" ? "Heartbeat aktif" : "Tanpa heartbeat";
   }
-  if (m.fallbackActive) {
+  if (m.fallbackActive && !isTempAccount()) {
     elEndpointBadge.textContent = "FALLBACK";
     elEndpointBadge.className = "ep-badge ep-fallback";
   }

@@ -18,6 +18,7 @@ interface UserStore {
   loading: boolean;
   error: string | null;
   isTempAccount: boolean;
+  tempExpiresAt: number | null;
   initAuth: () => void;
   logout: () => void;
 }
@@ -31,6 +32,7 @@ export const useAuthStore = create<UserStore>((set, get) => {
     user: null,
     role: null,
     isTempAccount: false,
+    tempExpiresAt: null,
     loading: true,
     error: null,
 
@@ -42,9 +44,9 @@ export const useAuthStore = create<UserStore>((set, get) => {
         if (authTimer) clearTimeout(authTimer);
 
         if (user) {
-          const tokenResult = await user.getIdTokenResult();
-          const isTempAccount = !!tokenResult.claims.isTempAccount;
-          const expiresAt = tokenResult.claims.expiresAt as number | undefined;
+          const tokenResult = await user.getIdTokenResult(true);
+          const isTempAccount = !!tokenResult.claims.isTempAccount || user.email?.trim().toLowerCase().startsWith('sim_') === true;
+          const expiresAt = Number(tokenResult.claims.expiresAt || 0) || undefined;
 
           if (isTempAccount && expiresAt) {
             const timeRemaining = expiresAt - Date.now();
@@ -62,7 +64,7 @@ export const useAuthStore = create<UserStore>((set, get) => {
             }
           }
 
-          set({ user, isTempAccount, error: null });
+          set({ user, isTempAccount, tempExpiresAt: expiresAt ?? null, error: null });
 
           // Get user role from RTDB
           const roleRef = ref(db, `users/${user.uid}/role`);
@@ -78,7 +80,7 @@ export const useAuthStore = create<UserStore>((set, get) => {
             }
           );
         } else {
-          set({ user: null, role: null, isTempAccount: false, loading: false });
+          set({ user: null, role: null, isTempAccount: false, tempExpiresAt: null, loading: false });
         }
       });
     },
@@ -87,7 +89,7 @@ export const useAuthStore = create<UserStore>((set, get) => {
       try {
         if (authTimer) clearTimeout(authTimer);
         await signOut(auth);
-        set({ user: null, role: null, isTempAccount: false, error: null });
+        set({ user: null, role: null, isTempAccount: false, tempExpiresAt: null, error: null });
         if (unsubscribeRole) {
           unsubscribeRole();
           unsubscribeRole = null;

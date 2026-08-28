@@ -34,6 +34,10 @@ let firebaseConnected = true;
 let stopListrik = null;
 let stopConnected = null;
 let renderTimer = null;
+let sessionIsTemp = false;
+let sessionPrefix = "";
+let tempExpiresAt = null;
+let demoCountdownTimer = null;
 
 function formatTime(value) {
   const n = Number(value);
@@ -60,7 +64,7 @@ function resolveUpdatedAt(payload) {
 }
 
 function setBadge(label = "CLOUD") {
-  const safeLabel = label === "LOCAL" || label === "FALLBACK" ? label : "CLOUD";
+  const safeLabel = label === "SIM" || label === "LOCAL" || label === "FALLBACK" ? label : "CLOUD";
   const className = "ep-badge " + (safeLabel === "LOCAL" ? "ep-local" : safeLabel === "FALLBACK" ? "ep-fallback" : "ep-cloud");
 
   if (endpointBadge) {
@@ -73,6 +77,54 @@ function setBadge(label = "CLOUD") {
   }
 }
 
+function ensureDemoBadge(container, id) {
+  if (!container) return null;
+  let badge = document.getElementById(id);
+  if (!badge) {
+    // auth.js may already have created the shared badge. Reuse it so the
+    // session indicator is rendered only once on every platform/page.
+    badge = container.querySelector(".demo-session-badge, #demoSessionBadge, #mobileDemoSessionBadge");
+  }
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.id = id;
+    badge.className = "ep-badge demo-session-badge";
+    badge.style.cssText = "border-color:rgba(250,204,21,.45);background:rgba(250,204,21,.13);color:#fde68a;";
+    container.prepend(badge);
+  }
+  return badge;
+}
+
+function renderDemoSessionBadge() {
+  const desktopBadge = sessionIsTemp
+    ? ensureDemoBadge(document.getElementById("connStrip"), "appHeaderDemoBadge")
+    : document.getElementById("appHeaderDemoBadge");
+  const mobileBadge = sessionIsTemp
+    ? ensureDemoBadge(document.querySelector(".mobile-conn-strip"), "mobileAppHeaderDemoBadge")
+    : document.getElementById("mobileAppHeaderDemoBadge");
+
+  if (!sessionIsTemp) {
+    desktopBadge?.remove();
+    mobileBadge?.remove();
+    if (demoCountdownTimer) clearInterval(demoCountdownTimer);
+    demoCountdownTimer = null;
+    return;
+  }
+
+  const render = () => {
+    const remaining = Math.max(0, Number(tempExpiresAt || 0) - Date.now());
+    const totalSeconds = Math.ceil(remaining / 1000);
+    const label = tempExpiresAt
+      ? `DEMO ${String(Math.floor(totalSeconds / 60)).padStart(2, "0")}:${String(totalSeconds % 60).padStart(2, "0")}`
+      : "DEMO";
+    if (desktopBadge) desktopBadge.textContent = label;
+    if (mobileBadge) mobileBadge.textContent = label;
+  };
+  render();
+  if (demoCountdownTimer) clearInterval(demoCountdownTimer);
+  demoCountdownTimer = setInterval(render, 1000);
+}
+
 function renderHeader() {
   if (!connStateText && !mConnStateText) return;
 
@@ -80,7 +132,8 @@ function renderHeader() {
   const hasFreshHeartbeat =
     Number.isFinite(lastSeenAt) && lastSeenAt > 0 && now - lastSeenAt <= DEVICE_STALE_MS;
 
-  setBadge("CLOUD");
+  setBadge(sessionIsTemp ? "SIM" : "CLOUD");
+  renderDemoSessionBadge();
 
   let stateTxt = "";
   let hbTxt = "";
@@ -124,7 +177,7 @@ function startSharedHeaderFeed() {
     renderHeader();
   });
 
-  stopListrik = onValue(ref(db, "/listrik"), (snap) => {
+  stopListrik = onValue(ref(db, `${sessionPrefix}/listrik`), (snap) => {
     const payload = snap.val() || {};
     lastSeenAt = resolveUpdatedAt(payload);
     lastStatus = payload.status || "NORMAL";
@@ -161,7 +214,7 @@ testNotifyBtn?.addEventListener("click", handleTestNotification);
 
 if ((endpointBadge && connStateText) || (mEndpointBadge && mConnStateText)) {
   renderHeader();
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (!user) {
       if (stopListrik) stopListrik();
       if (stopConnected) stopConnected();
@@ -170,9 +223,22 @@ if ((endpointBadge && connStateText) || (mEndpointBadge && mConnStateText)) {
       stopConnected = null;
       renderTimer = null;
       lastSeenAt = null;
+      sessionIsTemp = false;
+      tempExpiresAt = null;
+      sessionPrefix = "";
       renderHeader();
       return;
     }
+    try {
+      const token = await user.getIdTokenResult(true);
+      sessionIsTemp = token.claims?.isTempAccount === true || user.email?.trim().toLowerCase().startsWith("sim_");
+      tempExpiresAt = Number(token.claims?.expiresAt || 0) || null;
+    } catch (_) {
+      sessionIsTemp = user.email?.trim().toLowerCase().startsWith("sim_") === true;
+      tempExpiresAt = null;
+    }
+    sessionPrefix = sessionIsTemp ? `/sim/${user.uid}` : "";
+    renderHeader();
     startSharedHeaderFeed();
   });
 }

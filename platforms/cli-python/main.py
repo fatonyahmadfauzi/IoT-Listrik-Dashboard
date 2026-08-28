@@ -28,13 +28,13 @@ custom_style = questionary.Style([
 
 # Config Identik dengan versi JS
 firebaseConfig = {
-    "apiKey": "AIzaSyD99N-FQdkTPNnNGY-fof6ijskxg0bzARc",
-    "authDomain": "monitoring-listrik-719b1.firebaseapp.com",
-    "databaseURL": "https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app",
-    "projectId": "monitoring-listrik-719b1",
-    "storageBucket": "monitoring-listrik-719b1.firebasestorage.app",
-    "messagingSenderId": "115654600721",
-    "appId": "1:115654600721:web:6b971ee1c19be7e045a9b0",
+    "apiKey": "AIzaSyBLr8oo64-ARn2TUuR6yj68Zi3MUR3qsRU",
+    "authDomain": "iot-listrik-dashboard.firebaseapp.com",
+    "databaseURL": "https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "projectId": "iot-listrik-dashboard",
+    "storageBucket": "iot-listrik-dashboard.firebasestorage.app",
+    "messagingSenderId": "690684049171",
+    "appId": "1:690684049171:web:b8953844f7512e69488ce6",
 }
 
 firebase = pyrebase.initialize_app(firebaseConfig)
@@ -44,6 +44,8 @@ db = firebase.database()
 current_user = None
 path_prefix = ""
 session_timeout_timer = None
+is_temp_session = False
+temp_expires_at = None
 DEVICE_STALE_MS = 15000
 last_device_heartbeat_at = 0
 last_updated_marker = None
@@ -175,8 +177,11 @@ def process_user_claims(user_data):
     local_id = user_data.get('localId', '')
     claims = decode_jwt(token)
     
-    is_temp = claims.get('isTempAccount', False)
+    is_temp = bool(claims.get('isTempAccount', False)) or str(user_data.get('email') or '').strip().lower().startswith('sim_')
     expires_at = claims.get('expiresAt')
+    global is_temp_session, temp_expires_at
+    is_temp_session = is_temp
+    temp_expires_at = int(expires_at) if expires_at else None
 
     if is_temp and local_id:
         path_prefix = f"sim/{local_id}/"
@@ -210,7 +215,10 @@ def print_header():
     console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
     console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
     if current_user:
-        console.print(f"[bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]\n")
+        remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if temp_expires_at else 0
+        countdown = f"{remaining // 60:02d}:{remaining % 60:02d}"
+        badge = f"[black on yellow] DEMO {countdown} " if is_temp_session else "[dim] USER "
+        console.print(f"{badge}[/] [bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]\n")
 
 def hold_for_enter():
     questionary.text("Tekan Enter untuk kembali ke Menu Utama...", default="", style=custom_style).ask()
@@ -405,7 +413,10 @@ def stream_handler(message):
         register_device_heartbeat(full_data)
         console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
         console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
-        console.print(f"[bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]\n")
+        remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if is_temp_session and temp_expires_at else 0
+        countdown = f"{remaining // 60:02d}:{remaining % 60:02d}"
+        badge = f"[black on yellow] DEMO {countdown} " if is_temp_session else "[dim] USER "
+        console.print(f"{badge}[/] [bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]\n")
         console.print("[yellow]Memulai Live Stream Data Firebase...[/yellow]")
         console.print("[dim]Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n[/dim]")
 
@@ -417,6 +428,8 @@ def stream_handler(message):
             conn_str = f"[yellow]{connection}[/yellow]"
         else:
             conn_str = f"[bold red]{connection}[/bold red]"
+        source_label = "SIM" if is_temp_session else "CLOUD"
+        console.print(f"[blue]Sumber     :[/blue] {source_label}")
         console.print(f"[blue]Koneksi    :[/blue] {conn_str}")
         raw_updated_at = full_data.get("updated_at") or full_data.get("timestamp") or full_data.get("waktu")
         try:

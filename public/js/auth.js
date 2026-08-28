@@ -22,6 +22,8 @@ let _currentUser = null;
 let _currentRole = null;
 let _isTempAccount = false;
 let _tempExpiryTimer = null;
+let _tempCountdownTimer = null;
+let _tempExpiresAt = null;
 
 /** Expose current user/role (read-only snapshot) */
 function getCurrentUser() {
@@ -93,12 +95,18 @@ function initPage(callbacks = {}) {
     if (user) {
       _currentUser = user;
 
-      const token = await user.getIdTokenResult();
-      _isTempAccount = !!token.claims?.isTempAccount;
+      let token = null;
+      try {
+        token = await user.getIdTokenResult(true);
+      } catch (error) {
+        console.warn("[Auth] Gagal menyegarkan custom claims, memakai fallback email.", error);
+      }
+      _isTempAccount = !!token?.claims?.isTempAccount || user.email?.trim().toLowerCase().startsWith("sim_");
+      _tempExpiresAt = Number(token?.claims?.expiresAt || 0) || null;
 
       // Fitur Auto Kick-Out Client Side (Client Timeout)
-      if (_isTempAccount && token.claims?.expiresAt) {
-        const timeLeft = token.claims.expiresAt - Date.now();
+      if (_isTempAccount && _tempExpiresAt) {
+        const timeLeft = _tempExpiresAt - Date.now();
         if (timeLeft <= 0) {
           // Sudah basi
           forceKickOutDemo();
@@ -138,6 +146,8 @@ function initPage(callbacks = {}) {
       _currentUser = null;
       _currentRole = null;
       if (_tempExpiryTimer) clearTimeout(_tempExpiryTimer);
+      if (_tempCountdownTimer) clearInterval(_tempCountdownTimer);
+      _tempExpiresAt = null;
 
       if (typeof onGuest === "function") {
         onGuest();
@@ -182,8 +192,38 @@ function populateSidebar(user, role) {
   if (rolePill) {
     const isActuallyTemp = _isTempAccount || user.email.startsWith("sim_");
     if (isActuallyTemp) {
-      rolePill.textContent = "Temp Session";
       rolePill.className = "role-pill user";
+      const desktopStrip = document.getElementById("connStrip");
+      const mobileStrip = document.querySelector(".mobile-conn-strip");
+      const ensureDemoBadge = (container, id) => {
+        if (!container) return null;
+        let badge = document.getElementById(id);
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.id = id;
+          badge.className = "ep-badge";
+          badge.style.cssText = "border-color:rgba(250,204,21,.45);background:rgba(250,204,21,.13);color:#fde68a;";
+          container.prepend(badge);
+        }
+        return badge;
+      };
+      const desktopDemoBadge = ensureDemoBadge(desktopStrip, "demoSessionBadge");
+      const mobileDemoBadge = ensureDemoBadge(mobileStrip, "mobileDemoSessionBadge");
+      const renderDemoCountdown = () => {
+        const remaining = Math.max(0, Number(_tempExpiresAt || 0) - Date.now());
+        const totalSeconds = Math.ceil(remaining / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const label = _tempExpiresAt
+          ? `DEMO ${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+          : "DEMO";
+        rolePill.textContent = label;
+        if (desktopDemoBadge) desktopDemoBadge.textContent = label;
+        if (mobileDemoBadge) mobileDemoBadge.textContent = label;
+      };
+      renderDemoCountdown();
+      if (_tempCountdownTimer) clearInterval(_tempCountdownTimer);
+      _tempCountdownTimer = setInterval(renderDemoCountdown, 1000);
     } else {
       rolePill.textContent = role === "admin" ? "Admin" : "User";
       rolePill.className = `role-pill ${role}`;

@@ -1,4 +1,5 @@
 import { Home, Settings, BarChart3, Clock, LogOut } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 type SidebarProps = {
   activePage: 'dashboard' | 'history' | 'analytics' | 'settings';
@@ -10,11 +11,19 @@ type SidebarProps = {
 import { useAuthStore } from '../lib/store';
 
 export function Sidebar({ activePage, onNavigate }: SidebarProps) {
-  const { user, role, isTempAccount, logout } = useAuthStore();
+  const { user, role, isTempAccount, tempExpiresAt, logout } = useAuthStore();
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    if (!isTempAccount || !tempExpiresAt) return;
+    const timer = window.setInterval(() => setClockTick((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [isTempAccount, tempExpiresAt]);
   const email = user?.email || 'akun belum dimuat';
   const displayName = user?.displayName || email.split('@')[0] || 'User';
   const initial = (displayName || email || 'U').trim().charAt(0).toUpperCase();
-  const roleText = isTempAccount ? 'TEMP' : role === 'admin' ? 'ADMIN' : 'USER';
+  const remainingSeconds = tempExpiresAt ? Math.max(0, Math.ceil((tempExpiresAt - Date.now()) / 1000)) : 0;
+  const countdown = `${String(Math.floor(remainingSeconds / 60)).padStart(2, '0')}:${String(remainingSeconds % 60).padStart(2, '0')}`;
+  const roleText = isTempAccount ? `DEMO ${tempExpiresAt ? countdown : ''}`.trim() : role === 'admin' ? 'ADMIN' : 'USER';
 
   const items: Array<{ key: any, label: string, icon: any }> = [
     { key: 'dashboard', label: 'Dashboard', icon: Home },

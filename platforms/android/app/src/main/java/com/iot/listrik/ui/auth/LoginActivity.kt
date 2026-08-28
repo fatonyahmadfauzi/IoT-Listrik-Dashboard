@@ -53,8 +53,18 @@ class LoginActivity : AppCompatActivity() {
             auth.signInWithEmailAndPassword(email, pwd)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        startActivity(Intent(this, MainActivity::class.java))
-                        finish()
+                        // Refresh custom claims used by akun simulator. Jika refresh gagal
+                        // karena jaringan sementara, MainActivity tetap memiliki fallback
+                        // berdasarkan prefix email sim_ dan dapat menampilkan pesan yang sesuai.
+                        auth.currentUser?.getIdToken(true)
+                            ?.addOnCompleteListener {
+                                startActivity(Intent(this, MainActivity::class.java))
+                                finish()
+                            }
+                            ?: run {
+                                startActivity(Intent(this, MainActivity::class.java))
+                                finish()
+                            }
                     } else {
                         Toast.makeText(this, "Login Gagal: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                         binding.btnLogin.isEnabled = true

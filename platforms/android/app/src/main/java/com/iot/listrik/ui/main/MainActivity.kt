@@ -94,7 +94,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingCsvLogs: List<HistoryLog> = emptyList()
 
     private val dashboardLogLimit = 15
-    private val historyLogLimit = 1000
+    private val historyLogLimit = 100
     private val historyChartLimit = 50
     private val analyticsTrendLimit = 60
 
@@ -324,8 +324,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        user.getIdToken(false).addOnSuccessListener { result ->
-            val isTemp = result.claims["isTempAccount"] as? Boolean ?: false
+        user.getIdToken(true).addOnSuccessListener { result ->
+            val isTemp = (result.claims["isTempAccount"] as? Boolean == true) ||
+                user.email?.trim()?.startsWith("sim_", ignoreCase = true) == true
             val expiresAt = (result.claims["expiresAt"] as? Number)?.toLong()
 
             isTempAccount = isTemp
@@ -1541,6 +1542,27 @@ class MainActivity : AppCompatActivity() {
         connectedRef?.addValueEventListener(connectedListener!!)
     }
 
+    private fun snapshotNumber(snapshot: DataSnapshot, child: String): Double =
+        snapshotNumberOrNull(snapshot, child) ?: 0.0
+
+    private fun snapshotNumberOrNull(snapshot: DataSnapshot, child: String): Double? {
+        val value = snapshot.child(child).value ?: return null
+        return when (value) {
+            is Number -> value.toDouble()
+            is String -> value.trim().toDoubleOrNull()
+            else -> null
+        }
+    }
+
+    private fun snapshotLong(snapshot: DataSnapshot, child: String): Long {
+        val value = snapshot.child(child).value ?: return 0L
+        return when (value) {
+            is Number -> value.toLong()
+            is String -> value.trim().toLongOrNull() ?: value.trim().toDoubleOrNull()?.toLong() ?: 0L
+            else -> 0L
+        }
+    }
+
     private fun startDashboardListener() {
         if (dashboardListener != null) return
 
@@ -1549,25 +1571,22 @@ class MainActivity : AppCompatActivity() {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if(!snapshot.exists()) return
 
-                val status = snapshot.child("status").getValue(String::class.java) ?: "NORMAL"
-                val arus = snapshot.child("arus").getValue(Double::class.java) ?: 0.0
-                val tegangan = snapshot.child("tegangan").getValue(Double::class.java) ?: 0.0
-                val frekuensi = snapshot.child("frekuensi").getValue(Double::class.java) ?: 0.0
-                val pf = snapshot.child("power_factor").getValue(Double::class.java) ?: 0.0
-                val apparent = snapshot.child("apparent_power").getValue(Double::class.java)
-                    ?: snapshot.child("daya").getValue(Double::class.java)
+                val status = snapshot.child("status").value?.toString() ?: "NORMAL"
+                val arus = snapshotNumber(snapshot, "arus")
+                val tegangan = snapshotNumber(snapshot, "tegangan")
+                val frekuensi = snapshotNumber(snapshot, "frekuensi")
+                val pf = snapshotNumber(snapshot, "power_factor")
+                val apparent = snapshotNumberOrNull(snapshot, "apparent_power")
+                    ?: snapshotNumberOrNull(snapshot, "daya")
                     ?: (arus * tegangan)
                 // Prefer daya_w from PZEM/firmware; fall back to V*I*PF.
-                val dayaW = snapshot.child("daya_w").getValue(Double::class.java)
+                val dayaW = snapshotNumberOrNull(snapshot, "daya_w")
                     ?: (apparent * pf)
-                val energi = snapshot.child("energi_kwh").getValue(Double::class.java) ?: 0.0
-                val updatedAt = snapshot.child("updated_at").getValue(Long::class.java)
-                    ?: snapshot.child("updated_at").getValue(Double::class.java)?.toLong()
-                    ?: snapshot.child("updated_at").getValue(String::class.java)?.toLongOrNull()
-                    ?: 0L
-                val resetByAdmin = snapshot.child("reset_by_admin").getValue(Boolean::class.java) ?: false
-                val resetAt = snapshot.child("reset_at").getValue(String::class.java) ?: ""
-                val resetNote = snapshot.child("reset_note").getValue(String::class.java) ?: ""
+                val energi = snapshotNumber(snapshot, "energi_kwh")
+                val updatedAt = snapshotLong(snapshot, "updated_at")
+                val resetByAdmin = snapshot.child("reset_by_admin").value as? Boolean ?: false
+                val resetAt = snapshot.child("reset_at").value?.toString().orEmpty()
+                val resetNote = snapshot.child("reset_note").value?.toString().orEmpty()
                 val relayState = parseRelayState(snapshot.child("relay").value)
 
                 registerDeviceHeartbeat(
@@ -1683,8 +1702,66 @@ class MainActivity : AppCompatActivity() {
 
     private fun upsertHistory(snapshot: DataSnapshot) {
         val key = snapshot.key ?: return
-        val log = snapshot.getValue(HistoryLog::class.java) ?: return
-        historyByKey[key] = log.copy(key = key)
+        try {
+            // Jangan deserialisasi langsung ke HistoryLog karena data RTDB lama/Simulator
+            // dapat berisi campuran Long, Double, String, atau Boolean. Satu record
+            // yang bentuknya berbeda tidak boleh membuat callback Firebase crash.
+            val log = historyLogFromSnapshot(snapshot) ?: return
+            historyByKey[key] = log.copy(key = key)
+        } catch (error: Exception) {
+            Log.e("MainActivity", "Riwayat diabaikan karena format tidak valid: $key", error)
+        }
+    }
+
+    private fun historyLogFromSnapshot(snapshot: DataSnapshot): HistoryLog? {
+        if (!snapshot.exists()) return null
+        fun value(name: String): Any? = snapshot.child(name).value
+        return HistoryLog(
+            key = snapshot.key,
+            arus = value("arus"),
+            tegangan = value("tegangan"),
+            status = value("status")?.toString() ?: "NORMAL",
+            relay = value("relay"),
+            waktu = value("waktu"),
+            timestamp = value("timestamp"),
+            daya_w = value("daya_w"),
+            active_power = value("active_power"),
+            activePower = value("activePower"),
+            power_w = value("power_w"),
+            dayaAktif = value("dayaAktif"),
+            daya = value("daya"),
+            apparent_power = value("apparent_power"),
+            apparentPower = value("apparentPower"),
+            energi_kwh = value("energi_kwh"),
+            energy_kwh = value("energy_kwh"),
+            energy = value("energy"),
+            energi = value("energi"),
+            kwh = value("kwh"),
+            frekuensi = value("frekuensi"),
+            frequency = value("frequency"),
+            hz = value("hz"),
+            power_factor = value("power_factor"),
+            powerFactor = value("powerFactor"),
+            pf = value("pf"),
+            apparent = value("apparent"),
+            apparent_va = value("apparent_va"),
+            daya_va = value("daya_va"),
+            va = value("va"),
+            source = value("source"),
+            sumber = value("sumber"),
+            mode = value("mode"),
+            endpoint = value("endpoint"),
+            dataSource = value("dataSource"),
+            sensor_source = value("sensor_source"),
+            sensorSource = value("sensorSource"),
+            meter_source = value("meter_source"),
+            meterSource = value("meterSource"),
+            updated_at = value("updated_at"),
+            createdAt = value("createdAt"),
+            created_at = value("created_at"),
+            relayStatus = value("relayStatus"),
+            relay_status = value("relay_status")
+        )
     }
 
     /**
@@ -1744,7 +1821,7 @@ class MainActivity : AppCompatActivity() {
             refreshAllCharts()
         }
 
-        // Halaman Riwayat dan Analytics memakai sumber log yang sama seperti web (hingga 1000 entri).
+        // Halaman Riwayat dan Analytics memakai sumber log yang sama seperti web (hingga 100 entri).
         // Tetap render saat halaman belum aktif agar isi sudah siap saat dipilih dari sidebar.
         applyHistoryFilters()
         applyAnalyticsFilters()

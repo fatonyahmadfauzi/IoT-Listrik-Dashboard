@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.DiffUtil
 import com.iot.listrik.data.model.HistoryLog
 import com.iot.listrik.databinding.ItemHistoryBinding
 import java.text.SimpleDateFormat
@@ -93,8 +94,20 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
     override fun getItemCount() = logs.size
 
     fun updateData(newLogs: List<HistoryLog>) {
-        logs = newLogs
-        notifyDataSetChanged()
+        if (logs === newLogs || logs == newLogs) return
+        val oldLogs = logs
+        logs = newLogs.toList()
+        DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+            override fun getOldListSize(): Int = oldLogs.size
+            override fun getNewListSize(): Int = logs.size
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                val oldKey = oldLogs[oldItemPosition].key
+                val newKey = logs[newItemPosition].key
+                return oldKey != null && oldKey == newKey
+            }
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
+                oldLogs[oldItemPosition] == logs[newItemPosition]
+        }).dispatchUpdatesTo(this)
     }
 
     fun setDisplayMode(mode: DisplayMode) {

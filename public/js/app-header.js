@@ -96,12 +96,15 @@ function ensureDemoBadge(container, id) {
 }
 
 function renderDemoSessionBadge() {
+  // Gunakan ID yang sama dengan auth.js agar kedua modul memakai satu badge.
+  // Jika header dirender lebih dulu, auth.js akan menggunakan badge ini;
+  // jika auth.js dirender lebih dulu, header akan memperbarui badge yang sama.
   const desktopBadge = sessionIsTemp
-    ? ensureDemoBadge(document.getElementById("connStrip"), "appHeaderDemoBadge")
-    : document.getElementById("appHeaderDemoBadge");
+    ? ensureDemoBadge(document.getElementById("connStrip"), "demoSessionBadge")
+    : document.getElementById("demoSessionBadge");
   const mobileBadge = sessionIsTemp
-    ? ensureDemoBadge(document.querySelector(".mobile-conn-strip"), "mobileAppHeaderDemoBadge")
-    : document.getElementById("mobileAppHeaderDemoBadge");
+    ? ensureDemoBadge(document.querySelector(".mobile-conn-strip"), "mobileDemoSessionBadge")
+    : document.getElementById("mobileDemoSessionBadge");
 
   if (!sessionIsTemp) {
     desktopBadge?.remove();

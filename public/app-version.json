@@ -4,13 +4,13 @@
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard.apk",
-      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard.apk",
+      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard.apk",
       "size": "3.34 MB"
     },
     "windows": {
       "setup": {
         "filename": "IoT-Listrik-Dashboard-Setup.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard-Setup.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard-Setup.exe",
         "size": "334.72 MB",
         "architectures": [
           "ia32",
@@ -21,7 +21,7 @@
       },
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard-Portable.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard-Portable.exe",
         "size": "334.42 MB",
         "architectures": [
           "ia32",
@@ -32,7 +32,7 @@
       },
       "msi": {
         "filename": "IoT-Listrik-Dashboard.msi",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard.msi",
         "size": "125.07 MB",
         "architectures": [
           "x64"

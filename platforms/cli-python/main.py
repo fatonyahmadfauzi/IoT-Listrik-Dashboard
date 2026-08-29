@@ -4,6 +4,7 @@ import json
 import time
 import base64
 from threading import Timer
+import threading
 
 try:
     import msvcrt
@@ -53,6 +54,8 @@ last_sensor_signature = ""
 watch_started_at = int(time.time() * 1000)
 latest_listrik_snapshot = None
 last_admin_reset_marker = None
+header_ticker_stop = None
+header_ticker_thread = None
 
 def is_likely_epoch_ms(value):
     return isinstance(value, (int, float)) and value > 1_000_000_000_000
@@ -210,15 +213,57 @@ def process_user_claims(user_data):
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+def _header_line_plain():
+    remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if is_temp_session and temp_expires_at else 0
+    countdown = f"{remaining // 60:02d}:{remaining % 60:02d}"
+    if is_temp_session:
+        badge = f"\033[43;30m DEMO {countdown} \033[0m"
+    else:
+        badge = "\033[2m USER \033[0m"
+    return f"{badge} [+] Terhubung sebagai: {current_user['email']}" if current_user else ""
+
+
+def _update_header_line():
+    if not sys.stdout.isatty() or not current_user:
+        return
+    sys.stdout.write(f"\0337\033[5;1H\033[2K{_header_line_plain()}\0338")
+    sys.stdout.flush()
+
+
+def _header_ticker_worker(stop_event):
+    while not stop_event.wait(1.0):
+        _update_header_line()
+
+
+def start_header_ticker():
+    global header_ticker_stop, header_ticker_thread
+    if header_ticker_thread and header_ticker_thread.is_alive():
+        return
+    if not sys.stdout.isatty():
+        return
+    header_ticker_stop = threading.Event()
+    header_ticker_thread = threading.Thread(target=_header_ticker_worker, args=(header_ticker_stop,), daemon=True)
+    header_ticker_thread.start()
+
+
+def stop_header_ticker():
+    global header_ticker_stop, header_ticker_thread
+    if header_ticker_stop:
+        header_ticker_stop.set()
+    header_ticker_stop = None
+    header_ticker_thread = None
+
+
 def print_header():
     clear_screen()
     console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
     console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
     if current_user:
-        remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if temp_expires_at else 0
-        countdown = f"{remaining // 60:02d}:{remaining % 60:02d}"
-        badge = f"[black on yellow] DEMO {countdown} " if is_temp_session else "[dim] USER "
-        console.print(f"{badge}[/] [bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]\n")
+        console.print(_header_line_plain(), markup=False)
+        console.print()
+        start_header_ticker()
+    else:
+        stop_header_ticker()
 
 def hold_for_enter():
     questionary.text("Tekan Enter untuk kembali ke Menu Utama...", default="", style=custom_style).ask()
@@ -272,6 +317,7 @@ def handle_logout():
     if confirm:
         if os.path.exists(SESSION_FILE):
             os.remove(SESSION_FILE)
+        stop_header_ticker()
         current_user = None
         console.print("\n[bold green]Berhasil Log out. Aplikasi akan ditutup.[/bold green]")
         sys.exit(0)
@@ -413,10 +459,9 @@ def stream_handler(message):
         register_device_heartbeat(full_data)
         console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
         console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
-        remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if is_temp_session and temp_expires_at else 0
-        countdown = f"{remaining // 60:02d}:{remaining % 60:02d}"
-        badge = f"[black on yellow] DEMO {countdown} " if is_temp_session else "[dim] USER "
-        console.print(f"{badge}[/] [bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]\n")
+        console.print(_header_line_plain(), markup=False)
+        console.print()
+        start_header_ticker()
         console.print("[yellow]Memulai Live Stream Data Firebase...[/yellow]")
         console.print("[dim]Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n[/dim]")
 
@@ -525,6 +570,7 @@ def main_menu():
             handle_logout()
         elif action == "exit" or action is None:
             console.print("\n[dim]Menutup CLI dan menghentikan proses... Sampai jumpa!\n[/dim]")
+            stop_header_ticker()
             is_running = False
             sys.exit(0)
 

@@ -1,16 +1,16 @@
 {
-  "version": "1.1.3",
-  "buildDate": "2026-08-28",
+  "version": "1.1.4",
+  "buildDate": "2026-08-29",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard.apk",
-      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard.apk",
+      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard.apk",
       "size": "3.34 MB"
     },
     "windows": {
       "setup": {
         "filename": "IoT-Listrik-Dashboard-Setup.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard-Setup.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard-Setup.exe",
         "size": "334.72 MB",
         "architectures": [
           "ia32",
@@ -21,7 +21,7 @@
       },
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard-Portable.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard-Portable.exe",
         "size": "334.42 MB",
         "architectures": [
           "ia32",
@@ -32,7 +32,7 @@
       },
       "msi": {
         "filename": "IoT-Listrik-Dashboard.msi",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/IoT-Listrik-Dashboard.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/IoT-Listrik-Dashboard.msi",
         "size": "125.07 MB",
         "architectures": [
           "x64"
@@ -43,20 +43,20 @@
     "cli": {
       "node": {
         "filename": "iot-listrik-cli-node.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/iot-listrik-cli-node.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/iot-listrik-cli-node.exe",
         "size": "181.68 MB"
       },
       "python": {
         "filename": "iot-listrik-cli-python.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/iot-listrik-cli-python.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/iot-listrik-cli-python.exe",
         "size": "41.05 MB"
       },
       "linux": {
         "filename": "iot-listrik-dashboard-cli-linux",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.3/iot-listrik-dashboard-cli-linux",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.4/iot-listrik-dashboard-cli-linux",
         "size": "197.35 MB"
       }
     }
   },
-  "notes": "Release v1.1.3 — 2026-08-28. Indikator DEMO, hitung mundur sesi, dan badge sumber SIM diseragamkan pada Web/PWA, Windows Desktop, CLI Node, CLI Python, serta Android."
+  "notes": "Release v1.1.4 — 2026-08-29. Perbaikan pembaruan hitung mundur DEMO pada menu CLI dan mode Live Monitoring."
 }

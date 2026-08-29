@@ -39,6 +39,7 @@ let lastSensorSignature = "";
 let watchStartedAt = Date.now();
 let latestListrikSnapshot = null;
 let lastAdminResetMarker = null;
+let headerTicker = null;
 
 function isLikelyEpochMs(value) {
   return Number.isFinite(value) && value > 1e12;
@@ -223,16 +224,43 @@ function handleSessionExpired() {
   process.exit(0);
 }
 
+function currentSessionBadge() {
+  const remaining = tempExpiresAt ? Math.max(0, Math.ceil((tempExpiresAt - Date.now()) / 1000)) : 0;
+  const countdown = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
+  return isTempSession ? chalk.bgYellow.black(` DEMO ${countdown} `) : chalk.gray(' USER ');
+}
+
+function updateHeaderLine() {
+  if (!process.stdout.isTTY || !auth.currentUser) return;
+  const line = `${currentSessionBadge()} ${chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}`)}`;
+  process.stdout.write('\x1b7');
+  readline.cursorTo(process.stdout, 0, 2);
+  readline.clearLine(process.stdout, 0);
+  process.stdout.write(line);
+  process.stdout.write('\x1b8');
+}
+
+function startHeaderTicker() {
+  if (headerTicker || !process.stdout.isTTY) return;
+  headerTicker = setInterval(updateHeaderLine, 1000);
+  headerTicker.unref?.();
+}
+
+function stopHeaderTicker() {
+  if (headerTicker) clearInterval(headerTicker);
+  headerTicker = null;
+}
+
 function printHeader() {
   console.clear();
   console.log(chalk.cyan.bold("\nIoT Listrik Dashboard CLI"));
   console.log(chalk.gray("Pengembang: Fatony Ahmad Fauzi\n"));
   
   if (auth.currentUser) {
-    const remaining = tempExpiresAt ? Math.max(0, Math.ceil((tempExpiresAt - Date.now()) / 1000)) : 0;
-    const countdown = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
-    const badge = isTempSession ? chalk.bgYellow.black(` DEMO ${countdown} `) : chalk.gray(' USER ');
-    console.log(`${badge} ${chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}`)}\n`);
+    console.log(`${currentSessionBadge()} ${chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}`)}\n`);
+    startHeaderTicker();
+  } else {
+    stopHeaderTicker();
   }
 }
 
@@ -459,6 +487,7 @@ async function handleLogout() {
     if (fs.existsSync(LEGACY_SESSION_FILE)) {
       fs.unlinkSync(LEGACY_SESSION_FILE);
     }
+    stopHeaderTicker();
     stopPresenceWatch();
     await signOut(auth);
     console.log(chalk.green("\nBerhasil Log out. Aplikasi akan ditutup."));
@@ -507,6 +536,7 @@ async function mainMenu() {
         break;
       case "exit":
         console.log(chalk.gray("\nMenutup CLI dan menghentikan proses... Sampai jumpa!\n"));
+        stopHeaderTicker();
         stopPresenceWatch();
         isRunning = false;
         process.exit(0);

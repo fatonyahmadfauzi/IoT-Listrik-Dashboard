@@ -164,7 +164,7 @@ function stopPresenceWatch() {
 }
 
 function renderLiveMonitoring(data) {
-  printHeader();
+  printHeader(true);
   console.log(chalk.yellow("Memulai Live Stream Data Firebase..."));
   console.log(chalk.gray("Tekan 'q' atau 'Ctrl+C' kapan saja untuk kembali ke Menu Utama.\n"));
 
@@ -224,43 +224,60 @@ function handleSessionExpired() {
   process.exit(0);
 }
 
-function currentSessionBadge() {
+function sessionCountdownLabel() {
+  if (!isTempSession) return "";
   const remaining = tempExpiresAt ? Math.max(0, Math.ceil((tempExpiresAt - Date.now()) / 1000)) : 0;
   const countdown = `${String(Math.floor(remaining / 60)).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
-  return isTempSession ? chalk.bgYellow.black(` DEMO ${countdown} `) : chalk.gray(' USER ');
+  return `DEMO ${countdown} · SIM`;
 }
 
-function updateHeaderLine() {
-  if (!process.stdout.isTTY || !auth.currentUser) return;
-  const line = `${currentSessionBadge()} ${chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}`)}`;
-  process.stdout.write('\x1b7');
-  readline.cursorTo(process.stdout, 0, 2);
-  readline.clearLine(process.stdout, 0);
-  process.stdout.write(line);
-  process.stdout.write('\x1b8');
+function currentSessionBadge(liveCountdown = false) {
+  if (!isTempSession) return chalk.gray(' USER ');
+  const text = liveCountdown ? sessionCountdownLabel().replace(' · SIM', '') : 'DEMO';
+  return chalk.bgYellow.black(` ${text} `);
 }
 
-function startHeaderTicker() {
-  if (headerTicker || !process.stdout.isTTY) return;
-  headerTicker = setInterval(updateHeaderLine, 1000);
-  headerTicker.unref?.();
+function decoratePromptMessage(message) {
+  const label = sessionCountdownLabel();
+  return label ? `${message} ${chalk.yellow(`[${label}]`)}` : message;
+}
+
+function promptWithLiveCountdown(questions) {
+  const isArray = Array.isArray(questions);
+  const source = isArray ? questions : [questions];
+  const baseMessages = source.map((question) => String(question.message || ''));
+  const prepared = source.map((question, index) => ({
+    ...question,
+    message: decoratePromptMessage(baseMessages[index]),
+  }));
+  const promptPromise = inquirer.prompt(isArray ? prepared : prepared[0]);
+
+  const refresh = () => {
+    if (!isTempSession) return;
+    const activePrompt = promptPromise.ui?.activePrompt;
+    if (!activePrompt || activePrompt.status === 'answered') return;
+    const index = Math.max(0, prepared.findIndex((question) => question.name === activePrompt.opt.name));
+    activePrompt.opt.message = decoratePromptMessage(baseMessages[index] || '');
+    try { activePrompt.render(); } catch (_) {}
+  };
+
+  const ticker = isTempSession ? setInterval(refresh, 1000) : null;
+  return promptPromise.finally(() => {
+    if (ticker) clearInterval(ticker);
+  });
 }
 
 function stopHeaderTicker() {
-  if (headerTicker) clearInterval(headerTicker);
-  headerTicker = null;
+  // Kompatibilitas dengan alur logout lama. Countdown sekarang dirender
+  // oleh prompt aktif sehingga tidak menulis ke posisi terminal absolut.
 }
 
-function printHeader() {
+function printHeader(liveCountdown = false) {
   console.clear();
   console.log(chalk.cyan.bold("\nIoT Listrik Dashboard CLI"));
   console.log(chalk.gray("Pengembang: Fatony Ahmad Fauzi\n"));
-  
   if (auth.currentUser) {
-    console.log(`${currentSessionBadge()} ${chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}`)}\n`);
-    startHeaderTicker();
-  } else {
-    stopHeaderTicker();
+    console.log(`${currentSessionBadge(liveCountdown)} ${chalk.green(`[+] Terhubung sebagai: ${auth.currentUser.email}`)}\n`);
   }
 }
 
@@ -270,7 +287,7 @@ async function runLiveMonitoring() {
     renderLiveMonitoring(latestListrikSnapshot);
     const renderTick = setInterval(() => {
       renderLiveMonitoring(latestListrikSnapshot);
-    }, 2500);
+    }, 1000);
 
     const onKeypress = (str, key) => {
       if (key && (key.name === 'q' || (key.ctrl && key.name === 'c'))) {
@@ -295,7 +312,7 @@ async function toggleRelay() {
     return;
   }
 
-  const { confirmToggle } = await inquirer.prompt([
+  const { confirmToggle } = await promptWithLiveCountdown([
     {
       type: "list",
       name: "confirmToggle",
@@ -409,7 +426,7 @@ async function viewLogs() {
 
 /** Helper untuk menunggu input tekan Enter sebelum kembali ke menu */
 async function holdForEnter() {
-  await inquirer.prompt([
+  await promptWithLiveCountdown([
     { type: "input", name: "lanjut", message: "Tekan Enter untuk kembali ke Menu Utama...", prefix: "" }
   ]);
 }
@@ -480,7 +497,7 @@ async function processUserClaims() {
 
 /** Logout Handler */
 async function handleLogout() {
-  const { logoutConfirm } = await inquirer.prompt([
+  const { logoutConfirm } = await promptWithLiveCountdown([
     { type: "confirm", name: "logoutConfirm", message: "Anda yakin ingin Keluar (Log out)?", default: false }
   ]);
   if (logoutConfirm) {
@@ -505,7 +522,7 @@ async function mainMenu() {
   while (isRunning) {
     printHeader();
     
-    const { action } = await inquirer.prompt([
+    const { action } = await promptWithLiveCountdown([
       {
         type: "list",
         name: "action",

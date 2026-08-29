@@ -213,60 +213,67 @@ def process_user_claims(user_data):
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def _header_line_plain():
-    remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if is_temp_session and temp_expires_at else 0
-    countdown = f"{remaining // 60:02d}:{remaining % 60:02d}"
+def session_countdown_label():
+    if not is_temp_session:
+        return ""
+    remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if temp_expires_at else 0
+    return f"DEMO {remaining // 60:02d}:{remaining % 60:02d} · SIM"
+
+
+class DynamicSessionMessage:
+    def __init__(self, message):
+        self.message = message
+
+    def __format__(self, _format_spec):
+        label = session_countdown_label()
+        return f"{self.message} [{label}]" if label else self.message
+
+    def __str__(self):
+        return self.__format__("")
+
+
+def live_prompt_kwargs():
+    # prompt_toolkit memanggil ulang token prompt setiap refresh sehingga
+    # DynamicSessionMessage menampilkan hitung mundur terbaru tanpa merusak input.
+    return {"refresh_interval": 1.0} if is_temp_session else {}
+
+
+def _header_line_plain(live_countdown=False):
     if is_temp_session:
-        badge = f"\033[43;30m DEMO {countdown} \033[0m"
+        badge_text = session_countdown_label().replace(" · SIM", "") if live_countdown else "DEMO"
+        badge = f"\033[43;30m {badge_text} \033[0m"
     else:
         badge = "\033[2m USER \033[0m"
     return f"{badge} [+] Terhubung sebagai: {current_user['email']}" if current_user else ""
 
 
-def _update_header_line():
-    if not sys.stdout.isatty() or not current_user:
-        return
-    sys.stdout.write(f"\0337\033[5;1H\033[2K{_header_line_plain()}\0338")
-    sys.stdout.flush()
-
-
-def _header_ticker_worker(stop_event):
-    while not stop_event.wait(1.0):
-        _update_header_line()
-
-
 def start_header_ticker():
-    global header_ticker_stop, header_ticker_thread
-    if header_ticker_thread and header_ticker_thread.is_alive():
-        return
-    if not sys.stdout.isatty():
-        return
-    header_ticker_stop = threading.Event()
-    header_ticker_thread = threading.Thread(target=_header_ticker_worker, args=(header_ticker_stop,), daemon=True)
-    header_ticker_thread.start()
+    # Prompt aktif menangani refresh countdown melalui prompt_toolkit.
+    pass
 
 
 def stop_header_ticker():
-    global header_ticker_stop, header_ticker_thread
-    if header_ticker_stop:
-        header_ticker_stop.set()
-    header_ticker_stop = None
-    header_ticker_thread = None
+    # Dipertahankan untuk kompatibilitas alur logout.
+    pass
 
 
-def print_header():
+def print_header(live_countdown=False):
     clear_screen()
     console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
     console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
     if current_user:
-        console.print(_header_line_plain(), markup=False)
+        console.print(_header_line_plain(live_countdown), markup=False)
         console.print()
-        start_header_ticker()
-    else:
-        stop_header_ticker()
+
 
 def hold_for_enter():
-    questionary.text("Tekan Enter untuk kembali ke Menu Utama...", default="", style=custom_style).ask()
+    questionary.text(
+        DynamicSessionMessage("Tekan Enter untuk kembali ke Menu Utama..."),
+        default="",
+        style=custom_style,
+        **live_prompt_kwargs(),
+    ).ask()
+
 
 def enforce_login():
     global current_user
@@ -313,7 +320,12 @@ def enforce_login():
 
 def handle_logout():
     global current_user
-    confirm = questionary.confirm("Anda yakin ingin Keluar (Log out)?", default=False, style=custom_style).ask()
+    confirm = questionary.confirm(
+        DynamicSessionMessage("Anda yakin ingin Keluar (Log out)?"),
+        default=False,
+        style=custom_style,
+        **live_prompt_kwargs(),
+    ).ask()
     if confirm:
         if os.path.exists(SESSION_FILE):
             os.remove(SESSION_FILE)
@@ -419,13 +431,14 @@ def toggle_relay():
         return
 
     answer = questionary.select(
-        "Kontrol Relay Jarak Jauh:",
+        DynamicSessionMessage("Kontrol Relay Jarak Jauh:"),
         choices=[
             questionary.Choice("Nyalakan Relay (Paksakan ON)", True),
             questionary.Choice("Matikan Relay (Paksakan OFF)", False),
             questionary.Choice("Batal", None),
         ],
-        style=custom_style
+        style=custom_style,
+        **live_prompt_kwargs(),
     ).ask()
 
     if answer is not None:
@@ -459,7 +472,7 @@ def stream_handler(message):
         register_device_heartbeat(full_data)
         console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
         console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
-        console.print(_header_line_plain(), markup=False)
+        console.print(_header_line_plain(live_countdown=True), markup=False)
         console.print()
         start_header_ticker()
         console.print("[yellow]Memulai Live Stream Data Firebase...[/yellow]")
@@ -507,7 +520,7 @@ def stream_handler(message):
 
 def run_live_monitoring():
     global watch_started_at
-    print_header()
+    print_header(live_countdown=True)
     console.print("[yellow]Memulai Live Stream Data Firebase...[/yellow]")
     console.print("[dim]Tekan sembarang tombol dari keyboard untuk kembali ke Menu Utama.\n[/dim]")
 
@@ -525,7 +538,7 @@ def run_live_monitoring():
                     msvcrt.getch() # baca tombol
                     break
                 now = time.time()
-                if now - last_render >= 2.5 and latest_listrik_snapshot:
+                if now - last_render >= 1.0 and latest_listrik_snapshot:
                     stream_handler({"data": latest_listrik_snapshot})
                     last_render = now
                 time.sleep(0.1)
@@ -549,7 +562,7 @@ def main_menu():
         print_header()
 
         action = questionary.select(
-            "Pilih opsi:",
+            DynamicSessionMessage("Pilih opsi:"),
             choices=[
                 questionary.Choice("[1] Mengakses Live Monitoring", "live"),
                 questionary.Choice("[2] Riwayat Log (20 entri)", "log"),
@@ -557,7 +570,8 @@ def main_menu():
                 questionary.Choice("[4] Keluar Sesi (Logout)", "logout"),
                 questionary.Choice("[0] Matikan Aplikasi (Exit)", "exit")
             ],
-            style=custom_style
+            style=custom_style,
+            **live_prompt_kwargs(),
         ).ask()
 
         if action == "live":

@@ -1,6 +1,6 @@
 {
   "version": "1.1.4",
-  "buildDate": "2026-08-29",
+  "buildDate": "2026-08-28",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard.apk",
@@ -58,5 +58,6 @@
       }
     }
   },
-  "notes": "Release v1.1.4 — 2026-08-29. Perbaikan pembaruan hitung mundur DEMO pada menu CLI dan mode Live Monitoring."
+  "notes": "Release v1.1.4 — 2026-08-28. Perbaikan pembaruan hitung mundur DEMO pada menu CLI dan mode Live Monitoring."
 }
+

@@ -1,4 +1,14 @@
 #!/usr/bin/env node
+// Node 18 bundled by pkg can emit a Fetch API ExperimentalWarning used internally
+// by Firebase. Hide only that warning; application errors remain visible.
+const originalEmitWarning = process.emitWarning.bind(process);
+process.emitWarning = (warning, ...args) => {
+  const message = typeof warning === "string" ? warning : String(warning?.message || warning || "");
+  const warningType = typeof args[0] === "string" ? args[0] : String(warning?.name || "");
+  if (warningType === "ExperimentalWarning" && /Fetch API/i.test(message)) return;
+  return originalEmitWarning(warning, ...args);
+};
+
 const inquirer = require("inquirer");
 const chalk = require("chalk");
 const readline = require("readline");
@@ -431,6 +441,27 @@ async function holdForEnter() {
   ]);
 }
 
+function friendlyLoginError(error) {
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || error || "").toLowerCase();
+  if (/invalid-credential|wrong-password|user-not-found|invalid_login_credentials/.test(`${code} ${message}`)) {
+    return "Email atau password salah. Periksa kembali akun Anda.";
+  }
+  if (/invalid-email/.test(`${code} ${message}`)) {
+    return "Format email tidak valid.";
+  }
+  if (/too-many-requests/.test(`${code} ${message}`)) {
+    return "Terlalu banyak percobaan login. Tunggu beberapa saat lalu coba lagi.";
+  }
+  if (/user-disabled/.test(`${code} ${message}`)) {
+    return "Akun ini telah dinonaktifkan.";
+  }
+  if (/network-request-failed|network|fetch failed|timeout|econn/.test(`${code} ${message}`)) {
+    return "Tidak dapat terhubung ke Firebase. Periksa koneksi internet Anda.";
+  }
+  return "Login tidak berhasil. Periksa kredensial dan koneksi internet Anda.";
+}
+
 /** Fungsi Otentikasi Gatekeeper */
 async function enforceLogin() {
   console.clear();
@@ -462,7 +493,7 @@ async function enforceLogin() {
       console.log(chalk.green("\nLogin berhasil!\n"));
       loggedIn = true;
     } catch (e) {
-      console.log(chalk.red("\nLogin gagal:"), e.message, "\n");
+      console.log(chalk.red("\nLogin gagal:"), friendlyLoginError(e), "\n");
     }
   }
 }

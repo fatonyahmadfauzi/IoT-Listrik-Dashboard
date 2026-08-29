@@ -275,6 +275,27 @@ def hold_for_enter():
     ).ask()
 
 
+def friendly_login_error(error):
+    text = str(error or "").lower()
+    if any(code in text for code in (
+        "invalid_login_credentials", "invalid-credential", "wrong-password",
+        "wrong_password", "email_not_found", "user-not-found"
+    )):
+        return "Email atau password salah. Periksa kembali akun Anda."
+    if "invalid_email" in text or "invalid-email" in text:
+        return "Format email tidak valid."
+    if "too_many_attempts" in text or "too-many-requests" in text:
+        return "Terlalu banyak percobaan login. Tunggu beberapa saat lalu coba lagi."
+    if "user_disabled" in text or "user-disabled" in text:
+        return "Akun ini telah dinonaktifkan."
+    if any(code in text for code in (
+        "connection", "network", "timeout", "timed out", "name resolution",
+        "max retries", "connection refused"
+    )):
+        return "Tidak dapat terhubung ke Firebase. Periksa koneksi internet Anda."
+    return "Login tidak berhasil. Periksa kredensial dan koneksi internet Anda."
+
+
 def enforce_login():
     global current_user
     clear_screen()
@@ -315,7 +336,7 @@ def enforce_login():
         except EOFError:
             sys.exit(0)
         except Exception as e:
-            console.print(f"\n[bold red]Login gagal:[/bold red] {e}\n[dim]Pastikan kredensial & koneksi internet Anda benar.[/dim]\n")
+            console.print(f"\n[bold red]Login gagal:[/bold red] {friendly_login_error(e)}\n")
             time.sleep(1)
 
 def handle_logout():

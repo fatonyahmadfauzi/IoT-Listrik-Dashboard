@@ -34,15 +34,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       // Panggil Vercel Serverless Function
-      const response = await fetch("/api/create-temp-account", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ realEmail: email })
-      });
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 25000);
+      let response;
+      try {
+        response = await fetch("/api/create-temp-account", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ realEmail: email }),
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
 
-      const data = await response.json();
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        data = { error: `Server mengembalikan respons tidak valid (HTTP ${response.status}).` };
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Terjadi kesalahan server");
@@ -62,7 +75,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (error) {
       console.error(error);
-      showToast(error.message, "error");
+      const message = error?.name === "AbortError"
+        ? "Server terlalu lama merespons. Periksa konfigurasi Firebase Admin di Vercel lalu coba lagi."
+        : (error?.message || "Gagal membuat akun demo.");
+      showToast(message, "error");
     } finally {
       generateBtn.disabled = false;
       generateBtn.classList.remove("loading");

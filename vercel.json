@@ -113,7 +113,10 @@
     { "source": "/app/discord",   "destination": "/app/discord.html" },
     { "source": "/app/users",     "destination": "/app/users.html" },
 
-    { "source": "/simulator/app",  "destination": "/simulator/dashboard.html" },
-    { "source": "/simulator",      "destination": "/simulator/index.html" }
+    { "source": "/simulator/login",    "destination": "/simulator/login.html" },
+    { "source": "/simulator/dashboard", "destination": "/simulator/dashboard.html" },
+    { "source": "/simulator/settings",  "destination": "/simulator/settings.html" },
+    { "source": "/simulator/app",       "destination": "/simulator/dashboard.html" },
+    { "source": "/simulator",            "destination": "/simulator/index.html" }
   ]
 }

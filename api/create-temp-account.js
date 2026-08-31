@@ -12,7 +12,7 @@ if (!admin.apps.length) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      databaseURL: "https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app/" // adjust to your actual DB URL
+      databaseURL: "https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app/" // adjust to your actual DB URL
     });
   } catch (error) {
     console.error("Firebase admin init error:", error);
@@ -67,6 +67,24 @@ function applyCors(req, res) {
     "Content-Type, X-Requested-With, X-Api-Version"
   );
   return true;
+}
+
+function withTimeout(promise, timeoutMs, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error(`${label} timeout setelah ${timeoutMs} ms.`);
+      error.code = "UPSTREAM_TIMEOUT";
+      reject(error);
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function isFirebaseCredentialError(error) {
+  const message = String(error?.message || error || "");
+  return /invalid_grant|invalid credential|credential|account not found|timeout|UPSTREAM_TIMEOUT/i.test(message);
 }
 
 function hashKey(value) {
@@ -380,7 +398,11 @@ export default async function handler(req, res) {
 
   try {
     const db = admin.database();
-    const rateLimit = await enforceTempAccountRateLimit(db, req, realEmail);
+    const rateLimit = await withTimeout(
+      enforceTempAccountRateLimit(db, req, realEmail),
+      15000,
+      "Firebase Admin rate limit"
+    );
     if (!rateLimit.allowed) {
       const retryAfterSeconds = Math.ceil(rateLimit.retryAfterMs / 1000);
       res.setHeader("Retry-After", String(retryAfterSeconds));
@@ -497,6 +519,12 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("API Error:", error);
+    if (isFirebaseCredentialError(error)) {
+      return res.status(503).json({
+        error: "Layanan akun simulator sementara tidak tersedia. Kredensial Firebase Admin di Vercel perlu diperbarui atau akses Firebase sedang bermasalah.",
+        code: error.code || "FIREBASE_ADMIN_UNAVAILABLE",
+      });
+    }
     return res.status(500).json({ error: "Gagal membuat akun demo: " + error.message });
   }
 }

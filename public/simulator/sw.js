@@ -6,7 +6,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-simulator-v20260502-perf";
+const CACHE_NAME = "iot-simulator-v20260824-routing-fix";
 
 // Simulator app shell
 const CACHE_URLS = [

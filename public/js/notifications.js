@@ -46,7 +46,7 @@ import { messaging, getToken, db, auth, functions } from "./firebase-config.js";
 import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 
-const FCM_VAPID_KEY = "g9Cx-PNOUASH7e5oCunyYgut0I6sUIobkq-QoffeCEw";
+const FCM_VAPID_KEY = "BJbn2VWNTfMLRj4-6DDvWb5SafZS3XMiqIpgAtuma2BDfrnuvlkZbysZ19vStpBa11E6JEsrDyB7nwxPg9WndG0";
 const HARDWARE_ALERTS_TOPIC = "iot_alarms";
 const LAST_FCM_TOPIC_KEY = "iot_last_fcm_topic_subscription";
 let fcmVapidKeyWarningShown = false;

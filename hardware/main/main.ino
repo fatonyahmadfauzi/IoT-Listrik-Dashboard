@@ -49,6 +49,10 @@
   #include <Wire.h>
   #include <LiquidCrystal_I2C.h>
   LiquidCrystal_I2C lcd(LCD_ADDR, LCD_COLS, LCD_ROWS);
+  volatile bool lcdNeedsRecovery = false;
+  volatile unsigned long lcdRecoveryRequestedMs = 0;
+  bool lcdReady = false;
+  const unsigned long LCD_RECOVERY_DELAY_MS = 350UL;
 #endif
 
 // ═══════════════════════════════════════════════════════════════
@@ -787,6 +791,14 @@ void setRelay(int val) {
   digitalWrite(PIN_RELAY1, val == 1 ? HIGH : LOW);
 #endif
   state.relay = val;
+#ifdef USE_LCD
+  // Tunggu transien SSR/kontaktor mereda, lalu sinkronkan ulang HD44780 dari loop utama.
+  // Hanya memasang flag di sini agar operasi I2C tidak dijalankan lintas task/core.
+  if (lcdReady) {
+    lcdRecoveryRequestedMs = millis();
+    lcdNeedsRecovery = true;
+  }
+#endif
   Serial.printf("[Relay] → %s\n", val == 1 ? "ON" : "OFF");
 }
 
@@ -847,6 +859,8 @@ void scanI2CBus() {
 
 void initLCD() {
   Wire.begin(LCD_SDA_PIN, LCD_SCL_PIN);
+  // Bus lebih lambat lebih tahan terhadap noise dari jalur AC, SSR, dan kontaktor.
+  Wire.setClock(50000);
   delay(50);
   scanI2CBus();
 
@@ -886,14 +900,37 @@ void initLCD() {
 
   lcd.init();
   lcd.backlight();
+  lcd.clear();
+  lcdReady = true;
+  lcdNeedsRecovery = false;
   lcdStatus("IoT Listrik", "Booting...");
   Serial.printf("[LCD] Siap di alamat 0x%02X\n", detectedAddr ? detectedAddr : LCD_ADDR);
+}
+
+void recoverLCD() {
+  if (!lcdReady) return;
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  Serial.println("[LCD] Recovery selesai setelah transien/noise.");
+}
+
+void serviceLCDRecovery(unsigned long now) {
+  if (!lcdReady || !lcdNeedsRecovery) return;
+  if (now - lcdRecoveryRequestedMs < LCD_RECOVERY_DELAY_MS) return;
+
+  // Clear flag sebelum I2C recovery. Jika relay berubah lagi, setRelay() akan
+  // memasang permintaan baru yang diproses pada iterasi berikutnya.
+  lcdNeedsRecovery = false;
+  recoverLCD();
 }
 
 void updateLCD() {
   static bool wasMeterValid = true;
   if (state.meterValid != wasMeterValid) {
-    lcd.init(); // Re-init LCD to fix out-of-sync HD44780 controller caused by EMI/noise
+    // Perubahan validitas meter sering terjadi bersamaan dengan gangguan listrik.
+    // Re-init lengkap mengembalikan sinkronisasi serta kondisi backlight/display.
+    recoverLCD();
     wasMeterValid = state.meterValid;
   }
 
@@ -1773,6 +1810,8 @@ void loop() {
 
   // ── Update LCD ─────────────────────────────────────────────────
   #ifdef USE_LCD
+    // Recovery diperiksa setiap loop, tidak menunggu interval refresh data LCD.
+    serviceLCDRecovery(now);
     static unsigned long lastLcdUpdateMs = 0;
     if (now - lastLcdUpdateMs >= localRt.sendIntervalMs) {
       lastLcdUpdateMs = now;

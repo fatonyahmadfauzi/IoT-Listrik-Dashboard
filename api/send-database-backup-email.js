@@ -204,9 +204,9 @@ async function sendDatabaseBackupEmail(req) {
   const sentAtLabel = formatDateTimeLabel(now);
   const projectId = process.env.FIREBASE_PROJECT_ID
     || admin.app().options.projectId
-    || "monitoring-listrik-719b1";
+    || "iot-listrik-dashboard";
   const databaseUrl = admin.app().options.databaseURL
-    || "https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app";
+    || "https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app";
   const stamp = formatStamp(now);
 
   const dbFilename = `${projectId}-default-rtdb-export-${stamp}.json`;

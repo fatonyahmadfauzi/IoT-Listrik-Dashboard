@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "monitoring-listrik-719b1"
-  }
+    "default": "iot-listrik-dashboard"
+  },
+  "targets": {},
+  "etags": {}
 }

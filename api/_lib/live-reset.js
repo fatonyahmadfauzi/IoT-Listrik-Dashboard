@@ -4,7 +4,7 @@ const { Resend } = require("resend");
 
 const DATABASE_URL =
   process.env.FIREBASE_DATABASE_URL ||
-  "https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app/";
+  "https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app/";
 
 const RESET_OTP_TTL_MS = 10 * 60 * 1000;
 const RESET_OTP_COOLDOWN_MS = 60 * 1000;

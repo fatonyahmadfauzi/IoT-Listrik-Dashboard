@@ -34,7 +34,7 @@ if (!fs.existsSync(serviceAccountPath)) {
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(require(serviceAccountPath)),
-    databaseURL: 'https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app',
+    databaseURL: 'https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app',
   });
 }
 

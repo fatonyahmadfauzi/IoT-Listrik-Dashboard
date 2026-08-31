@@ -1,6 +1,6 @@
 /**
  * telegram_handler.h — Telegram Bot Notification Handler
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * ---
  * KEY CHANGE from previous version:
  *   Telegram Bot Token and Chat ID are no longer compile-time macros.
  *   They are passed as RUNTIME PARAMETERS loaded from Firebase /settings.
@@ -10,7 +10,7 @@
  * Required library:
  *   HTTPClient — built-in to ESP32 Arduino core (no install needed)
  *   UrlEncode  — search "URLEncode" by Masoud K in Arduino Library Manager
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * ---
  */
 
 #ifndef TELEGRAM_HANDLER_H
@@ -25,7 +25,7 @@
 
 static const char* TELEGRAM_API_BASE = "https://api.telegram.org/bot";
 
-// â”€â”€ Anti-spam state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Anti-spam state ---
 static unsigned long _lastTelegramMs = 0;
 static String        _lastTelegramMsg = "";
 
@@ -59,7 +59,7 @@ bool sendTelegramToOneChat(const String& message,
   return false;
 }
 
-// â”€â”€â”€ sendTelegram() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- sendTelegram() ---
 /**
  * Send a text message to a Telegram chat via Bot API.
  *
@@ -131,7 +131,7 @@ bool sendTelegram(const String& message,
   return ok;
 }
 
-// â”€â”€â”€ buildAlertMessage() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- buildAlertMessage() ---
 /**
  * Build a formatted Telegram HTML alert message.
  *
@@ -160,16 +160,16 @@ String buildAlertMessage(const String& status,
     "%s %s\n\n"
     "Status sebelumnya: <code>%s -> %s</code>\n"
     "<b>Snapshot Data Realtime:</b>\n"
-    "  âš¡ Arus     : <code>%.2f A</code>\n"
-    "  ðŸ”Œ Tegangan : <code>%.1f V</code>\n"
+    "  \xE2\x9A\xA1 Arus     : <code>%.2f A</code>\n"
+    "  \xF0\x9F\x94\x8C Tegangan : <code>%.1f V</code>\n"
     "  Daya aktif : <code>%.1f W</code>\n"
     "  Daya semu  : <code>%.1f VA</code>\n"
     "  Energi     : <code>%.4f kWh</code>\n"
     "  PF         : <code>%.2f</code>\n"
     "  Frekuensi  : <code>%.1f Hz</code>\n"
-    "  ðŸ” Relay    : <code>%s</code>\n\n"
+    "  \xF0\x9F\x94\x81 Relay    : <code>%s</code>\n\n"
     "Sumber meter: <code>%s</code>\n"
-    "â± Uptime: <code>%lu s</code>",
+    "\xE2\x8F\xB1 Uptime: <code>%lu s</code>",
     emoji, title,
     previousStatus.c_str(), status.c_str(),
     arus, tegangan,
@@ -182,7 +182,7 @@ String buildAlertMessage(const String& status,
   return String(buf);
 }
 
-// â”€â”€â”€ sendAlertIfNeeded() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- sendAlertIfNeeded() ---
 /**
  * Send a Telegram alert only when status changes to/from a
  * critical state. Prevents alert fatigue from repeated messages.

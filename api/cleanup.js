@@ -7,7 +7,7 @@ if (!admin.apps.length) {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      databaseURL: "https://monitoring-listrik-719b1-default-rtdb.asia-southeast1.firebasedatabase.app/" // sesuaikan jika berbeda
+      databaseURL: "https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app/" // sesuaikan jika berbeda
     });
   } catch (error) {
     console.error("Firebase admin init error di cleanup:", error);

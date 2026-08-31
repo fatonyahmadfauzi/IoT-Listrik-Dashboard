@@ -1,6 +1,6 @@
 /**
  * discord_handler.h — Discord Webhook Notification Handler
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * ---
  * Kirim notifikasi ke Discord via Webhook URL yang dikonfigurasi di
  * Firebase /settings/discord/webhookAlerts
  *
@@ -12,7 +12,7 @@
  * Required library:
  *   HTTPClient — built-in to ESP32 Arduino core (no install needed)
  *   ArduinoJson — install via Arduino Library Manager
- * â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * ---
  */
 
 #ifndef DISCORD_HANDLER_H
@@ -25,11 +25,11 @@
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>  // FIX: reset WDT saat HTTP blocking
 
-// â”€â”€ Anti-spam state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Anti-spam state ---
 static unsigned long _lastDiscordMs  = 0;
 static String        _lastDiscordMsg = "";
 
-// â”€â”€â”€ sendDiscordWebhook() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- sendDiscordWebhook() ---
 /**
  * Kirim Discord embed ke webhook URL.
  *
@@ -118,7 +118,7 @@ bool sendDiscordWebhook(const String& webhookUrl,
   return ok;
 }
 
-// â”€â”€ Warna embed standar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- Warna embed standar ---
 #define DISCORD_COLOR_GREEN    0x2ECC71   // Normal / online
 #define DISCORD_COLOR_YELLOW   0xF1C40F   // Warning
 #define DISCORD_COLOR_ORANGE   0xE67E22   // Leakage
@@ -126,7 +126,7 @@ bool sendDiscordWebhook(const String& webhookUrl,
 #define DISCORD_COLOR_BLUE     0x3498DB   // Info / relay ON
 #define DISCORD_COLOR_GRAY     0x95A5A6   // Relay OFF / offline
 
-// â”€â”€â”€ buildDiscordStatusEmbed() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- buildDiscordStatusEmbed() ---
 /**
  * Buat judul + deskripsi embed untuk notifikasi perubahan status.
  */
@@ -204,7 +204,7 @@ void buildDiscordRealtimeEmbed(float arus, float tegangan,
   outDesc = String(buf);
 }
 
-// â”€â”€â”€ buildDiscordRelayEmbed() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- buildDiscordRelayEmbed() ---
 /**
  * Buat judul + deskripsi embed untuk notifikasi relay ON/OFF.
  */
@@ -230,15 +230,15 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
   char buf[896];
   snprintf(buf, sizeof(buf),
     "**Data Sensor saat perintah:**\n"
-    "âš¡ Arus     : `%.2f A`\n"
+    "\xE2\x9A\xA1 Arus     : `%.2f A`\n"
     "🔔 Tegangan : `%.1f V`\n"
     "Daya aktif : `%.1f W`\n"
     "Daya semu  : `%.1f VA`\n"
     "Energi     : `%.4f kWh`\n"
     "PF         : `%.2f`\n"
     "Frekuensi  : `%.1f Hz`\n"
-    "ðŸ“Š Status   : `%s`\n"
-    "ðŸ“‹ Penyebab : `%s`\n"
+    "\xF0\x9F\x93\x8A Status   : `%s`\n"
+    "\xF0\x9F\x93\x8B Penyebab : `%s`\n"
     "Sumber meter: `%s`\n"
     "⏱ Uptime   : `%lu s`",
     arus, tegangan,
@@ -252,7 +252,7 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
   outDesc = String(buf);
 }
 
-// â”€â”€â”€ sendDiscordStatusAlert() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- sendDiscordStatusAlert() ---
 /**
  * Kirim notifikasi Discord saat status berubah (WARNING/LEAKAGE/DANGER/NORMAL).
  * Hanya kirim saat transisi yang relevan (anti-spam).
@@ -286,7 +286,7 @@ void sendDiscordStatusAlert(const String& newStatus, const String& lastStatus,
   sendDiscordWebhook(webhookUrl, title, desc, color, cooldownMs);
 }
 
-// â”€â”€â”€ sendDiscordRelayNotif() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// --- sendDiscordRelayNotif() ---
 /**
  * Kirim notifikasi Discord saat relay berubah state.
  * Dipanggil dari main.ino setelah relay command dieksekusi.

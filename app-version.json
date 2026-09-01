@@ -1,17 +1,17 @@
 {
-  "version": "1.1.0",
-  "buildDate": "2026-08-14",
+  "version": "1.1.6",
+  "buildDate": "2026-09-01",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard.apk",
-      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/IoT-Listrik-Dashboard.apk",
+      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/IoT-Listrik-Dashboard.apk",
       "size": "3.34 MB"
     },
     "windows": {
       "setup": {
         "filename": "IoT-Listrik-Dashboard-Setup.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/IoT-Listrik-Dashboard-Setup.exe",
-        "size": "334.72 MB",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/IoT-Listrik-Dashboard-Setup.exe",
+        "size": "334.73 MB",
         "architectures": [
           "ia32",
           "x64",
@@ -21,7 +21,7 @@
       },
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/IoT-Listrik-Dashboard-Portable.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/IoT-Listrik-Dashboard-Portable.exe",
         "size": "334.42 MB",
         "architectures": [
           "ia32",
@@ -32,8 +32,8 @@
       },
       "msi": {
         "filename": "IoT-Listrik-Dashboard.msi",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/IoT-Listrik-Dashboard.msi",
-        "size": "125.07 MB",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/IoT-Listrik-Dashboard.msi",
+        "size": "125.06 MB",
         "architectures": [
           "x64"
         ],
@@ -43,20 +43,20 @@
     "cli": {
       "node": {
         "filename": "iot-listrik-cli-node.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/iot-listrik-cli-node.exe",
-        "size": "181.68 MB"
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/iot-listrik-cli-node.exe",
+        "size": "181.73 MB"
       },
       "python": {
         "filename": "iot-listrik-cli-python.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/iot-listrik-cli-python.exe",
-        "size": "41.05 MB"
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/iot-listrik-cli-python.exe",
+        "size": "42.07 MB"
       },
       "linux": {
         "filename": "iot-listrik-dashboard-cli-linux",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.0/iot-listrik-dashboard-cli-linux",
-        "size": "197.35 MB"
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/iot-listrik-dashboard-cli-linux",
+        "size": "189.80 MB"
       }
     }
   },
-  "notes": "Release v1.1.0 — 2026-08-14. Semua platform diperbarui: log tabel konsisten di web, APK Android, Windows EXE, dan CLI dengan kolom Sumber Meter dan Uptime. Perbaikan bug writeLog Firebase rules dan ring buffer log ESP32."
+  "notes": "Release v1.1.6 — 2026-09-01. Perbaikan encoding Telegram, penghentian alarm saat perangkat offline, dan sinkronisasi alarm Web/PWA, Windows, Android, serta backend."
 }

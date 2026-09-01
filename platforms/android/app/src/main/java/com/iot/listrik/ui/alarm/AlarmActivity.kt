@@ -1,24 +1,26 @@
 package com.iot.listrik.ui.alarm
 
 import android.app.KeyguardManager
+import android.content.BroadcastReceiver
 import android.content.Context
-import android.media.MediaPlayer
-import android.media.RingtoneManager
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.iot.listrik.databinding.ActivityAlarmBinding
 import com.iot.listrik.service.AlarmForegroundService
 
 class AlarmActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAlarmBinding
-    private var mediaPlayer: MediaPlayer? = null
-    private var vibrator: Vibrator? = null
-    private var fadeAnimator: android.animation.ValueAnimator? = null
+    private var stopReceiverRegistered = false
+    private val stopReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AlarmForegroundService.ACTION_ALARM_STOPPED) finish()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // OVERRIDE LOCK SCREEN
@@ -47,91 +49,45 @@ class AlarmActivity : AppCompatActivity() {
         binding.tvAlarmTitle.text = title
         binding.tvAlarmBody.text = message
 
-        startSirenAndVibration()
+        if (!AlarmForegroundService.isActive(this)) {
+            finish()
+            return
+        }
+
+        // Suara dan getaran hanya dikelola AlarmForegroundService agar
+        // perintah STOP_ALARM dapat menghentikan alarm secara konsisten.
+        AlarmForegroundService.start(this)
 
         binding.btnDismiss.setOnClickListener {
-            stopSirenAndVibration()
             // Pastikan alarm global (service) juga berhenti saat user dismiss
             AlarmForegroundService.stop(this)
             finish() // Close alarm, returns to previous app or home
         }
     }
 
-    private fun startSirenAndVibration() {
-        // Play Alarm Sound with fallback
-        var uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        if (uri == null) uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-        if (uri == null) uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-        if (uri != null) {
-            try {
-                mediaPlayer = MediaPlayer().apply {
-                    val audioAttributes = android.media.AudioAttributes.Builder()
-                        .setUsage(android.media.AudioAttributes.USAGE_ALARM)
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                    setAudioAttributes(audioAttributes)
-                    setDataSource(this@AlarmActivity, uri)
-                    isLooping = true
-                    
-                    setVolume(0f, 0f)
-                    
-                    setOnPreparedListener {
-                        it.start()
-
-                        // Fade In Audio Drama (over 6 seconds)
-                        fadeAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f)
-                        fadeAnimator?.duration = 6000
-                        fadeAnimator?.addUpdateListener { animator ->
-                            val v = animator.animatedValue as Float
-                            try {
-                                setVolume(v, v)
-                            } catch (e: Exception) {
-                                // Ignore if released
-                            }
-                        }
-                        fadeAnimator?.start()
-                    }
-                    prepareAsync()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    override fun onStart() {
+        super.onStart()
+        if (!AlarmForegroundService.isActive(this)) {
+            finish()
+            return
         }
-
-        // Vibrate
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        
-        val pattern = longArrayOf(0, 100, 50, 100, 50, 600, 200, 600)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(pattern, 0)
+        if (!stopReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                this,
+                stopReceiver,
+                IntentFilter(AlarmForegroundService.ACTION_ALARM_STOPPED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            stopReceiverRegistered = true
         }
     }
 
-    private fun stopSirenAndVibration() {
-        fadeAnimator?.cancel()
-        fadeAnimator = null
-        
-        try {
-            mediaPlayer?.stop()
-        } catch (e: Exception) {}
-        mediaPlayer?.release()
-        mediaPlayer = null
-        
-        vibrator?.cancel()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        stopSirenAndVibration()
+    override fun onStop() {
+        if (stopReceiverRegistered) {
+            unregisterReceiver(stopReceiver)
+            stopReceiverRegistered = false
+        }
+        super.onStop()
     }
 }
+

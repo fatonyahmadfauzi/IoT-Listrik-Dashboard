@@ -33,12 +33,15 @@ class AlarmForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
         if (action == ACTION_STOP) {
+            markAlarmActive(this, false)
+            notifyAlarmUiStopped(this)
             stopAlarm()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
         }
 
+        markAlarmActive(this, true)
         startForeground(NOTIF_ID, buildNotification())
         startAlarm()
         return START_STICKY
@@ -156,8 +159,12 @@ class AlarmForegroundService : Service() {
         private const val CHANNEL_ID = "ALARM_FOREGROUND_SERVICE"
         private const val NOTIF_ID = 2001
         private const val ACTION_STOP = "com.iot.listrik.action.STOP_ALARM"
+        const val ACTION_ALARM_STOPPED = "com.iot.listrik.action.ALARM_STOPPED"
+        private const val PREFS_NAME = "iot_listrik_alarm_state"
+        private const val PREF_ACTIVE = "active"
 
         fun start(context: Context) {
+            markAlarmActive(context, true)
             val i = Intent(context, AlarmForegroundService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(i)
@@ -167,9 +174,30 @@ class AlarmForegroundService : Service() {
         }
 
         fun stop(context: Context) {
-            val i = Intent(context, AlarmForegroundService::class.java).apply { action = ACTION_STOP }
-            context.startService(i)
+            markAlarmActive(context, false)
+            notifyAlarmUiStopped(context)
+            context.stopService(Intent(context, AlarmForegroundService::class.java))
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(NOTIF_ID)
+        }
+
+        fun isActive(context: Context): Boolean =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(PREF_ACTIVE, false)
+
+        private fun markAlarmActive(context: Context, active: Boolean) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean(PREF_ACTIVE, active)
+                .apply()
+        }
+
+        private fun notifyAlarmUiStopped(context: Context) {
+            context.sendBroadcast(
+                Intent(ACTION_ALARM_STOPPED).setPackage(context.packageName)
+            )
         }
     }
 }
+
 

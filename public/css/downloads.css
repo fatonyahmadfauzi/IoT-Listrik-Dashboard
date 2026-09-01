@@ -1346,3 +1346,40 @@
     font-size: 12px !important;
   }
 }
+
+
+/* Final alignment fix: center CLI command text vertically in every viewport. */
+.dl-cli-card .dl-code-row {
+  align-items: stretch;
+}
+
+.dl-cli-card .dl-inline-code,
+.dl-cli-card .dl-command-code {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+.dl-cli-card .dl-install-row {
+  align-items: stretch;
+}
+
+.dl-cli-card .dl-install-row .dl-command-code {
+  flex: 1 1 auto;
+}
+
+.dl-cli-card .dl-install-row .cmd-copy-btn {
+  align-self: stretch;
+  min-height: 44px;
+}
+
+@media (max-width: 760px) {
+  .dl-cli-card .dl-inline-code,
+  .dl-cli-card .dl-command-code {
+    min-height: 44px;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+}

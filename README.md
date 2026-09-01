@@ -1,6 +1,6 @@
 # Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time
 
-![Version](https://img.shields.io/badge/versi-1.1.0-blue) ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20Windows%20%7C%20CLI-brightgreen) ![License](https://img.shields.io/badge/lisensi-MIT-green) ![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange)
+![Version](https://img.shields.io/badge/versi-1.1.6-blue) ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20Windows%20%7C%20CLI-brightgreen) ![License](https://img.shields.io/badge/lisensi-MIT-green) ![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange)
 
 > **Skripsi S1 — Program Studi Teknik Informatika**
 > Universitas Bina Insani, Bekasi — 2026
@@ -18,6 +18,19 @@
 
 Sistem monitoring kondisi kelistrikan terintegrasi dengan deteksi dini **indikasi arus bocor** atau **arus abnormal** berbasis IoT.
 Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan **Terminal (CLI)**.
+
+## Status Release Saat Ini
+
+Per 1 September 2026, seluruh artefak project yang dipublikasikan menggunakan release v1.1.6:
+
+| Platform | Release yang digunakan | Keterangan |
+|---|---|---|
+| Web/PWA | `v1.1.6` | Perbaikan alarm offline dan cache PWA |
+| Android | `v1.1.6` | Perbaikan penghentian alarm offline |
+| Windows Setup, Portable, MSI | `v1.1.6` | Perbaikan penghentian alarm offline |
+| CLI Node.js, Python, Linux | `v1.1.6` | Build terbaru |
+
+Release terbaru secara keseluruhan adalah `v1.1.6`. Seluruh tautan unduhan diarahkan ke aset GitHub Release v1.1.6.
 
 
 
@@ -41,7 +54,7 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 - **Discord Admin Tools**: 5 tujuan webhook (alerts, relay, monitoring, daily report, logs), status bot, ringkasan server, jumlah member/online/ban, ban/unban user.
 - **Halaman Analytics**: ringkasan statistik histori log — min/max/rata-rata arus, tegangan, daya, tren sensor dalam grafik, distribusi status (NORMAL/WARNING/DANGER), dan snapshot parameter listrik terkini. Tersedia di Web PWA (/app/analytics) dan Windows Desktop.
 - **Filter Tanggal Log**: kalender interaktif di halaman Riwayat dan Analytics — tanggal tanpa data dinonaktifkan otomatis, semua filter (grafik, tabel ringkas, tabel detail, export CSV) diperbarui serentak.
-- **Mode Koneksi LOCAL / CLOUD / AUTO**: sumber data realtime dapat dikonfigurasi dari Settings. Mode AUTO menggunakan Firebase langsung dan fallback otomatis ke local REST backend (ackend-local/server.js) jika Firebase tidak terjangkau.
+- **Mode Koneksi LOCAL / CLOUD / AUTO**: sumber data realtime dapat dikonfigurasi dari Settings. Mode AUTO menggunakan Firebase langsung dan fallback otomatis ke local REST backend (backend-local/server.js) jika Firebase tidak terjangkau.
 - **LCD 1602 I2C opsional** pada firmware ESP32: tampilkan arus, tegangan, status, dan relay langsung di layar fisik. Aktifkan dengan #define USE_LCD di config.h.
 - Ring buffer log 4 slot di firmware ESP32 — event log tidak lagi saling menimpa saat beberapa trigger terjadi bersamaan (status change + periodic + auto-cutoff + web_command).
 - Kolom **Sumber Meter** (contoh: `PZEM-004T`) dan **Uptime** (`5521 s`) kini konsisten di seluruh platform: Web, Android, Windows Desktop, dan Terminal CLI.

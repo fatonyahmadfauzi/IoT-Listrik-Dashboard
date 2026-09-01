@@ -19,6 +19,7 @@ function App() {
   const { user, role, loading, initAuth, isTempAccount } = useAuthStore();
   const {
     currentData,
+    connectionMeta,
     subscribeToData,
     subscribeLogs,
     subscribeSettings,
@@ -78,6 +79,13 @@ function App() {
     }
 
     const status = currentData?.status;
+    const connection = String(connectionMeta?.connection || '');
+
+    if (connection && connection !== 'Connected') {
+      stopAlarm();
+      prevStatus.current = status;
+      return;
+    }
 
     if (!notifications || !status) {
       stopAlarm();
@@ -98,7 +106,7 @@ function App() {
     }
 
     prevStatus.current = status;
-  }, [user, currentData?.status, notifications]);
+  }, [user, currentData?.status, notifications, connectionMeta?.connection]);
 
   useEffect(() => {
     if (!user) {

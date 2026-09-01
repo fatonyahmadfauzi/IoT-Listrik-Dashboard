@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260508-speed-insights";
+const CACHE_NAME = "iot-app-v20260901-alarm-offline-fix";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
@@ -202,3 +202,4 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+

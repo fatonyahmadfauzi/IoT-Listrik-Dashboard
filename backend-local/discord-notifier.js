@@ -1102,6 +1102,19 @@ async function publishClientEvent({
   return nextPayload;
 }
 
+async function sendStopAlarmFCM(reason = 'device_offline') {
+  try {
+    await admin.messaging().send({
+      topic: 'iot_alarms',
+      data: { action: 'STOP_ALARM', status: 'NORMAL', reason, source: 'hardware' },
+      android: { priority: 'high' },
+    });
+    console.log(`[FCM] STOP_ALARM sent (${reason}).`);
+  } catch (err) {
+    console.error('[FCM] STOP_ALARM gagal dikirim:', err.message);
+  }
+}
+
 async function sendInfoFCM(title, message, event, severity = 'info') {
   try {
     await admin.messaging().send({
@@ -1145,6 +1158,7 @@ async function broadcastPhysicalSystemEvent({
   const tasks = [
     publishClientEvent({ event, title, message, severity, payload }),
     sendInfoFCM(title, message, event, severity),
+    ...(event === 'device_offline' ? [sendStopAlarmFCM('device_offline')] : []),
   ];
 
   if (telegramEnabled && telegramBotToken && telegramChatIds.length > 0 && telegramMessage) {

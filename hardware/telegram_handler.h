@@ -160,16 +160,16 @@ String buildAlertMessage(const String& status,
     "%s %s\n\n"
     "Status sebelumnya: <code>%s -> %s</code>\n"
     "<b>Snapshot Data Realtime:</b>\n"
-    "  \xE2\x9A\xA1 Arus     : <code>%.2f A</code>\n"
-    "  \xF0\x9F\x94\x8C Tegangan : <code>%.1f V</code>\n"
+    "  Arus     : <code>%.2f A</code>\n"
+    "  Tegangan : <code>%.1f V</code>\n"
     "  Daya aktif : <code>%.1f W</code>\n"
     "  Daya semu  : <code>%.1f VA</code>\n"
     "  Energi     : <code>%.4f kWh</code>\n"
     "  PF         : <code>%.2f</code>\n"
     "  Frekuensi  : <code>%.1f Hz</code>\n"
-    "  \xF0\x9F\x94\x81 Relay    : <code>%s</code>\n\n"
+    "  Relay    : <code>%s</code>\n\n"
     "Sumber meter: <code>%s</code>\n"
-    "\xE2\x8F\xB1 Uptime: <code>%lu s</code>",
+    "Uptime: <code>%lu s</code>",
     emoji, title,
     previousStatus.c_str(), status.c_str(),
     arus, tegangan,

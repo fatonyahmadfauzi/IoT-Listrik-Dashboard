@@ -7,6 +7,32 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
+## [1.1.6] — 2026-09-01
+
+### Fixed
+- Encoding label Telegram dibuat aman tanpa emoji mojibake pada snapshot metrik.
+- Alarm Web/PWA, Windows, dan Android berhenti saat telemetry berhenti atau perangkat offline.
+- Alarm Android disatukan pada foreground service agar perintah `STOP_ALARM` menghentikan suara, getaran, notifikasi, dan layar alarm.
+- Backend mengirim `STOP_ALARM` ketika event `device_offline` diterima.
+
+### Changed
+- Cache Service Worker PWA dibump agar perbaikan alarm terbaru tidak tertahan cache lama.
+
+## [1.1.5] — 2026-08-29
+
+### Fixed
+- CLI Node.js, CLI Python, dan CLI Linux diperbarui agar countdown akun demo tetap berjalan pada menu dan mode monitoring.
+- Penanganan login dengan kredensial salah pada seluruh CLI diperjelas tanpa menampilkan stack trace yang membingungkan pengguna.
+
+### Changed
+- Release ini hanya memperbarui artefak CLI. Android APK serta Windows Setup, Portable, dan MSI tetap menggunakan paket GUI stabil dari release sebelumnya.
+
+## [1.1.4] — 2026-08-28
+
+### Fixed
+- Sinkronisasi countdown demo pada CLI dan mode Live Monitoring.
+- Penyelarasan metadata release dan tautan unduhan dengan artefak yang tersedia.
+
 ## [1.1.0] — 2026-08-14
 
 ### Added
@@ -85,4 +111,7 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 [1.1.0]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.0.0
-[Unreleased]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.1.5...HEAD
+
+[1.1.5]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.1.4...v1.1.5
+[1.1.4]: https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/compare/v1.1.3...v1.1.4

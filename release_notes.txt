@@ -1,6 +1,12 @@
-Pembaruan Layar Monitoring Android (versi 1.0.2):
-- Penyesuaian layout constraint pada UI riwayat `item_history.xml` untuk mengatasi teks waktu/tanggal yang memanjang atau tumpang tindih saat menampilkan data Real-Time.
-- Pembaruan parser regex untuk format ISO-8601 di Date/Time sehingga waktu dan tanggal tampil sempurna dan tidak menampilkan simbol (-) lagi.
-- Placeholder state *"Belum ada riwayat statistik"* ditambahkan di grafik MPAndroidChart untuk penanganan empty-state yang lebih informatif.
-- Penyesuaian sinkronisasi awal (lazy fetch) agar 20 titik di chart langsung memuat data histori dari Firebase Simulator sejak layar Android dibuka.
-- Persiapan deploy link unduhan v1.0.2 untuk Android di Web Vercel (`app-version.json`).
+IoT Listrik Dashboard — Catatan Release
+
+Release terbaru: v1.1.6 (1 September 2026)
+
+- Perbaikan encoding label metrik Telegram agar tidak tampil sebagai karakter mojibake.
+- Alarm Web/PWA dan Windows berhenti ketika telemetry berhenti atau perangkat offline.
+- Alarm Android dipusatkan pada foreground service sehingga suara, getaran, notifikasi, dan layar dapat dihentikan konsisten.
+- Backend mengirim perintah STOP_ALARM ketika perangkat terdeteksi offline.
+- Android APK, Windows Setup, Portable, MSI, CLI Node.js, CLI Python, dan CLI Linux dibangun untuk release v1.1.6.
+- Halaman Downloads diarahkan ke seluruh aset release v1.1.6.
+
+Rujuk CHANGELOG.md untuk riwayat lengkap perubahan.

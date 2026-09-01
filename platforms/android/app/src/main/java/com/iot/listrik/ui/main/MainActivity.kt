@@ -633,6 +633,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         val isOnline = label == "Connected"
+        if (!isOnline) {
+            // Snapshot DANGER lama tidak boleh membuat sirene terus berbunyi
+            // setelah perangkat offline atau koneksi cloud terputus.
+            AlarmForegroundService.stop(this)
+        }
         binding.tvEndpointBadge.text = if (isTempAccount) "SIM" else "CLOUD"
         binding.tvConnectionState.text = if (isOnline) "Device Online" else label
         binding.tvConnectionState.setTextColor(color)

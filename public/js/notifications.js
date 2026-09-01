@@ -22,6 +22,8 @@ let lastRepeatStatus = null;
 let lastResetNotifiedAt = 0;
 let lastSystemEventId = '';
 let stopSystemNotificationFeed = null;
+let alarmWatchdogTimer = null;
+const ALARM_STREAM_STALE_MS = 35000;
 
 try {
   const at = localStorage.getItem('iot_last_alarm_repeat_at');
@@ -374,6 +376,12 @@ function checkSystemEventNotify(payload, options = {}) {
     }
   }
 
+  if (payload?.event === 'device_offline') {
+    stopWebSiren();
+    lastRepeatAt = 0;
+    lastRepeatStatus = null;
+  }
+
   const title = String(payload?.title || 'Pembaruan Sistem').trim();
   const message = String(payload?.message || '').trim();
   if (!message) return false;
@@ -417,7 +425,18 @@ function startSystemNotificationFeed(options = {}) {
  * @param {number} arus   - current in Amperes
  * @param {number} tegangan - voltage in Volts
  */
+function armAlarmWatchdog() {
+  if (alarmWatchdogTimer) clearTimeout(alarmWatchdogTimer);
+  alarmWatchdogTimer = setTimeout(() => {
+    // Tidak ada telemetry baru: jangan mempertahankan alarm berdasarkan snapshot lama.
+    stopWebSiren();
+    lastRepeatAt = 0;
+    lastRepeatStatus = null;
+  }, ALARM_STREAM_STALE_MS);
+}
+
 function checkAndNotify(status, arus, tegangan) {
+  armAlarmWatchdog();
   if (isAlarmDisabled()) {
     stopWebSiren();
     return;

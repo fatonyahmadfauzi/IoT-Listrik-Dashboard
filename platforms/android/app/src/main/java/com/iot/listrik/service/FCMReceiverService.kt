@@ -35,6 +35,8 @@ class FCMReceiverService : FirebaseMessagingService() {
         } else if (action == "STOP_ALARM") {
             Log.d("FCM", "STOP_ALARM received - stopping service.")
             AlarmForegroundService.stop(this)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(1001)
         } else if (action == "SHOW_INFO") {
             val eventId = (message.data["eventId"] ?: "").trim()
             if (eventId.isNotBlank() && hasHandledInfoEvent(eventId)) {
@@ -148,3 +150,4 @@ class FCMReceiverService : FirebaseMessagingService() {
         notificationManager.notify(1002, notificationBuilder.build())
     }
 }
+

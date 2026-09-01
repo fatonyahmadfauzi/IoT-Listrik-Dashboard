@@ -28,9 +28,9 @@ Per 1 September 2026, seluruh artefak project yang dipublikasikan menggunakan re
 | Web/PWA | `v1.1.6` | Perbaikan alarm offline dan cache PWA |
 | Android | `v1.1.6` | Perbaikan penghentian alarm offline |
 | Windows Setup, Portable, MSI | `v1.1.6` | Perbaikan penghentian alarm offline |
-| CLI Node.js, Python, Linux | `v1.1.6` | Build terbaru |
+| CLI Node.js, Python, Linux | `v1.1.7` | Perapihan tabel riwayat |
 
-Release terbaru secara keseluruhan adalah `v1.1.6`. Seluruh tautan unduhan diarahkan ke aset GitHub Release v1.1.6.
+Release GUI tetap `v1.1.6`, sedangkan paket CLI terbaru adalah `v1.1.7`. Tautan unduhan mengikuti versi masing-masing platform.
 
 
 

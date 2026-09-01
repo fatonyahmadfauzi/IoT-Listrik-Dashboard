@@ -43,20 +43,20 @@
     "cli": {
       "node": {
         "filename": "iot-listrik-cli-node.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/iot-listrik-cli-node.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.7/iot-listrik-cli-node.exe",
         "size": "181.73 MB"
       },
       "python": {
         "filename": "iot-listrik-cli-python.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/iot-listrik-cli-python.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.7/iot-listrik-cli-python.exe",
         "size": "42.07 MB"
       },
       "linux": {
         "filename": "iot-listrik-dashboard-cli-linux",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.6/iot-listrik-dashboard-cli-linux",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.7/iot-listrik-dashboard-cli-linux",
         "size": "189.80 MB"
       }
     }
   },
-  "notes": "Release v1.1.6 — 2026-09-01. Perbaikan encoding Telegram, penghentian alarm saat perangkat offline, dan sinkronisasi alarm Web/PWA, Windows, Android, serta backend."
+  "notes": "Aplikasi GUI v1.1.6; CLI v1.1.7 — perapihan tabel riwayat agar kolom Status, Relay, Sumber Meter, dan Uptime tidak saling menempel."
 }

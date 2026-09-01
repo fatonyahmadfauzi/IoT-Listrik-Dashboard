@@ -374,13 +374,18 @@ def view_logs():
                 header_style="bold cyan",
                 border_style="dim",
                 show_lines=False,
+                box=None,
+                pad_edge=False,
+                collapse_padding=False,
+                padding=(0, 1),
+                expand=False,
             )
-            table.add_column("Waktu",        width=21, no_wrap=True)
-            table.add_column("Beban",        width=24, no_wrap=True)
-            table.add_column("Status",       width=9,  no_wrap=True)
+            table.add_column("Waktu",        width=21, no_wrap=True, overflow="ellipsis")
+            table.add_column("Beban (A / V / W)", width=22, no_wrap=True, overflow="ellipsis")
+            table.add_column("Status",       width=12, no_wrap=True, overflow="ellipsis")
             table.add_column("Relay",        width=5,  no_wrap=True)
-            table.add_column("Sumber Meter", width=14, no_wrap=True)
-            table.add_column("Uptime",       width=10, no_wrap=True)
+            table.add_column("Sumber Meter", width=12, no_wrap=True, overflow="ellipsis")
+            table.add_column("Uptime",       width=9,  no_wrap=True, overflow="ellipsis")
 
             for key, item in entries:
                 # Timestamp

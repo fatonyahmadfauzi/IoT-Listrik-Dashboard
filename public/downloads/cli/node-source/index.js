@@ -358,19 +358,28 @@ async function viewLogs() {
       const logs = snap.val();
       const entries = Object.values(logs).reverse();
 
-      // Header
-      const w = { time: 22, load: 28, status: 10, relay: 6, source: 12, uptime: 10 };
+      // Header: setiap sel diberi lebar tetap dan dipisahkan dua spasi.
+      // Warna diterapkan SETELAH padding agar escape ANSI Chalk tidak merusak lebar kolom.
+      const sep = '  ';
+      const w = { time: 19, load: 22, status: 12, relay: 5, source: 12, uptime: 8 };
+      const fitCell = (value, width) => {
+        const text = String(value ?? '');
+        if (text.length <= width) return text.padEnd(width);
+        if (width <= 1) return text.slice(0, width);
+        return `${text.slice(0, width - 1)}…`;
+      };
+      const totalWidth = Object.values(w).reduce((sum, width) => sum + width, 0) + (sep.length * 5);
       console.log(
-        chalk.cyan.bold(
-          'Waktu'.padEnd(w.time) +
-          'Beban (A / V / W)'.padEnd(w.load) +
-          'Status'.padEnd(w.status) +
-          'Relay'.padEnd(w.relay) +
-          'Sumber Meter'.padEnd(w.source) +
-          'Uptime'
-        )
+        chalk.cyan.bold([
+          fitCell('Waktu', w.time),
+          fitCell('Beban (A / V / W)', w.load),
+          fitCell('Status', w.status),
+          fitCell('Relay', w.relay),
+          fitCell('Sumber Meter', w.source),
+          fitCell('Uptime', w.uptime),
+        ].join(sep))
       );
-      console.log(chalk.gray('─'.repeat(w.time + w.load + w.status + w.relay + w.source + w.uptime)));
+      console.log(chalk.gray('─'.repeat(totalWidth)));
 
       entries.forEach(item => {
         // Timestamp
@@ -378,11 +387,14 @@ async function viewLogs() {
         let timeStr = '-';
         if (rawWaktu) {
           const ms = Number(rawWaktu);
-          if (Number.isFinite(ms) && ms > 1e12) {
-            timeStr = new Date(ms).toLocaleString('id-ID');
-          } else {
-            const parsed = Date.parse(String(rawWaktu));
-            if (Number.isFinite(parsed)) timeStr = new Date(parsed).toLocaleString('id-ID');
+          const parsed = Number.isFinite(ms) && ms > 1e12
+            ? ms
+            : Date.parse(String(rawWaktu));
+          if (Number.isFinite(parsed)) {
+            const date = new Date(parsed);
+            const two = value => String(value).padStart(2, '0');
+            timeStr = `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()} ` +
+              `${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`;
           }
         }
 
@@ -395,13 +407,16 @@ async function viewLogs() {
         const loadStr = `${arus.toFixed(2)}A / ${teg.toFixed(1)}V / ${dayaW.toFixed(0)}W`;
 
         // Status
-        const status  = String(item.status || 'NORMAL').toUpperCase();
-        const colored = statusColor(status)(status.padEnd(w.status));
+        const status = String(item.status || 'NORMAL').toUpperCase();
+        const statusCell = statusColor(status)(fitCell(status, w.status));
 
         // Relay
         const relayRaw = item.relay;
         const relayOn  = relayRaw === true || Number(relayRaw) === 1;
-        const relayStr = relayOn ? chalk.green('ON') : chalk.red('OFF');
+        const relayText = relayOn ? 'ON' : 'OFF';
+        const relayCell = relayOn
+          ? chalk.green(fitCell(relayText, w.relay))
+          : chalk.red(fitCell(relayText, w.relay));
 
         // Sumber Meter
         const meterSource = String(item.sensor_source ?? item.sensorSource ?? 'PZEM-004T').trim() || 'PZEM-004T';
@@ -413,17 +428,17 @@ async function viewLogs() {
           ? `${Math.floor(uptimeNum)} s`
           : '—';
 
-        console.log(
-          chalk.white(timeStr.padEnd(w.time)) +
-          chalk.yellow(loadStr.padEnd(w.load)) +
-          colored +
-          relayStr.padEnd(w.relay + 6) +   // +6 karena chalk escape chars
-          chalk.white(meterSource.padEnd(w.source)) +
-          chalk.gray(uptimeStr)
-        );
+        console.log([
+          chalk.white(fitCell(timeStr, w.time)),
+          chalk.yellow(fitCell(loadStr, w.load)),
+          statusCell,
+          relayCell,
+          chalk.white(fitCell(meterSource, w.source)),
+          chalk.gray(fitCell(uptimeStr, w.uptime)),
+        ].join(sep));
       });
 
-      console.log(chalk.gray('\n' + '─'.repeat(88)));
+      console.log(chalk.gray('\n' + '─'.repeat(totalWidth)));
       console.log(chalk.gray(`${entries.length} entri ditampilkan.`));
     } else {
       console.log(chalk.gray("Belum ada catatan aktivitas."));

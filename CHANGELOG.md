@@ -7,6 +7,13 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
+## [1.1.7] — 2026-09-01
+
+### Fixed
+- Tampilan tabel riwayat CLI Node.js dan Python dirapikan dengan lebar kolom tetap dan jarak antarkolom yang konsisten.
+- Status `SENSOR_ERROR`, Relay, Sumber Meter, dan Uptime tidak lagi saling menempel.
+- Format waktu CLI Node.js diseragamkan menjadi `dd/mm/yyyy HH:mm:ss` agar lebih ringkas.
+
 ## [1.1.6] — 2026-09-01
 
 ### Fixed

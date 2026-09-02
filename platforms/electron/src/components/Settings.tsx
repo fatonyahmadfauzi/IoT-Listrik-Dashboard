@@ -589,7 +589,6 @@ export function Settings() {
       return;
     }
 
-    const popup = window.open('about:blank', '_blank', 'noopener,noreferrer');
     setTelegramActionLoading(true);
     try {
       const data = await callLiveResetApi('telegram-admin-action', {
@@ -604,10 +603,15 @@ export function Settings() {
           : 'Bot Telegram berhasil dikenali.'
       );
       notifyDesktop('Telegram Bot', username ? `Bot @${username} siap dihubungkan.` : 'Bot Telegram berhasil dikenali.');
-      if (popup && botUrl) popup.location.href = botUrl;
-      else if (botUrl) window.open(botUrl, '_blank', 'noopener,noreferrer');
+      if (botUrl) {
+        if (window.electronAPI?.openExternal) {
+          const opened = await window.electronAPI.openExternal(botUrl);
+          if (!opened.ok) throw new Error(opened.error || 'Browser default tidak dapat dibuka.');
+        } else {
+          window.open(botUrl, '_blank', 'noopener,noreferrer');
+        }
+      }
     } catch (error) {
-      if (popup) popup.close();
       const msg = getCallableErrorMessage(error, 'Gagal membaca profil bot Telegram.');
       setTelegramActionMessage(msg);
       notifyDesktop('Gagal membaca bot Telegram', msg);

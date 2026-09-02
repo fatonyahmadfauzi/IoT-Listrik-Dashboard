@@ -7,6 +7,7 @@ import {
   ipcMain,
   dialog,
   nativeImage,
+  shell,
 } from 'electron';
 import { existsSync } from 'fs';
 import { isAbsolute, join, relative, resolve } from 'path';
@@ -219,6 +220,15 @@ ipcMain.handle('show-notification', async (_, { title, body }) => {
       notification.on('close', () => resolve('closed'));
     });
   }
+});
+
+ipcMain.handle('open-external', async (_, url: string) => {
+  const value = String(url || '').trim();
+  if (!/^https:\/\/(?:t\.me|telegram\.me)\//i.test(value)) {
+    return { ok: false as const, error: 'URL eksternal tidak diizinkan.' };
+  }
+  await shell.openExternal(value);
+  return { ok: true as const };
 });
 
 ipcMain.handle('get-settings', () => {

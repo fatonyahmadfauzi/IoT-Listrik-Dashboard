@@ -4,6 +4,7 @@ declare global {
   interface Window {
     electronAPI?: {
       showNotification: (title: string, body: string) => Promise<string>;
+      openExternal: (url: string) => Promise<{ ok: boolean; error?: string }>;
       getSettings: () => Promise<{
         runAtStartup: boolean;
         enableNotifications: boolean;

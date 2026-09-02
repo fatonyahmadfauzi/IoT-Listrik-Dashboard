@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   getSettings: () => ipcRenderer.invoke('get-settings'),
 
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
   setSettings: (settings: any) => ipcRenderer.invoke('set-settings', settings),
 
   startLocalServer: (opts: { cwd?: string }) =>

@@ -1,6 +1,6 @@
 # Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time
 
-![Version](https://img.shields.io/badge/versi-1.1.6-blue) ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20Windows%20%7C%20CLI-brightgreen) ![License](https://img.shields.io/badge/lisensi-MIT-green) ![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange)
+![Version](https://img.shields.io/badge/versi-1.1.8-blue) ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20Windows%20%7C%20CLI-brightgreen) ![License](https://img.shields.io/badge/lisensi-MIT-green) ![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange)
 
 > **Skripsi S1 — Program Studi Teknik Informatika**
 > Universitas Bina Insani, Bekasi — 2026
@@ -21,16 +21,16 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 
 ## Status Release Saat Ini
 
-Per 1 September 2026, seluruh artefak project yang dipublikasikan menggunakan release v1.1.6:
+Per 2 September 2026, seluruh artefak project yang dipublikasikan menggunakan release v1.1.8:
 
 | Platform | Release yang digunakan | Keterangan |
 |---|---|---|
-| Web/PWA | `v1.1.6` | Perbaikan alarm offline dan cache PWA |
-| Android | `v1.1.6` | Perbaikan penghentian alarm offline |
-| Windows Setup, Portable, MSI | `v1.1.6` | Perbaikan penghentian alarm offline |
-| CLI Node.js, Python, Linux | `v1.1.7` | Perapihan tabel riwayat |
+| Web/PWA | `v1.1.8` | Metadata dan tautan unduhan terbaru |
+| Android | `v1.1.8` | Dukungan status `SENSOR_ERROR` yang konsisten |
+| Windows Setup, Portable, MSI | `v1.1.8` | Dukungan status `SENSOR_ERROR` yang konsisten |
+| CLI Node.js, Python, Linux | `v1.1.8` | Paket CLI stabil dengan tabel riwayat rapi |
 
-Release GUI tetap `v1.1.6`, sedangkan paket CLI terbaru adalah `v1.1.7`. Tautan unduhan mengikuti versi masing-masing platform.
+Seluruh artefak unduhan tersedia melalui release terpadu `v1.1.8`.
 
 
 

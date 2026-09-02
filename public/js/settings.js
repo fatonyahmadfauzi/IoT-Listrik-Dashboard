@@ -1812,6 +1812,18 @@ async function connectTelegramBot() {
     return;
   }
 
+  // Buka satu tab saat masih berada dalam user gesture agar tidak diblokir browser.
+  // Jangan gunakan `noopener` langsung pada window.open karena sebagian browser
+  // mengembalikan null walaupun tab sudah dibuat, yang sebelumnya memicu tab kedua.
+  const popup = window.open('', '_blank');
+  if (popup) {
+    try {
+      popup.opener = null;
+      popup.document.title = 'Menghubungkan Telegram Bot...';
+      popup.document.body.innerHTML = '<p style="font:16px sans-serif;padding:24px">Memeriksa profil bot Telegram...</p>';
+    } catch (_) {}
+  }
+
   if (connectTelegramBotBtn) {
     connectTelegramBotBtn.disabled = true;
     connectTelegramBotBtn.innerHTML = '<span class="material-symbols-rounded">link</span> Menghubungkan...';
@@ -1828,8 +1840,12 @@ async function connectTelegramBot() {
       'success'
     );
     showToast(username ? `Bot @${username} siap dihubungkan.` : 'Bot Telegram berhasil dikenali.', 'success');
-    if (link) window.open(link, '_blank', 'noopener,noreferrer');
+    if (link && popup) popup.location.replace(link);
+    else if (link) {
+      setTelegramActionStatus('Bot dikenali, tetapi browser memblokir tab Telegram. Izinkan pop-up lalu coba lagi.', 'warning');
+    }
   } catch (err) {
+    if (popup) popup.close();
     const message = getCallableErrorMessage(err, 'Gagal membaca profil bot Telegram.');
     setTelegramActionStatus(message, 'error');
     showToast(message, 'error');

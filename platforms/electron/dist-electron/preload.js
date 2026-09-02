@@ -6,6 +6,7 @@ const electron_1 = require("electron");
 electron_1.contextBridge.exposeInMainWorld('electronAPI', {
     showNotification: (title, body) => electron_1.ipcRenderer.invoke('show-notification', { title, body }),
     getSettings: () => electron_1.ipcRenderer.invoke('get-settings'),
+    openExternal: (url) => electron_1.ipcRenderer.invoke('open-external', url),
     setSettings: (settings) => electron_1.ipcRenderer.invoke('set-settings', settings),
     startLocalServer: (opts) => electron_1.ipcRenderer.invoke('local-server:start', opts),
     stopLocalServer: () => electron_1.ipcRenderer.invoke('local-server:stop'),

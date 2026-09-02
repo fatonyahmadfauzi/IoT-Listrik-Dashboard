@@ -192,6 +192,14 @@ electron_1.ipcMain.handle('show-notification', async (_, { title, body }) => {
         });
     }
 });
+electron_1.ipcMain.handle('open-external', async (_, url) => {
+    const value = String(url || '').trim();
+    if (!/^https:\/\/(?:t\.me|telegram\.me)\//i.test(value)) {
+        return { ok: false, error: 'URL eksternal tidak diizinkan.' };
+    }
+    await electron_1.shell.openExternal(value);
+    return { ok: true };
+});
 electron_1.ipcMain.handle('get-settings', () => {
     return {
         runAtStartup: store.get('runAtStartup', false),

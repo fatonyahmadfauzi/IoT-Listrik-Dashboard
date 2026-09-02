@@ -91,10 +91,27 @@ FirebaseConfig fbConfig;
 
 // --- Firebase token callback ------------------------------------------------
 void firebaseTokenStatusCallback(TokenInfo info) {
+  static unsigned long lastTokenErrorLogMs = 0;
+  static int lastTokenErrorCode = 0;
+
   if (info.status == token_status_error) {
-    Serial.println("[Firebase] Token error.");
+    s_fbTokenReady = false;
+    const unsigned long now = millis();
+    const int errorCode = info.error.code;
+
+    // Hindari memenuhi Serial Monitor dengan pesan identik setiap callback,
+    // tetapi tetap tampilkan ulang setiap 10 detik atau saat kode berubah.
+    if (errorCode != lastTokenErrorCode || now - lastTokenErrorLogMs >= 10000UL) {
+      lastTokenErrorCode = errorCode;
+      lastTokenErrorLogMs = now;
+      Serial.printf("[Firebase] Token error code=%d: %s\n",
+                    errorCode,
+                    info.error.message.c_str());
+      Serial.println("[Firebase] Periksa API key, email/password akun IoT, lalu restart ESP32.");
+    }
   } else if (info.status == token_status_ready) {
     s_fbTokenReady = true;
+    lastTokenErrorCode = 0;
     Serial.println("[Firebase] Auth token ready");
   }
 }

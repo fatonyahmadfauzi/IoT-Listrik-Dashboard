@@ -361,6 +361,7 @@ def view_logs():
     try:
         from datetime import datetime
         from rich.table import Table
+        from rich import box
 
         logs_data = db.child(f"{path_prefix}logs").order_by_key().limit_to_last(20).get(current_user['token'])
 
@@ -374,7 +375,8 @@ def view_logs():
                 header_style="bold cyan",
                 border_style="dim",
                 show_lines=False,
-                box=None,
+                box=box.SIMPLE,
+                show_edge=False,
                 pad_edge=False,
                 collapse_padding=False,
                 padding=(0, 1),
@@ -382,10 +384,10 @@ def view_logs():
             )
             table.add_column("Waktu",        width=21, no_wrap=True, overflow="ellipsis")
             table.add_column("Beban (A / V / W)", width=22, no_wrap=True, overflow="ellipsis")
-            table.add_column("Status",       width=12, no_wrap=True, overflow="ellipsis")
+            table.add_column("Status",       width=13, no_wrap=True, overflow="ellipsis")
             table.add_column("Relay",        width=5,  no_wrap=True)
-            table.add_column("Sumber Meter", width=12, no_wrap=True, overflow="ellipsis")
-            table.add_column("Uptime",       width=9,  no_wrap=True, overflow="ellipsis")
+            table.add_column("Sumber Meter", width=14, no_wrap=True, overflow="ellipsis")
+            table.add_column("Uptime",       width=10, no_wrap=True, overflow="ellipsis")
 
             for key, item in entries:
                 # Timestamp

@@ -24,6 +24,7 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ### Changed
 - Cache Service Worker PWA dibump agar perbaikan alarm terbaru tidak tertahan cache lama.
+- Tabel riwayat pada CLI Node.js dan Python menggunakan lebar kolom serta pemisah yang konsisten agar label Status, Relay, Sumber Meter, dan Uptime tidak saling menempel.
 
 ## [1.1.5] — 2026-08-29
 

@@ -360,8 +360,8 @@ async function viewLogs() {
 
       // Header: setiap sel diberi lebar tetap dan dipisahkan dua spasi.
       // Warna diterapkan SETELAH padding agar escape ANSI Chalk tidak merusak lebar kolom.
-      const sep = '  ';
-      const w = { time: 19, load: 22, status: 12, relay: 5, source: 12, uptime: 8 };
+      const sep = ' | ';
+      const w = { time: 19, load: 22, status: 13, relay: 5, source: 14, uptime: 10 };
       const fitCell = (value, width) => {
         const text = String(value ?? '');
         if (text.length <= width) return text.padEnd(width);
@@ -379,7 +379,7 @@ async function viewLogs() {
           fitCell('Uptime', w.uptime),
         ].join(sep))
       );
-      console.log(chalk.gray('─'.repeat(totalWidth)));
+      console.log(chalk.gray('-'.repeat(totalWidth)));
 
       entries.forEach(item => {
         // Timestamp
@@ -438,7 +438,7 @@ async function viewLogs() {
         ].join(sep));
       });
 
-      console.log(chalk.gray('\n' + '─'.repeat(totalWidth)));
+      console.log(chalk.gray('\n' + '-'.repeat(totalWidth)));
       console.log(chalk.gray(`${entries.length} entri ditampilkan.`));
     } else {
       console.log(chalk.gray("Belum ada catatan aktivitas."));

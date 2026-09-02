@@ -1,6 +1,6 @@
 {
   "name": "iot-listrik-dashboard-electron",
-  "version": "1.1.6",
+  "version": "1.1.8",
   "description": "IoT Listrik Dashboard Desktop App",
   "author": "Fatony Ahmad Fauzi",
   "main": "dist-electron/main.js",

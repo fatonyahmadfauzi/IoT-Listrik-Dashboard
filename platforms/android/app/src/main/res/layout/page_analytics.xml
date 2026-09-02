@@ -350,7 +350,7 @@
             android:orientation="vertical"
             android:padding="20dp">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Distribusi Status" android:textColor="@color/text_primary" android:textSize="19sp" android:textStyle="bold" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Perbandingan NORMAL, WARNING, LEAKAGE, dan DANGER." android:textColor="@color/text_secondary" android:textSize="11sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Perbandingan NORMAL, WARNING, LEAKAGE, DANGER, dan SENSOR_ERROR." android:textColor="@color/text_secondary" android:textSize="11sp" />
             <com.github.mikephil.charting.charts.PieChart android:id="@+id/analyticsStatusChart" android:layout_width="match_parent" android:layout_height="235dp" android:layout_marginTop="8dp" />
             <LinearLayout android:id="@+id/analyticsStatusLegend" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
         </LinearLayout>

@@ -7,6 +7,13 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
+## [1.1.8] — 2026-09-02
+
+### Fixed
+- Windows Desktop dan Android APK mengenali `SENSOR_ERROR` sebagai status resmi, bukan `UNKNOWN`.
+- Dashboard, Analytics, Riwayat, filter, warna, grafik, dan notifikasi menampilkan status sensor error secara konsisten.
+- Alarm/status sensor error pada aplikasi tidak mengganggu mekanisme penghentian alarm ketika perangkat offline.
+
 ## [1.1.7] — 2026-09-01
 
 ### Fixed

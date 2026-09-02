@@ -62,6 +62,14 @@ const statusCopy: Record<
     title: 'Kondisi berbahaya',
     hint: 'Relay perlu berada pada kondisi aman sampai data kembali normal.',
   },
+  SENSOR_ERROR: {
+    panel: 'border-slate-400/55 bg-slate-500/10',
+    badge: 'border-slate-400/50 bg-slate-500/15 text-slate-200',
+    text: 'text-slate-200',
+    iconBox: 'text-slate-200 bg-slate-500/20 border-slate-400/30',
+    title: 'Sensor tidak terbaca',
+    hint: 'Data PZEM-004T tidak valid. Periksa koneksi sensor dan tunggu pembacaan berikutnya.',
+  },
 };
 
 const chartText = '#cbd5e1';

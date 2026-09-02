@@ -37,6 +37,7 @@ const colors = {
   pf: '#38bdf8',
   frequency: '#2dd4bf',
   apparent: '#fb923c',
+  sensorError: '#7c879b',
   text: '#cbd5e1',
   grid: 'rgba(148, 163, 184, 0.16)',
 };
@@ -97,7 +98,7 @@ function readApparent(source: any) {
 
 function normalizeStatus(status?: string) {
   const value = String(status || 'NORMAL').toUpperCase();
-  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'].includes(value) ? value : 'UNKNOWN';
+  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
 }
 
 function statusBadgeClass(status?: string) {
@@ -135,6 +136,7 @@ export function Analytics() {
       WARNING: filteredLogs.filter((log) => normalizeStatus(log.status) === 'WARNING').length,
       LEAKAGE: filteredLogs.filter((log) => normalizeStatus(log.status) === 'LEAKAGE').length,
       DANGER: filteredLogs.filter((log) => normalizeStatus(log.status) === 'DANGER').length,
+      SENSOR_ERROR: filteredLogs.filter((log) => normalizeStatus(log.status) === 'SENSOR_ERROR').length,
     }),
     [filteredLogs]
   );
@@ -161,6 +163,7 @@ export function Analytics() {
     ['WARNING', statusCounts.WARNING, colors.warning],
     ['LEAKAGE', statusCounts.LEAKAGE, colors.leakage],
     ['DANGER', statusCounts.DANGER, colors.danger],
+    ['SENSOR_ERROR', statusCounts.SENSOR_ERROR, colors.sensorError],
   ] as const;
 
   const trendData = {
@@ -231,7 +234,7 @@ export function Analytics() {
   };
 
   const statusData = {
-    labels: ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'],
+    labels: ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER', 'SENSOR_ERROR'],
     datasets: [
       {
         data: [
@@ -239,8 +242,9 @@ export function Analytics() {
           statusCounts.WARNING,
           statusCounts.LEAKAGE,
           statusCounts.DANGER,
+          statusCounts.SENSOR_ERROR,
         ],
-        backgroundColor: [colors.normal, colors.warning, colors.leakage, colors.danger],
+        backgroundColor: [colors.normal, colors.warning, colors.leakage, colors.danger, colors.sensorError],
         borderColor: 'rgba(7, 12, 24, 0.92)',
         borderWidth: 4,
       },
@@ -452,7 +456,7 @@ export function Analytics() {
         <article className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
           <div className="border-b border-slate-700/70 pb-4">
             <h2 className="text-lg font-black text-white">Distribusi Status</h2>
-            <p className="mt-1 text-sm text-slate-400">Perbandingan NORMAL, WARNING, LEAKAGE, dan DANGER.</p>
+            <p className="mt-1 text-sm text-slate-400">Perbandingan NORMAL, WARNING, LEAKAGE, DANGER, dan SENSOR_ERROR.</p>
           </div>
           <div className="mt-6 h-80 min-w-0">
             <Doughnut data={statusData} options={commonChartOptions} />

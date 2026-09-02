@@ -18,7 +18,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 const chartText = '#cbd5e1';
 const chartGrid = 'rgba(148, 163, 184, 0.16)';
 
-type StatusFilter = '' | 'NORMAL' | 'WARNING' | 'LEAKAGE' | 'DANGER';
+type StatusFilter = '' | 'NORMAL' | 'WARNING' | 'LEAKAGE' | 'DANGER' | 'SENSOR_ERROR';
 type LogMode = 'summary' | 'detail';
 
 function number(value: unknown, fallback = 0) {
@@ -49,7 +49,7 @@ function formatClock(timestamp?: number) {
 
 function normalizeStatus(status?: string) {
   const value = String(status || 'NORMAL').toUpperCase();
-  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER'].includes(value) ? value : 'UNKNOWN';
+  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
 }
 
 function statusClass(status?: string) {
@@ -62,6 +62,8 @@ function statusClass(status?: string) {
       return 'border-orange-300/45 bg-orange-500/15 text-orange-100';
     case 'DANGER':
       return 'border-red-300/50 bg-red-500/20 text-red-100';
+    case 'SENSOR_ERROR':
+      return 'border-slate-400/50 bg-slate-500/15 text-slate-200';
     default:
       return 'border-slate-600 bg-slate-800 text-slate-300';
   }
@@ -362,6 +364,7 @@ export function History() {
               <option value="WARNING">WARNING</option>
               <option value="LEAKAGE">LEAKAGE</option>
               <option value="DANGER">DANGER</option>
+              <option value="SENSOR_ERROR">SENSOR_ERROR</option>
             </select>
             <div className="inline-flex rounded-full border border-slate-700 bg-slate-950/50 p-1">
               <button

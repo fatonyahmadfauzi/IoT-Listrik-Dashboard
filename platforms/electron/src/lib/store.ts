@@ -111,7 +111,7 @@ interface ListrikData {
   frekuensi: number;
   power_factor: number;
   relay: boolean;
-  status: 'NORMAL' | 'WARNING' | 'LEAKAGE' | 'DANGER';
+  status: 'NORMAL' | 'WARNING' | 'LEAKAGE' | 'DANGER' | 'SENSOR_ERROR';
   updated_at: number;
   reset_by_admin?: boolean;
   reset_at?: string | number | null;

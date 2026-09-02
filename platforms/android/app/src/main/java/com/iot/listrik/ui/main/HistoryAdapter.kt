@@ -171,6 +171,7 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
         "LEAKAGE" -> "LEAKAGE"
         "WARNING" -> "WARNING"
         "NORMAL" -> "NORMAL"
+        "SENSOR_ERROR" -> "SENSOR_ERROR"
         else -> "UNKNOWN"
     }
 
@@ -215,6 +216,7 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
             "LEAKAGE" -> Color.parseColor("#fb923c")
             "WARNING" -> Color.parseColor("#fee58a")
             "NORMAL" -> Color.parseColor("#2eea72")
+            "SENSOR_ERROR" -> Color.parseColor("#7c879b")
             else -> Color.parseColor("#94a3b8")
         }
         view.setTextColor(color)

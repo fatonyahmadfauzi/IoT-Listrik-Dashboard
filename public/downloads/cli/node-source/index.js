@@ -129,7 +129,7 @@ function relayBlockedReason() {
 function statusColor(status) {
   if (status === "NORMAL") return chalk.green.bold;
   if (status === "WARNING") return chalk.yellow.bold;
-  if (status === "LEAKAGE") return chalk.hex ? chalk.hex("#fb923c").bold : chalk.yellow.bold;
+  if (status === "LEAKAGE") return chalk.red.bold; // status legacy
   if (status === "DANGER") return chalk.red.bold;
   return chalk.gray;
 }

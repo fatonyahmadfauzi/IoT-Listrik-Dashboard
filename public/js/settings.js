@@ -2181,15 +2181,38 @@ function loadUsers() {
 
   if (usersUnsubscribe) usersUnsubscribe();
 
-  usersUnsubscribe = onValue(ref(db, '/users'), (snap) => {
-    if (!snap.exists()) {
+  usersUnsubscribe = onValue(ref(db, '/users'), async (snap) => {
+    const users = [];
+    if (snap.exists()) {
+      snap.forEach(child => users.push({ uid: child.key, ...child.val() }));
+    }
+
+    // Pastikan akun yang sedang login tetap terlihat pada daftar. Ini menjaga
+    // konsistensi UI ketika snapshot RTDB yang diterima browser terlambat,
+    // berasal dari cache lama, atau belum memuat child akun saat listener awal.
+    const currentUser = auth.currentUser;
+    if (currentUser && !users.some((item) => item.uid === currentUser.uid)) {
+      try {
+        const ownSnap = await get(ref(db, `/users/${currentUser.uid}`));
+        const ownProfile = ownSnap.exists() ? ownSnap.val() : {};
+        users.push({
+          uid: currentUser.uid,
+          email: ownProfile.email || currentUser.email || '',
+          displayName: ownProfile.displayName || currentUser.displayName || '',
+          role: ownProfile.role === 'admin' ? 'admin' : 'user',
+          createdAt: ownProfile.createdAt || ownProfile.created_at || '',
+        });
+      } catch (error) {
+        console.warn('[Users] Profil akun aktif belum dapat dimuat:', error);
+      }
+    }
+
+    if (!users.length) {
       renderUserSummary([]);
       usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
         Belum ada pengguna</td></tr>`;
       return;
     }
-    const users = [];
-    snap.forEach(child => users.push({ uid: child.key, ...child.val() }));
     renderUsers(users);
   }, (err) => {
     showToast('Gagal memuat users: ' + err.message, 'error');

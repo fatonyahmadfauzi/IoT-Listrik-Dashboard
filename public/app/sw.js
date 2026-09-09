@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260909-discord-diagnostics-full";
+const CACHE_NAME = "iot-app-v20260909-users-admin-fix";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [

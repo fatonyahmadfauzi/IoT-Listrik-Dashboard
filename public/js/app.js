@@ -195,7 +195,7 @@ function renderConnectionMeta(m) {
   // Re-render tombol relay sesuai state terakhir + status koneksi
   if (lastRelayVal !== -1) renderRelay(lastRelayVal);
   if (elRelayHint) {
-    const statusUnsafe = lastDeviceStatus === "WARNING" || lastDeviceStatus === "DANGER" || lastDeviceStatus === "SENSOR_ERROR";
+    const statusUnsafe = lastDeviceStatus === "DANGER" || lastDeviceStatus === "LEAKAGE" || lastDeviceStatus === "SENSOR_ERROR";
     if (!relayControlAllowed) {
       elRelayHint.textContent = relayControlReason;
     } else if (statusUnsafe) {
@@ -203,7 +203,7 @@ function renderConnectionMeta(m) {
     } else if (lastRelayVal === 0) {
       elRelayHint.textContent = "Relay dimatikan. Klik tombol ON untuk menyalakan kembali.";
     } else {
-      elRelayHint.textContent = "Perangkat terhubung. Auto-cutoff aktif: relay OFF otomatis jika WARNING/DANGER.";
+      elRelayHint.textContent = "Perangkat terhubung. Auto-cutoff aktif: relay OFF otomatis jika DANGER.";
     }
   }
   if (elUpdated) {
@@ -259,8 +259,8 @@ async function sendRelayCommand(val) {
     return;
   }
 
-  // Blokir perintah ON jika kondisi masih WARNING atau DANGER
-  if (val === 1 && (lastDeviceStatus === "WARNING" || lastDeviceStatus === "DANGER")) {
+  // Blokir perintah ON hanya jika kondisi bahaya masih aktif
+  if (val === 1 && (lastDeviceStatus === "DANGER" || lastDeviceStatus === "LEAKAGE" || lastDeviceStatus === "SENSOR_ERROR")) {
     showToast(
       `Perintah ON ditolak: kondisi ${lastDeviceStatus}. Perbaiki kondisi listrik lebih dulu.`,
       "error",

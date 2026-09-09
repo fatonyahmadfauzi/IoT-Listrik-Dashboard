@@ -1319,8 +1319,8 @@ void firebaseTaskCore0(void *pvParameters) {
 
           } else if (cmdRelay == 1) {
             // ── Perintah ON ──────────────────────────────────────────
-            // Tolak jika kondisi masih WARNING atau DANGER.
-            bool conditionUnsafe = (localState.status == "DANGER" || localState.status == "WARNING");
+            // Tolak perintah ON jika kondisi masih DANGER.
+            bool conditionUnsafe = (localState.status == "DANGER");
             if (localRt.autoCutoffEnabled && conditionUnsafe) {
               Serial.printf("[Relay] ON ditolak: kondisi %s masih tidak aman.\n",
                             localState.status.c_str());
@@ -1785,13 +1785,13 @@ void loop() {
   if (trace) { Serial.printf("[Loop] 4. Status OK: %s\n", newStatus.c_str()); Serial.flush(); }
   bool statusChanged = (newStatus != lastStatus);
 
-  // ── Auto-cutoff (WARNING atau DANGER, relay=ON) ─────────────────
-  // Trigger jika: autoCutoffEnabled AND (WARNING atau DANGER) AND relay masih ON.
+  // ── Auto-cutoff (DANGER, relay=ON) ─────────────────────────────
+  // WARNING hanya memberi peringatan; cutoff otomatis hanya saat DANGER.
   // Setelah cutoff, set relayLockedOff sehingga relay TIDAK nyala otomatis
   // meskipun kondisi kembali NORMAL — hanya perintah ON dari web yang bisa clear lock.
   bool shouldAutoCutoff = reading.valid
                            && localRt.autoCutoffEnabled
-                          && (newStatus == "DANGER" || newStatus == "WARNING")
+                          && newStatus == "DANGER"
                           && currentRelay == 1;
 
   if (shouldAutoCutoff) {

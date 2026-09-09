@@ -22,6 +22,7 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 - Pesan diagnostik Discord memakai transaction state RTDB agar perubahan yang sama tidak dikirim berulang.
 - Tampilan diagnostik, badge, status sensor, dan informasi firmware diseragamkan antarplatform.
 - Seluruh CLI kini membaca role dari `/users/{uid}/role`: badge Admin/User/Demo ditampilkan konsisten, menu kontrol relay hanya muncul untuk Admin, dan fungsi relay memiliki pemeriksaan role tambahan.
+- Auto-cutoff firmware diselaraskan dengan spesifikasi UI: WARNING mempertahankan relay ON untuk pemantauan, sedangkan relay OFF dan lock otomatis hanya dipicu saat DANGER.
 
 ### Changed
 - Release `v1.1.9` memperbarui Android APK, Windows Setup/Portable/MSI, CLI Node.js/Python/Linux, dokumentasi, dan halaman Downloads.

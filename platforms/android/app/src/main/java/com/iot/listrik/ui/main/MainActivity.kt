@@ -604,10 +604,11 @@ class MainActivity : AppCompatActivity() {
         binding.tvRelayControlHint.text = when {
             commandPending -> "Mengirim perintah relay dan menunggu konfirmasi perangkat."
             !canControl -> relayBlockedReason()
-            lastDeviceStatus == "WARNING" || lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" || lastDeviceStatus == "SENSOR_ERROR" ->
+            lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" || lastDeviceStatus == "SENSOR_ERROR" ->
                 "Kondisi $lastDeviceStatus — relay dikunci OFF. Perbaiki kondisi lebih dulu, lalu nyalakan kembali."
             relayIsOff -> "Relay dimatikan. Tekan Nyalakan Relay untuk mengaktifkan kembali beban."
-            relayIsOn -> "Perangkat terhubung. Auto-cutoff aktif saat kondisi listrik tidak aman."
+            lastDeviceStatus == "WARNING" -> "Status WARNING aktif. Relay tetap ON untuk pemantauan; auto-cutoff hanya saat DANGER."
+            relayIsOn -> "Perangkat terhubung. Auto-cutoff aktif saat DANGER."
             else -> "Menunggu status relay dari perangkat."
         }
     }
@@ -2271,7 +2272,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (value == 1 && (lastDeviceStatus == "WARNING" || lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" || lastDeviceStatus == "SENSOR_ERROR")) {
+        if (value == 1 && (lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" || lastDeviceStatus == "SENSOR_ERROR")) {
             showToast("Perintah ON ditolak: kondisi $lastDeviceStatus. Perbaiki kondisi listrik lebih dulu.")
             return
         }

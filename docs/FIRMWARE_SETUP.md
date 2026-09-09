@@ -68,7 +68,7 @@ Pengaturan runtime disimpan di Firebase RTDB `/settings` dan dapat diubah dari h
 |---------|---------|-----------|
 | `thresholdArus` | 10.0 A | Batas arus DANGER |
 | `warningPercent` | 80 | Persen threshold untuk WARNING |
-| `autoCutoffEnabled` | true | Auto-cutoff relay saat DANGER/WARNING |
+| `autoCutoffEnabled` | true | Auto-cutoff relay saat DANGER |
 | `buzzerEnabled` | true | Buzzer aktif saat status berubah |
 | `sendIntervalMs` | 2000 | Interval kirim data ke Firebase (min: 5000ms) |
 | `realtimeStreamEnabled` | true | Aktif/nonaktif stream data ke /listrik |
@@ -193,7 +193,7 @@ Firmware menulis ke `/logs` dengan field `source` yang menunjukkan penyebab:
 | `initial_snapshot` | Snapshot pertama setelah boot dan koneksi Firebase berhasil |
 | `esp32` | Perubahan status (NORMAL → WARNING → DANGER atau sebaliknya) |
 | `periodic` | Log rutin setiap 60 detik |
-| `auto_cutoff` | Relay dimatikan otomatis karena kondisi DANGER/WARNING |
+| `auto_cutoff` | Relay dimatikan otomatis karena kondisi DANGER |
 | `web_command` | Perintah relay ON/OFF dari dashboard web |
 
 ---

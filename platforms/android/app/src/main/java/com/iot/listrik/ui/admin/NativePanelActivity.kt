@@ -427,18 +427,34 @@ class NativePanelActivity : AppCompatActivity() {
     private fun chooseUser(uid: String) {
         val m = latestUsers[uid] ?: return
         val email = m["email"]?.toString().orEmpty()
-        val actions = arrayOf("Jadikan Admin", "Jadikan User", "Kirim Reset Password", "Hapus Profil RTDB")
+        val isCurrentAccount = uid == auth.currentUser?.uid
+        val actions = if (isCurrentAccount) {
+            arrayOf("Kirim Reset Password")
+        } else {
+            arrayOf("Jadikan Admin", "Jadikan User", "Kirim Reset Password", "Hapus Profil RTDB")
+        }
+
         AlertDialogBuilder(this).setTitle(email.ifBlank { uid }).setItems(actions) { _, which ->
+            if (isCurrentAccount) {
+                if (email.isNotBlank()) {
+                    auth.sendPasswordResetEmail(email)
+                        .addOnSuccessListener { message("Email reset password dikirim.", false) }
+                        .addOnFailureListener { message("Gagal: ${it.message}", true) }
+                } else {
+                    message("Email akun tidak tersedia.", true)
+                }
+                return@setItems
+            }
+
             when (which) {
                 0 -> updatePath("users/$uid/role", "admin")
                 1 -> updatePath("users/$uid/role", "user")
                 2 -> if (email.isNotBlank()) auth.sendPasswordResetEmail(email)
                     .addOnSuccessListener { message("Email reset password dikirim.", false) }
                     .addOnFailureListener { message("Gagal: ${it.message}", true) }
-                3 -> if (uid != auth.currentUser?.uid) db.getReference("users/$uid").removeValue()
+                3 -> db.getReference("users/$uid").removeValue()
                     .addOnSuccessListener { message("Profil RTDB dihapus.", false) }
                     .addOnFailureListener { message("Gagal: ${it.message}", true) }
-                else -> message("Akun sendiri tidak dapat dihapus.", true)
             }
         }.setNegativeButton("Tutup", null).show()
     }

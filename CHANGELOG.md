@@ -23,6 +23,7 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 - Tampilan diagnostik, badge, status sensor, dan informasi firmware diseragamkan antarplatform.
 - Seluruh CLI kini membaca role dari `/users/{uid}/role`: badge Admin/User/Demo ditampilkan konsisten, menu kontrol relay hanya muncul untuk Admin, dan fungsi relay memiliki pemeriksaan role tambahan.
 - Auto-cutoff firmware diselaraskan dengan spesifikasi UI: WARNING mempertahankan relay ON untuk pemantauan, sedangkan relay OFF dan lock otomatis hanya dipicu saat DANGER.
+- Tampilan SENSOR_ERROR tidak lagi salah menyebut relay terkunci OFF; UI kini menampilkan kondisi relay terakhir dan mencegah perintah ON baru sampai sensor valid.
 
 ### Changed
 - Release `v1.1.9` memperbarui Android APK, Windows Setup/Portable/MSI, CLI Node.js/Python/Linux, dokumentasi, dan halaman Downloads.

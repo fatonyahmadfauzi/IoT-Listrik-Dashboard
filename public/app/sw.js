@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260909-danger-cutoff-fix";
+const CACHE_NAME = "iot-app-v20260909-sensor-error-relay-fix";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [

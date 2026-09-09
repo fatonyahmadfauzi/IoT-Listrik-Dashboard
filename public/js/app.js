@@ -195,11 +195,15 @@ function renderConnectionMeta(m) {
   // Re-render tombol relay sesuai state terakhir + status koneksi
   if (lastRelayVal !== -1) renderRelay(lastRelayVal);
   if (elRelayHint) {
-    const statusUnsafe = lastDeviceStatus === "DANGER" || lastDeviceStatus === "LEAKAGE" || lastDeviceStatus === "SENSOR_ERROR";
+    const statusUnsafe = lastDeviceStatus === "DANGER" || lastDeviceStatus === "LEAKAGE";
     if (!relayControlAllowed) {
       elRelayHint.textContent = relayControlReason;
     } else if (statusUnsafe) {
       elRelayHint.textContent = `Kondisi ${lastDeviceStatus} — relay dikunci OFF. Perbaiki kondisi lebih dulu, lalu klik ON.`;
+    } else if (lastDeviceStatus === "SENSOR_ERROR") {
+      elRelayHint.textContent = lastRelayVal === 1
+        ? "SENSOR_ERROR — relay tetap ON sesuai kondisi terakhir. Perbaiki sensor sebelum mengubah beban."
+        : "SENSOR_ERROR — relay tetap OFF. Perbaiki sensor sebelum menyalakan beban.";
     } else if (lastRelayVal === 0) {
       elRelayHint.textContent = "Relay dimatikan. Klik tombol ON untuk menyalakan kembali.";
     } else {

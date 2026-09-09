@@ -604,8 +604,12 @@ class MainActivity : AppCompatActivity() {
         binding.tvRelayControlHint.text = when {
             commandPending -> "Mengirim perintah relay dan menunggu konfirmasi perangkat."
             !canControl -> relayBlockedReason()
-            lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" || lastDeviceStatus == "SENSOR_ERROR" ->
+            lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" ->
                 "Kondisi $lastDeviceStatus — relay dikunci OFF. Perbaiki kondisi lebih dulu, lalu nyalakan kembali."
+            lastDeviceStatus == "SENSOR_ERROR" && relayIsOn ->
+                "SENSOR_ERROR — relay tetap ON sesuai kondisi terakhir. Perbaiki sensor sebelum mengubah beban."
+            lastDeviceStatus == "SENSOR_ERROR" ->
+                "SENSOR_ERROR — relay tetap OFF. Perbaiki sensor sebelum menyalakan beban."
             relayIsOff -> "Relay dimatikan. Tekan Nyalakan Relay untuk mengaktifkan kembali beban."
             lastDeviceStatus == "WARNING" -> "Status WARNING aktif. Relay tetap ON untuk pemantauan; auto-cutoff hanya saat DANGER."
             relayIsOn -> "Perangkat terhubung. Auto-cutoff aktif saat DANGER."

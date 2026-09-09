@@ -47,6 +47,7 @@ path_prefix = ""
 session_timeout_timer = None
 is_temp_session = False
 temp_expires_at = None
+current_role = "user"
 DEVICE_STALE_MS = 15000
 last_device_heartbeat_at = 0
 last_updated_marker = None
@@ -174,7 +175,7 @@ def handle_session_expired():
     os._exit(0)
 
 def process_user_claims(user_data):
-    global path_prefix, session_timeout_timer, watch_started_at, last_device_heartbeat_at, last_updated_marker, last_sensor_signature, latest_listrik_snapshot, last_admin_reset_marker
+    global path_prefix, session_timeout_timer, watch_started_at, last_device_heartbeat_at, last_updated_marker, last_sensor_signature, latest_listrik_snapshot, last_admin_reset_marker, current_role
     
     token = user_data.get('idToken', '')
     local_id = user_data.get('localId', '')
@@ -187,6 +188,7 @@ def process_user_claims(user_data):
     temp_expires_at = int(expires_at) if expires_at else None
 
     if is_temp and local_id:
+        current_role = "demo"
         path_prefix = f"sim/{local_id}/"
         if expires_at:
             time_remaining = (expires_at - (time.time() * 1000)) / 1000.0
@@ -199,6 +201,12 @@ def process_user_claims(user_data):
                 session_timeout_timer.start()
     else:
         path_prefix = ""
+        try:
+            role_value = db.child("users").child(local_id).child("role").get(token).val() if local_id else None
+            current_role = "admin" if role_value == "admin" else "user"
+        except Exception:
+            current_role = "user"
+            console.print("[yellow]Role akun tidak dapat diverifikasi; akses dibatasi sebagai User.[/yellow]")
         if session_timeout_timer:
             session_timeout_timer.cancel()
             session_timeout_timer = None
@@ -249,6 +257,8 @@ def _header_line_rich(live_countdown=False):
     if is_temp_session:
         badge_text = session_countdown_label().replace(" · SIM", "") if live_countdown else "DEMO"
         badge = f"[black on yellow] {badge_text} [/black on yellow]"
+    elif current_role == "admin":
+        badge = "[black on yellow] ADMIN [/black on yellow]"
     else:
         badge = "[dim] USER [/dim]"
     return f"{badge} [bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]"
@@ -602,6 +612,11 @@ def view_diagnostics():
 
 
 def toggle_relay():
+    if is_temp_session or current_role != "admin":
+        console.print("\n[bold red]Akses ditolak: kontrol relay hanya tersedia untuk Admin.[/bold red]")
+        hold_for_enter()
+        return
+
     if not probe_device_ready():
         console.print(f"\n[bold yellow]Perintah relay diblokir:[/bold yellow] {relay_blocked_reason()}")
         hold_for_enter()
@@ -738,16 +753,22 @@ def main_menu():
     while is_running:
         print_header()
 
+        choices = [
+            questionary.Choice("[1] Mengakses Live Monitoring", "live"),
+            questionary.Choice("[2] Riwayat Log (20 entri)", "log"),
+            questionary.Choice("[3] Diagnostik Sistem", "diagnostics"),
+        ]
+        if current_role == "admin" and not is_temp_session:
+            choices.append(questionary.Choice("[4] Kontrol Relay Power", "relay"))
+        logout_number = 5 if current_role == "admin" and not is_temp_session else 4
+        choices.extend([
+            questionary.Choice(f"[{logout_number}] Keluar Sesi (Logout)", "logout"),
+            questionary.Choice("[0] Matikan Aplikasi (Exit)", "exit")
+        ])
+
         action = questionary.select(
             DynamicSessionMessage("Pilih opsi:"),
-            choices=[
-                questionary.Choice("[1] Mengakses Live Monitoring", "live"),
-                questionary.Choice("[2] Riwayat Log (20 entri)", "log"),
-                questionary.Choice("[3] Diagnostik Sistem", "diagnostics"),
-                questionary.Choice("[4] Kontrol Relay Power", "relay"),
-                questionary.Choice("[5] Keluar Sesi (Logout)", "logout"),
-                questionary.Choice("[0] Matikan Aplikasi (Exit)", "exit")
-            ],
+            choices=choices,
             style=custom_style,
             **live_prompt_kwargs(),
         ).ask()

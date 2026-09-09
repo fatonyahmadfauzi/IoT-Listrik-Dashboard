@@ -38,7 +38,7 @@ Seluruh artefak unduhan tersedia melalui release terpadu `v1.1.9`.
 - **PWA Simulator Mode**: Platform simulasi virtual (*multi-akun*) yang terisolasi dari basis data utama, digunakan untuk pengujian atau presentasi tanpa memerlukan *hardware* fisik ESP32.
 - **Premium UI & Dark Mode**: Tampilan dasbor modern *(Glassmorphism)* yang responsif serta mendukung integrasi *Global Dark Mode* bawaan sistem operasi.
 - **Device Presence Detection (Watchdog)**: Deteksi otomatis status koneksi perangkat (**Online/Offline**) ketika aliran data terputus, bekerja secara *real-time* di seluruh platform tanpa modifikasi firmware ESP32.
-- Role-based access: aksi kritikal (relay/settings) hanya untuk admin.
+- Role-based access: aksi kritikal (relay/settings) hanya untuk admin. Seluruh CLI membaca role akun dari RTDB, menampilkan badge `ADMIN`/`USER`/`DEMO`, dan menyembunyikan kontrol relay dari User biasa serta akun simulator.
 - Histori kejadian, export CSV, dan notifikasi multi-channel (Web push + Telegram + **Discord Webhook** + Discord Bot tools).
 - Auto-cutoff relay saat arus melewati ambang bahaya yang ditentukan.
 - Kontrol stream realtime perangkat: admin dapat pause/resume pengiriman data IoT dan mengatur delay stream.

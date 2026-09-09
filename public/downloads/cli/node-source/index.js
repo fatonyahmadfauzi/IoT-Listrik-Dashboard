@@ -40,6 +40,7 @@ let pathPrefix = "";
 let sessionTimeoutTimer = null;
 let isTempSession = false;
 let tempExpiresAt = null;
+let currentRole = "user";
 let presenceListrikRef = null;
 let presenceConnRef = null;
 let firebaseConnected = true;
@@ -242,9 +243,13 @@ function sessionCountdownLabel() {
 }
 
 function currentSessionBadge(liveCountdown = false) {
-  if (!isTempSession) return chalk.gray(' USER ');
-  const text = liveCountdown ? sessionCountdownLabel().replace(' · SIM', '') : 'DEMO';
-  return chalk.bgYellow.black(` ${text} `);
+  if (isTempSession) {
+    const text = liveCountdown ? sessionCountdownLabel().replace(' · SIM', '') : 'DEMO';
+    return chalk.bgYellow.black(` ${text} `);
+  }
+  return currentRole === 'admin'
+    ? chalk.bgYellow.black(' ADMIN ')
+    : chalk.gray(' USER ');
 }
 
 function decoratePromptMessage(message) {
@@ -324,6 +329,12 @@ async function runLiveMonitoring() {
 
 /** Hit API untuk mengubah Relay */
 async function toggleRelay() {
+  if (isTempSession || currentRole !== 'admin') {
+    console.log(chalk.red("\nAkses ditolak: kontrol relay hanya tersedia untuk Admin."));
+    await holdForEnter();
+    return;
+  }
+
   if (currentConnectionLabel() !== "Connected") {
     console.log(chalk.yellow(`\nPerintah relay diblokir: ${relayBlockedReason()}`));
     await holdForEnter();
@@ -652,6 +663,7 @@ async function processUserClaims() {
   tempExpiresAt = expiresAt;
   
   if (isTemp) {
+    currentRole = "demo";
     pathPrefix = `sim/${auth.currentUser.uid}`;
     if (expiresAt) {
       const timeRemaining = expiresAt - Date.now();
@@ -664,6 +676,13 @@ async function processUserClaims() {
     }
   } else {
     pathPrefix = "";
+    try {
+      const roleSnap = await get(ref(db, `users/${auth.currentUser.uid}/role`));
+      currentRole = roleSnap.val() === "admin" ? "admin" : "user";
+    } catch (error) {
+      currentRole = "user";
+      console.warn(chalk.yellow("Role akun tidak dapat diverifikasi; akses dibatasi sebagai User."));
+    }
     if (sessionTimeoutTimer) {
       clearTimeout(sessionTimeoutTimer);
       sessionTimeoutTimer = null;
@@ -698,19 +717,25 @@ async function mainMenu() {
   while (isRunning) {
     printHeader();
     
+    const choices = [
+      { name: "[1] Mengakses Live Monitoring", value: "live" },
+      { name: "[2] Riwayat Log (20 entri)", value: "log" },
+      { name: "[3] Diagnostik Sistem", value: "diagnostics" },
+    ];
+    if (currentRole === "admin" && !isTempSession) {
+      choices.push({ name: "[4] Kontrol Relay Power", value: "relay" });
+    }
+    choices.push(
+      { name: `[${currentRole === "admin" && !isTempSession ? 5 : 4}] Keluar Sesi (Logout)`, value: "logout" },
+      { name: "[0] Matikan Aplikasi (Exit)", value: "exit" },
+    );
+
     const { action } = await promptWithLiveCountdown([
       {
         type: "list",
         name: "action",
         message: "Pilih opsi:",
-        choices: [
-          { name: "[1] Mengakses Live Monitoring", value: "live" },
-          { name: "[2] Riwayat Log (20 entri)", value: "log" },
-          { name: "[3] Diagnostik Sistem", value: "diagnostics" },
-          { name: "[4] Kontrol Relay Power", value: "relay" },
-          { name: "[5] Keluar Sesi (Logout)", value: "logout" },
-          { name: "[0] Matikan Aplikasi (Exit)", value: "exit" },
-        ],
+        choices,
         pageSize: 10
       }
     ]);

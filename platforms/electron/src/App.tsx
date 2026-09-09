@@ -7,12 +7,14 @@ import { Dashboard } from './components/Dashboard';
 import { History } from './components/History';
 import { Analytics } from './components/Analytics';
 import { Settings } from './components/Settings';
+import { Diagnostics } from './components/Diagnostics';
+import { SerialMonitor } from './components/SerialMonitor';
 import { Login } from './components/Login';
 import { playAlarm, showNotification, stopAlarm } from './lib/notifikasi';
 import { db } from './lib/firebase';
 import { onValue, ref } from 'firebase/database';
 
-type Page = 'dashboard' | 'history' | 'analytics' | 'settings';
+type Page = 'dashboard' | 'history' | 'analytics' | 'settings' | 'diagnostics' | 'serial';
 
 function App() {
   const { notifications } = useStore();
@@ -182,6 +184,10 @@ function App() {
         return <Analytics />;
       case 'settings':
         return <Settings />;
+      case 'diagnostics':
+        return <Diagnostics />;
+      case 'serial':
+        return <SerialMonitor />;
       default:
         return <Dashboard />;
     }
@@ -214,6 +220,10 @@ function App() {
               ? 'Analytics Overview'
               : page === 'settings'
               ? 'Pengaturan'
+              : page === 'diagnostics'
+              ? 'Diagnostik Sistem'
+              : page === 'serial'
+              ? 'Serial Monitor'
               : 'Dashboard Monitoring'
           }
         />

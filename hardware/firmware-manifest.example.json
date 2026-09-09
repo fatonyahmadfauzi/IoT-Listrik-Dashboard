@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "product": "iot-listrik-esp32",
+  "version": "1.0.1",
+  "board": "esp32-dev-module",
+  "file": "iot-listrik-esp32-v1.0.1.bin",
+  "size": 0,
+  "sha256": "ISI_SHA256_HEKSADESIMAL_64_KARAKTER",
+  "minimumVersion": "1.0.0",
+  "releaseDate": "YYYY-MM-DD",
+  "notes": "Ringkasan perubahan firmware"
+}

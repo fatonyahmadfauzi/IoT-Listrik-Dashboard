@@ -116,6 +116,9 @@ interface ListrikData {
   reset_by_admin?: boolean;
   reset_at?: string | number | null;
   reset_note?: string;
+  sensor_source?: string; meter_ok?: boolean; lcd_ok?: boolean; lcd_address?: number; wifi_rssi?: number; free_heap?: number;
+  firmware_version?: string; firmware_board?: string; firmware_ota_capable?: boolean;
+  pzem_rx_pin?: number; pzem_tx_pin?: number; lcd_sda_pin?: number; lcd_scl_pin?: number; relay_pin?: number; buzzer_pin?: number;
 }
 
 interface DataStore {
@@ -170,6 +173,21 @@ export const useDataStore = create<DataStore>((set) => {
               reset_by_admin: Boolean((d as any).reset_by_admin),
               reset_at: (d as any).reset_at ?? null,
               reset_note: String((d as any).reset_note || ''),
+              sensor_source: d.sensor_source,
+              meter_ok: d.meter_ok,
+              lcd_ok: d.lcd_ok,
+              lcd_address: d.lcd_address,
+              wifi_rssi: d.wifi_rssi,
+              free_heap: d.free_heap,
+              firmware_version: d.firmware_version,
+              firmware_board: d.firmware_board,
+              firmware_ota_capable: d.firmware_ota_capable,
+              pzem_rx_pin: d.pzem_rx_pin,
+              pzem_tx_pin: d.pzem_tx_pin,
+              lcd_sda_pin: d.lcd_sda_pin,
+              lcd_scl_pin: d.lcd_scl_pin,
+              relay_pin: d.relay_pin,
+              buzzer_pin: d.buzzer_pin,
             },
             loading: false,
           });

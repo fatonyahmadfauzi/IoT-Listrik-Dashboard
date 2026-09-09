@@ -284,6 +284,7 @@ export function Settings() {
   const [discordMonitoring, setDiscordMonitoring] = useState(dSettings.webhookMonitoring || '');
   const [discordDailyReport, setDiscordDailyReport] = useState(dSettings.webhookDailyReport || '');
   const [discordLogs, setDiscordLogs] = useState(dSettings.webhookLogs || '');
+  const [discordDiagnostics, setDiscordDiagnostics] = useState(dSettings.webhookDiagnostics || '');
   const [discordEnabled, setDiscordEnabled] = useState(dSettings.enabled ?? true);
   const [discordBotToken, setDiscordBotToken] = useState('');
   const [discordGuildId, setDiscordGuildId] = useState('');
@@ -332,6 +333,7 @@ export function Settings() {
   const [showDiscordMonitoring, setShowDiscordMonitoring] = useState(false);
   const [showDiscordDailyReport, setShowDiscordDailyReport] = useState(false);
   const [showDiscordLogs, setShowDiscordLogs] = useState(false);
+  const [showDiscordDiagnostics, setShowDiscordDiagnostics] = useState(false);
   const [showDiscordBotToken, setShowDiscordBotToken] = useState(false);
   const [showDeviceWifiPassword, setShowDeviceWifiPassword] = useState(false);
   const [showDeviceApiKey, setShowDeviceApiKey] = useState(false);
@@ -769,6 +771,7 @@ export function Settings() {
         webhookMonitoring: discordMonitoring,
         webhookDailyReport: discordDailyReport,
         webhookLogs: discordLogs,
+        webhookDiagnostics: discordDiagnostics,
         enabled: discordEnabled,
       });
       notifyDesktop('Discord tersimpan', 'Konfigurasi Discord berhasil diperbarui.');
@@ -1204,41 +1207,42 @@ export function Settings() {
     }
   };
 
-  const testDiscordWebhook = async () => {
+  const testDiscordWebhook = async (target: 'alerts' | 'diagnostics' = 'alerts') => {
     if (!discordEnabled) {
-      notifyDesktop(
-        'Discord dimatikan',
-        'Aktifkan Master Switch Discord terlebih dahulu jika ingin mengirim test.'
-      );
+      notifyDesktop('Discord dimatikan', 'Aktifkan Master Switch Discord terlebih dahulu jika ingin mengirim test.');
       return;
     }
-    if (!discordAlerts.startsWith('https://discord.com/api/webhooks/')) {
-      notifyDesktop('Test Discord', 'Isi Webhook #alerts terlebih dahulu untuk test.');
+    const isDiagnostics = target === 'diagnostics';
+    const webhook = isDiagnostics ? discordDiagnostics : discordAlerts;
+    const channel = isDiagnostics ? '#diagnostik-sistem' : '#alerts';
+    if (!webhook.startsWith('https://discord.com/api/webhooks/')) {
+      notifyDesktop('Test Discord', `Isi Webhook ${channel} terlebih dahulu untuk test.`);
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch(discordAlerts, {
+      const res = await fetch(webhook, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          embeds: [{
-            title: '🔔 Test Notifikasi — IoT Listrik Dashboard',
-            description: 'Koneksi Discord Webhook berhasil! Sistem notifikasi Desktop siap digunakan.',
-            color: 0x5865F2,
-            fields: [
-              { name: 'Status', value: '✅ Webhook terhubung', inline: true },
-              { name: 'Waktu', value: new Date().toLocaleString('id-ID'), inline: true },
-            ],
-            footer: { text: 'IoT Listrik Dashboard Desktop — Discord Integration Test' },
-          }],
-        }),
+        body: JSON.stringify({ embeds: [{
+          title: isDiagnostics ? '🩺 Test Diagnostik Sistem IoT Listrik' : '🔔 Test Notifikasi — IoT Listrik Dashboard',
+          description: isDiagnostics
+            ? 'Webhook diagnostik terhubung. Channel menerima perubahan kesehatan sistem, bukan setiap perubahan angka telemetri.'
+            : 'Koneksi Discord Webhook berhasil! Sistem notifikasi Desktop siap digunakan.',
+          color: isDiagnostics ? 0x22D3EE : 0x5865F2,
+          fields: isDiagnostics ? [
+            { name: 'PZEM-004T', value: '✅ BERFUNGSI', inline: true },
+            { name: 'ESP32 dan Wi-Fi', value: '🟢 ONLINE', inline: true },
+            { name: 'Firebase', value: '🟢 TERHUBUNG', inline: true },
+          ] : [
+            { name: 'Status', value: '✅ Webhook terhubung', inline: true },
+            { name: 'Waktu', value: new Date().toLocaleString('id-ID'), inline: true },
+          ],
+          footer: { text: 'IoT Listrik Dashboard Desktop — Discord Integration Test' },
+        }] }),
       });
-      if (res.ok || res.status === 204) {
-        notifyDesktop('Test Discord berhasil', 'Embed test berhasil dikirim ke channel #alerts.');
-      } else {
-        notifyDesktop('Discord menolak', `Webhook mengembalikan HTTP ${res.status}.`);
-      }
+      if (res.ok || res.status === 204) notifyDesktop('Test Discord berhasil', `Embed test berhasil dikirim ke ${channel}.`);
+      else notifyDesktop('Discord menolak', `Webhook mengembalikan HTTP ${res.status}.`);
     } catch (error: any) {
       notifyDesktop('Gagal kirim test Discord', error.message || 'Terjadi kesalahan saat mengirim test.');
     } finally {
@@ -1911,7 +1915,7 @@ export function Settings() {
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.95fr)]">
               <div className="space-y-4">
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm leading-6 text-indigo-800 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200">
-                  <strong className="font-semibold">Webhook aktif:</strong> gunakan untuk #alerts, #relay, #monitoring, #daily-report, dan #logs tanpa memenuhi halaman pengaturan utama.
+                  <strong className="font-semibold">Webhook aktif:</strong> gunakan untuk #alerts, #relay, #monitoring, #diagnostik-sistem, #daily-report, dan #logs tanpa memenuhi halaman pengaturan utama.
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
@@ -1970,6 +1974,27 @@ export function Settings() {
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Webhook #diagnostik-sistem
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showDiscordDiagnostics ? "text" : "password"}
+                          value={discordDiagnostics}
+                          onChange={(e) => setDiscordDiagnostics(e.target.value)}
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white p-3 pr-10"
+                          placeholder="https://discord.com/api/webhooks/..."
+                        />
+                        <button className="absolute right-3 top-3 text-gray-500" onClick={() => setShowDiscordDiagnostics(!showDiscordDiagnostics)}>
+                          {showDiscordDiagnostics ? <EyeOff size={20}/> : <Eye size={20}/>}
+                        </button>
+                      </div>
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Perubahan kesehatan sensor, ESP32/Wi-Fi, LCD, koneksi, dan firmware.
+                      </p>
+                    </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Webhook #daily-report
@@ -2046,11 +2071,18 @@ export function Settings() {
                     {loading ? 'Saving...' : 'Simpan Konfigurasi Webhook'}
                   </button>
                   <button
-                    onClick={testDiscordWebhook}
+                    onClick={() => testDiscordWebhook('alerts')}
                     disabled={loading || !discordEnabled || !discordAlerts.startsWith('https://discord.com/api/webhooks/')}
                     className="px-4 py-2 bg-transparent border border-[#5865F2] text-[#5865F2] hover:bg-[#5865F2] hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
                   >
                     Test Kirim Ke #alerts
+                  </button>
+                  <button
+                    onClick={() => testDiscordWebhook('diagnostics')}
+                    disabled={loading || !discordEnabled || !discordDiagnostics.startsWith('https://discord.com/api/webhooks/')}
+                    className="px-4 py-2 bg-transparent border border-cyan-500 text-cyan-600 dark:text-cyan-300 hover:bg-cyan-500 hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
+                  >
+                    Test #diagnostik-sistem
                   </button>
                 </div>
               </div>

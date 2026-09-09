@@ -1,16 +1,16 @@
 {
-  "version": "1.1.8",
-  "buildDate": "2026-09-02",
+  "version": "1.1.9",
+  "buildDate": "2026-09-09",
   "downloads": {
     "android": {
       "filename": "IoT-Listrik-Dashboard.apk",
-      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.8/IoT-Listrik-Dashboard.apk",
+      "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.9/IoT-Listrik-Dashboard.apk",
       "size": "3.34 MB"
     },
     "windows": {
       "setup": {
         "filename": "IoT-Listrik-Dashboard-Setup.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.8/IoT-Listrik-Dashboard-Setup.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.9/IoT-Listrik-Dashboard-Setup.exe",
         "size": "334.73 MB",
         "architectures": [
           "ia32",
@@ -21,7 +21,7 @@
       },
       "portable": {
         "filename": "IoT-Listrik-Dashboard-Portable.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.8/IoT-Listrik-Dashboard-Portable.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.9/IoT-Listrik-Dashboard-Portable.exe",
         "size": "334.42 MB",
         "architectures": [
           "ia32",
@@ -32,7 +32,7 @@
       },
       "msi": {
         "filename": "IoT-Listrik-Dashboard.msi",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.8/IoT-Listrik-Dashboard.msi",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.9/IoT-Listrik-Dashboard.msi",
         "size": "125.08 MB",
         "architectures": [
           "x64"
@@ -43,20 +43,20 @@
     "cli": {
       "node": {
         "filename": "iot-listrik-cli-node.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.8/iot-listrik-cli-node.exe",
-        "size": "181.73 MB"
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.9/iot-listrik-cli-node.exe",
+        "size": "181.74 MB"
       },
       "python": {
         "filename": "iot-listrik-cli-python.exe",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.8/iot-listrik-cli-python.exe",
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.9/iot-listrik-cli-python.exe",
         "size": "42.07 MB"
       },
       "linux": {
         "filename": "iot-listrik-dashboard-cli-linux",
-        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.8/iot-listrik-dashboard-cli-linux",
-        "size": "189.80 MB"
+        "url": "https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/download/v1.1.9/iot-listrik-dashboard-cli-linux",
+        "size": "189.81 MB"
       }
     }
   },
-  "notes": "Aplikasi GUI v1.1.8 — status SENSOR_ERROR ditampilkan konsisten pada Windows dan Android."
+  "notes": "Aplikasi GUI v1.1.9 — Diagnostik sistem, Serial Monitor USB ESP32, tombol Reset ESP32, dan pembacaan data realtime."
 }

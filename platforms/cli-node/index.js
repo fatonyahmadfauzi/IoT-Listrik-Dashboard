@@ -282,8 +282,16 @@ function stopHeaderTicker() {
   // oleh prompt aktif sehingga tidak menulis ke posisi terminal absolut.
 }
 
+function clearTerminal() {
+  if (process.stdout.isTTY) {
+    process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
+  } else {
+    console.clear();
+  }
+}
+
 function printHeader(liveCountdown = false) {
-  console.clear();
+  clearTerminal();
   console.log(chalk.cyan.bold("\nIoT Listrik Dashboard CLI"));
   console.log(chalk.gray("Pengembang: Fatony Ahmad Fauzi\n"));
   if (auth.currentUser) {
@@ -449,6 +457,128 @@ async function viewLogs() {
   await holdForEnter();
 }
 
+function formatFirmwareVersion(value) {
+  const text = String(value || "Belum dilaporkan").trim();
+  return text && /^v/i.test(text) ? text : (text ? `v${text}` : "Belum dilaporkan");
+}
+
+function wifiQuality(rssi) {
+  if (!Number.isFinite(rssi) || rssi > 0) return "Belum dilaporkan";
+  return `${rssi} dBm - ${rssi >= -60 ? "Sangat baik" : rssi >= -70 ? "Baik" : rssi >= -80 ? "Lemah" : "Sangat lemah"}`;
+}
+
+function diagnosticBadge(label, state) {
+  if (state === "ok") return chalk.green.bold(label);
+  if (state === "error") return chalk.red.bold(label);
+  return chalk.yellow.bold(label);
+}
+
+function diagnosticTimestamp(data) {
+  const raw = data?.updated_at ?? data?.timestamp ?? data?.waktu;
+  const number = Number(raw);
+  return Number.isFinite(number) && number > 1e12 ? number : 0;
+}
+
+function formatDiagnosticTime(epochMs) {
+  if (!epochMs) return "Belum ada timestamp";
+  const date = new Date(epochMs);
+  const two = (value) => String(value).padStart(2, "0");
+  return `${two(date.getDate())}/${two(date.getMonth() + 1)}/${date.getFullYear()} ${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`;
+}
+
+function printDiagnosticRow(label, value) {
+  console.log(`${chalk.blue(String(label).padEnd(18))} : ${value}`);
+}
+
+async function checkLatestFirmware() {
+  try {
+    const response = await fetch("https://api.github.com/repos/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/latest", {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "iot-listrik-cli" },
+    });
+    if (!response.ok) throw new Error(`GitHub HTTP ${response.status}`);
+    const release = await response.json();
+    const assets = Array.isArray(release.assets) ? release.assets.map((asset) => asset.name).filter(Boolean) : [];
+    return { tag: release.tag_name || "Belum diperiksa", bin: assets.find((name) => /\.bin$/i.test(name)) || "", assets };
+  } catch (error) {
+    return { error: error.message || String(error), tag: "Gagal diperiksa", bin: "", assets: [] };
+  }
+}
+
+async function viewDiagnostics() {
+  let running = true;
+  while (running) {
+    printHeader(true);
+    let data = latestListrikSnapshot;
+    try {
+      const snapshot = await get(ref(db, `${pathPrefix}/listrik`));
+      if (snapshot.exists()) {
+        data = snapshot.val();
+        latestListrikSnapshot = data;
+        registerDeviceHeartbeat(data);
+      }
+    } catch (error) {
+      console.log(chalk.red(`Gagal membaca data diagnostik: ${error.message}`));
+    }
+
+    const connection = currentConnectionLabel();
+    const connected = connection === "Connected";
+    const updated = diagnosticTimestamp(data || {});
+    const age = updated ? Math.max(0, Date.now() - updated) : Infinity;
+    const online = connected && age <= DEVICE_STALE_MS;
+    const meterOk = typeof data?.meter_ok === "boolean" ? data.meter_ok : String(data?.status || "").toUpperCase() !== "SENSOR_ERROR" && Number(data?.tegangan) > 1;
+    const lcdReported = typeof data?.lcd_ok === "boolean";
+    const lcdOk = data?.lcd_ok === true;
+    const status = String(data?.status || "UNKNOWN").toUpperCase();
+    const rssi = Number(data?.wifi_rssi);
+    const heap = Number(data?.free_heap);
+    const firmware = await checkLatestFirmware();
+    const overallError = !connected || !online || !meterOk || (!isTempSession && lcdReported && !lcdOk);
+    const overallWarn = !overallError && (!isTempSession && !lcdReported);
+
+    console.log(chalk.cyan.bold("DIAGNOSTIK SISTEM IoT LISTRIK"));
+    console.log(chalk.gray("Pemeriksaan bersifat read-only; tidak mengubah konfigurasi atau menyalakan beban.\n"));
+    printDiagnosticRow("Koneksi cloud", diagnosticBadge(connected ? "TERHUBUNG" : "TERPUTUS", connected ? "ok" : "error"));
+    printDiagnosticRow("Perangkat", diagnosticBadge(online ? "ONLINE" : "OFFLINE", online ? "ok" : "error"));
+    printDiagnosticRow("Heartbeat", lastDeviceHeartbeatAt ? "AKTIF" : "Belum terdeteksi");
+    printDiagnosticRow("Update terakhir", updated ? `${formatDiagnosticTime(updated)} (${Math.round(age / 1000)} detik lalu)` : "Belum ada timestamp");
+    console.log();
+
+    console.log(chalk.cyan.bold("Sensor dan perangkat"));
+    printDiagnosticRow("PZEM-004T", diagnosticBadge(meterOk && online ? "BERFUNGSI" : "ERROR", meterOk && online ? "ok" : "error"));
+    printDiagnosticRow("Status baca", diagnosticBadge(status, status === "NORMAL" ? "ok" : status === "WARNING" ? "warn" : "error"));
+    printDiagnosticRow("Arus / tegangan", `${Number(data?.arus ?? 0).toFixed(2)} A / ${Number(data?.tegangan ?? 0).toFixed(1)} V`);
+    printDiagnosticRow("ESP32 dan Wi-Fi", diagnosticBadge(online ? "ONLINE" : "OFFLINE", online ? "ok" : "error"));
+    printDiagnosticRow("RSSI / kualitas", wifiQuality(rssi));
+    printDiagnosticRow("Heap bebas", Number.isFinite(heap) && heap > 0 ? `${Math.round(heap / 1024)} KB` : "Belum dilaporkan");
+    printDiagnosticRow("LCD I2C", diagnosticBadge(isTempSession ? "SIMULATOR" : lcdReported ? (lcdOk ? "I2C MERESPONS" : "ERROR") : "MENUNGGU DATA", isTempSession || lcdOk ? "ok" : lcdReported ? "error" : "warn"));
+    printDiagnosticRow("LCD alamat", lcdOk && Number(data?.lcd_address) > 0 ? `0x${Number(data.lcd_address).toString(16).toUpperCase().padStart(2, "0")}` : isTempSession ? "Simulator" : "Tidak ditemukan");
+    printDiagnosticRow("Relay", online ? (Number(data?.relay) === 1 ? "ON" : "OFF") : "Tidak diketahui");
+    printDiagnosticRow("Buzzer", online ? "TERKONFIGURASI" : "Tidak diketahui");
+    console.log();
+
+    console.log(chalk.cyan.bold("Pemetaan Hardware"));
+    console.log("  PZEM UART2   : RX GPIO16 <- PZEM TX; TX GPIO17 -> PZEM RX");
+    console.log("  LCD I2C      : SDA GPIO21; SCL GPIO22");
+    console.log("  Relay        : GPIO26");
+    console.log("  Buzzer       : GPIO25");
+    console.log();
+
+    console.log(chalk.cyan.bold("Firmware Release"));
+    printDiagnosticRow("Versi terpasang", formatFirmwareVersion(data?.firmware_version || "1.0.0"));
+    printDiagnosticRow("Release terbaru", firmware.tag);
+    printDiagnosticRow("Asset .bin", firmware.bin || "BELUM TERSEDIA");
+    printDiagnosticRow("Board", data?.firmware_board || "esp32-dev-module");
+    printDiagnosticRow("OTA", data?.firmware_ota_capable === true ? "AKTIF" : "BELUM AKTIF");
+    if (firmware.error) console.log(chalk.yellow(`Catatan firmware: ${firmware.error}`));
+    console.log(chalk.gray("Pembaruan firmware dilakukan melalui desktop/PC menggunakan USB."));
+    console.log();
+    printDiagnosticRow("Kesimpulan", diagnosticBadge(overallError ? "PERLU DIPERIKSA" : overallWarn ? "DATA BELUM LENGKAP" : "SEMUA NORMAL", overallError ? "error" : overallWarn ? "warn" : "ok"));
+
+    const { next } = await promptWithLiveCountdown([{ type: "list", name: "next", message: "Diagnostik Sistem:", choices: [{ name: "[r] Refresh", value: "refresh" }, { name: "[b] Kembali", value: "back" }] }]);
+    if (next === "back") running = false;
+  }
+}
+
 /** Helper untuk menunggu input tekan Enter sebelum kembali ke menu */
 async function holdForEnter() {
   await promptWithLiveCountdown([
@@ -576,8 +706,9 @@ async function mainMenu() {
         choices: [
           { name: "[1] Mengakses Live Monitoring", value: "live" },
           { name: "[2] Riwayat Log (20 entri)", value: "log" },
-          { name: "[3] Kontrol Relay Power", value: "relay" },
-          { name: "[4] Keluar Sesi (Logout)", value: "logout" },
+          { name: "[3] Diagnostik Sistem", value: "diagnostics" },
+          { name: "[4] Kontrol Relay Power", value: "relay" },
+          { name: "[5] Keluar Sesi (Logout)", value: "logout" },
           { name: "[0] Matikan Aplikasi (Exit)", value: "exit" },
         ],
         pageSize: 10
@@ -590,6 +721,9 @@ async function mainMenu() {
         break;
       case "log":
         await viewLogs();
+        break;
+      case "diagnostics":
+        await viewDiagnostics();
         break;
       case "relay":
         await toggleRelay();

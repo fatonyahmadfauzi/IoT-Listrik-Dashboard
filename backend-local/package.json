@@ -10,7 +10,8 @@
     "sim-notify": "node sim-notifier.js",
     "seed-demo": "node seed-demo.js",
     "seed-demo:live": "node seed-demo.js --live",
-    "seed-logs": "node seed-demo.js --logs=80 --clear-logs"
+    "seed-logs": "node seed-demo.js --logs=80 --clear-logs",
+    "start:all": "node run-all.js"
   },
   "keywords": [],
   "author": "",

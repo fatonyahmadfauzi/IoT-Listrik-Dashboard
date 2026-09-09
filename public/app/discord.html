@@ -716,7 +716,7 @@
                   Integrasi Discord Webhook
                 </div>
                 <div class="form-hint" style="margin-bottom: 16px;">
-                  Gunakan webhook untuk alert, status relay, monitoring berkala, laporan Excel harian, dan log aktivitas. URL tersimpan di Firebase RTDB <code>/settings/discord</code> dan dibaca oleh backend notifier.
+                  Gunakan webhook untuk alert, status relay, monitoring berkala, diagnostik sistem, laporan Excel harian, dan log aktivitas. URL tersimpan di Firebase RTDB <code>/settings/discord</code> dan dibaca oleh backend notifier.
                 </div>
 
                 <div class="input-row" style="margin-bottom: 14px;">
@@ -773,7 +773,19 @@
                   </div>
                 </div>
 
-                <div class="input-row" style="margin-bottom: 16px;">
+                <div class="input-row" style="margin-bottom: 14px;">
+                  <div class="form-group field-sensitive">
+                    <label class="form-label" for="inpDiscordDiagnostics">
+                      <span class="material-symbols-rounded" style="color:#22D3EE; font-size:16px; margin-right:4px;">health_and_safety</span> Webhook #diagnostik-sistem
+                    </label>
+                    <div class="input-reveal-wrap">
+                      <input id="inpDiscordDiagnostics" class="form-input" type="password" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" />
+                      <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordDiagnostics',this)" title="Tampilkan/sembunyikan">
+                        <span class="material-symbols-rounded">visibility</span>
+                      </button>
+                    </div>
+                    <div class="form-hint">Perubahan kesehatan PZEM, ESP32/Wi-Fi, LCD, heap, koneksi, dan ketersediaan firmware.</div>
+                  </div>
                   <div class="form-group field-sensitive">
                     <label class="form-label" for="inpDiscordLogs">
                       <span class="material-symbols-rounded" style="color:#99AAB5; font-size:16px; margin-right:4px;">receipt_long</span> Webhook #logs
@@ -786,6 +798,9 @@
                     </div>
                     <div class="form-hint">Aktivitas log terbaru dari node <code>/logs</code>.</div>
                   </div>
+                </div>
+
+                <div class="input-row" style="margin-bottom: 16px;">
                   <div class="form-group">
                     <label class="form-label" for="inpDiscordEnabled">
                       <span class="material-symbols-rounded">toggle_on</span> Master Switch Notifikasi
@@ -804,7 +819,10 @@
                     <span class="material-symbols-rounded">save</span>Simpan Konfigurasi Discord
                   </button>
                   <button id="testDiscordBtn" class="btn btn-ghost">
-                    <span class="material-symbols-rounded">send</span>Test Kirim Pesan
+                    <span class="material-symbols-rounded">send</span>Test #alerts
+                  </button>
+                  <button id="testDiscordDiagnosticsBtn" class="btn btn-ghost">
+                    <span class="material-symbols-rounded">health_and_safety</span>Test #diagnostik-sistem
                   </button>
                   <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn btn-ghost" style="color:#7289da;border-color:rgba(114,137,218,0.3);">
                     <span class="material-symbols-rounded">group</span>Join Server Discord

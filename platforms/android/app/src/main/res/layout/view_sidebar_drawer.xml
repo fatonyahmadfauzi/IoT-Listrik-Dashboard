@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/sidebarDrawer"
     android:layout_width="304dp"
     android:layout_height="match_parent"
     android:layout_gravity="start"
     android:background="@color/bg_surface"
     android:elevation="20dp"
-    android:fitsSystemWindows="true"
-    android:orientation="vertical"
-    android:paddingHorizontal="16dp"
-    android:paddingTop="22dp"
-    android:paddingBottom="18dp">
+    android:fillViewport="true"
+    android:fitsSystemWindows="true">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:minHeight="640dp"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="22dp"
+        android:paddingBottom="18dp">
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -74,8 +79,8 @@
         android:paddingHorizontal="14dp"
         android:text="Dashboard"
         android:textColor="@color/drawer_nav_text"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:textSize="13sp"
+        android:textStyle="normal" />
 
     <TextView
         android:id="@+id/btnDrawerHistory"
@@ -93,8 +98,8 @@
         android:paddingHorizontal="14dp"
         android:text="Riwayat Log"
         android:textColor="@color/drawer_nav_text"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:textSize="13sp"
+        android:textStyle="normal" />
 
     <TextView
         android:id="@+id/btnDrawerAnalytics"
@@ -112,14 +117,113 @@
         android:paddingHorizontal="14dp"
         android:text="Analytics"
         android:textColor="@color/drawer_nav_text"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:textSize="13sp"
+        android:textStyle="normal" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="18dp"
         android:background="#1FFFFFFF" />
+
+    <TextView
+        android:id="@+id/btnDrawerDiagnostics"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_shield"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Diagnostik"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="13sp"
+        android:textStyle="normal" />
+
+    <TextView
+        android:id="@+id/btnDrawerSettings"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_settings"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Pengaturan Sistem"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="13sp"
+        android:textStyle="normal"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/btnDrawerTelegram"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_notifications"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Telegram"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="13sp"
+        android:textStyle="normal"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/btnDrawerDiscord"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_cloud_sync"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Discord"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="13sp"
+        android:textStyle="normal"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/btnDrawerUsers"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="5dp"
+        android:background="@drawable/bg_drawer_nav"
+        android:clickable="true"
+        android:drawablePadding="14dp"
+        android:drawableStart="@drawable/ic_dashboard"
+        android:drawableTint="@color/text_secondary"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:text="Pengguna"
+        android:textColor="@color/drawer_nav_text"
+        android:textSize="13sp"
+        android:textStyle="normal"
+        android:visibility="gone" />
 
     <Space
         android:layout_width="match_parent"
@@ -192,4 +296,5 @@
         android:textColor="@color/text_primary"
         android:textStyle="bold" />
 
-</LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

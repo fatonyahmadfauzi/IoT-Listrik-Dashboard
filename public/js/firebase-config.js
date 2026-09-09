@@ -11,7 +11,11 @@
  */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, initializeAuth, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  initializeAuth,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import { getFunctions } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
@@ -41,9 +45,12 @@ if (isSim) {
     persistence: browserSessionPersistence
   });
 } else {
-  // Untuk Dashboard: Gunakan wadah utama dengan memori IndexedDB (tetap login pasca tab ditutup)
+  // Untuk Dashboard: tetapkan persistence secara eksplisit agar sesi tidak
+  // berubah mengikuti default/lingkungan browser ketika berpindah halaman.
   app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
+  auth = initializeAuth(app, {
+    persistence: browserLocalPersistence
+  });
 }
 
 const db = getDatabase(app);

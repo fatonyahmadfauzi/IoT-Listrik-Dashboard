@@ -942,6 +942,22 @@
                 </div>
               </div>
 
+              <div class="input-row" style="margin-bottom: 14px;">
+                <div class="form-group field-sensitive">
+                  <label class="form-label" for="inpDiscordDiagnostics">
+                    <span class="material-symbols-rounded" style="color:#22D3EE; font-size: 1.1em; vertical-align: middle; margin-right: 2px;">health_and_safety</span> Webhook #diagnostik-sistem
+                  </label>
+                  <div class="input-reveal-wrap">
+                    <input id="inpDiscordDiagnostics" class="form-input" type="password" placeholder="https://discord.com/api/webhooks/..." autocomplete="off"/>
+                    <button type="button" class="reveal-btn" onclick="toggleReveal('inpDiscordDiagnostics',this)" title="Tampilkan/sembunyikan">
+                      <span class="material-symbols-rounded">visibility</span>
+                    </button>
+                  </div>
+                  <div class="form-hint">Perubahan kesehatan sensor, ESP32/Wi-Fi, LCD, koneksi, dan firmware.</div>
+                </div>
+                <div class="form-group"></div>
+              </div>
+
               <div class="input-row" style="margin-bottom: 20px;">
                 <div class="form-group field-sensitive">
                   <label class="form-label" for="inpDiscordMonitoring">
@@ -988,7 +1004,10 @@
                   <span class="material-symbols-rounded">save</span> Simpan Konfigurasi Discord
                 </button>
                 <button id="testDiscordBtn" class="btn btn-ghost">
-                  <span class="material-symbols-rounded">send</span> Test Kirim Pesan
+                  <span class="material-symbols-rounded">send</span> Test #alerts
+                </button>
+                <button id="testDiscordDiagnosticsBtn" class="btn btn-ghost">
+                  <span class="material-symbols-rounded">health_and_safety</span> Test #diagnostik-sistem
                 </button>
                 <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn btn-ghost" style="color:#7289da; border-color:rgba(114,137,218,0.3);">
                   <span class="material-symbols-rounded">group</span> Join Server Discord

@@ -211,13 +211,18 @@ def process_user_claims(user_data):
     last_admin_reset_marker = None
 
 def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    # Hapus viewport dan scrollback supaya hasil refresh tidak tampil ganda.
+    if sys.stdout.isatty():
+        sys.stdout.write('\033[2J\033[3J\033[H')
+        sys.stdout.flush()
+    else:
+        os.system('cls' if os.name == 'nt' else 'clear')
 
 def session_countdown_label():
     if not is_temp_session:
         return ""
     remaining = max(0, int((temp_expires_at - time.time() * 1000) / 1000)) if temp_expires_at else 0
-    return f"DEMO {remaining // 60:02d}:{remaining % 60:02d} · SIM"
+    return f"DEMO {remaining // 60:02d}:{remaining % 60:02d} Â· SIM"
 
 
 class DynamicSessionMessage:
@@ -238,13 +243,15 @@ def live_prompt_kwargs():
     return {"refresh_interval": 1.0} if is_temp_session else {}
 
 
-def _header_line_plain(live_countdown=False):
+def _header_line_rich(live_countdown=False):
+    if not current_user:
+        return ""
     if is_temp_session:
         badge_text = session_countdown_label().replace(" · SIM", "") if live_countdown else "DEMO"
-        badge = f"\033[43;30m {badge_text} \033[0m"
+        badge = f"[black on yellow] {badge_text} [/black on yellow]"
     else:
-        badge = "\033[2m USER \033[0m"
-    return f"{badge} [+] Terhubung sebagai: {current_user['email']}" if current_user else ""
+        badge = "[dim] USER [/dim]"
+    return f"{badge} [bold green][+] Terhubung sebagai: {current_user['email']}[/bold green]"
 
 
 def start_header_ticker():
@@ -262,7 +269,7 @@ def print_header(live_countdown=False):
     console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
     console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
     if current_user:
-        console.print(_header_line_plain(live_countdown), markup=False)
+        console.print(_header_line_rich(live_countdown))
         console.print()
 
 
@@ -437,9 +444,9 @@ def view_logs():
                 raw_uptime = item.get("uptime_s") or item.get("uptimeSeconds") or item.get("uptime")
                 try:
                     uptime_num = float(raw_uptime) if raw_uptime is not None else None
-                    uptime_str = f"{int(uptime_num)} s" if uptime_num is not None and uptime_num >= 0 else "—"
+                    uptime_str = f"{int(uptime_num)} s" if uptime_num is not None and uptime_num >= 0 else "â€”"
                 except (ValueError, TypeError):
-                    uptime_str = "—"
+                    uptime_str = "â€”"
 
                 table.add_row(waktu_str, load_str, status_rich, relay_str, meter_source, uptime_str)
 
@@ -451,6 +458,148 @@ def view_logs():
         console.print(f"[bold red]Kesalahan saat mengambil data: {str(e)}[/bold red]")
 
     hold_for_enter()
+
+def _number(value, fallback=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _firmware_version(value):
+    text = str(value or "Belum dilaporkan").strip()
+    if text == "Belum dilaporkan":
+        return text
+    return text if text.lower().startswith("v") else f"v{text}"
+
+
+def _wifi_quality(value):
+    rssi = _number(value, 999)
+    if rssi > 0:
+        return "Belum dilaporkan"
+    quality = "Sangat baik" if rssi >= -60 else "Baik" if rssi >= -70 else "Lemah" if rssi >= -80 else "Sangat lemah"
+    return f"{int(rssi)} dBm - {quality}"
+
+
+def _diagnostic_timestamp(data):
+    for key in ("updated_at", "timestamp", "waktu"):
+        value = data.get(key) if data else None
+        try:
+            number = float(value)
+            if number > 1_000_000_000_000:
+                return int(number)
+        except (TypeError, ValueError):
+            pass
+    return 0
+
+
+
+def _diagnostic_row(label, value):
+    console.print(f"[blue]{label:<18}[/blue] : {value}")
+
+def _github_release():
+    import urllib.request
+    try:
+        request = urllib.request.Request(
+            "https://api.github.com/repos/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/latest",
+            headers={"Accept": "application/vnd.github+json", "User-Agent": "iot-listrik-cli"},
+        )
+        with urllib.request.urlopen(request, timeout=12) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        assets = [str(item.get("name")) for item in payload.get("assets", []) if item.get("name")]
+        binary = next((name for name in assets if name.lower().endswith(".bin")), "")
+        return {"tag": payload.get("tag_name") or "Belum diperiksa", "bin": binary, "assets": assets, "error": ""}
+    except Exception as error:
+        return {"tag": "Gagal diperiksa", "bin": "", "assets": [], "error": str(error)}
+
+
+def view_diagnostics():
+    while True:
+        print_header(live_countdown=True)
+        data = {}
+        firebase_connected = False
+        try:
+            data = fetch_listrik_snapshot() or latest_listrik_snapshot or {}
+            firebase_connected = True
+        except Exception as error:
+            console.print(f"[bold red]Gagal membaca data diagnostik:[/bold red] {error}")
+            data = latest_listrik_snapshot or {}
+
+        updated = _diagnostic_timestamp(data)
+        age_ms = max(0, int(time.time() * 1000) - updated) if updated else 10**18
+        online = firebase_connected and age_ms <= DEVICE_STALE_MS
+        raw_status = str(data.get("status") or "UNKNOWN").upper()
+        meter_reported = isinstance(data.get("meter_ok"), bool)
+        meter_ok = data.get("meter_ok") if meter_reported else raw_status != "SENSOR_ERROR" and _number(data.get("tegangan")) > 1
+        lcd_reported = isinstance(data.get("lcd_ok"), bool)
+        lcd_ok = data.get("lcd_ok") is True
+        firmware = _github_release()
+        overall_error = (not firebase_connected or not online or not meter_ok or (not is_temp_session and lcd_reported and not lcd_ok))
+        overall_warn = not overall_error and not is_temp_session and not lcd_reported
+
+        console.print("[bold cyan]DIAGNOSTIK SISTEM IoT LISTRIK[/bold cyan]")
+        console.print("[dim]Pemeriksaan bersifat read-only; tidak mengubah konfigurasi atau menyalakan beban.[/dim]\n")
+        _diagnostic_row("Koneksi cloud", "[bold green]TERHUBUNG[/bold green]" if firebase_connected else "[bold red]TERPUTUS[/bold red]")
+        _diagnostic_row("Perangkat", "[bold green]ONLINE[/bold green]" if online else "[bold red]OFFLINE[/bold red]")
+        _diagnostic_row("Heartbeat", "AKTIF" if online else "TIDAK AKTIF")
+        if updated:
+            from datetime import datetime
+            update_text = f"{datetime.fromtimestamp(updated / 1000).strftime('%d/%m/%Y %H:%M:%S')} ({round(age_ms / 1000)} detik lalu)"
+        else:
+            update_text = "Belum ada timestamp"
+        _diagnostic_row("Update terakhir", update_text); console.print()
+
+        console.print("[bold cyan]Sensor dan perangkat[/bold cyan]")
+        _diagnostic_row("PZEM-004T", "[bold green]BERFUNGSI[/bold green]" if meter_ok and online else "[bold red]ERROR[/bold red]")
+        status_color = "green" if raw_status == "NORMAL" else "yellow" if raw_status == "WARNING" else "red"
+        _diagnostic_row("Status baca", f"[bold {status_color}]{raw_status}[/bold {status_color}]")
+        _diagnostic_row("Arus / tegangan", f"{_number(data.get('arus')):.2f} A / {_number(data.get('tegangan')):.1f} V")
+        _diagnostic_row("ESP32 dan Wi-Fi", "[bold green]ONLINE[/bold green]" if online else "[bold red]OFFLINE[/bold red]")
+        _diagnostic_row("RSSI / kualitas", _wifi_quality(data.get("wifi_rssi")))
+        heap = _number(data.get("free_heap"))
+        _diagnostic_row("Heap bebas", f"{round(heap / 1024)} KB" if heap > 0 else "Belum dilaporkan")
+        if is_temp_session:
+            lcd_label, lcd_color, lcd_address = "SIMULATOR", "green", "Simulator"
+        elif lcd_reported:
+            lcd_label, lcd_color = ("I2C MERESPONS", "green") if lcd_ok else ("ERROR", "red")
+            address = int(_number(data.get("lcd_address")))
+            lcd_address = f"0x{address:02X}" if lcd_ok and address > 0 else "Tidak ditemukan"
+        else:
+            lcd_label, lcd_color, lcd_address = "MENUNGGU DATA", "yellow", "Tidak ditemukan"
+        _diagnostic_row("LCD I2C", f"[bold {lcd_color}]{lcd_label}[/bold {lcd_color}]")
+        _diagnostic_row("LCD alamat", lcd_address)
+        _diagnostic_row("Relay", ("ON" if int(_number(data.get("relay"))) == 1 else "OFF") if online else "Tidak diketahui")
+        _diagnostic_row("Buzzer", "TERKONFIGURASI" if online else "Tidak diketahui"); console.print()
+
+        console.print("[bold cyan]Pemetaan Hardware[/bold cyan]")
+        console.print("  PZEM UART2   : RX GPIO16 <- PZEM TX; TX GPIO17 -> PZEM RX")
+        console.print("  LCD I2C      : SDA GPIO21; SCL GPIO22")
+        console.print("  Relay        : GPIO26")
+        console.print("  Buzzer       : GPIO25\n")
+
+        console.print("[bold cyan]Firmware Release[/bold cyan]")
+        _diagnostic_row("Versi terpasang", _firmware_version(data.get("firmware_version") or "1.0.0"))
+        _diagnostic_row("Release terbaru", firmware["tag"])
+        _diagnostic_row("Asset .bin", firmware["bin"] or "BELUM TERSEDIA")
+        _diagnostic_row("Board", data.get("firmware_board") or "esp32-dev-module")
+        _diagnostic_row("OTA", "AKTIF" if data.get("firmware_ota_capable") is True else "BELUM AKTIF")
+        if firmware["error"]:
+            console.print(f"[yellow]Catatan firmware: {firmware['error']}[/yellow]")
+        console.print("[dim]Pembaruan firmware dilakukan melalui desktop/PC menggunakan USB.[/dim]\n")
+
+        conclusion = "PERLU DIPERIKSA" if overall_error else "DATA BELUM LENGKAP" if overall_warn else "SEMUA NORMAL"
+        conclusion_color = "red" if overall_error else "yellow" if overall_warn else "green"
+        _diagnostic_row("Kesimpulan", f"[bold {conclusion_color}]{conclusion}[/bold {conclusion_color}]"); console.print()
+
+        action = questionary.select(
+            DynamicSessionMessage("Diagnostik Sistem:"),
+            choices=[questionary.Choice("[r] Refresh", "refresh"), questionary.Choice("[b] Kembali", "back")],
+            style=custom_style,
+            **live_prompt_kwargs(),
+        ).ask()
+        if action != "refresh":
+            return
+
 
 def toggle_relay():
     if not probe_device_ready():
@@ -483,15 +632,15 @@ def stream_handler(message):
     try:
         global latest_listrik_snapshot
         data = message["data"]
-        # Ini terjadi kalau data terubah (misal yang diubah hanya 'arus') 
-        # Di Pyrebase, kalau path `/listrik` dipantau, message["data"] adalah state utuh awalnya, 
+        # Ini terjadi kalau data terubah (misal yang diubah hanya 'arus')
+        # Di Pyrebase, kalau path `/listrik` dipantau, message["data"] adalah state utuh awalnya,
         # perubahan berikutnya ("put" event) memberikan dictionary kecil atau bahkan state penuh.
-        # Kita fetch manual saja untuk memastikan render penuh. 
+        # Kita fetch manual saja untuk memastikan render penuh.
         full_data = db.child(f"{path_prefix}listrik").get(current_user['token']).val()
         if not full_data: return
 
         # Gunakan ansi escape logic kaya di node JS (clear part of screen)
-        # Di Windows msvcrt, untuk simplifikasi di Python, kita posisikan ulang kursor 
+        # Di Windows msvcrt, untuk simplifikasi di Python, kita posisikan ulang kursor
         # secara kasar ke baris 5 atau kita print dengan cls
         # Karena pyrebase menjalankan ini di thread background
         # kita clear saja dan redraw (bisa layar kedip sedikit)
@@ -500,7 +649,7 @@ def stream_handler(message):
         register_device_heartbeat(full_data)
         console.print("\n[bold cyan]IoT Listrik Dashboard CLI[/bold cyan]")
         console.print("[dim]Pengembang: Fatony Ahmad Fauzi[/dim]\n")
-        console.print(_header_line_plain(live_countdown=True), markup=False)
+        console.print(_header_line_rich(live_countdown=True))
         console.print()
         start_header_ticker()
         console.print("[yellow]Memulai Live Stream Data Firebase...[/yellow]")
@@ -594,8 +743,9 @@ def main_menu():
             choices=[
                 questionary.Choice("[1] Mengakses Live Monitoring", "live"),
                 questionary.Choice("[2] Riwayat Log (20 entri)", "log"),
-                questionary.Choice("[3] Kontrol Relay Power", "relay"),
-                questionary.Choice("[4] Keluar Sesi (Logout)", "logout"),
+                questionary.Choice("[3] Diagnostik Sistem", "diagnostics"),
+                questionary.Choice("[4] Kontrol Relay Power", "relay"),
+                questionary.Choice("[5] Keluar Sesi (Logout)", "logout"),
                 questionary.Choice("[0] Matikan Aplikasi (Exit)", "exit")
             ],
             style=custom_style,
@@ -606,6 +756,8 @@ def main_menu():
             run_live_monitoring()
         elif action == "log":
             view_logs()
+        elif action == "diagnostics":
+            view_diagnostics()
         elif action == "relay":
             toggle_relay()
         elif action == "logout":

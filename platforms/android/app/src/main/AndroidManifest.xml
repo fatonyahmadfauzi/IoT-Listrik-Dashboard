@@ -33,6 +33,7 @@
 
         <!-- RegisterActivity has been removed as it is entirely stubbed -->
         <activity android:name=".ui.main.MainActivity" />
+        <activity android:name=".ui.admin.NativePanelActivity" />
 
         <!-- Alarm Activity: Full Screen, override lock screen -->
         <activity

@@ -24,6 +24,9 @@ let _isTempAccount = false;
 let _tempExpiryTimer = null;
 let _tempCountdownTimer = null;
 let _tempExpiresAt = null;
+let _guestRedirectTimer = null;
+
+const GUEST_REDIRECT_GRACE_MS = 1500;
 
 /** Expose current user/role (read-only snapshot) */
 function getCurrentUser() {
@@ -93,11 +96,18 @@ function initPage(callbacks = {}) {
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
+      if (_guestRedirectTimer) {
+        clearTimeout(_guestRedirectTimer);
+        _guestRedirectTimer = null;
+      }
       _currentUser = user;
 
       let token = null;
       try {
-        token = await user.getIdTokenResult(true);
+        // Jangan paksa refresh token pada setiap perpindahan halaman. Firebase
+        // otomatis menyegarkan token bila diperlukan; force-refresh berulang
+        // membuat sesi lebih rentan terhadap gangguan jaringan sesaat.
+        token = await user.getIdTokenResult();
       } catch (error) {
         console.warn("[Auth] Gagal menyegarkan custom claims, memakai fallback email.", error);
       }
@@ -152,7 +162,18 @@ function initPage(callbacks = {}) {
       if (typeof onGuest === "function") {
         onGuest();
       } else {
-        window.location.href = redirectIfGuest;
+        // Beri waktu singkat untuk menghindari redirect akibat transisi state
+        // ketika persistence browser baru dipulihkan atau jaringan tersendat.
+        if (_guestRedirectTimer) clearTimeout(_guestRedirectTimer);
+        _guestRedirectTimer = setTimeout(() => {
+          _guestRedirectTimer = null;
+          if (auth.currentUser) return;
+          console.warn("[Auth] Sesi tidak ditemukan setelah inisialisasi.", {
+            path: window.location.pathname,
+            online: navigator.onLine,
+          });
+          window.location.replace(redirectIfGuest);
+        }, GUEST_REDIRECT_GRACE_MS);
       }
     }
   });
@@ -180,10 +201,36 @@ function populateSidebar(user, role) {
     historyLink?.insertAdjacentElement("afterend", analyticsLink);
   }
 
+  if (nav && !nav.querySelector('a[href="/app/diagnostics"]')) {
+    const analyticsLink = nav.querySelector('a[href="/app/analytics"]');
+    const diagnosticsLink = document.createElement("a");
+    diagnosticsLink.href = "/app/diagnostics";
+    diagnosticsLink.className = "nav-item";
+    diagnosticsLink.innerHTML = '<span class="material-symbols-rounded nav-icon">health_and_safety</span>Diagnostik';
+    analyticsLink?.insertAdjacentElement("afterend", diagnosticsLink);
+  }
+
+  if (nav && !nav.querySelector('a[href="/app/serial-monitor"]')) {
+    const diagnosticsLink = nav.querySelector('a[href="/app/diagnostics"]');
+    const serialLink = document.createElement("a");
+    serialLink.href = "/app/serial-monitor";
+    serialLink.className = "nav-item serial-monitor-nav";
+    serialLink.title = "Buka Serial Monitor";
+    serialLink.innerHTML = '<span class="material-symbols-rounded nav-icon">terminal</span>Serial Monitor';
+    diagnosticsLink?.insertAdjacentElement("afterend", serialLink);
+  // Serial Monitor membutuhkan Web Serial dan koneksi USB, sehingga hanya ditampilkan pada desktop/PC.
+  if (!document.getElementById("serial-monitor-responsive-style")) {
+    const style = document.createElement("style");
+    style.id = "serial-monitor-responsive-style";
+    style.textContent = "@media (max-width: 900px) { .serial-monitor-nav { display: none !important; } }";
+    document.head.appendChild(style);
+  }
+  }
+
   const currentPath = window.location.pathname.replace(/\/$/, "");
-  if (currentPath === "/app/analytics") {
+  if (["/app/analytics", "/app/diagnostics", "/app/serial-monitor"].includes(currentPath)) {
     document.querySelectorAll(".sidebar-nav .nav-item").forEach((item) => {
-      item.classList.toggle("active", item.getAttribute("href") === "/app/analytics");
+      item.classList.toggle("active", item.getAttribute("href") === currentPath);
     });
   }
 

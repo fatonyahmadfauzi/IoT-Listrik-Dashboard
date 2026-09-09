@@ -1,10 +1,10 @@
-import { Home, Settings, BarChart3, Clock, LogOut } from 'lucide-react';
+import { Home, Settings, BarChart3, Clock, LogOut, HeartPulse, Terminal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type SidebarProps = {
-  activePage: 'dashboard' | 'history' | 'analytics' | 'settings';
+  activePage: 'dashboard' | 'history' | 'analytics' | 'settings' | 'diagnostics' | 'serial';
   onNavigate: (
-    page: 'dashboard' | 'history' | 'analytics' | 'settings'
+    page: 'dashboard' | 'history' | 'analytics' | 'settings' | 'diagnostics' | 'serial'
   ) => void;
 };
 
@@ -28,6 +28,8 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
   const items: Array<{ key: any, label: string, icon: any }> = [
     { key: 'dashboard', label: 'Dashboard', icon: Home },
     { key: 'history', label: 'Riwayat Log', icon: Clock },
+    { key: 'diagnostics', label: 'Diagnostik', icon: HeartPulse },
+    { key: 'serial', label: 'Serial Monitor', icon: Terminal },
   ];
 
   if (role === 'admin' || isTempAccount) {

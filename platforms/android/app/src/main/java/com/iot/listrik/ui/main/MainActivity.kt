@@ -50,6 +50,7 @@ import com.iot.listrik.databinding.PageAnalyticsBinding
 import com.iot.listrik.databinding.PageHistoryBinding
 import com.iot.listrik.databinding.ViewSidebarDrawerBinding
 import com.iot.listrik.ui.auth.LoginActivity
+import com.iot.listrik.ui.admin.NativePanelActivity
 import com.iot.listrik.service.AlarmForegroundService
 import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
@@ -200,6 +201,11 @@ class MainActivity : AppCompatActivity() {
         drawerBinding.btnDrawerDashboard.setOnClickListener { showPage(AppPage.DASHBOARD) }
         drawerBinding.btnDrawerHistory.setOnClickListener { showPage(AppPage.HISTORY) }
         drawerBinding.btnDrawerAnalytics.setOnClickListener { showPage(AppPage.ANALYTICS) }
+        drawerBinding.btnDrawerDiagnostics.setOnClickListener { openNativePanel("diagnostics", "Diagnostik Sistem") }
+        drawerBinding.btnDrawerSettings.setOnClickListener { openNativePanel("settings", "Pengaturan Sistem") }
+        drawerBinding.btnDrawerTelegram.setOnClickListener { openNativePanel("telegram", "Telegram") }
+        drawerBinding.btnDrawerDiscord.setOnClickListener { openNativePanel("discord", "Discord") }
+        drawerBinding.btnDrawerUsers.setOnClickListener { openNativePanel("users", "Pengguna") }
         drawerBinding.btnDrawerLogout.setOnClickListener { performLogout() }
     }
 
@@ -224,6 +230,14 @@ class MainActivity : AppCompatActivity() {
             AppPage.DASHBOARD -> Unit
         }
         if (closeDrawer) binding.drawerLayout.closeDrawer(GravityCompat.START)
+    }
+
+    private fun openNativePanel(route: String, title: String) {
+        binding.drawerLayout.closeDrawer(GravityCompat.START)
+        startActivity(Intent(this, NativePanelActivity::class.java).apply {
+            putExtra(NativePanelActivity.EXTRA_ROUTE, route)
+            putExtra(NativePanelActivity.EXTRA_TITLE, title)
+        })
     }
 
     private fun performLogout() {
@@ -445,6 +459,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.relaySection.visibility = if (isAdmin) View.VISIBLE else View.GONE
+        val adminVisibility = if (isAdmin && !isTempAccount) View.VISIBLE else View.GONE
+        drawerBinding.btnDrawerSettings.visibility = adminVisibility
+        drawerBinding.btnDrawerTelegram.visibility = adminVisibility
+        drawerBinding.btnDrawerDiscord.visibility = adminVisibility
+        drawerBinding.btnDrawerUsers.visibility = adminVisibility
 
         updateDrawerAccount()
         updateRelayControls()

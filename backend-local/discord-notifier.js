@@ -45,6 +45,11 @@ const DAILY_REPORT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const DAILY_REPORT_MINUTE_GATE = 5;
 const TELEGRAM_COMMAND_STATE_PATH = '/admin_secure/telegramCommandState/physical';
 const TELEGRAM_COMMAND_POLL_INTERVAL_MS = 4000;
+const FIRMWARE_RELEASE_STATE_PATH = '/admin_secure/firmwareReleaseState/physical';
+const DIAGNOSTIC_NOTIFICATION_STATE_PATH = '/admin_secure/diagnosticNotificationState/physical';
+const FIRMWARE_RELEASE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+const GITHUB_FIRMWARE_RELEASE_API = 'https://api.github.com/repos/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/latest';
+const DEVICE_DIAGNOSTIC_STALE_MS = 20000;
 
 // ── Config cache dari RTDB ────────────────────────────────────────────────
 let settingsConfig = {};
@@ -63,8 +68,8 @@ db.ref('/settings/discord').on('value', (snap) => {
 
 // ── Helper: Kirim embed Discord ───────────────────────────────────────────
 async function sendEmbed(webhookUrl, embed) {
-  if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) return;
-  if (!discordConfig.enabled) return;
+  if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) return false;
+  if (discordConfig.enabled === false) return false;
   try {
     const res = await fetch(webhookUrl, {
       method: 'POST',
@@ -74,11 +79,13 @@ async function sendEmbed(webhookUrl, embed) {
     if (!res.ok && res.status !== 204) {
       const txt = await res.text();
       console.error(`[Discord] HTTP ${res.status}:`, txt.slice(0, 200));
-    } else {
-      console.log(`[Discord] Embed terkirim → ${webhookUrl.slice(0, 60)}...`);
+      return false;
     }
+    console.log(`[Discord] Embed terkirim → ${webhookUrl.slice(0, 60)}...`);
+    return true;
   } catch (err) {
     console.error('[Discord] Fetch error:', err.message);
+    return false;
   }
 }
 
@@ -273,6 +280,10 @@ let telegramCommandPollBusy = false;
 let telegramCommandOffset = 0;
 let telegramCommandStateReady = false;
 let telegramCommandTokenCache = '';
+let telegramCommandsSyncedToken = '';
+let firmwareReleaseCheckBusy = false;
+let firmwareReleaseCache = null;
+let firmwareReleaseCacheAt = 0;
 
 function normalizeTelegramCommand(text = '') {
   const firstToken = String(text || '').trim().split(/\s+/)[0] || '';
@@ -290,6 +301,9 @@ function buildTelegramCommandHelpText() {
     '/pause — hentikan notifikasi untuk chat ini',
     '/resume — aktifkan lagi notifikasi untuk chat ini',
     '/status — lihat status notifikasi chat ini',
+    '/diagnostik — periksa kesehatan sensor dan perangkat',
+    '/system_update — periksa release firmware ESP32',
+    '/firmware — alias singkat untuk /system_update',
     '/help — tampilkan bantuan ini',
     '',
     'Perintah berlaku personal untuk setiap Chat ID / Group ID yang sudah terdaftar.',
@@ -336,6 +350,456 @@ async function sendTelegramCommandReply(botToken, chatId, text) {
   }
 }
 
+function escapeTelegramHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function normalizeVersionParts(value) {
+  const match = String(value || '0').replace(/^v/i, '').match(/\d+(?:\.\d+){0,3}/);
+  return (match ? match[0] : '0').split('.').map((part) => Number(part) || 0);
+}
+
+function compareSemanticVersions(left, right) {
+  const a = normalizeVersionParts(left);
+  const b = normalizeVersionParts(right);
+  const length = Math.max(a.length, b.length, 3);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (a[index] || 0) - (b[index] || 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+function formatFirmwareVersion(value, fallback = 'Belum dilaporkan') {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  return /^v/i.test(text) ? text : `v${text}`;
+}
+
+function diagnosticTimestamp(data = {}) {
+  for (const value of [data.updated_at, data.updatedAt, data.timestamp]) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 1e12) return numeric;
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
+function wifiDiagnosticLabel(value) {
+  const rssi = Number(value);
+  if (!Number.isFinite(rssi) || rssi > 0) return 'Belum dilaporkan';
+  const quality = rssi >= -60 ? 'Sangat baik' : rssi >= -70 ? 'Baik' : rssi >= -80 ? 'Lemah' : 'Sangat lemah';
+  return `${Math.round(rssi)} dBm - ${quality}`;
+}
+
+async function fetchLatestFirmwareRelease({ force = false } = {}) {
+  if (!force && firmwareReleaseCache && Date.now() - firmwareReleaseCacheAt < 5 * 60 * 1000) {
+    return firmwareReleaseCache;
+  }
+
+  const response = await fetch(GITHUB_FIRMWARE_RELEASE_API, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'iot-listrik-telegram-bot',
+    },
+  });
+  if (!response.ok) throw new Error(`GitHub HTTP ${response.status}`);
+
+  const release = await response.json();
+  const assets = Array.isArray(release.assets) ? release.assets : [];
+  const firmwareAsset = assets.find((asset) => /\.bin$/i.test(String(asset?.name || ''))) || null;
+  const manifestAsset = assets.find((asset) => String(asset?.name || '').toLowerCase() === 'firmware-manifest.json') || null;
+  firmwareReleaseCache = {
+    tag: String(release.tag_name || '').trim() || 'Belum diketahui',
+    name: String(release.name || '').trim(),
+    url: String(release.html_url || '').trim(),
+    publishedAt: String(release.published_at || '').trim(),
+    firmwareAsset: firmwareAsset ? String(firmwareAsset.name || '') : '',
+    firmwareAssetUrl: firmwareAsset ? String(firmwareAsset.browser_download_url || '') : '',
+    manifestAvailable: !!manifestAsset,
+  };
+  firmwareReleaseCacheAt = Date.now();
+  return firmwareReleaseCache;
+}
+
+function analyzeFirmwareRelease(device = {}, release = {}) {
+  const installed = formatFirmwareVersion(device.firmware_version || '1.0.0');
+  const latest = formatFirmwareVersion(release.tag, 'Belum diketahui');
+  const newerVersion = release.tag && compareSemanticVersions(installed, latest) < 0;
+  const assetAvailable = !!release.firmwareAsset;
+  const updateAvailable = !!newerVersion && assetAvailable;
+  return { installed, latest, newerVersion: !!newerVersion, assetAvailable, updateAvailable };
+}
+
+function buildFirmwareTelegramText(device, release) {
+  const result = analyzeFirmwareRelease(device, release);
+  const status = result.updateAvailable
+    ? 'PEMBARUAN TERSEDIA'
+    : result.newerVersion && !result.assetAvailable
+      ? 'ASSET FIRMWARE BELUM TERSEDIA'
+      : result.latest === 'Belum diketahui'
+        ? 'BELUM DAPAT DIPERIKSA'
+        : 'SUDAH TERBARU';
+
+  return [
+    '🔄 <b>Firmware Release ESP32</b>',
+    '',
+    `Status: <b>${status}</b>`,
+    `Versi terpasang: <code>${escapeTelegramHtml(result.installed)}</code>`,
+    `Release GitHub: <code>${escapeTelegramHtml(result.latest)}</code>`,
+    `Asset firmware: <b>${release.firmwareAsset ? escapeTelegramHtml(release.firmwareAsset) : 'Belum tersedia di GitHub Release'}</b>`,
+    `Manifest: <b>${release.manifestAvailable ? 'TERSEDIA' : 'BELUM TERSEDIA'}</b>`,
+    `Target board: <code>${escapeTelegramHtml(device.firmware_board || 'esp32-dev-module')}</code>`,
+    `OTA: <b>${device.firmware_ota_capable === true ? 'AKTIF' : 'BELUM AKTIF'}</b>`,
+    '',
+    result.updateAvailable
+      ? 'Pembaruan baru tersedia. Lakukan update melalui desktop/PC menggunakan USB dan verifikasi file firmware sebelum upload.'
+      : result.newerVersion
+        ? 'Versi release lebih baru terdeteksi, tetapi belum ada file .bin sehingga belum dapat dipasang sebagai firmware ESP32.'
+        : 'Tidak ada pembaruan firmware ESP32 yang dapat dipasang saat ini.',
+  ].join('\n');
+}
+
+
+function buildFirmwareDiscordEmbed(device, release) {
+  const result = analyzeFirmwareRelease(device, release);
+  const board = String(device.firmware_board || 'esp32-dev-module').trim();
+  const description = [
+    'Release firmware ESP32 baru terdeteksi dan file `.bin` tersedia.',
+    'Lakukan pembaruan melalui desktop/PC menggunakan USB, lalu verifikasi versi perangkat setelah upload.',
+  ].join(' ');
+
+  return {
+    title: '🚀 Pembaruan Firmware ESP32 Tersedia',
+    description,
+    url: release.url || undefined,
+    color: 0xFEE75C,
+    fields: [
+      { name: 'Versi terpasang', value: `\`${result.installed}\``, inline: true },
+      { name: 'Release GitHub', value: `\`${result.latest}\``, inline: true },
+      { name: 'Asset firmware', value: `\`${release.firmwareAsset}\``, inline: false },
+      { name: 'Manifest', value: release.manifestAvailable ? 'TERSEDIA' : 'BELUM TERSEDIA', inline: true },
+      { name: 'Target board', value: `\`${board}\``, inline: true },
+      { name: 'OTA', value: device.firmware_ota_capable === true ? 'AKTIF' : 'BELUM AKTIF', inline: true },
+    ],
+    footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
+  };
+}
+
+
+function diagnosticHealthSignature(result = {}) {
+  const { data = {}, online = false, meterOk = false, lcdReported = false, lcdOk = false } = result;
+  const rssi = Number(data.wifi_rssi);
+  const wifiBand = !Number.isFinite(rssi) || rssi > 0
+    ? 'unknown'
+    : rssi >= -60 ? 'excellent' : rssi >= -70 ? 'good' : rssi >= -80 ? 'weak' : 'very_weak';
+  const lcdAddress = lcdOk && Number(data.lcd_address) > 0
+    ? Number(data.lcd_address).toString(16).toUpperCase()
+    : '';
+  return [
+    online ? 'online' : 'offline',
+    meterOk ? 'meter_ok' : 'meter_error',
+    `status:${String(data.status || 'UNKNOWN').toUpperCase()}`,
+    `relay:${relayIsOn(data.relay) ? 'on' : 'off'}`,
+    lcdReported ? (lcdOk ? `lcd_ok:${lcdAddress}` : 'lcd_error') : 'lcd_unknown',
+    wifiBand,
+    Number(data.free_heap) > 0 && Number(data.free_heap) < 50000 ? 'heap_low' : 'heap_ok',
+  ].join('|');
+}
+
+function buildDiagnosticsDiscordEmbed(result = {}, release = null) {
+  const { data = {}, updatedAt, ageMs, online, meterOk, lcdReported, lcdOk, status } = result;
+  const overallError = !online || !meterOk || (lcdReported && !lcdOk);
+  const overall = overallError ? 'PERLU DIPERIKSA' : !lcdReported ? 'DATA BELUM LENGKAP' : 'SEMUA NORMAL';
+  const lcdStatus = !lcdReported ? 'MENUNGGU DATA' : lcdOk ? 'I2C MERESPONS' : 'ERROR';
+  const rssi = Number(data.wifi_rssi);
+  const wifi = Number.isFinite(rssi) && rssi <= 0
+    ? `${Math.round(rssi)} dBm · ${rssi >= -60 ? 'Sangat baik' : rssi >= -70 ? 'Baik' : rssi >= -80 ? 'Lemah' : 'Sangat lemah'}`
+    : 'Belum dilaporkan';
+  const heap = Number(data.free_heap) > 0 ? `${Math.round(Number(data.free_heap) / 1024)} KB` : 'Belum dilaporkan';
+  const lcdAddress = lcdOk && Number(data.lcd_address) > 0
+    ? `0x${Number(data.lcd_address).toString(16).toUpperCase().padStart(2, '0')}`
+    : 'Tidak ditemukan';
+  const color = overallError ? 0xED4245 : !lcdReported ? 0xFEE75C : 0x57F287;
+  const updatedLabel = updatedAt
+    ? `${formatTelemetryTimestamp(updatedAt)} (${Math.round(Number(ageMs || 0) / 1000)} detik lalu)`
+    : 'Belum ada timestamp';
+  const firmware = release ? analyzeFirmwareRelease(data, release) : null;
+  const firmwareStatus = firmware?.updateAvailable
+    ? 'PEMBARUAN TERSEDIA'
+    : firmware?.newerVersion && !firmware?.assetAvailable
+      ? 'ASSET FIRMWARE BELUM TERSEDIA'
+      : firmware?.latest === 'Belum diketahui' || !firmware
+        ? 'BELUM DAPAT DIPERIKSA'
+        : 'SUDAH TERBARU';
+
+  return {
+    title: '🩺 Diagnostik Sistem IoT Listrik',
+    description: [
+      `**Kesimpulan: ${overall}**`,
+      `Perangkat: **${online ? 'ONLINE' : 'OFFLINE'}** · Heartbeat: **${online ? 'AKTIF' : 'TIDAK AKTIF'}**`,
+      `Update terakhir: ${updatedLabel}`,
+      '',
+      'Pesan otomatis dikirim hanya ketika kondisi diagnostik berubah.',
+    ].join('\n'),
+    color,
+    fields: [
+      { name: 'PZEM-004T', value: `${meterOk && online ? '✅ **BERFUNGSI**' : '❌ **ERROR**'}\nStatus baca: \`${status || 'UNKNOWN'}\`\nArus/tegangan: \`${formatMetricValue(data.arus, 2)} A / ${formatMetricValue(data.tegangan, 1)} V\``, inline: true },
+      { name: 'ESP32 dan Wi-Fi', value: `${online ? '🟢 **ONLINE**' : '🔴 **OFFLINE**'}\nWi-Fi: \`${wifi}\`\nHeap bebas: \`${heap}\``, inline: true },
+      { name: 'LCD I2C', value: `${lcdStatus === 'I2C MERESPONS' ? '✅' : '❌'} **${lcdStatus}**\nAlamat: \`${lcdAddress}\``, inline: true },
+      { name: 'Relay dan buzzer', value: `Relay logis: **${online ? (relayIsOn(data.relay) ? 'ON' : 'OFF') : 'TIDAK DIKETAHUI'}**\nBuzzer: **TERKONFIGURASI**`, inline: true },
+      { name: 'Firebase', value: '🟢 **TERHUBUNG**\nSumber data: `PZEM-004T`', inline: true },
+      { name: 'Pemetaan Pin Firmware', value: '`PZEM RX GPIO16 <- PZEM TX`\n`PZEM TX GPIO17 -> PZEM RX`\n`LCD SDA GPIO21 | SCL GPIO22`\n`Relay GPIO26 | Buzzer GPIO25`', inline: false },
+      { name: '🔄 Firmware Release ESP32', value: `Status: **${firmwareStatus}**\nVersi terpasang: \`${firmware?.installed || formatFirmwareVersion(data.firmware_version || '1.0.0')}\`\nRelease GitHub: \`${firmware?.latest || 'Belum diketahui'}\`\nAsset firmware: **${release?.firmwareAsset || 'Belum tersedia di GitHub Release'}**\nManifest: **${release?.manifestAvailable ? 'TERSEDIA' : 'BELUM TERSEDIA'}**\nTarget board: \`${data.firmware_board || 'esp32-dev-module'}\`\nOTA: **${data.firmware_ota_capable === true ? 'AKTIF' : 'BELUM AKTIF'}**`, inline: false },
+    ],
+    footer: { text: `IoT Listrik Dashboard • ${waktu()}` },
+  };
+}
+
+async function sendDiagnosticDiscord(result = {}) {
+  const webhook = String(discordConfig.webhookDiagnostics || '').trim();
+  if (discordConfig.enabled === false || !webhook.startsWith('https://discord.com/api/webhooks/')) return false;
+
+  const signature = diagnosticHealthSignature(result);
+  const stateRef = db.ref(DIAGNOSTIC_NOTIFICATION_STATE_PATH);
+  const claimNow = Date.now();
+  const claim = await stateRef.transaction((current) => {
+    const state = current && typeof current === 'object' ? current : {};
+    if (state.lastNotifiedSignature === signature) return;
+    const claimFresh = state.inFlightSignature === signature
+      && claimNow - Number(state.inFlightAt || 0) < 60 * 1000;
+    if (claimFresh) return;
+    return {
+      ...state,
+      inFlightSignature: signature,
+      inFlightAt: claimNow,
+      inFlightPid: process.pid,
+    };
+  });
+  if (!claim.committed) return false;
+
+  let release = null;
+  try {
+    release = await fetchLatestFirmwareRelease();
+  } catch (error) {
+    console.warn('[Diagnostics] Pemeriksaan firmware untuk embed dilewati:', error.message);
+  }
+  const sent = await sendEmbed(webhook, buildDiagnosticsDiscordEmbed(result, release));
+  await stateRef.transaction((current) => {
+    const state = current && typeof current === 'object' ? current : {};
+    if (state.inFlightSignature !== signature) return state;
+    const next = { ...state };
+    delete next.inFlightSignature;
+    delete next.inFlightAt;
+    delete next.inFlightPid;
+    if (sent) {
+      next.lastNotifiedSignature = signature;
+      next.lastNotifiedAt = Date.now();
+    }
+    return next;
+  });
+  return sent;
+}
+
+async function loadPhysicalDiagnostics() {
+  const snap = await db.ref('/listrik').get();
+  const data = snap.val() || {};
+  const updatedAt = diagnosticTimestamp(data);
+  const ageMs = updatedAt ? Math.max(0, Date.now() - updatedAt) : Infinity;
+  const online = Number.isFinite(ageMs) && ageMs <= DEVICE_DIAGNOSTIC_STALE_MS;
+  const status = String(data.status || 'UNKNOWN').trim().toUpperCase() || 'UNKNOWN';
+  const meterOk = typeof data.meter_ok === 'boolean'
+    ? data.meter_ok
+    : status !== 'SENSOR_ERROR' && Number(data.tegangan) > 1;
+  const lcdReported = typeof data.lcd_ok === 'boolean';
+  const lcdOk = data.lcd_ok === true;
+  return { data, updatedAt, ageMs, online, status, meterOk, lcdReported, lcdOk };
+}
+
+function buildDiagnosticsTelegramText(result) {
+  const { data, updatedAt, ageMs, online, status, meterOk, lcdReported, lcdOk } = result;
+  const overallError = !online || !meterOk || (lcdReported && !lcdOk);
+  const overall = overallError ? 'PERLU DIPERIKSA' : !lcdReported ? 'DATA BELUM LENGKAP' : 'SEMUA NORMAL';
+  const lcdStatus = !lcdReported ? 'MENUNGGU DATA' : lcdOk ? 'I2C MERESPONS' : 'ERROR';
+  const lcdAddress = lcdOk && Number(data.lcd_address) > 0
+    ? `0x${Number(data.lcd_address).toString(16).toUpperCase().padStart(2, '0')}`
+    : 'Tidak ditemukan';
+  const updatedLabel = updatedAt
+    ? `${formatTelemetryTimestamp(updatedAt)} (${Math.round(ageMs / 1000)} detik lalu)`
+    : 'Belum ada timestamp';
+
+  return [
+    '🩺 <b>Diagnostik Sistem IoT Listrik</b>',
+    '',
+    `Kesimpulan: <b>${overall}</b>`,
+    `Perangkat: <b>${online ? 'ONLINE' : 'OFFLINE'}</b>`,
+    `Heartbeat: <b>${online ? 'AKTIF' : 'TIDAK AKTIF'}</b>`,
+    `Update terakhir: ${escapeTelegramHtml(updatedLabel)}`,
+    '',
+    '<b>Sensor dan Perangkat</b>',
+    `PZEM-004T: <b>${meterOk && online ? 'BERFUNGSI' : 'ERROR'}</b>`,
+    `Status baca: <code>${escapeTelegramHtml(status)}</code>`,
+    `Arus / tegangan: <code>${formatMetricValue(data.arus, 2)} A / ${formatMetricValue(data.tegangan, 1)} V</code>`,
+    `ESP32 dan Wi-Fi: <b>${online ? 'ONLINE' : 'OFFLINE'}</b>`,
+    `Wi-Fi: <code>${escapeTelegramHtml(wifiDiagnosticLabel(data.wifi_rssi))}</code>`,
+    `Heap bebas: <code>${Number(data.free_heap) > 0 ? `${Math.round(Number(data.free_heap) / 1024)} KB` : 'Belum dilaporkan'}</code>`,
+    `LCD I2C: <b>${lcdStatus}</b>`,
+    `LCD alamat: <code>${lcdAddress}</code>`,
+    `Relay logis: <b>${online ? (relayIsOn(data.relay) ? 'ON' : 'OFF') : 'TIDAK DIKETAHUI'}</b>`,
+    `Firebase: <b>TERHUBUNG</b>`,
+    '',
+    '<b>Pemetaan Pin Firmware</b>',
+    '<code>PZEM RX GPIO16 &lt;- PZEM TX</code>',
+    '<code>PZEM TX GPIO17 -&gt; PZEM RX</code>',
+    '<code>LCD SDA GPIO21 | SCL GPIO22</code>',
+    '<code>Relay GPIO26 | Buzzer GPIO25</code>',
+    '',
+    'Gunakan /system_update untuk memeriksa release firmware ESP32.',
+  ].join('\n');
+}
+
+async function syncTelegramBotCommands(botToken) {
+  if (!botToken || telegramCommandsSyncedToken === botToken) return;
+  await callTelegramApi(botToken, 'setMyCommands', {
+    commands: [
+      { command: 'diagnostik', description: 'Periksa kesehatan sensor dan perangkat' },
+      { command: 'system_update', description: 'Periksa release firmware ESP32' },
+      { command: 'firmware', description: 'Alias pemeriksaan firmware ESP32' },
+      { command: 'status', description: 'Lihat status notifikasi chat' },
+      { command: 'pause', description: 'Jeda notifikasi untuk chat ini' },
+      { command: 'resume', description: 'Aktifkan kembali notifikasi chat' },
+      { command: 'help', description: 'Tampilkan daftar perintah' },
+    ],
+  });
+  telegramCommandsSyncedToken = botToken;
+  console.log('[Telegram Commands] Daftar command bot berhasil disinkronkan.');
+}
+
+async function checkFirmwareReleaseAndNotify({ force = false } = {}) {
+  if (firmwareReleaseCheckBusy) return false;
+
+  const botToken = String(settingsConfig.telegramBotToken || '').trim();
+  const chatIds = getTelegramChatIds(settingsConfig);
+  const hasTelegramTarget = !!botToken && chatIds.length > 0 && isTelegramMasterEnabled();
+  const discordWebhook = String(discordConfig.webhookDiagnostics || discordConfig.webhookAlerts || '').trim();
+  const hasDiscordTarget = discordConfig.enabled !== false
+    && discordWebhook.startsWith('https://discord.com/api/webhooks/');
+
+  if (!hasTelegramTarget && !hasDiscordTarget) return false;
+
+  firmwareReleaseCheckBusy = true;
+  try {
+    const [diagnostics, release] = await Promise.all([
+      loadPhysicalDiagnostics(),
+      fetchLatestFirmwareRelease({ force }),
+    ]);
+    const analysis = analyzeFirmwareRelease(diagnostics.data, release);
+    const notificationKey = `${analysis.installed}|${analysis.latest}|${release.firmwareAsset || 'no-bin'}`;
+    const stateRef = db.ref(FIRMWARE_RELEASE_STATE_PATH);
+
+    await stateRef.update({
+      installedVersion: analysis.installed,
+      latestRelease: analysis.latest,
+      firmwareAsset: release.firmwareAsset || '',
+      updateAvailable: analysis.updateAvailable,
+      lastCheckedAt: Date.now(),
+    });
+
+    // EXE/APK/CLI pada release bukan firmware ESP32. Notifikasi hanya dikirim
+    // jika versi lebih baru DAN asset firmware .bin benar-benar tersedia.
+    if (!analysis.updateAvailable) return false;
+
+    const claimNow = Date.now();
+    const claimResult = await stateRef.transaction((current) => {
+      const state = current && typeof current === 'object' ? current : {};
+      const telegramPending = hasTelegramTarget && state.lastTelegramNotifiedKey !== notificationKey;
+      const discordPending = hasDiscordTarget && state.lastDiscordNotifiedKey !== notificationKey;
+      if (!telegramPending && !discordPending) return;
+
+      const claimAge = claimNow - Number(state.notificationClaimedAt || 0);
+      const claimedByAnotherInstance = state.notificationClaimKey === notificationKey
+        && claimAge >= 0
+        && claimAge < 2 * 60 * 1000;
+      if (claimedByAnotherInstance) return;
+
+      return {
+        ...state,
+        notificationClaimKey: notificationKey,
+        notificationClaimedAt: claimNow,
+        notificationClaimedByPid: process.pid,
+      };
+    });
+
+    if (!claimResult.committed) return false;
+    const claimedState = claimResult.snapshot.val() || {};
+    const telegramPending = hasTelegramTarget
+      && claimedState.lastTelegramNotifiedKey !== notificationKey;
+    const discordPending = hasDiscordTarget
+      && claimedState.lastDiscordNotifiedKey !== notificationKey;
+
+    const notificationTasks = [];
+    const channels = [];
+    if (telegramPending) {
+      channels.push('telegram');
+      notificationTasks.push(sendTelegram(botToken, chatIds, [
+        '🚀 <b>PEMBARUAN FIRMWARE TERSEDIA</b>',
+        '',
+        buildFirmwareTelegramText(diagnostics.data, release),
+      ].join('\n')));
+    }
+    if (discordPending) {
+      channels.push('discord');
+      notificationTasks.push(sendEmbed(
+        discordWebhook,
+        buildFirmwareDiscordEmbed(diagnostics.data, release),
+      ));
+    }
+
+    const results = await Promise.allSettled(notificationTasks);
+    const stateUpdate = {};
+    const sentChannels = [];
+    results.forEach((result, index) => {
+      const sent = result.status === 'fulfilled' && result.value === true;
+      if (!sent) return;
+      const channel = channels[index];
+      sentChannels.push(channel);
+      if (channel === 'telegram') stateUpdate.lastTelegramNotifiedKey = notificationKey;
+      if (channel === 'discord') stateUpdate.lastDiscordNotifiedKey = notificationKey;
+    });
+
+    await stateRef.transaction((current) => {
+      const state = current && typeof current === 'object' ? current : {};
+      if (state.notificationClaimKey !== notificationKey) return state;
+      const next = {
+        ...state,
+        ...stateUpdate,
+        lastNotifiedAt: sentChannels.length > 0 ? Date.now() : Number(state.lastNotifiedAt || 0),
+      };
+      delete next.notificationClaimKey;
+      delete next.notificationClaimedAt;
+      delete next.notificationClaimedByPid;
+      return next;
+    });
+
+    if (sentChannels.length > 0) {
+      console.log(`[Firmware Release] Notifikasi ${analysis.installed} -> ${analysis.latest} terkirim ke ${sentChannels.join(' dan ')}.`);
+      return true;
+    }
+
+    console.warn('[Firmware Release] Pembaruan tersedia, tetapi pengiriman notifikasi gagal. Akan dicoba lagi.');
+    return false;
+  } catch (err) {
+    console.error('[Firmware Release] Pemeriksaan gagal:', err.message);
+    return false;
+  } finally {
+    firmwareReleaseCheckBusy = false;
+  }
+}
+
 async function loadTelegramCommandState(botToken) {
   if (telegramCommandStateReady) return;
 
@@ -378,11 +842,37 @@ async function loadTelegramCommandState(botToken) {
 }
 
 async function persistTelegramCommandState(botToken) {
-  await db.ref(TELEGRAM_COMMAND_STATE_PATH).update({
-    offset: telegramCommandOffset,
-    botToken,
-    updatedAt: Date.now(),
+  await db.ref(TELEGRAM_COMMAND_STATE_PATH).transaction((current) => {
+    const state = current && typeof current === 'object' ? current : {};
+    const storedOffset = Number(state.offset || 0) || 0;
+    return {
+      ...state,
+      offset: Math.max(storedOffset, telegramCommandOffset),
+      botToken,
+      updatedAt: Date.now(),
+    };
   });
+}
+
+async function claimTelegramUpdate(botToken, updateId) {
+  const nextOffset = Number(updateId || 0) + 1;
+  if (nextOffset <= 1) return false;
+
+  const result = await db.ref(TELEGRAM_COMMAND_STATE_PATH).transaction((current) => {
+    const state = current && typeof current === 'object' ? current : {};
+    const sameBot = !state.botToken || state.botToken === botToken;
+    const storedOffset = sameBot ? (Number(state.offset || 0) || 0) : 0;
+    if (storedOffset >= nextOffset) return;
+    return {
+      ...state,
+      offset: nextOffset,
+      botToken,
+      claimedByPid: process.pid,
+      updatedAt: Date.now(),
+    };
+  });
+
+  return result.committed === true;
 }
 
 async function saveTelegramRecipientsFromCommand(recipients) {
@@ -397,7 +887,7 @@ async function handleTelegramCommand(botToken, message) {
   const command = normalizeTelegramCommand(message?.text || '');
   if (!chatId || !command) return;
 
-  if (!['/pause', '/resume', '/status', '/help'].includes(command)) return;
+  if (!['/pause', '/resume', '/status', '/diagnostik', '/system_update', '/firmware', '/help'].includes(command)) return;
 
   const recipients = getTelegramRecipients(settingsConfig);
   const recipientIndex = recipients.findIndex((recipient) => recipient.chatId === chatId);
@@ -419,6 +909,31 @@ async function handleTelegramCommand(botToken, message) {
 
   if (!recipient) {
     await sendTelegramCommandReply(botToken, chatId, buildTelegramRegistrationText(chatId));
+    return;
+  }
+
+  if (command === '/diagnostik') {
+    try {
+      const diagnostics = await loadPhysicalDiagnostics();
+      await sendTelegramCommandReply(botToken, chatId, buildDiagnosticsTelegramText(diagnostics));
+    } catch (err) {
+      await sendTelegramCommandReply(botToken, chatId, `❌ <b>Diagnostik gagal</b>
+${escapeTelegramHtml(err.message)}`);
+    }
+    return;
+  }
+
+  if (command === '/system_update' || command === '/firmware') {
+    try {
+      const [diagnostics, release] = await Promise.all([
+        loadPhysicalDiagnostics(),
+        fetchLatestFirmwareRelease({ force: true }),
+      ]);
+      await sendTelegramCommandReply(botToken, chatId, buildFirmwareTelegramText(diagnostics.data, release));
+    } catch (err) {
+      await sendTelegramCommandReply(botToken, chatId, `❌ <b>Pemeriksaan firmware gagal</b>
+${escapeTelegramHtml(err.message)}`);
+    }
     return;
   }
 
@@ -511,6 +1026,11 @@ async function pollTelegramCommands() {
 
   telegramCommandPollBusy = true;
   try {
+    try {
+      await syncTelegramBotCommands(botToken);
+    } catch (syncError) {
+      console.error('[Telegram Commands] Sinkronisasi daftar command gagal:', syncError.message);
+    }
     await loadTelegramCommandState(botToken);
 
     if (telegramCommandTokenCache !== botToken) {
@@ -531,9 +1051,15 @@ async function pollTelegramCommands() {
 
     for (const update of updates) {
       const updateId = Number(update?.update_id || 0);
-      if (updateId > 0) {
-        telegramCommandOffset = Math.max(telegramCommandOffset, updateId + 1);
+      if (updateId <= 0) continue;
+
+      const claimed = await claimTelegramUpdate(botToken, updateId);
+      telegramCommandOffset = Math.max(telegramCommandOffset, updateId + 1);
+      if (!claimed) {
+        console.log(`[Telegram Commands] Update ${updateId} sudah diproses instance lain; dilewati.`);
+        continue;
       }
+
       await handleTelegramCommand(botToken, update?.message);
     }
 
@@ -1169,6 +1695,36 @@ async function broadcastPhysicalSystemEvent({
 }
 
 // ════════════════════════════════════════════════════════════════════════
+// LISTENER — Perubahan kesehatan diagnostik → #diagnostik-sistem
+let lastDiagnosticSignature = null;
+db.ref('/listrik').on('value', async (snap) => {
+  const webhook = String(discordConfig.webhookDiagnostics || '').trim();
+  if (discordConfig.enabled === false || !webhook.startsWith('https://discord.com/api/webhooks/')) return;
+
+  const data = snap.val() || {};
+  const updatedAt = diagnosticTimestamp(data);
+  const ageMs = updatedAt ? Math.max(0, Date.now() - updatedAt) : Infinity;
+  const online = Number.isFinite(ageMs) && ageMs <= DEVICE_DIAGNOSTIC_STALE_MS;
+  const status = String(data.status || 'UNKNOWN').trim().toUpperCase() || 'UNKNOWN';
+  const meterOk = typeof data.meter_ok === 'boolean'
+    ? data.meter_ok
+    : status !== 'SENSOR_ERROR' && Number(data.tegangan) > 1;
+  const lcdReported = typeof data.lcd_ok === 'boolean';
+  const lcdOk = data.lcd_ok === true;
+  const result = { data, updatedAt, ageMs, online, status, meterOk, lcdReported, lcdOk };
+  const signature = diagnosticHealthSignature(result);
+
+  if (lastDiagnosticSignature === null) {
+    lastDiagnosticSignature = signature;
+    return;
+  }
+  if (signature === lastDiagnosticSignature) return;
+
+  lastDiagnosticSignature = signature;
+  console.log(`[Diagnostics] Kondisi berubah: ${signature}`);
+  await sendDiagnosticDiscord(result);
+});
+
 // LISTENER 1 — Status → #alerts
 // ════════════════════════════════════════════════════════════════════════
 let lastStatus = null;
@@ -1266,6 +1822,9 @@ setInterval(async () => {
       footer: { text: `IoT Listrik Dashboard • ${waktu()}` }
     };
     await sendEmbed(discordConfig.webhookAlerts, embed);
+    await sendDiagnosticDiscord({
+      data: {}, online: false, status: 'OFFLINE', meterOk: false, lcdReported: false, lcdOk: false,
+    });
     await broadcastPhysicalSystemEvent({
       event: 'device_offline',
       title: embed.title,
@@ -1295,6 +1854,8 @@ db.ref('/listrik/updated_at').on('value', async (snap) => {
       footer: { text: `IoT Listrik Dashboard • ${waktu()}` }
     };
     await sendEmbed(discordConfig.webhookAlerts, embed);
+    const onlineDiagnostics = await loadPhysicalDiagnostics();
+    await sendDiagnosticDiscord(onlineDiagnostics);
     await broadcastPhysicalSystemEvent({
       event: 'device_online',
       title: embed.title,
@@ -1584,9 +2145,22 @@ setInterval(() => {
   });
 }, TELEGRAM_COMMAND_POLL_INTERVAL_MS);
 
+setTimeout(() => {
+  checkFirmwareReleaseAndNotify().catch((err) => {
+    console.error('[Firmware Release] Initial check error:', err.message);
+  });
+}, 20000);
+
+setInterval(() => {
+  checkFirmwareReleaseAndNotify().catch((err) => {
+    console.error('[Firmware Release] Scheduler error:', err.message);
+  });
+}, FIRMWARE_RELEASE_CHECK_INTERVAL_MS);
+
 // ── Keep-alive ────────────────────────────────────────────────────────────
 console.log('[Discord Notifier] Mendengarkan perubahan RTDB... (Ctrl+C untuk berhenti)');
 console.log('[Daily Report] Scheduler aktif — cek laporan harian setiap 5 menit.');
-console.log('[Telegram Commands] Polling aktif — cek /pause, /resume, /status, /help setiap 4 detik.');
+console.log('[Telegram Commands] Polling aktif — cek /diagnostik, /system_update, /firmware, /pause, /resume, /status, /help setiap 4 detik.');
+console.log('[Firmware Release] Pemeriksaan otomatis aktif setiap 30 menit; notifikasi dikirim sekali per versi firmware yang tersedia.');
 process.on('SIGINT', () => { console.log('\n[Discord Notifier] Dihentikan.'); process.exit(0); });
 

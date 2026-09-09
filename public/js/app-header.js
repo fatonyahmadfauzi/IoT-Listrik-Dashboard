@@ -233,7 +233,8 @@ if ((endpointBadge && connStateText) || (mEndpointBadge && mConnStateText)) {
       return;
     }
     try {
-      const token = await user.getIdTokenResult(true);
+      // Custom claims tidak perlu dipaksa refresh pada setiap halaman.
+      const token = await user.getIdTokenResult();
       sessionIsTemp = token.claims?.isTempAccount === true || user.email?.trim().toLowerCase().startsWith("sim_");
       tempExpiresAt = Number(token.claims?.expiresAt || 0) || null;
     } catch (_) {

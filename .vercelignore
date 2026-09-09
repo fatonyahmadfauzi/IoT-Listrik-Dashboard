@@ -63,3 +63,10 @@ test-results/
 dist-public/
 *.bak
 *.tmp
+
+# Local release bundles and temporary work directories
+release-assets-v1.1.9/
+_tmp_*/
+backups/
+.tmp-npm-firebase-cli/
+.tmp-serial-check.js

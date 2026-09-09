@@ -4,7 +4,7 @@
 
 Integrasi Discord sekarang memakai dua jalur:
 
-- **Discord Webhook** untuk mengirim notifikasi monitoring, relay, alert, laporan harian, dan log.
+- **Discord Webhook** untuk mengirim notifikasi monitoring, relay, alert, diagnostik sistem, laporan harian, dan log.
 - **Discord Bot** untuk membaca status server, jumlah member/online/ban, serta ban/unban user dari admin UI.
 
 Konfigurasi utama dilakukan dari halaman admin `/discord` atau `/app/discord` dan disimpan di Firebase Realtime Database pada `/settings/discord`.
@@ -18,6 +18,7 @@ Konfigurasi utama dilakukan dari halaman admin `/discord` atau `/app/discord` da
 | `alerts` | `DANGER`, `WARNING`, pulih `NORMAL`, device `ONLINE/OFFLINE` | Embed status kelistrikan dan kondisi perangkat |
 | `relay` | Relay ON/OFF berubah | Status relay lama dan baru |
 | `monitoring` | Snapshot data monitoring berkala | Arus, tegangan, daya, relay, frekuensi, power factor, energi, status |
+| `diagnostik-sistem` | Kondisi kesehatan perangkat berubah | PZEM, heartbeat, Wi-Fi, heap, LCD, relay, Firebase, pemetaan GPIO, dan firmware |
 | `daily-report` | Laporan harian tersedia | File Excel data monitoring 24 jam |
 | `logs` | Entry baru pada `/logs` | Aktivitas sistem dan pengguna |
 
@@ -26,7 +27,7 @@ Konfigurasi utama dilakukan dari halaman admin `/discord` atau `/app/discord` da
 ## Setup Webhook
 
 1. Buka Discord Server.
-2. Buat channel teks, misalnya `alerts`, `relay`, `monitoring`, `daily-report`, dan `logs`.
+2. Buat channel teks, misalnya `alerts`, `relay`, `monitoring`, `diagnostik-sistem`, `daily-report`, dan `logs`.
 3. Untuk setiap channel: **Edit Channel** -> **Integrations** -> **Webhooks** -> **New Webhook**.
 4. Salin Webhook URL.
 5. Buka admin UI:
@@ -37,7 +38,7 @@ https://iot-listrik-dashboard.vercel.app/discord
 
 6. Isi URL webhook sesuai tujuan channel.
 7. Aktifkan **Master Switch Notifikasi**.
-8. Klik **Test Kirim Pesan** untuk memastikan webhook valid.
+8. Klik **Test #alerts** atau **Test #diagnostik-sistem** untuk memastikan webhook valid.
 
 Webhook tidak perlu disimpan di source code. Semua URL dikelola dari Firebase melalui admin UI.
 
@@ -87,9 +88,9 @@ npm run sim-notify
 
 Fungsi notifier:
 
-- Mengirim alert status, relay, monitoring, log, dan laporan harian ke Discord.
+- Mengirim alert status, relay, monitoring, diagnostik perubahan kondisi, log, dan laporan harian ke Discord.
 - Mengirim notifikasi yang sama ke Telegram jika Telegram aktif.
-- Membaca command Telegram `/pause` dan `/resume` per Chat ID.
+- Membaca command Telegram `/pause`, `/resume`, `/status`, `/diagnostik`, `/system_update`, `/firmware`, dan `/help` per Chat ID.
 - Membuat laporan harian Excel dan mengirimnya hanya jika ada data baru pada hari tersebut.
 
 ---
@@ -98,7 +99,8 @@ Fungsi notifier:
 
 | Masalah | Solusi |
 |---------|--------|
-| Test webhook gagal | Pastikan URL webhook lengkap dan masih aktif |
+| Test webhook gagal | Pastikan URL webhook lengkap, channel masih tersedia, dan Master Switch Discord aktif |
+| Force close saat test webhook Android | Gunakan APK `v1.1.9` terbaru; operasi HTTP webhook sudah dipindahkan ke background thread |
 | Master switch mati tapi notifikasi masih muncul | Restart `backend-local/discord-notifier.js` agar konfigurasi terbaru terbaca |
 | Bot status error JSON | Pastikan Bot Token di env/admin UI satu baris, tanpa kutip tambahan atau karakter `{}` |
 | Jumlah member/online tidak muncul | Aktifkan Server Members Intent dan Presence Intent di Developer Portal |

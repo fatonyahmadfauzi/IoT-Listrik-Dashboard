@@ -153,3 +153,11 @@ public/downloads/cli/node-source/iot-listrik-dashboard-cli-*
 dist-public/
 test-results/
 ~WRL*.tmp
+.env*
+
+# Generated local workspace artifacts
+.tmp-*/
+.tmp-*
+_tmp*/
+release-assets-*/
+backups/

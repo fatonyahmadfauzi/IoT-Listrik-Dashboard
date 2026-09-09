@@ -6,7 +6,7 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-val appVersionName = "1.1.8"
+val appVersionName = "1.1.9"
 
 android {
     namespace = "com.iot.listrik"
@@ -26,7 +26,7 @@ android {
         applicationId = "com.iot.listrik"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
+        versionCode = 5
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

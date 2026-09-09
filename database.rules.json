@@ -4,12 +4,10 @@
       ".read": false,
       ".write": false
     },
-
     "rate_limits": {
       ".read": false,
       ".write": false
     },
-
     "listrik": {
       ".read": "auth != null && auth.token.isTempAccount !== true",
       "arus": {
@@ -52,6 +50,62 @@
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
         ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 4294968"
       },
+      "meter_ok": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isBoolean()"
+      },
+      "lcd_ok": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isBoolean()"
+      },
+      "lcd_address": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 127"
+      },
+      "wifi_rssi": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= -127 && newData.val() <= 0"
+      },
+      "free_heap": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+      },
+      "firmware_version": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isString() && newData.val().length <= 32"
+      },
+      "firmware_board": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isString() && newData.val().length <= 64"
+      },
+      "firmware_ota_capable": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isBoolean()"
+      },
+      "pzem_rx_pin": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 39"
+      },
+      "pzem_tx_pin": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 39"
+      },
+      "lcd_sda_pin": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 39"
+      },
+      "lcd_scl_pin": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 39"
+      },
+      "relay_pin": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 39"
+      },
+      "buzzer_pin": {
+        ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
+        ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 39"
+      },
       "status": {
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
         ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'LEAKAGE' || newData.val() === 'DANGER' || newData.val() === 'SENSOR_ERROR')"
@@ -65,12 +119,14 @@
         ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)"
       }
     },
-
     "logs": {
-      ".read":  "auth != null && auth.token.isTempAccount !== true",
-      ".indexOn": ["waktu", "status"],
+      ".read": "auth != null && auth.token.isTempAccount !== true",
+      ".indexOn": [
+        "waktu",
+        "status"
+      ],
       "$logId": {
-        ".write": "auth != null && auth.token.isTempAccount !== true && !data.exists() && newData.exists() && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && !data.exists() && newData.exists() && (auth.uid === 'm2MiBbrbPse1i2pcYmlixtz5nUA2' || auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         "arus": {
           ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 200"
         },
@@ -121,14 +177,12 @@
         }
       }
     },
-
     "notifications": {
       "system": {
         ".read": "auth != null && auth.token.isTempAccount !== true",
         ".write": false
       }
     },
-
     "commands": {
       ".read": "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
       "relay": {
@@ -136,9 +190,8 @@
         ".validate": "!newData.exists() || (newData.isNumber() && (newData.val() === 0 || newData.val() === 1))"
       }
     },
-
     "settings": {
-      ".read":  "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+      ".read": "auth != null && auth.token.isTempAccount !== true && (auth.token.email === 'listrik.iot.device@gmail.com' || root.child('users').child(auth.uid).child('role').val() === 'admin')",
       ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",
       "thresholdArus": {
         ".write": "auth != null && auth.token.isTempAccount !== true && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.token.email === 'listrik.iot.device@gmail.com' && root.child('settings').child('autoLearning').child('applyToThreshold').val() === true))",
@@ -225,11 +278,10 @@
         }
       }
     },
-
     "users": {
       ".read": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",
       "$uid": {
-        ".read":  "auth != null && auth.uid === $uid && auth.token.isTempAccount !== true",
+        ".read": "auth != null && auth.uid === $uid && auth.token.isTempAccount !== true",
         ".write": "auth != null && auth.token.isTempAccount !== true && root.child('users').child(auth.uid).child('role').val() === 'admin'",
         "email": {
           ".write": "auth != null && auth.token.isTempAccount !== true && auth.uid === $uid && !data.exists() && newData.isString() && newData.val() === auth.token.email"
@@ -254,21 +306,18 @@
         }
       }
     },
-
     "sim": {
       "$uid": {
-        ".read":  "auth != null && auth.uid === $uid && auth.token.isTempAccount === true",
+        ".read": "auth != null && auth.uid === $uid && auth.token.isTempAccount === true",
         ".write": "auth != null && auth.uid === $uid && auth.token.isTempAccount === true"
       }
     },
-
     "temp_sessions": {
       "$uid": {
-        ".read":  "auth != null && auth.uid === $uid",
+        ".read": "auth != null && auth.uid === $uid",
         ".write": false
       }
     },
-
     "fcm_tokens": {
       "web": {
         "$uid": {
@@ -277,6 +326,5 @@
         }
       }
     }
-
   }
 }

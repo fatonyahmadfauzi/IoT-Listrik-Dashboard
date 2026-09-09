@@ -764,12 +764,18 @@ async function requestMonitoringWipeOtp(req) {
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
-    await resend.emails.send({
+    const emailResult = await resend.emails.send({
       from: "onboarding@resend.dev",
       to: email,
       subject: "🔐 OTP Hapus Semua Data Monitoring IoT",
       html: buildMonitoringWipeOtpEmailHTML({ otp, email, expiresAt }),
     });
+    if (emailResult?.error) {
+      throw new Error(emailResult.error.message || "Resend menolak pengiriman OTP.");
+    }
+    if (!emailResult?.data?.id) {
+      throw new Error("Resend tidak mengembalikan ID email.");
+    }
   } catch (error) {
     await otpRef.remove();
     console.error("Gagal kirim OTP hapus semua data monitoring:", error);

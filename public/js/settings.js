@@ -97,10 +97,12 @@ const inpDiscordRelay      = document.getElementById('inpDiscordRelay');
 const inpDiscordMonitoring = document.getElementById('inpDiscordMonitoring');
 const inpDiscordDailyReport = document.getElementById('inpDiscordDailyReport');
 const inpDiscordLogs       = document.getElementById('inpDiscordLogs');
+const inpDiscordDiagnostics = document.getElementById('inpDiscordDiagnostics');
 const inpDiscordEnabled    = document.getElementById('inpDiscordEnabled');
 const discordSaveStatus    = document.getElementById('discordSaveStatus');
 const saveDiscordBtn       = document.getElementById('saveDiscordBtn');
 const testDiscordBtn       = document.getElementById('testDiscordBtn');
+const testDiscordDiagnosticsBtn = document.getElementById('testDiscordDiagnosticsBtn');
 const inpDiscordBotToken   = document.getElementById('inpDiscordBotToken');
 const inpDiscordGuildId    = document.getElementById('inpDiscordGuildId');
 const discordBotStatusBadge = document.getElementById('discordBotStatusBadge');
@@ -1931,22 +1933,31 @@ function loadDiscordSettings() {
     if (inpDiscordMonitoring) inpDiscordMonitoring.value = d.webhookMonitoring || '';
     if (inpDiscordDailyReport) inpDiscordDailyReport.value = d.webhookDailyReport || '';
     if (inpDiscordLogs)       inpDiscordLogs.value       = d.webhookLogs       || '';
+    if (inpDiscordDiagnostics) inpDiscordDiagnostics.value = d.webhookDiagnostics || '';
     if (inpDiscordEnabled)    inpDiscordEnabled.checked  = d.enabled !== false;
     // Placeholder hint untuk yang sudah tersimpan
-    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordDailyReport, inpDiscordLogs]
+    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordDailyReport, inpDiscordLogs, inpDiscordDiagnostics]
       .forEach(el => { if (el && el.value) el.placeholder = '••• (tersimpan)'; });
     syncDiscordTestButtonState();
   });
 }
 
 function syncDiscordTestButtonState() {
-  if (!testDiscordBtn) return;
-  const hasWebhook = inpDiscordAlerts?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const enabled = !!inpDiscordEnabled?.checked;
-  testDiscordBtn.disabled = !enabled || !hasWebhook;
-  testDiscordBtn.title = enabled
-    ? (hasWebhook ? '' : 'Isi Webhook #alerts terlebih dahulu')
-    : 'Master Switch Discord sedang dimatikan';
+  const hasAlerts = inpDiscordAlerts?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const hasDiagnostics = inpDiscordDiagnostics?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  if (testDiscordBtn) {
+    testDiscordBtn.disabled = !enabled || !hasAlerts;
+    testDiscordBtn.title = enabled
+      ? (hasAlerts ? '' : 'Isi Webhook #alerts terlebih dahulu')
+      : 'Master Switch Discord sedang dimatikan';
+  }
+  if (testDiscordDiagnosticsBtn) {
+    testDiscordDiagnosticsBtn.disabled = !enabled || !hasDiagnostics;
+    testDiscordDiagnosticsBtn.title = enabled
+      ? (hasDiagnostics ? '' : 'Isi Webhook #diagnostik-sistem terlebih dahulu')
+      : 'Master Switch Discord sedang dimatikan';
+  }
 }
 
 async function saveDiscordSettings() {
@@ -1955,7 +1966,8 @@ async function saveDiscordSettings() {
   const hasMonitoring = inpDiscordMonitoring?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const hasDailyReport = inpDiscordDailyReport?.value.trim().startsWith('https://discord.com/api/webhooks/');
   const hasLogs       = inpDiscordLogs?.value.trim().startsWith('https://discord.com/api/webhooks/');
-  const hasAnyWebhook = hasAlerts || hasRelay || hasMonitoring || hasDailyReport || hasLogs;
+  const hasDiagnostics = inpDiscordDiagnostics?.value.trim().startsWith('https://discord.com/api/webhooks/');
+  const hasAnyWebhook = hasAlerts || hasRelay || hasMonitoring || hasDailyReport || hasLogs || hasDiagnostics;
   const enabledValue = !!(inpDiscordEnabled?.checked);
 
   const payload = {
@@ -1964,6 +1976,7 @@ async function saveDiscordSettings() {
     webhookMonitoring: inpDiscordMonitoring?.value.trim() || '',
     webhookDailyReport: inpDiscordDailyReport?.value.trim() || '',
     webhookLogs:       inpDiscordLogs?.value.trim()       || '',
+    webhookDiagnostics: inpDiscordDiagnostics?.value.trim() || '',
     enabled:           enabledValue,
   };
 
@@ -2026,7 +2039,7 @@ async function testDiscordWebhook() {
   } catch (err) {
     showToast('Gagal kirim test: ' + err.message, 'error');
   } finally {
-    if (testDiscordBtn) { testDiscordBtn.disabled = false; testDiscordBtn.innerHTML = '<span class="material-symbols-rounded">send</span> Test Kirim Pesan'; }
+    if (testDiscordBtn) { testDiscordBtn.disabled = false; testDiscordBtn.innerHTML = '<span class="material-symbols-rounded">send</span>Test #alerts'; }
   }
 }
 
@@ -2061,6 +2074,81 @@ function saveClientConfigFromForm() {
 // ═══════════════════════════════════════════════════════════════
 // USER MANAGEMENT — Tanpa Firebase Functions
 // ═══════════════════════════════════════════════════════════════
+
+
+async function testDiscordDiagnosticsWebhook() {
+  if (!inpDiscordEnabled?.checked) {
+    showToast('Master Switch Discord sedang dimatikan. Aktifkan terlebih dahulu.', 'error');
+    return;
+  }
+  const url = inpDiscordDiagnostics?.value.trim();
+  if (!url?.startsWith('https://discord.com/api/webhooks/')) {
+    showToast('Isi Webhook #diagnostik-sistem terlebih dahulu untuk test', 'error');
+    return;
+  }
+  if (testDiscordDiagnosticsBtn) {
+    testDiscordDiagnosticsBtn.disabled = true;
+    testDiscordDiagnosticsBtn.textContent = 'Memuat diagnostik...';
+  }
+  try {
+    const snapshot = await get(ref(db, `${getDbPrefix()}/listrik`));
+    const data = snapshot.val() || {};
+    const updated = Number(data.updated_at || data.updatedAt || data.timestamp || 0);
+    const age = updated > 1e12 ? Math.max(0, Date.now() - updated) : 0;
+    const online = updated > 1e12 && age <= 20000;
+    const status = String(data.status || 'UNKNOWN').toUpperCase();
+    const meterOk = typeof data.meter_ok === 'boolean' ? data.meter_ok : status !== 'SENSOR_ERROR' && Number(data.tegangan) > 1;
+    const lcdReported = typeof data.lcd_ok === 'boolean';
+    const lcdOk = data.lcd_ok === true;
+    const rssi = Number(data.wifi_rssi);
+    const wifiQuality = !Number.isFinite(rssi) || rssi > 0 ? 'Belum dilaporkan' : `${Math.round(rssi)} dBm - ${rssi >= -60 ? 'Sangat baik' : rssi >= -70 ? 'Baik' : rssi >= -80 ? 'Lemah' : 'Sangat lemah'}`;
+    const overall = !online || !meterOk || (lcdReported && !lcdOk) ? 'PERLU DIPERIKSA' : !lcdReported ? 'DATA BELUM LENGKAP' : 'SEMUA NORMAL';
+    const updatedLabel = updated > 1e12 ? `${new Date(updated).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} (${Math.round(age / 1000)} detik lalu)` : 'Belum ada timestamp';
+    const firmwareVersion = String(data.firmware_version || '1.0.0').replace(/^v/i, 'v');
+    let releaseTag = 'Belum diketahui';
+    let firmwareAsset = '';
+    let manifestAvailable = false;
+    try {
+      const releaseResponse = await fetch('https://api.github.com/repos/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/latest', {
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+      if (releaseResponse.ok) {
+        const release = await releaseResponse.json();
+        releaseTag = String(release.tag_name || 'Belum diketahui');
+        const assets = Array.isArray(release.assets) ? release.assets : [];
+        firmwareAsset = String(assets.find((asset) => /\.bin$/i.test(String(asset?.name || '')))?.name || '');
+        manifestAvailable = assets.some((asset) => String(asset?.name || '').toLowerCase() === 'firmware-manifest.json');
+      }
+    } catch (_) {}
+    const releaseNewer = Number(releaseTag.replace(/\D/g, '')) > Number(firmwareVersion.replace(/\D/g, ''));
+    const firmwareStatus = releaseNewer && firmwareAsset ? 'PEMBARUAN TERSEDIA' : releaseNewer ? 'ASSET FIRMWARE BELUM TERSEDIA' : 'SUDAH TERBARU';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ embeds: [{
+        title: '🩺 Diagnostik Sistem IoT Listrik',
+        description: `**Kesimpulan: ${overall}**\nPerangkat: **${online ? 'ONLINE' : 'OFFLINE'}**\nHeartbeat: **${online ? 'AKTIF' : 'TIDAK AKTIF'}**\nUpdate terakhir: ${updatedLabel}\n\nPemetaan dan nilai berikut berasal dari pembacaan perangkat terakhir.`,
+        color: !online || !meterOk || (lcdReported && !lcdOk) ? 0xED4245 : !lcdReported ? 0xFEE75C : 0x57F287,
+        fields: [
+          { name: 'Sensor dan Perangkat', value: `PZEM-004T: ${meterOk && online ? '**BERFUNGSI**' : '**ERROR**'}\nStatus baca: \`${status}\`\nArus / tegangan: \`${Number(data.arus || 0).toFixed(2)} A / ${Number(data.tegangan || 0).toFixed(1)} V\`\nESP32 dan Wi-Fi: **${online ? 'ONLINE' : 'OFFLINE'}**\nWi-Fi: \`${wifiQuality}\`\nHeap bebas: \`${Number(data.free_heap) > 0 ? Math.round(Number(data.free_heap) / 1024) + ' KB' : 'Belum dilaporkan'}\``, inline: false },
+          { name: 'LCD, Relay, dan Firebase', value: `LCD I2C: **${!lcdReported ? 'MENUNGGU DATA' : lcdOk ? 'I2C MERESPONS' : 'ERROR'}**\nLCD alamat: \`${lcdOk && Number(data.lcd_address) > 0 ? '0x' + Number(data.lcd_address).toString(16).toUpperCase() : 'Tidak ditemukan'}\`\nRelay logis: **${online ? (data.relay ? 'ON' : 'OFF') : 'TIDAK DIKETAHUI'}**\nBuzzer: **TERKONFIGURASI**\nFirebase: **TERHUBUNG**\nSumber data: \`PZEM-004T\``, inline: false },
+          { name: 'Pemetaan Pin Firmware', value: '`PZEM RX GPIO16 <- PZEM TX`\n`PZEM TX GPIO17 -> PZEM RX`\n`LCD SDA GPIO21 | SCL GPIO22`\n`Relay GPIO26 | Buzzer GPIO25`', inline: false },
+          { name: '🔄 Firmware Release ESP32', value: `Status: **${firmwareStatus}**\nVersi terpasang: \`${firmwareVersion}\`\nRelease GitHub: \`${releaseTag}\`\nAsset firmware: **${firmwareAsset || 'Belum tersedia di GitHub Release'}**\nManifest: **${manifestAvailable ? 'TERSEDIA' : 'BELUM TERSEDIA'}**\nTarget board: \`${data.firmware_board || 'esp32-dev-module'}\`\nOTA: **${data.firmware_ota_capable === true ? 'AKTIF' : 'BELUM AKTIF'}**\n\n${releaseNewer && !firmwareAsset ? 'Versi release lebih baru terdeteksi, tetapi belum ada file .bin sehingga belum dapat dipasang sebagai firmware ESP32.' : 'Tidak ada pembaruan firmware ESP32 yang dapat dipasang saat ini.'}`, inline: false },
+        ],
+        footer: { text: 'IoT Listrik Dashboard — Diagnostic Webhook Test' },
+      }] }),
+    });
+    if (res.ok || res.status === 204) showToast('Diagnostik lengkap berhasil dikirim ke #diagnostik-sistem!', 'success');
+    else showToast(`Discord menolak: HTTP ${res.status}`, 'error');
+  } catch (err) {
+    showToast('Gagal kirim diagnostik: ' + err.message, 'error');
+  } finally {
+    if (testDiscordDiagnosticsBtn) {
+      testDiscordDiagnosticsBtn.disabled = false;
+      testDiscordDiagnosticsBtn.innerHTML = '<span class="material-symbols-rounded">health_and_safety</span>Test #diagnostik-sistem';
+    }
+  }
+}
 
 /**
  * LIST USERS
@@ -2312,8 +2400,9 @@ initPage({
     sendMonitoringWipeOtpBtn?.addEventListener('click', requestMonitoringWipeOtp);
     confirmMonitoringWipeBtn?.addEventListener('click', confirmMonitoringWipe);
     testDiscordBtn?.addEventListener('click', testDiscordWebhook);
+    testDiscordDiagnosticsBtn?.addEventListener('click', testDiscordDiagnosticsWebhook);
     inpDiscordEnabled?.addEventListener('change', syncDiscordTestButtonState);
-    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordDailyReport, inpDiscordLogs]
+    [inpDiscordAlerts, inpDiscordRelay, inpDiscordMonitoring, inpDiscordDailyReport, inpDiscordLogs, inpDiscordDiagnostics]
       .forEach((el) => el?.addEventListener('input', syncDiscordTestButtonState));
     refreshDiscordBotBtn?.addEventListener('click', () => loadDiscordBotStatus());
     refreshDiscordBotSummaryBtn?.addEventListener('click', () => loadDiscordBotStatus());

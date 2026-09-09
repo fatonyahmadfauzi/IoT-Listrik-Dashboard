@@ -35,6 +35,20 @@ export interface NormalizedListrik {
   reset_by_admin: boolean;
   reset_at: string | number | null;
   reset_note: string;
+  meter_ok?: boolean;
+  lcd_ok?: boolean;
+  lcd_address?: number;
+  wifi_rssi?: number;
+  free_heap?: number;
+  firmware_version?: string;
+  firmware_board?: string;
+  firmware_ota_capable?: boolean;
+  pzem_rx_pin?: number;
+  pzem_tx_pin?: number;
+  lcd_sda_pin?: number;
+  lcd_scl_pin?: number;
+  relay_pin?: number;
+  buzzer_pin?: number;
 }
 
 export function normalizeListrikPayload(d: Record<string, unknown> | null): NormalizedListrik {
@@ -64,6 +78,20 @@ export function normalizeListrikPayload(d: Record<string, unknown> | null): Norm
         ? rawResetAt
         : null,
     reset_note: d?.reset_note ? String(d.reset_note) : '',
+    meter_ok: typeof d?.meter_ok === 'boolean' ? d.meter_ok : undefined,
+    lcd_ok: typeof d?.lcd_ok === 'boolean' ? d.lcd_ok : undefined,
+    lcd_address: Number.isFinite(Number(d?.lcd_address)) ? Number(d?.lcd_address) : undefined,
+    wifi_rssi: Number.isFinite(Number(d?.wifi_rssi)) ? Number(d?.wifi_rssi) : undefined,
+    free_heap: Number.isFinite(Number(d?.free_heap)) ? Number(d?.free_heap) : undefined,
+    firmware_version: d?.firmware_version ? String(d.firmware_version) : undefined,
+    firmware_board: d?.firmware_board ? String(d.firmware_board) : undefined,
+    firmware_ota_capable: typeof d?.firmware_ota_capable === 'boolean' ? d.firmware_ota_capable : undefined,
+    pzem_rx_pin: Number.isInteger(Number(d?.pzem_rx_pin)) ? Number(d?.pzem_rx_pin) : undefined,
+    pzem_tx_pin: Number.isInteger(Number(d?.pzem_tx_pin)) ? Number(d?.pzem_tx_pin) : undefined,
+    lcd_sda_pin: Number.isInteger(Number(d?.lcd_sda_pin)) ? Number(d?.lcd_sda_pin) : undefined,
+    lcd_scl_pin: Number.isInteger(Number(d?.lcd_scl_pin)) ? Number(d?.lcd_scl_pin) : undefined,
+    relay_pin: Number.isInteger(Number(d?.relay_pin)) ? Number(d?.relay_pin) : undefined,
+    buzzer_pin: Number.isInteger(Number(d?.buzzer_pin)) ? Number(d?.buzzer_pin) : undefined,
   };
 }
 
@@ -104,7 +132,7 @@ export function startHybridListrik(
   let watchStartedAt = Date.now();
   const forceCloud = Boolean(handlers.prefix);
 
-  const meta = (partial: Record<string, unknown>) => handlers.onMeta?.(partial);
+  const meta = (partial: Record<string, unknown>) => handlers.onMeta?.({ firebaseConnected: fbConnected, ...partial });
 
   const isDeviceOffline = (now = Date.now()) => {
     const base = lastDataReceivedTime || watchStartedAt;

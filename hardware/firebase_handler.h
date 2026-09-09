@@ -50,7 +50,9 @@ void initFirebase(const char*, const char*, const char*, const char*) {
 }
 bool isFirebaseReady() { return false; }
 bool writeMonitorData(float, float, float, float, float, float, float,
-                      const String&, int, const String& = "PZEM-004T") { return false; }
+                      const String&, int, const String& = "PZEM-004T",
+                      unsigned long = 0, bool = false, bool = false,
+                      int = 0, int = -127, unsigned long = 0) { return false; }
 bool writeLog(float, float, const String&, int, const String&,
               float = 0, float = 0, float = 0, float = 50, float = 0.85,
               const String& = "PZEM-004T") { return false; }
@@ -181,12 +183,20 @@ static bool _fbHttpRequest(const char* method, const char* path,
   String url = _getBaseUrl() + path + ".json?auth=" + String(token);
   
   unsigned long now = millis();
-  bool needReinit = !_fbReqConnected || (now - _fbReqLastMs > 25000UL);
+  // Firebase kadang menutup koneksi keep-alive setelah request PATCH/POST.
+  // Jika koneksi stale dipakai untuk membaca seluruh /settings, HTTPClient
+  // menunggu sampai timeout dan mengembalikan -11. Gunakan koneksi TLS baru
+  // khusus untuk respons /settings dan polling command relay, tanpa mengubah
+  // jalur realtime/log yang tetap memakai koneksi persisten.
+  const bool freshSettingsRead = strcmp(method, "GET") == 0 && strcmp(path, "/settings") == 0;
+  const bool freshCommandRead = strcmp(method, "GET") == 0 && strcmp(path, "/commands/relay") == 0;
+  const bool freshRead = freshSettingsRead || freshCommandRead;
+  bool needReinit = freshRead || !_fbReqConnected || (now - _fbReqLastMs > 25000UL);
   if (needReinit) {
     _httpFbReq.end();
     _wcsFbReq.stop();
     _wcsFbReq.setInsecure();
-    _httpFbReq.setReuse(true);
+    _httpFbReq.setReuse(!freshRead);
     _fbReqConnected = false;
   }
   
@@ -196,7 +206,8 @@ static bool _fbHttpRequest(const char* method, const char* path,
   }
   
   _httpFbReq.addHeader("Content-Type", "application/json");
-  _httpFbReq.setTimeout(10000);
+  if (freshRead) _httpFbReq.addHeader("Connection", "close");
+  _httpFbReq.setTimeout(freshSettingsRead ? 15000 : (freshCommandRead ? 12000 : 10000));
   
   int code = -1;
   if (strcmp(method, "GET") == 0) code = _httpFbReq.GET();
@@ -211,10 +222,22 @@ static bool _fbHttpRequest(const char* method, const char* path,
   // saat melakukan banyak fetch beruntun (seperti di bootstrap).
   vTaskDelay(pdMS_TO_TICKS(20));
   if (code == 200) {
-    _fbReqConnected = true;
     if (respOut) *respOut = _httpFbReq.getString();
+    if (freshRead) {
+      _httpFbReq.end();
+      _wcsFbReq.stop();
+      _fbReqConnected = false;
+    } else {
+      _fbReqConnected = true;
+    }
   } else {
     Serial.printf("[Firebase] %s %s => %d\n", method, path, code);
+    if (code == 401 || code == 403) {
+      String errorBody = _httpFbReq.getString();
+      errorBody.trim();
+      if (errorBody.length() > 220) errorBody = errorBody.substring(0, 220);
+      Serial.println("[Firebase] Detail penolakan: " + errorBody);
+    }
     _httpFbReq.end();
     _fbReqConnected = false;
   }
@@ -225,22 +248,58 @@ bool writeMonitorData(float arus, float tegangan, float dayaW,
                       float apparentPowerVa, float energiKwh,
                       float freqHz, float powerFactor,
                       const String& status, int relay,
-                      const String& sensorSource = "PZEM-004T") {
+                      const String& sensorSource = "PZEM-004T",
+                      unsigned long uptimeSeconds = 0,
+                      bool meterOk = false, bool lcdOk = false,
+                      int lcdAddress = 0, int wifiRssi = -127,
+                      unsigned long freeHeap = 0) {
   if (!isFirebaseReady()) return false;
   FB_HEAP_GUARD("writeMonitorData");
   if (apparentPowerVa <= 0.0f) apparentPowerVa = arus * tegangan;
   if (dayaW <= 0.0f) dayaW = apparentPowerVa * powerFactor;
-  char json[640];
+  int diagnosticLcdSdaPin = 0;
+  int diagnosticLcdSclPin = 0;
+#ifdef USE_LCD
+  diagnosticLcdSdaPin = LCD_SDA_PIN;
+  diagnosticLcdSclPin = LCD_SCL_PIN;
+#endif
+  char json[1024];
   snprintf(json, sizeof(json),
     "{\"arus\":%.2f,\"tegangan\":%.1f,\"daya\":%.1f,\"daya_w\":%.1f,"
     "\"apparent_power\":%.1f,\"energi_kwh\":%.4f,\"frekuensi\":%.1f,"
     "\"power_factor\":%.2f,\"sensor_source\":\"%s\",\"status\":\"%s\",\"relay\":%d,"
-    "\"updated_at\":{\".sv\":\"timestamp\"}}",
+    "\"uptime_s\":%lu,\"meter_ok\":%s,\"lcd_ok\":%s,\"lcd_address\":%d,"
+    "\"wifi_rssi\":%d,\"free_heap\":%lu,\"firmware_version\":\"%s\","
+    "\"firmware_board\":\"%s\",\"firmware_ota_capable\":%s,"
+    "\"pzem_rx_pin\":%d,\"pzem_tx_pin\":%d,\"lcd_sda_pin\":%d,\"lcd_scl_pin\":%d,"
+    "\"relay_pin\":%d,\"buzzer_pin\":%d,\"updated_at\":{\".sv\":\"timestamp\"}}",
     arus, tegangan, apparentPowerVa, dayaW, apparentPowerVa, energiKwh, freqHz, powerFactor,
-    sensorSource.c_str(), status.c_str(), relay);
+    sensorSource.c_str(), status.c_str(), relay, uptimeSeconds,
+    meterOk ? "true" : "false", lcdOk ? "true" : "false", lcdAddress, wifiRssi, freeHeap,
+    FIRMWARE_VERSION, FIRMWARE_BOARD_ID, FIRMWARE_OTA_CAPABLE ? "true" : "false",
+    PZEM_RX_PIN, PZEM_TX_PIN, diagnosticLcdSdaPin, diagnosticLcdSclPin, PIN_RELAY1, PIN_BUZZER);
   bool ok = _fbHttpRequest("PATCH", "/listrik", json);
   if (ok) Serial.printf("[Firebase] Monitor OK: status=%s relay=%d\n", status.c_str(), relay);
   return ok;
+}
+
+static float _safeLogNumber(float value, float fallback, float minValue, float maxValue) {
+  if (!isfinite(value) || isnan(value)) return fallback;
+  if (value < minValue) return minValue;
+  if (value > maxValue) return maxValue;
+  return value;
+}
+
+static String _safeLogText(const String& value, const char* fallback) {
+  String out = value;
+  out.trim();
+  if (out.isEmpty()) out = fallback;
+  out.replace("\\", "-");
+  out.replace("\"", "'");
+  out.replace("\r", " ");
+  out.replace("\n", " ");
+  if (out.length() > 80) out.remove(80);
+  return out;
 }
 
 bool writeLog(float arus, float tegangan,
@@ -253,22 +312,52 @@ bool writeLog(float arus, float tegangan,
               long uptimeSeconds = 0) {
   if (!isFirebaseReady()) return false;
   FB_HEAP_GUARD("writeLog");
-  if (apparentPowerVa <= 0.0f) apparentPowerVa = arus * tegangan;
-  if (dayaW <= 0.0f) dayaW = apparentPowerVa * powerFactor;
+
+  // Entri retry berasal dari snapshot lama, bukan selalu dari baris Monitor terbaru.
+  // Normalisasi agar NaN/inf/nilai di luar batas tidak ditolak Security Rules.
+  arus = _safeLogNumber(arus, 0.0f, 0.0f, 200.0f);
+  tegangan = _safeLogNumber(tegangan, 0.0f, 0.0f, 300.0f);
+  powerFactor = _safeLogNumber(powerFactor, 0.85f, 0.0f, 1.2f);
+  freqHz = _safeLogNumber(freqHz, 50.0f, 0.0f, 70.0f);
+  energiKwh = _safeLogNumber(energiKwh, 0.0f, 0.0f, 1000000.0f);
+  apparentPowerVa = _safeLogNumber(apparentPowerVa, arus * tegangan, 0.0f, 60000.0f);
+  dayaW = _safeLogNumber(dayaW, apparentPowerVa * powerFactor, 0.0f, 60000.0f);
+  relay = relay == 1 ? 1 : 0;
+  if (uptimeSeconds < 0) uptimeSeconds = 0;
+  if (uptimeSeconds > 4294968L) uptimeSeconds = 4294968L;
+
+  String safeStatus = status;
+  if (safeStatus != "NORMAL" && safeStatus != "WARNING" &&
+      safeStatus != "LEAKAGE" && safeStatus != "DANGER" &&
+      safeStatus != "SENSOR_ERROR") {
+    safeStatus = "SENSOR_ERROR";
+  }
+  const String safeSource = _safeLogText(source, "esp32");
+  const String safeSensorSource = _safeLogText(sensorSource, "PZEM-004T");
+
   char jsonStr[640];
   snprintf(jsonStr, sizeof(jsonStr),
     "{\"arus\":%.2f,\"tegangan\":%.1f,\"daya\":%.1f,\"daya_w\":%.1f,"
     "\"apparent_power\":%.1f,\"energi_kwh\":%.4f,\"frekuensi\":%.1f,"
     "\"power_factor\":%.2f,\"sensor_source\":\"%s\","
-    "\"status\":\"%s\",\"relay\":%d,\"waktu\":{\".sv\":\"timestamp\"},\"timestamp\":{\".sv\":\"timestamp\"},\"source\":\"%s\",\"uptime_s\":%ld}",
+    "\"status\":\"%s\",\"relay\":%d,\"waktu\":{\".sv\":\"timestamp\"},"
+    "\"timestamp\":{\".sv\":\"timestamp\"},\"source\":\"%s\",\"uptime_s\":%ld}",
     arus, tegangan, apparentPowerVa, dayaW, apparentPowerVa, energiKwh, freqHz, powerFactor,
-    sensorSource.c_str(), status.c_str(), relay, source.c_str(), uptimeSeconds);
-  
+    safeSensorSource.c_str(), safeStatus.c_str(), relay, safeSource.c_str(), uptimeSeconds);
+
   bool ok = _fbHttpRequest("POST", "/logs", jsonStr);
-  if (ok) Serial.println("[Firebase] Log -> " + status + " (" + source + ")");
+  if (ok) {
+    Serial.println("[Firebase] Log -> " + safeStatus + " (" + safeSource + ")");
+  } else {
+    Serial.printf(
+      "[Firebase] Snapshot log ditolak: src=%s status=%s I=%.2f V=%.1f P=%.1f S=%.1f "
+      "E=%.4f PF=%.2f f=%.1f relay=%d uptime=%ld\n",
+      safeSource.c_str(), safeStatus.c_str(), arus, tegangan, dayaW,
+      apparentPowerVa, energiKwh, powerFactor, freqHz, relay, uptimeSeconds
+    );
+  }
   return ok;
 }
-
 // --- readRelayCommand() -----------------------------------------------------
 bool readRelayCommand(int& outRelay) {
   if (!isFirebaseReady()) return false;
@@ -356,6 +445,8 @@ bool readAllSettings(RuntimeSettings& out) {
   // Discord
   if (json.get(val, "discord/webhookAlerts") && !val.stringValue.isEmpty())
     out.discordWebhookAlerts = val.stringValue;
+  if (json.get(val, "discord/webhookMonitoring") && !val.stringValue.isEmpty())
+    out.discordWebhookMonitoring = val.stringValue;
   if (json.get(val, "discord/enabled"))
     out.discordNotifyEnabled = (val.stringValue == "true" || val.intValue == 1);
 

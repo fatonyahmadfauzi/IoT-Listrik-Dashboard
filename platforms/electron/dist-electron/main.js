@@ -252,8 +252,41 @@ electron_1.ipcMain.handle('local-server:stop', async () => {
 electron_1.ipcMain.handle('local-server:status', async () => ({
     running: !!(localServerChild && !localServerChild.killed),
 }));
+function configureSerialPermissions() {
+    const ses = electron_1.session.defaultSession;
+    ses.setPermissionCheckHandler((_webContents, permission) => {
+        return permission === 'serial' || permission === 'notifications';
+    });
+    ses.on('select-serial-port', async (event, portList, _webContents, callback) => {
+        event.preventDefault();
+        if (!portList.length) {
+            callback('');
+            return;
+        }
+        const knownUsbSerial = portList.filter((port) => {
+            const vendor = String(port.vendorId || '').toLowerCase();
+            return ['10c4', '1a86', '0403', '067b', '303a'].includes(vendor);
+        });
+        const candidates = knownUsbSerial.length ? knownUsbSerial : portList;
+        if (candidates.length === 1) {
+            callback(candidates[0].portId);
+            return;
+        }
+        const labels = candidates.map((port) => `${port.displayName || port.portName} (${port.portName})`);
+        const result = await electron_1.dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            title: 'Pilih Port Serial ESP32',
+            message: 'Pilih port USB yang terhubung ke ESP32.',
+            buttons: [...labels, 'Batal'],
+            cancelId: labels.length,
+            noLink: true,
+        });
+        callback(result.response < candidates.length ? candidates[result.response].portId : '');
+    });
+}
 // App event handlers
 electron_1.app.whenReady().then(() => {
+    configureSerialPermissions();
     electron_1.Menu.setApplicationMenu(null);
     createTray();
     createWindow();

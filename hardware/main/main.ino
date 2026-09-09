@@ -51,7 +51,9 @@
   LiquidCrystal_I2C lcd(LCD_ADDR, LCD_COLS, LCD_ROWS);
   volatile bool lcdNeedsRecovery = false;
   volatile unsigned long lcdRecoveryRequestedMs = 0;
-  bool lcdReady = false;
+  volatile bool lcdReady = false;
+  volatile bool lcdBusHealthy = false;
+  volatile uint8_t lcdActiveAddress = 0;
   const unsigned long LCD_RECOVERY_DELAY_MS = 350UL;
 #endif
 
@@ -236,6 +238,18 @@ static const unsigned long WIFI_CONNECT_TIMEOUT_MS = 15000UL;
 static const unsigned long REMOTE_BOOTSTRAP_POLL_MS = 5000UL;
 static const unsigned long AUTO_LEARNING_SAMPLE_MS = 500UL;
 static const unsigned long RELAY_COMMAND_POLL_MS = 1000UL;
+
+// PZEM dapat kehilangan satu-dua respons ketika SSR/kontaktor berpindah karena
+// transien/EMI. Jangan langsung mengubah status menjadi SENSOR_ERROR; tahan
+// pembacaan valid terakhir selama jendela pendek. Putus sensor yang nyata tetap
+// dilaporkan setelah gagal terus-menerus.
+static const unsigned long SENSOR_ERROR_CONFIRM_MS = 3000UL;
+static const uint8_t SENSOR_ERROR_MIN_FAILURES = 3;
+ElectricalReading lastValidElectricalReading;
+bool hasLastValidElectricalReading = false;
+unsigned long invalidElectricalSinceMs = 0;
+uint16_t consecutiveInvalidElectricalReads = 0;
+bool sensorErrorLogged = false;
 
 String readBootstrapMeta(const char* key) {
   prefs.begin(NVS_NAMESPACE, true);
@@ -895,28 +909,49 @@ void initLCD() {
                   detectedAddr, LCD_ADDR);
     lcd = LiquidCrystal_I2C(detectedAddr, LCD_COLS, LCD_ROWS);
   } else if (detectedAddr == 0) {
-    Serial.println("[LCD] Tidak ada LCD ditemukan di 0x27 atau 0x3F. Cek kabel SDA/SCL.");
+    lcdReady = false;
+    lcdBusHealthy = false;
+    lcdActiveAddress = 0;
+    Serial.println("[LCD] Tidak ada LCD ditemukan di 0x27, 0x3F, atau 0x26. Cek kabel SDA/SCL.");
+    return;
   }
 
+  lcdActiveAddress = detectedAddr;
   lcd.init();
   lcd.backlight();
   lcd.clear();
   lcdReady = true;
+  lcdBusHealthy = true;
   lcdNeedsRecovery = false;
   lcdStatus("IoT Listrik", "Booting...");
-  Serial.printf("[LCD] Siap di alamat 0x%02X\n", detectedAddr ? detectedAddr : LCD_ADDR);
+  Serial.printf("[LCD] Siap di alamat 0x%02X\n", detectedAddr);
+}
+
+bool probeLCD() {
+  if (lcdActiveAddress == 0) return false;
+  Wire.beginTransmission(lcdActiveAddress);
+  return Wire.endTransmission() == 0;
 }
 
 void recoverLCD() {
-  if (!lcdReady) return;
+  if (!probeLCD()) {
+    if (lcdBusHealthy || lcdReady) {
+      Serial.printf("[LCD] Tidak merespons di 0x%02X — status ERROR.\n", lcdActiveAddress);
+    }
+    lcdBusHealthy = false;
+    lcdReady = false;
+    return;
+  }
   lcd.init();
   lcd.backlight();
   lcd.clear();
+  lcdReady = true;
+  lcdBusHealthy = true;
   Serial.println("[LCD] Recovery selesai setelah transien/noise.");
 }
 
 void serviceLCDRecovery(unsigned long now) {
-  if (!lcdReady || !lcdNeedsRecovery) return;
+  if (!lcdNeedsRecovery || lcdActiveAddress == 0) return;
   if (now - lcdRecoveryRequestedMs < LCD_RECOVERY_DELAY_MS) return;
 
   // Clear flag sebelum I2C recovery. Jika relay berubah lagi, setRelay() akan
@@ -926,6 +961,25 @@ void serviceLCDRecovery(unsigned long now) {
 }
 
 void updateLCD() {
+  static unsigned long lastMissingRetryMs = 0;
+  if (lcdActiveAddress == 0) {
+    if (millis() - lastMissingRetryMs >= 10000UL) {
+      lastMissingRetryMs = millis();
+      initLCD();
+    }
+    if (!lcdReady) return;
+  } else if (!probeLCD()) {
+    if (lcdBusHealthy) {
+      Serial.printf("[LCD] Koneksi I2C hilang di 0x%02X.\n", lcdActiveAddress);
+    }
+    lcdBusHealthy = false;
+    lcdReady = false;
+    return;
+  } else if (!lcdReady || !lcdBusHealthy) {
+    recoverLCD();
+  }
+
+  lcdBusHealthy = true;
   static bool wasMeterValid = true;
   if (state.meterValid != wasMeterValid) {
     // Perubahan validitas meter sering terjadi bersamaan dengan gangguan listrik.
@@ -1337,10 +1391,18 @@ void firebaseTaskCore0(void *pvParameters) {
         if (localRt.realtimeStreamEnabled) {
           // Selalu update dashboard, termasuk saat SENSOR_ERROR agar web & notifikasi tahu
           // bahwa sensor putus (angka akan 0 dan status = SENSOR_ERROR).
+            bool localLcdOk = false;
+            int localLcdAddress = 0;
+#ifdef USE_LCD
+            localLcdOk = lcdReady && lcdBusHealthy;
+            localLcdAddress = lcdActiveAddress;
+#endif
             bool monitorOk = writeMonitorData(localState.arus, localState.tegangan, localState.dayaW,
                                               localState.apparentPowerVa, localState.energiKwh,
                                               localState.frekuensi, localState.powerFactor,
-                                              localState.status, localState.relay, localState.sensorSource);
+                                              localState.status, localState.relay, localState.sensorSource,
+                                              now / 1000UL, localState.meterValid, localLcdOk,
+                                              localLcdAddress, WiFi.RSSI(), ESP.getFreeHeap());
             Serial.printf("[Monitor] src=%s I=%.2fA V=%.1fV P=%.1fW S=%.1fVA PF=%.2f f=%.1fHz status=%s relay=%d\n",
                           localState.sensorSource.c_str(), localState.arus, localState.tegangan,
                           localState.dayaW, localState.apparentPowerVa, localState.powerFactor,
@@ -1576,41 +1638,11 @@ void firebaseTaskCore0(void *pvParameters) {
         }
       }
 
-      // Snapshot berkala yang lengkap untuk pemantauan jarak jauh. Interval
-      // minimum default 60 detik agar Telegram/Discord tidak terkena spam atau
-      // rate-limit, namun tetap mencerminkan data meter terbaru.
+      // Snapshot berkala ditangani oleh backend-local/Cloud Functions agar
+      // hanya ada satu sumber notifikasi Telegram/Discord. Firmware tetap
+      // menulis data terbaru ke /listrik dan histori ke /logs.
       if (realtimeNotifyDue) {
-        const bool canSendTelegram = localRt.telegramNotifyEnabled &&
-                                     !localRt.telegramBotToken.isEmpty() &&
-                                     !localRt.telegramChatId.isEmpty();
-        const bool canSendDiscord = localRt.discordNotifyEnabled &&
-                                    !localRt.discordWebhookAlerts.isEmpty();
-        if (canSendTelegram || canSendDiscord) {
-          releaseFirebaseHttpConnection();
-          if (canSendTelegram) {
-            String telemetryMessage = buildRealtimeMessage(
-              localState.arus, localState.tegangan,
-              localState.dayaW, localState.apparentPowerVa,
-              localState.energiKwh, localState.frekuensi, localState.powerFactor,
-              localState.status, localState.relay, localState.sensorSource
-            );
-            sendTelegram(telemetryMessage, localRt.telegramBotToken,
-                         localRt.telegramChatId, localRt.realtimeNotifyIntervalMs);
-          }
-          if (canSendDiscord) {
-            String title, description;
-            buildDiscordRealtimeEmbed(
-              localState.arus, localState.tegangan,
-              localState.dayaW, localState.apparentPowerVa,
-              localState.energiKwh, localState.frekuensi, localState.powerFactor,
-              localState.status, localState.relay, localState.sensorSource,
-              title, description
-            );
-            sendDiscordWebhook(localRt.discordWebhookAlerts, title, description,
-                               DISCORD_COLOR_BLUE, localRt.realtimeNotifyIntervalMs);
-          }
-          lastRealtimeNotifyMs = now;
-        }
+        lastRealtimeNotifyMs = now;
       }
 
     }
@@ -1677,6 +1709,49 @@ void loop() {
   // ── Read metering data from PZEM-004T ───────────────────────
   if (trace) { Serial.println("[Loop] 2. Baca PZEM..."); Serial.flush(); }
   ElectricalReading reading = readElectrical(localRt, g_energiKwh);
+
+  if (reading.valid) {
+    lastValidElectricalReading = reading;
+    hasLastValidElectricalReading = true;
+    invalidElectricalSinceMs = 0;
+    consecutiveInvalidElectricalReads = 0;
+    sensorErrorLogged = false;
+  } else {
+    if (invalidElectricalSinceMs == 0) invalidElectricalSinceMs = now;
+    if (consecutiveInvalidElectricalReads < UINT16_MAX) {
+      consecutiveInvalidElectricalReads++;
+    }
+
+    const unsigned long invalidForMs = now - invalidElectricalSinceMs;
+    const bool sensorErrorConfirmed =
+      consecutiveInvalidElectricalReads >= SENSOR_ERROR_MIN_FAILURES &&
+      invalidForMs >= SENSOR_ERROR_CONFIRM_MS;
+
+    if (hasLastValidElectricalReading && !sensorErrorConfirmed) {
+      // Pertahankan snapshot valid terakhir saat gangguan singkat akibat relay.
+      // Energi tetap memakai akumulasi terbaru dan tidak di-reset.
+      reading = lastValidElectricalReading;
+      reading.energiKwh = g_energiKwh;
+      reading.energyFromMeter = false;
+
+      static unsigned long lastTransientLogMs = 0;
+      if (now - lastTransientLogMs >= 1000UL) {
+        lastTransientLogMs = now;
+        Serial.printf(
+          "[PZEM] Gangguan sementara ditahan (%u gagal, %lu ms) — belum SENSOR_ERROR.\n",
+          consecutiveInvalidElectricalReads, invalidForMs
+        );
+      }
+    } else if (sensorErrorConfirmed) {
+      if (!sensorErrorLogged) {
+        Serial.printf(
+          "[PZEM] SENSOR_ERROR dikonfirmasi setelah %u kegagalan selama %lu ms.\n",
+          consecutiveInvalidElectricalReads, invalidForMs
+        );
+        sensorErrorLogged = true;
+      }
+    }
+  }
   if (trace) { Serial.println("[Loop] 2. PZEM OK"); Serial.flush(); }
 
   // ── Energy handling ──────────────────────────────────────────

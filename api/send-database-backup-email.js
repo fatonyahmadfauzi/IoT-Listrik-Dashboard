@@ -237,7 +237,7 @@ async function sendDatabaseBackupEmail(req) {
   ];
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
+  const emailResult = await resend.emails.send({
     from: "onboarding@resend.dev",
     to: email,
     subject: "🗄️ Backup Firebase RTDB & Rules",
@@ -251,6 +251,12 @@ async function sendDatabaseBackupEmail(req) {
     }),
     attachments,
   });
+  if (emailResult?.error) {
+    throw httpError(502, emailResult.error.message || "Resend menolak pengiriman backup.");
+  }
+  if (!emailResult?.data?.id) {
+    throw httpError(502, "Resend tidak mengembalikan ID email backup.");
+  }
 
   return {
     success: true,

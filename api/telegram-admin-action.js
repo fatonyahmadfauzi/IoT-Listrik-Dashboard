@@ -4,6 +4,7 @@ const {
   testTelegramConfig,
 } = require("./_lib/telegram-admin");
 
+
 export default async function handler(req, res) {
   if (!setCors(req, res)) {
     return res.status(403).json({ error: "Origin tidak diizinkan." });
@@ -19,8 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const action = String(req.body?.action || req.query?.action || "").trim().toLowerCase();
-
+    const action = String(req.body?.action || "").trim().toLowerCase();
     if (action === "profile") {
       const result = await getTelegramBotProfile(req);
       return res.status(200).json(result);

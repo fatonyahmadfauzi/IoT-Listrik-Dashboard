@@ -1,6 +1,6 @@
 # Alat Deteksi Kebocoran Arus Listrik Berbasis IoT dengan Notifikasi Real-Time
 
-![Version](https://img.shields.io/badge/versi-1.1.8-blue) ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20Windows%20%7C%20CLI-brightgreen) ![License](https://img.shields.io/badge/lisensi-MIT-green) ![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange)
+![Version](https://img.shields.io/badge/versi-1.1.9-blue) ![Platform](https://img.shields.io/badge/platform-Web%20%7C%20Android%20%7C%20Windows%20%7C%20CLI-brightgreen) ![License](https://img.shields.io/badge/lisensi-MIT-green) ![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange)
 
 > **Skripsi S1 — Program Studi Teknik Informatika**
 > Universitas Bina Insani, Bekasi — 2026
@@ -21,18 +21,16 @@ Platform yang didukung: **Web (PWA)**, **Android**, **Windows (Desktop)**, dan *
 
 ## Status Release Saat Ini
 
-Per 2 September 2026, seluruh artefak project yang dipublikasikan menggunakan release v1.1.8:
+Per 9 September 2026, seluruh artefak project yang dipublikasikan menggunakan release `v1.1.9`:
 
 | Platform | Release yang digunakan | Keterangan |
 |---|---|---|
-| Web/PWA | `v1.1.8` | Metadata dan tautan unduhan terbaru |
-| Android | `v1.1.8` | Dukungan status `SENSOR_ERROR` yang konsisten |
-| Windows Setup, Portable, MSI | `v1.1.8` | Dukungan status `SENSOR_ERROR` yang konsisten |
-| CLI Node.js, Python, Linux | `v1.1.8` | Paket CLI stabil dengan tabel riwayat rapi |
+| Web/PWA | `v1.1.9` | Diagnostik sistem, Serial Monitor desktop, dan konfigurasi Discord diagnostik |
+| Android APK | `v1.1.9` | Panel admin native, diagnostik lengkap, serta perbaikan force close pada test webhook Discord |
+| Windows Setup, Portable, MSI | `v1.1.9` | Diagnostik sistem, Serial Monitor USB, dan konfigurasi webhook diagnostik |
+| CLI Node.js, Python, Linux | `v1.1.9` | Diagnostik sistem read-only dan pemeriksaan release firmware |
 
-Seluruh artefak unduhan tersedia melalui release terpadu `v1.1.8`.
-
-
+Seluruh artefak unduhan tersedia melalui release terpadu `v1.1.9`.
 
 ## Ringkasan Fitur
 
@@ -50,8 +48,10 @@ Seluruh artefak unduhan tersedia melalui release terpadu `v1.1.8`.
 - Laporan harian Excel otomatis: data monitoring 24 jam dikirim ke Telegram dan Discord jika ada data baru pada hari tersebut.
 - Terminal UI (Hacker Mode) portabel untuk eksekusi tanpa GUI (Mendukung CLI Node.js & Python).
 - Build pipeline untuk Android APK, Windows MSI/Setup/Portable, dan CLI binaries.
-- **Telegram Admin Tools**: multi Chat ID/Group ID, jumlah penerima aktif, test pesan, hubungkan bot, serta command `/pause` dan `/resume` per chat.
-- **Discord Admin Tools**: 5 tujuan webhook (alerts, relay, monitoring, daily report, logs), status bot, ringkasan server, jumlah member/online/ban, ban/unban user.
+- **Telegram Admin Tools**: multi Chat ID/Group ID, jumlah penerima aktif, test pesan, hubungkan bot, serta command `/pause`, `/resume`, `/status`, `/diagnostik`, dan `/system_update` per chat.
+- **Discord Admin Tools**: 6 tujuan webhook (alerts, relay, monitoring, diagnostik-sistem, daily report, logs), status bot, ringkasan server, jumlah member/online/ban, ban/unban user. Notifikasi firmware ESP32 baru memakai webhook **Diagnostik Sistem** dan akan memakai **Alerts** sebagai fallback jika webhook diagnostik belum dikonfigurasi; perubahan kesehatan sistem memakai webhook **Diagnostik Sistem** terpisah agar tidak bercampur dengan alert. Channel diagnostik baru bersifat opsional dan perlu dibuat hanya jika ingin pemisahan tersebut.
+- **Discord Diagnostik Sistem**: webhook `#diagnostik-sistem` menerima perubahan kesehatan PZEM-004T, ESP32/Wi-Fi, LCD, heap, relay, Firebase, pemetaan pin, dan status firmware. Pengiriman memakai deduplikasi RTDB agar tidak menggandakan pesan.
+- **Android Discord Test Fix**: seluruh operasi HTTP webhook berjalan pada background thread; UI hanya menampilkan hasil sehingga test `#alerts` dan `#diagnostik-sistem` tidak memicu `NetworkOnMainThreadException` atau force close.
 - **Halaman Analytics**: ringkasan statistik histori log — min/max/rata-rata arus, tegangan, daya, tren sensor dalam grafik, distribusi status (NORMAL/WARNING/DANGER), dan snapshot parameter listrik terkini. Tersedia di Web PWA (/app/analytics) dan Windows Desktop.
 - **Filter Tanggal Log**: kalender interaktif di halaman Riwayat dan Analytics — tanggal tanpa data dinonaktifkan otomatis, semua filter (grafik, tabel ringkas, tabel detail, export CSV) diperbarui serentak.
 - **Mode Koneksi LOCAL / CLOUD / AUTO**: sumber data realtime dapat dikonfigurasi dari Settings. Mode AUTO menggunakan Firebase langsung dan fallback otomatis ke local REST backend (backend-local/server.js) jika Firebase tidak terjangkau.
@@ -286,7 +286,7 @@ Untuk membuat release versi baru:
 | Windows Setup/Portable/MSI | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
 | CLI Node.js (Win x64) | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
 | CLI Python (Win x64) | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
-| CLI Linux/Mac/Termux | `curl -sL https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh \| bash` | ✅ v1.1.0 |
+| CLI Linux/Mac/Termux | `curl -sL https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh \| bash` | ✅ v1.1.9 |
 
 ## Setup Awal
 
@@ -503,7 +503,7 @@ https://iot-listrik-dashboard.vercel.app/telegram
 → Gunakan Hubungkan Bot atau Test Kirim Pesan
 ```
 
-Setiap Chat ID dapat melakukan `/pause` dan `/resume` untuk menghentikan atau mengaktifkan notifikasi miliknya sendiri.
+Setiap Chat ID dapat melakukan `/pause` dan `/resume` untuk menghentikan atau mengaktifkan notifikasi miliknya sendiri. Perintah `/diagnostik` memeriksa kesehatan sistem, sedangkan `/system_update` atau `/firmware` memeriksa release firmware ESP32.
 
 **3. Jalankan local notifier:**
 ```bash

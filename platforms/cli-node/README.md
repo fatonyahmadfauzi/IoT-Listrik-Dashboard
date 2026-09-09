@@ -84,7 +84,7 @@ WINDOWS:
   Portable: IoT-Listrik-Dashboard-Portable.exe (334.13 MB)
   MSI: IoT-Listrik-Dashboard.msi (124.86 MB)
   Node CLI: iot-listrik-cli-node.exe (189.28 MB)
-  Linux CLI: iot-listrik-dashboard-cli-linux (197.35 MB)
+  Linux CLI: iot-listrik-dashboard-cli-linux (189.81 MB)
 ```
 
 ## Contoh CLI Commands

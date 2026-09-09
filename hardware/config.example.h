@@ -36,6 +36,21 @@
 #define CONFIG_H
 
 // ═══════════════════════════════════════════════════════════════
+// FIRMWARE IDENTITY / OTA CAPABILITY
+// ═══════════════════════════════════════════════════════════════
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION        "1.0.0"
+#endif
+#ifndef FIRMWARE_BOARD_ID
+#define FIRMWARE_BOARD_ID       "esp32-dev-module"
+#endif
+// Aktifkan hanya setelah memilih partition scheme dengan dua slot OTA
+// dan meng-upload firmware bootstrap pertama melalui USB.
+#ifndef FIRMWARE_OTA_CAPABLE
+#define FIRMWARE_OTA_CAPABLE    0
+#endif
+
+// ═══════════════════════════════════════════════════════════════
 // LAYER 1A — BOOTSTRAP COMPILE-TIME FALLBACK DEFAULTS
 // These #define values are ONLY written to NVS on first boot.
 // After the captive portal saves credentials, these are ignored.

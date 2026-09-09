@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260901-alarm-offline-fix";
+const CACHE_NAME = "iot-app-v20260909-discord-diagnostics-full";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [
@@ -21,6 +21,8 @@ const CACHE_URLS = [
   "/app/dashboard",
   "/app/history",
   "/app/analytics",
+  "/app/diagnostics",
+  "/app/serial-monitor",
   "/app/settings",
   "/app/telegram",
   "/app/discord",
@@ -33,6 +35,8 @@ const CACHE_URLS = [
   "/js/app.js",
   "/js/history.js",
   "/js/analytics.js",
+  "/js/diagnostics.js",
+  "/js/serial-monitor.js",
   "/js/settings.js",
   "/js/charts.js",
   "/js/notifications.js",
@@ -114,8 +118,17 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() =>
-          // Offline fallback: serve cached page if available
-          caches.match(request).then((cached) => cached || caches.match("/app/login") || Response.error())
+          // Offline fallback: pertahankan halaman tujuan. Jangan mengganti
+          // halaman terlindungi dengan login karena itu terlihat seperti sesi
+          // pengguna terhapus padahal hanya jaringan yang sedang terputus.
+          caches.match(request).then((cached) =>
+            cached ||
+            caches.match(requestUrl.pathname) ||
+            new Response(
+              "Aplikasi sedang offline. Periksa koneksi lalu muat ulang halaman.",
+              { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+            )
+          )
         )
     );
     return;
@@ -202,4 +215,3 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
-

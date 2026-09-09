@@ -7,6 +7,27 @@ dan proyek ini mengikuti [Semantic Versioning](https://semver.org/lang/id/).
 
 ---
 
+## [1.1.9] — 2026-09-08
+
+### Added
+- Diagnostik sistem konsisten pada Web/PWA, Android native, Windows Desktop, dan seluruh CLI.
+- Webhook Discord `webhookDiagnostics` untuk channel `#diagnostik-sistem` dengan test khusus dan tampilan UI responsif.
+- Pesan diagnostik Discord lengkap: PZEM-004T, status baca, arus/tegangan, ESP32/Wi-Fi, RSSI, heap, LCD I2C, relay, buzzer, Firebase, pemetaan GPIO, dan release firmware.
+- Command Telegram `/diagnostik`, `/system_update`, dan `/firmware` serta notifikasi otomatis ketika asset firmware `.bin` baru tersedia.
+- Serial Monitor USB dan pemeriksaan firmware pada Web/PWA desktop serta Windows.
+
+### Fixed
+- Android tidak lagi force close ketika menjalankan test webhook Alerts atau Diagnostik. Seluruh operasi HTTP, termasuk pembacaan `responseCode`, dijalankan pada background thread.
+- Pesan Telegram dan pemeriksaan command memakai transaction state untuk mencegah pemrosesan ganda oleh lebih dari satu notifier.
+- Pesan diagnostik Discord memakai transaction state RTDB agar perubahan yang sama tidak dikirim berulang.
+- Tampilan diagnostik, badge, status sensor, dan informasi firmware diseragamkan antarplatform.
+
+### Changed
+- Release `v1.1.9` memperbarui Android APK, Windows Setup/Portable/MSI, CLI Node.js/Python/Linux, dokumentasi, dan halaman Downloads.
+- Notifikasi firmware Discord diprioritaskan ke channel diagnostik dan fallback ke Alerts jika webhook diagnostik belum dikonfigurasi.
+
+---
+
 ## [1.1.8] — 2026-09-02
 
 ### Fixed

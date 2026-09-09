@@ -604,7 +604,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvRelayControlHint.text = when {
             commandPending -> "Mengirim perintah relay dan menunggu konfirmasi perangkat."
             !canControl -> relayBlockedReason()
-            lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" ->
+            lastDeviceStatus == "DANGER" ->
                 "Kondisi $lastDeviceStatus — relay dikunci OFF. Perbaiki kondisi lebih dulu, lalu nyalakan kembali."
             lastDeviceStatus == "SENSOR_ERROR" && relayIsOn ->
                 "SENSOR_ERROR — relay tetap ON sesuai kondisi terakhir. Perbaiki sensor sebelum mengubah beban."
@@ -891,7 +891,7 @@ class MainActivity : AppCompatActivity() {
             showBuiltInLegend = false
         )
 
-        val statuses = listOf("Semua Status", "NORMAL", "WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR")
+        val statuses = listOf("Semua Status", "NORMAL", "WARNING", "DANGER", "SENSOR_ERROR")
         historyPageBinding.spHistoryStatus.adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
@@ -1116,7 +1116,7 @@ class MainActivity : AppCompatActivity() {
         val apparentPowers = analyticsVisibleLogs.map { log ->
             logApparentPower(log, logNumber(log.arus), logNumber(log.tegangan))
         }
-        val statusCounts = linkedMapOf("NORMAL" to 0, "WARNING" to 0, "LEAKAGE" to 0, "DANGER" to 0, "SENSOR_ERROR" to 0)
+        val statusCounts = linkedMapOf("NORMAL" to 0, "WARNING" to 0, "DANGER" to 0, "SENSOR_ERROR" to 0)
         analyticsVisibleLogs.forEach { log ->
             val status = normalizeLogStatus(log.status)
             if (statusCounts.containsKey(status)) statusCounts[status] = (statusCounts[status] ?: 0) + 1
@@ -1138,8 +1138,7 @@ class MainActivity : AppCompatActivity() {
         val energyLast = if (energies.isNotEmpty()) energies.last() else maxEnergy
         val latest = analyticsVisibleLogs.lastOrNull() ?: latestRealtimeLog
         val latestStatus = latest?.let { normalizeLogStatus(it.status) } ?: "UNKNOWN"
-        val riskCount = (statusCounts["WARNING"] ?: 0) +
-            (statusCounts["LEAKAGE"] ?: 0) + (statusCounts["DANGER"] ?: 0)
+        val riskCount = (statusCounts["WARNING"] ?: 0) + (statusCounts["DANGER"] ?: 0)
 
         analyticsPageBinding.tvAnalyticsLatestStatus.text = latestStatus
         analyticsPageBinding.tvAnalyticsLatestStatus.setTextColor(statusColor(latestStatus))
@@ -1389,11 +1388,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateAnalyticsStatusChart(statusCounts: Map<String, Int>) {
-        val labels = listOf("NORMAL", "WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR")
+        val labels = listOf("NORMAL", "WARNING", "DANGER", "SENSOR_ERROR")
         val colors = listOf(
             Color.parseColor("#22c55e"),
             Color.parseColor("#fcd34d"),
-            Color.parseColor("#fb923c"),
             Color.parseColor("#ef4444"),
             Color.parseColor("#7c879b")
         )
@@ -1501,7 +1499,6 @@ class MainActivity : AppCompatActivity() {
             Color.parseColor("#fcd34d"),
             Color.parseColor("#a78bfa"),
             Color.parseColor("#38bdf8"),
-            Color.parseColor("#fb923c"),
             Color.parseColor("#fb923c")
         )
         analyticsSnapshotLabels.clear()
@@ -1546,7 +1543,6 @@ class MainActivity : AppCompatActivity() {
     private fun statusColor(status: String): Int = when (status) {
         "NORMAL" -> Color.parseColor("#22c55e")
         "WARNING" -> Color.parseColor("#fcd34d")
-        "LEAKAGE" -> Color.parseColor("#fb923c")
         "DANGER" -> Color.parseColor("#ef4444")
         "SENSOR_ERROR" -> Color.parseColor("#7c879b")
         else -> Color.parseColor("#94a3b8")
@@ -1906,7 +1902,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         "NORMAL" -> "NORMAL"
         "WARNING" -> "WARNING"
-        "LEAKAGE" -> "LEAKAGE"
+        "LEAKAGE" -> "DANGER" // status legacy
         "DANGER" -> "DANGER"
         "SENSOR_ERROR" -> "SENSOR_ERROR"
         else -> "UNKNOWN"
@@ -2009,7 +2005,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvStatusHint.text = statusHintFor(status)
         if (status == lastStatus) return
 
-        val dangerStatuses = setOf("WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR")
+        val dangerStatuses = setOf("WARNING", "DANGER", "SENSOR_ERROR")
         val isDanger = dangerStatuses.contains(status)
         val wasDanger = dangerStatuses.contains(lastStatus)
 
@@ -2017,8 +2013,7 @@ class MainActivity : AppCompatActivity() {
             // Munculkan di Notification Tray Android
             val notifTitle = if (status == "DANGER") "BAHAYA KRITIS!" else "PERINGATAN!"
             val notifBody = when (status) {
-                "DANGER" -> "Kebocoran arus tingkat bahaya dideteksi!"
-                "LEAKAGE" -> "Terdeteksi kebocoran arus. Periksa instalasi!"
+                "DANGER" -> "Arus mencapai atau melebihi threshold. Periksa beban dan instalasi!"
                 "SENSOR_ERROR" -> "Sensor PZEM-004T tidak terbaca. Periksa koneksi sensor!"
                 else -> "Beban listrik melebihi batas. Periksa pemakaian!"
             }
@@ -2044,15 +2039,13 @@ class MainActivity : AppCompatActivity() {
         val colorTo = when (status) {
             "DANGER" -> Color.parseColor("#ef4444")
             "SENSOR_ERROR" -> Color.parseColor("#7c879b")
-            "LEAKAGE" -> Color.parseColor("#fb923c")
-            "NORMAL" -> Color.parseColor("#2eea72")
+                "NORMAL" -> Color.parseColor("#2eea72")
             else -> Color.parseColor("#fee58a")
         }
 
         val statusBackground = when (status) {
             "DANGER" -> R.drawable.bg_status_danger
             "SENSOR_ERROR" -> R.drawable.bg_status_sensor_error
-            "LEAKAGE" -> R.drawable.bg_status_leakage
             "NORMAL" -> R.drawable.bg_status_normal
             else -> R.drawable.bg_status_warning
         }
@@ -2084,7 +2077,6 @@ class MainActivity : AppCompatActivity() {
     private fun statusSummaryFor(status: String): String = when (status) {
         "DANGER" -> "Bahaya — gangguan ekstrem"
         "SENSOR_ERROR" -> "Sensor tidak terbaca"
-        "LEAKAGE" -> "Indikasi kebocoran arus"
         "WARNING" -> "Peringatan — mendekati batas"
         "UNKNOWN" -> "Status belum dikenali"
         else -> "Sistem stabil"
@@ -2093,7 +2085,6 @@ class MainActivity : AppCompatActivity() {
     private fun statusHintFor(status: String): String = when (status) {
         "DANGER" -> "Auto-cutoff dan notifikasi bahaya diprioritaskan. Periksa beban, kabel, dan kondisi perangkat sebelum menyalakan relay kembali."
         "SENSOR_ERROR" -> "Data sensor tidak valid. Periksa catu daya, kabel TX/RX, koneksi PZEM-004T, dan tunggu pembacaan berikutnya."
-        "LEAKAGE" -> "Sistem membaca indikasi arus bocor atau arus abnormal. Periksa isolasi, sambungan, dan kondisi beban sebelum relay dinyalakan kembali."
         "WARNING" -> "Arus mendekati ambang batas. Pantau perubahan beban dan pastikan konsumsi masih sesuai kapasitas uji."
         "UNKNOWN" -> "Status belum dikenali. Tunggu data berikutnya atau periksa koneksi perangkat."
         else -> "Data realtime dibaca dari perangkat dan dievaluasi berdasarkan ambang sistem."
@@ -2276,7 +2267,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (value == 1 && (lastDeviceStatus == "LEAKAGE" || lastDeviceStatus == "DANGER" || lastDeviceStatus == "SENSOR_ERROR")) {
+        if (value == 1 && (lastDeviceStatus == "DANGER" || lastDeviceStatus == "SENSOR_ERROR")) {
             showToast("Perintah ON ditolak: kondisi $lastDeviceStatus. Perbaiki kondisi listrik lebih dulu.")
             return
         }

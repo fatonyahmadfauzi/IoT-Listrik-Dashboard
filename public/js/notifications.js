@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────
  * Browser notification helpers.
  * Uses the Web Notifications API (no server needed).
- * Triggered locally when RTDB status changes to LEAKAGE/DANGER.
+ * Triggered locally when RTDB status changes to DANGER.
  * ─────────────────────────────────────────────────────────────
  */
 
@@ -421,7 +421,7 @@ function startSystemNotificationFeed(options = {}) {
 /**
  * Check status and send notification if status is critical.
  * Prevents duplicate notifications for the same status.
- * @param {string} status - 'NORMAL' | 'WARNING' | 'LEAKAGE' | 'DANGER'
+ * @param {string} status - 'NORMAL' | 'WARNING' | 'DANGER' | 'SENSOR_ERROR'
  * @param {number} arus   - current in Amperes
  * @param {number} tegangan - voltage in Volts
  */
@@ -446,14 +446,14 @@ function checkAndNotify(status, arus, tegangan) {
   status = status || 'NORMAL';
 
   // Always evaluate siren state based on current status
-  if (status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER' || status === 'SENSOR_ERROR') {
+  if (status === 'WARNING' || status === 'DANGER' || status === 'SENSOR_ERROR') {
     // Requires page interaction first! (browser policy)
     playWebSiren();
   } else {
     stopWebSiren();
   }
 
-  const isDanger = status === 'WARNING' || status === 'LEAKAGE' || status === 'DANGER' || status === 'SENSOR_ERROR';
+  const isDanger = status === 'WARNING' || status === 'DANGER' || status === 'SENSOR_ERROR';
   if (!isDanger) {
     // Recovery handling + stop repeats
     if (status === 'NORMAL' && lastNotifiedStatus && lastNotifiedStatus !== 'NORMAL') {
@@ -482,14 +482,7 @@ function checkAndNotify(status, arus, tegangan) {
 
   if (!shouldNotify) return;
 
-  if (status === 'LEAKAGE') {
-    sendNotification(
-      '<iconify-icon icon="lucide:triangle-alert"></iconify-icon> Kebocoran Arus Terdeteksi!',
-      `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V\nSistem mendeteksi kebocoran arus listrik.`,
-      '/icons/icon-192.png',
-      'leakage-alert'
-    );
-  } else if (status === 'DANGER') {
+  if (status === 'DANGER') {
     sendNotification(
       '<iconify-icon icon="lucide:triangle-alert"></iconify-icon> BAHAYA! Kondisi Listrik Kritis!',
       `Arus: ${arus.toFixed(2)} A | Tegangan: ${tegangan.toFixed(1)} V\nRelay akan dimatikan otomatis!`,

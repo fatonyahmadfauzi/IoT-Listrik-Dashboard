@@ -163,7 +163,7 @@ function renderHeader() {
   if (lastUpdated) lastUpdated.textContent = upTxt;
   if (mLastUpdated) mLastUpdated.textContent = upTxt;
 
-  const risky = ["WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR"].includes(String(lastStatus).toUpperCase());
+  const risky = ["WARNING", "DANGER", "SENSOR_ERROR"].includes(String(lastStatus).toUpperCase());
   if (alertPulse) alertPulse.classList.toggle("hidden", !risky);
   if (mAlertPulse) mAlertPulse.classList.toggle("hidden", !risky);
 }

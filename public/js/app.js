@@ -89,7 +89,6 @@ function formatSeenTime(value) {
 
 function getStatusLabel(status) {
   if (status === "DANGER") return "Bahaya — gangguan ekstrem";
-  if (status === "LEAKAGE") return "Indikasi kebocoran arus";
   if (status === "WARNING") return "Peringatan — mendekati batas";
   if (status === "SENSOR_ERROR") return "Sensor tidak terbaca";
   if (status === "UNKNOWN") return "Status belum dikenali";
@@ -99,9 +98,6 @@ function getStatusLabel(status) {
 function getStatusHint(status) {
   if (status === "DANGER") {
     return "Auto-cutoff dan notifikasi bahaya diprioritaskan. Periksa beban, kabel, dan kondisi perangkat sebelum menyalakan relay kembali.";
-  }
-  if (status === "LEAKAGE") {
-    return "Sistem membaca indikasi arus bocor atau arus abnormal. Periksa isolasi, sambungan, dan kondisi beban sebelum relay dinyalakan kembali.";
   }
   if (status === "WARNING") {
     return "Arus mendekati ambang batas. Pantau perubahan beban dan pastikan konsumsi masih sesuai kapasitas uji.";
@@ -117,7 +113,9 @@ function getStatusHint(status) {
 
 function normalizeStatus(status) {
   const value = String(status || "NORMAL").toUpperCase();
-  return ["NORMAL", "WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR"].includes(value)
+  // LEAKAGE adalah status legacy; firmware ESP32 saat ini memakai DANGER.
+  if (value === "LEAKAGE") return "DANGER";
+  return ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"].includes(value)
     ? value
     : "UNKNOWN";
 }
@@ -135,21 +133,20 @@ function renderStatus(status) {
     statusSurface.classList.remove(
       "status-NORMAL",
       "status-WARNING",
-      "status-LEAKAGE",
       "status-DANGER",
       "status-SENSOR_ERROR",
       "status-UNKNOWN",
       "status-pulse-danger",
     );
     statusSurface.classList.add(`status-${safeStatus}`);
-    if (safeStatus === "DANGER" || safeStatus === "LEAKAGE") {
+    if (safeStatus === "DANGER") {
       statusSurface.classList.add("status-pulse-danger");
     } else {
       statusSurface.classList.remove("status-pulse-danger");
     }
   }
   if (elAlertPulse) {
-    if (safeStatus === "DANGER" || safeStatus === "LEAKAGE" || safeStatus === "WARNING" || safeStatus === "SENSOR_ERROR") {
+    if (safeStatus === "DANGER" || safeStatus === "WARNING" || safeStatus === "SENSOR_ERROR") {
       elAlertPulse.classList.remove("hidden");
     } else {
       elAlertPulse.classList.add("hidden");
@@ -195,7 +192,7 @@ function renderConnectionMeta(m) {
   // Re-render tombol relay sesuai state terakhir + status koneksi
   if (lastRelayVal !== -1) renderRelay(lastRelayVal);
   if (elRelayHint) {
-    const statusUnsafe = lastDeviceStatus === "DANGER" || lastDeviceStatus === "LEAKAGE";
+    const statusUnsafe = lastDeviceStatus === "DANGER";
     if (!relayControlAllowed) {
       elRelayHint.textContent = relayControlReason;
     } else if (statusUnsafe) {
@@ -264,7 +261,7 @@ async function sendRelayCommand(val) {
   }
 
   // Blokir perintah ON hanya jika kondisi bahaya masih aktif
-  if (val === 1 && (lastDeviceStatus === "DANGER" || lastDeviceStatus === "LEAKAGE" || lastDeviceStatus === "SENSOR_ERROR")) {
+  if (val === 1 && (lastDeviceStatus === "DANGER" || lastDeviceStatus === "SENSOR_ERROR")) {
     showToast(
       `Perintah ON ditolak: kondisi ${lastDeviceStatus}. Perbaiki kondisi listrik lebih dulu.`,
       "error",

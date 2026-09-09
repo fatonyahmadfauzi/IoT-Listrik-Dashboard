@@ -96,7 +96,7 @@ function App() {
     }
 
     const danger = (s: string) =>
-      s === 'WARNING' || s === 'LEAKAGE' || s === 'DANGER' || s === 'SENSOR_ERROR';
+      s === 'WARNING' || s === 'DANGER' || s === 'SENSOR_ERROR';
     const isDanger = danger(status);
     const wasDanger = prevStatus.current != null && danger(prevStatus.current);
 

@@ -63,7 +63,7 @@ Seluruh artefak unduhan tersedia melalui release terpadu `v1.1.9`.
 ## Catatan Logika Deteksi
 
 - Sistem membaca parameter listrik utama menggunakan **PZEM-004T**. Rangkaian sensor analog tambahan tidak lagi dipakai pada firmware utama.
-- Dashboard menampilkan **indikasi arus bocor** atau **arus abnormal** sebagai peringatan dini, bukan pengukuran residual current presisi seperti **RCD/ELCB**.
+- Dashboard menampilkan **indikasi arus abnormal berdasarkan threshold** sebagai peringatan dini, bukan pengukuran residual current presisi seperti **RCD/ELCB**. Status operasional perangkat adalah NORMAL, WARNING, DANGER, dan SENSOR_ERROR; LEAKAGE hanya dipertahankan untuk kompatibilitas data lama dan dipetakan sebagai DANGER.
 - **Beban tinggi normal** tidak otomatis dianggap kebocoran selama nilai arus masih sesuai kapasitas beban uji dan belum melewati ambang yang ditentukan.
 - **Short circuit / gangguan ekstrem** diperlakukan sebagai kondisi bahaya dengan lonjakan arus sangat besar dan cepat.
 - **MCB / ELCB** tetap menjadi proteksi utama instalasi listrik, sedangkan sistem ini berfungsi sebagai monitoring, notifikasi, dan auto-cutoff tambahan.

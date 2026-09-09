@@ -18,7 +18,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 const chartText = '#cbd5e1';
 const chartGrid = 'rgba(148, 163, 184, 0.16)';
 
-type StatusFilter = '' | 'NORMAL' | 'WARNING' | 'LEAKAGE' | 'DANGER' | 'SENSOR_ERROR';
+type StatusFilter = '' | 'NORMAL' | 'WARNING' | 'DANGER' | 'SENSOR_ERROR';
 type LogMode = 'summary' | 'detail';
 
 function number(value: unknown, fallback = 0) {
@@ -49,7 +49,8 @@ function formatClock(timestamp?: number) {
 
 function normalizeStatus(status?: string) {
   const value = String(status || 'NORMAL').toUpperCase();
-  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
+  if (value === 'LEAKAGE') return 'DANGER'; // status legacy
+  return ['NORMAL', 'WARNING', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
 }
 
 function statusClass(status?: string) {
@@ -58,8 +59,6 @@ function statusClass(status?: string) {
       return 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200';
     case 'WARNING':
       return 'border-amber-300/45 bg-amber-500/15 text-amber-100';
-    case 'LEAKAGE':
-      return 'border-orange-300/45 bg-orange-500/15 text-orange-100';
     case 'DANGER':
       return 'border-red-300/50 bg-red-500/20 text-red-100';
     case 'SENSOR_ERROR':
@@ -362,7 +361,6 @@ export function History() {
               <option value="">Semua Status</option>
               <option value="NORMAL">NORMAL</option>
               <option value="WARNING">WARNING</option>
-              <option value="LEAKAGE">LEAKAGE</option>
               <option value="DANGER">DANGER</option>
               <option value="SENSOR_ERROR">SENSOR_ERROR</option>
             </select>

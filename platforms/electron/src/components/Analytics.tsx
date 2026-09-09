@@ -28,7 +28,6 @@ ChartJS.register(
 const colors = {
   normal: '#22c55e',
   warning: '#facc15',
-  leakage: '#fb923c',
   danger: '#ef4444',
   current: '#22c55e',
   voltage: '#60a5fa',
@@ -98,7 +97,8 @@ function readApparent(source: any) {
 
 function normalizeStatus(status?: string) {
   const value = String(status || 'NORMAL').toUpperCase();
-  return ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
+  if (value === 'LEAKAGE') return 'DANGER'; // status legacy
+  return ['NORMAL', 'WARNING', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
 }
 
 function statusBadgeClass(status?: string) {
@@ -107,8 +107,6 @@ function statusBadgeClass(status?: string) {
       return 'border-emerald-400/45 bg-emerald-500/15 text-emerald-200';
     case 'WARNING':
       return 'border-amber-300/45 bg-amber-500/15 text-amber-100';
-    case 'LEAKAGE':
-      return 'border-orange-300/45 bg-orange-500/15 text-orange-100';
     case 'DANGER':
       return 'border-red-300/50 bg-red-500/20 text-red-100';
     default:
@@ -134,7 +132,6 @@ export function Analytics() {
     () => ({
       NORMAL: filteredLogs.filter((log) => normalizeStatus(log.status) === 'NORMAL').length,
       WARNING: filteredLogs.filter((log) => normalizeStatus(log.status) === 'WARNING').length,
-      LEAKAGE: filteredLogs.filter((log) => normalizeStatus(log.status) === 'LEAKAGE').length,
       DANGER: filteredLogs.filter((log) => normalizeStatus(log.status) === 'DANGER').length,
       SENSOR_ERROR: filteredLogs.filter((log) => normalizeStatus(log.status) === 'SENSOR_ERROR').length,
     }),
@@ -154,14 +151,13 @@ export function Analytics() {
     avgFreq: average(freqValues),
     avgApparent: average(apparentValues),
     peakApparent: maxValue(apparentValues),
-    riskCount: statusCounts.WARNING + statusCounts.LEAKAGE + statusCounts.DANGER,
+    riskCount: statusCounts.WARNING + statusCounts.DANGER,
   };
 
   const statusTotal = Object.values(statusCounts).reduce((sum, value) => sum + value, 0);
   const statusRows = [
     ['NORMAL', statusCounts.NORMAL, colors.normal],
     ['WARNING', statusCounts.WARNING, colors.warning],
-    ['LEAKAGE', statusCounts.LEAKAGE, colors.leakage],
     ['DANGER', statusCounts.DANGER, colors.danger],
     ['SENSOR_ERROR', statusCounts.SENSOR_ERROR, colors.sensorError],
   ] as const;
@@ -234,17 +230,16 @@ export function Analytics() {
   };
 
   const statusData = {
-    labels: ['NORMAL', 'WARNING', 'LEAKAGE', 'DANGER', 'SENSOR_ERROR'],
+    labels: ['NORMAL', 'WARNING', 'DANGER', 'SENSOR_ERROR'],
     datasets: [
       {
         data: [
           statusCounts.NORMAL,
           statusCounts.WARNING,
-          statusCounts.LEAKAGE,
           statusCounts.DANGER,
           statusCounts.SENSOR_ERROR,
         ],
-        backgroundColor: [colors.normal, colors.warning, colors.leakage, colors.danger, colors.sensorError],
+        backgroundColor: [colors.normal, colors.warning, colors.danger, colors.sensorError],
         borderColor: 'rgba(7, 12, 24, 0.92)',
         borderWidth: 4,
       },
@@ -432,7 +427,7 @@ export function Analytics() {
           ['Power factor rata-rata', stats.avgPf.toFixed(2), 'Diambil dari PZEM / fallback settings', 'border-l-cyan-400'],
           ['Frekuensi rata-rata', `${stats.avgFreq.toFixed(1)} Hz`, 'Nominal grid PLN', 'border-l-orange-400'],
           ['Apparent puncak', `${stats.peakApparent.toFixed(0)} VA`, `Rata-rata ${stats.avgApparent.toFixed(0)} VA`, 'border-l-sky-300'],
-          ['Status berisiko', String(stats.riskCount), 'WARNING + LEAKAGE + DANGER', 'border-l-red-400'],
+          ['Status berisiko', String(stats.riskCount), 'WARNING + DANGER', 'border-l-red-400'],
         ].map(([label, value, note, border]) => (
           <article key={label} className={`rounded-xl border border-slate-700/75 bg-slate-900/70 p-5 shadow-lg border-l-2 ${border}`}>
             <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
@@ -456,7 +451,7 @@ export function Analytics() {
         <article className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
           <div className="border-b border-slate-700/70 pb-4">
             <h2 className="text-lg font-black text-white">Distribusi Status</h2>
-            <p className="mt-1 text-sm text-slate-400">Perbandingan NORMAL, WARNING, LEAKAGE, DANGER, dan SENSOR_ERROR.</p>
+            <p className="mt-1 text-sm text-slate-400">Perbandingan NORMAL, WARNING, DANGER, dan SENSOR_ERROR.</p>
           </div>
           <div className="mt-6 h-80 min-w-0">
             <Doughnut data={statusData} options={commonChartOptions} />

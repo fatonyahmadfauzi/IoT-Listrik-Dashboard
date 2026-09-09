@@ -46,14 +46,6 @@ const statusCopy: Record<
     title: 'Perlu perhatian',
     hint: 'Nilai listrik mendekati ambang batas. Periksa beban dan kondisi instalasi.',
   },
-  LEAKAGE: {
-    panel: 'border-orange-400/55 bg-orange-500/10',
-    badge: 'border-orange-300/45 bg-orange-500/15 text-orange-100',
-    text: 'text-orange-200',
-    iconBox: 'text-orange-100 bg-orange-500/20 border-orange-300/30',
-    title: 'Indikasi arus abnormal',
-    hint: 'Sistem membaca indikasi arus abnormal berdasarkan ambang dan pola data perangkat.',
-  },
   DANGER: {
     panel: 'border-red-400/60 bg-red-500/10',
     badge: 'border-red-300/50 bg-red-500/20 text-red-100',
@@ -119,7 +111,6 @@ function relayLabel(relay?: boolean) {
 
 function getStatusIcon(status: string) {
   if (status === 'NORMAL') return Shield;
-  if (status === 'LEAKAGE') return Zap;
   return AlertTriangle;
 }
 

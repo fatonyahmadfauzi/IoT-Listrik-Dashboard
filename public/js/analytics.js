@@ -41,7 +41,6 @@ const TREND_LIMIT = 60;
 const COLORS = {
   normal: "#22c55e",
   warning: "#fcd34d",
-  leakage: "#fb923c",
   danger: "#ef4444",
   sensorError: "#6b7280",
   current: "#22c55e",
@@ -82,7 +81,8 @@ function number(value, fallback = 0) {
 
 function normalizeStatus(status) {
   const value = String(status || "NORMAL").toUpperCase();
-  return ["NORMAL", "WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR"].includes(value)
+  if (value === "LEAKAGE") return "DANGER"; // status legacy
+  return ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"].includes(value)
     ? value
     : "UNKNOWN";
 }
@@ -353,11 +353,11 @@ function createStatusChart(canvas) {
   return new Chart(canvas, {
     type: "doughnut",
     data: {
-      labels: ["NORMAL", "WARNING", "LEAKAGE", "DANGER", "SENSOR_ERROR"],
+      labels: ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"],
       datasets: [
         {
-          data: [0, 0, 0, 0, 0],
-          backgroundColor: [COLORS.normal, COLORS.warning, COLORS.leakage, COLORS.danger, COLORS.sensorError],
+          data: [0, 0, 0, 0],
+          backgroundColor: [COLORS.normal, COLORS.warning, COLORS.danger, COLORS.sensorError],
           borderColor: "rgba(7,12,24,0.92)",
           borderWidth: 4,
           hoverOffset: 6,
@@ -470,7 +470,7 @@ function calculateStats(entries) {
   const energies = entries.map((entry) => entry.energi_kwh);
   const pfs = entries.map((entry) => entry.power_factor);
   const freqs = entries.map((entry) => entry.frekuensi);
-  const statusCounts = { NORMAL: 0, WARNING: 0, LEAKAGE: 0, DANGER: 0, SENSOR_ERROR: 0 };
+  const statusCounts = { NORMAL: 0, WARNING: 0, DANGER: 0, SENSOR_ERROR: 0 };
 
   entries.forEach((entry) => {
     if (statusCounts[entry.status] !== undefined) statusCounts[entry.status] += 1;
@@ -497,7 +497,7 @@ function calculateStats(entries) {
 }
 
 function updateSummary(stats, latest) {
-  const riskCount = stats.statusCounts.WARNING + stats.statusCounts.LEAKAGE + stats.statusCounts.DANGER + stats.statusCounts.SENSOR_ERROR;
+  const riskCount = stats.statusCounts.WARNING + stats.statusCounts.DANGER + stats.statusCounts.SENSOR_ERROR;
   const latestStatus = latest?.status || "UNKNOWN";
 
   if (countEl) countEl.textContent = `${stats.count} log`;
@@ -633,7 +633,6 @@ function updateStatusChart(stats) {
   const counts = [
     stats.statusCounts.NORMAL,
     stats.statusCounts.WARNING,
-    stats.statusCounts.LEAKAGE,
     stats.statusCounts.DANGER,
     stats.statusCounts.SENSOR_ERROR,
   ];
@@ -644,9 +643,8 @@ function updateStatusChart(stats) {
   const rows = [
     ["NORMAL", counts[0], COLORS.normal],
     ["WARNING", counts[1], COLORS.warning],
-    ["LEAKAGE", counts[2], COLORS.leakage],
-    ["DANGER", counts[3], COLORS.danger],
-    ["SENSOR_ERROR", counts[4], COLORS.sensorError],
+    ["DANGER", counts[2], COLORS.danger],
+    ["SENSOR_ERROR", counts[3], COLORS.sensorError],
   ];
 
   if (statusLegendEl) {

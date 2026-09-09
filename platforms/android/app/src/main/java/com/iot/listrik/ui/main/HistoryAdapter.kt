@@ -168,7 +168,7 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
 
     private fun normalizeStatus(raw: String?): String = when (raw?.trim()?.uppercase(Locale.ROOT)) {
         "DANGER" -> "DANGER"
-        "LEAKAGE" -> "LEAKAGE"
+        "LEAKAGE" -> "DANGER" // status legacy
         "WARNING" -> "WARNING"
         "NORMAL" -> "NORMAL"
         "SENSOR_ERROR" -> "SENSOR_ERROR"
@@ -213,7 +213,6 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
     private fun applyStatusStyle(view: TextView, status: String) {
         val color = when (status) {
             "DANGER" -> Color.parseColor("#ef4444")
-            "LEAKAGE" -> Color.parseColor("#fb923c")
             "WARNING" -> Color.parseColor("#fee58a")
             "NORMAL" -> Color.parseColor("#2eea72")
             "SENSOR_ERROR" -> Color.parseColor("#7c879b")

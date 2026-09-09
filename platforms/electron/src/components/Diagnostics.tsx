@@ -47,7 +47,10 @@ export function Diagnostics() {
     { icon: Radio, title: 'Relay dan buzzer', state: online ? 'ok' as const : 'warn' as const, label: online ? 'STATUS LOGIS' : 'TIDAK DIKETAHUI', description: 'Menampilkan status logis terakhir; keberhasilan fisik perlu uji langsung.', rows: [['Relay logis', online ? (data?.relay ? 'ON' : 'OFF') : 'Tidak ada heartbeat'], ['Buzzer', 'Tidak dapat dipastikan jarak jauh']] },
     { icon: Database, title: 'Firebase', state: firebaseConnected ? 'ok' as const : 'error' as const, label: firebaseConnected ? 'TERHUBUNG' : 'TERPUTUS', description: 'Status koneksi aplikasi ke Realtime Database.', rows: [['Koneksi', firebaseDetail], ['Sumber data', String(data?.sensor_source || 'PZEM-004T')]] },
   ];
-  const overall = !firebaseConnected || !online || !meterOk || sensorError ? { state: 'error' as const, label: 'PERLU PEMERIKSAAN' } : { state: 'ok' as const, label: 'SEMUA NORMAL' };
+  const lcdError = data?.lcd_ok === false;
+  const overall = !firebaseConnected || !online || !meterOk || sensorError || lcdError
+    ? { state: 'error' as const, label: 'PERLU PEMERIKSAAN' }
+    : { state: 'ok' as const, label: 'SEMUA NORMAL' };
   const firmwareAsset = release?.assets?.find((asset: any) => /\.bin$/i.test(asset.name || ''));
   const firmwareBadge = checking
     ? { state: 'warn' as const, label: 'MEMERIKSA' }

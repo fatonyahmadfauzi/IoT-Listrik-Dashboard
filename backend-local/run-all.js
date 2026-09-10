@@ -4,7 +4,8 @@ const path = require('path');
 const cwd = __dirname;
 const services = [
   { name: 'backend', file: 'server.js' },
-  { name: 'notifier', file: 'discord-notifier.js' },
+  { name: 'notifier-hardware', file: 'discord-notifier.js' },
+  { name: 'notifier-simulator', file: 'sim-notifier.js' },
 ];
 
 let stopping = false;
@@ -41,5 +42,5 @@ function stopAll(exitCode = 0) {
 process.on('SIGINT', () => stopAll(0));
 process.on('SIGTERM', () => stopAll(0));
 
-console.log('[start:all] Backend API dan Discord/Telegram notifier berjalan bersamaan.');
-console.log('[start:all] Tekan Ctrl+C untuk menghentikan keduanya.');
+console.log('[start:all] Backend API, notifier hardware, dan notifier simulator berjalan bersamaan.');
+console.log('[start:all] Tekan Ctrl+C untuk menghentikan semua layanan.');

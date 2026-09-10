@@ -9,6 +9,7 @@ Folder ini berisi backend lokal Node.js untuk fitur yang membutuhkan server berj
 | `server.js` | `npm start` | Health endpoint lokal, API baca `/listrik` dan `/logs`, serta trigger FCM untuk Android saat status berubah |
 | `discord-notifier.js` | `npm run discord` | Notifikasi hardware utama ke Discord, Telegram, laporan harian Excel, dan command Telegram `/pause` `/resume` `/diagnostik` `/system_update` |
 | `sim-notifier.js` | `npm run sim-notify` | Notifikasi khusus akun simulator pada path `/sim/{uid}` |
+| `run-all.js` | `npm run start:all` | Menjalankan API lokal, notifier hardware, dan notifier simulator sekaligus |
 | `seed-demo.js` | `npm run seed-demo` | Membuat data demo untuk pengujian lokal |
 
 ## Prasyarat
@@ -52,6 +53,20 @@ Catatan: `server.js` membaca `FIREBASE_DATABASE_URL` dari `.env`. `ALLOWED_ORIGI
 cd backend-local
 npm install
 ```
+
+## Jalankan Semua Layanan (Direkomendasikan)
+
+```bash
+npm run start:all
+```
+
+Perintah tersebut menjalankan tiga proses sekaligus:
+
+1. `server.js` untuk API lokal dan FCM.
+2. `discord-notifier.js` untuk perangkat ESP32 fisik.
+3. `sim-notifier.js` untuk akun simulator pada `/sim/{uid}`.
+
+Tekan `Ctrl+C` satu kali untuk menghentikan seluruh proses.
 
 ## Jalankan Backend
 

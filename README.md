@@ -505,18 +505,14 @@ https://iot-listrik-dashboard.vercel.app/telegram
 
 Setiap Chat ID dapat melakukan `/pause` dan `/resume` untuk menghentikan atau mengaktifkan notifikasi miliknya sendiri. Perintah `/diagnostik` memeriksa kesehatan sistem, sedangkan `/system_update` atau `/firmware` memeriksa release firmware ESP32.
 
-**3. Jalankan local notifier:**
+**3. Jalankan backend dan seluruh notifier:**
 ```bash
 cd backend-local
 npm install
-# Untuk Hardware Utama ESP32
-npm run discord
-# ATAU manual: node discord-notifier.js
-
-# Untuk Simulator Virtual PWA
-npm run sim-notify
-# ATAU manual: node sim-notifier.js
+npm run start:all
 ```
+
+Perintah `start:all` menjalankan API lokal, notifier hardware ESP32, dan notifier simulator secara bersamaan. Untuk menjalankan layanan secara terpisah gunakan `npm start`, `npm run discord`, atau `npm run sim-notify`.
 
 Notifier membaca konfigurasi Telegram dan Discord dari RTDB secara real-time. Discord Bot untuk status server dan ban/unban user memakai endpoint Vercel API di folder `api/`.
 

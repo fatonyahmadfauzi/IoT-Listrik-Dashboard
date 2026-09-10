@@ -42,11 +42,16 @@ async function saveDiscordBotSummary(summary) {
   await admin.database().ref(DISCORD_BOT_SUMMARY_PATH).set(summary);
 }
 
-function buildDiscordHeaders(token, auditReason = "") {
+function buildDiscordHeaders(token, auditReason = "", hasJsonBody = false) {
   const headers = {
     Authorization: `Bot ${token}`,
-    "Content-Type": "application/json",
   };
+
+  // Jangan kirim Content-Type JSON pada GET/DELETE tanpa body. Discord akan
+  // mencoba mengurai body kosong dan membalas 50109 (invalid JSON).
+  if (hasJsonBody) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (auditReason) {
     headers["X-Audit-Log-Reason"] = encodeURIComponent(auditReason);
@@ -60,10 +65,11 @@ async function discordApi(path, { token, method = "GET", body, auditReason = "",
     throw httpError(400, "Discord Bot Token belum dikonfigurasi.");
   }
 
+  const hasJsonBody = body !== undefined && body !== null;
   const response = await fetch(`${DISCORD_API_BASE}${path}`, {
     method,
-    headers: buildDiscordHeaders(token, auditReason),
-    body: body ? JSON.stringify(body) : undefined,
+    headers: buildDiscordHeaders(token, auditReason, hasJsonBody),
+    body: hasJsonBody ? JSON.stringify(body) : undefined,
   });
 
   if (!okStatuses.includes(response.status)) {
@@ -73,7 +79,23 @@ async function discordApi(path, { token, method = "GET", body, auditReason = "",
     } catch (_) {
       detail = "";
     }
-    const message = detail || `Discord API mengembalikan HTTP ${response.status}.`;
+
+    let discordMessage = "";
+    let discordCode = "";
+    if (detail) {
+      try {
+        const payload = JSON.parse(detail);
+        discordMessage = String(payload?.message || "").trim();
+        discordCode = payload?.code != null ? String(payload.code) : "";
+      } catch (_) {
+        discordMessage = detail.trim();
+      }
+    }
+
+    const suffix = discordCode ? ` (Discord ${discordCode})` : "";
+    const message = discordMessage
+      ? `${discordMessage}${suffix}`
+      : `Discord API mengembalikan HTTP ${response.status}.`;
     throw httpError(response.status, message);
   }
 

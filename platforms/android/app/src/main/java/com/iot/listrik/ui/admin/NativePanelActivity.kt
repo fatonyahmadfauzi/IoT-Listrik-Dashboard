@@ -97,11 +97,29 @@ class NativePanelActivity : AppCompatActivity() {
     private fun buildShell(text: String) {
         root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.rgb(7, 12, 20)) }
         val bar = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(8), 0, dp(8), 0); setBackgroundColor(Color.rgb(17, 24, 32)) }
-        val back = TextView(this).apply { this.text = "‹"; textSize = 30f; gravity = Gravity.CENTER; setTextColor(Color.rgb(203, 213, 225)); isClickable = true; isFocusable = true; setOnClickListener { finish() } }
+        val back = ImageButton(this).apply {
+            setImageResource(R.drawable.ic_arrow_back_24)
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            scaleType = ImageView.ScaleType.CENTER
+            contentDescription = "Kembali"
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { finish() }
+        }
         bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(56)))
-        viewTitle = TextView(this).apply { this.text = text; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER_VERTICAL }
+        viewTitle = TextView(this).apply { this.text = text; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER_VERTICAL; includeFontPadding = false }
         bar.addView(viewTitle, LinearLayout.LayoutParams(0, dp(56), 1f))
-        val reload = TextView(this).apply { this.text = "↻"; textSize = 21f; gravity = Gravity.CENTER; setTextColor(Color.rgb(203, 213, 225)); isClickable = true; isFocusable = true; setOnClickListener { recreate() } }
+        val reload = ImageButton(this).apply {
+            setImageResource(R.drawable.ic_refresh_24)
+            setBackgroundColor(Color.TRANSPARENT)
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            scaleType = ImageView.ScaleType.CENTER
+            contentDescription = "Muat ulang"
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { recreate() }
+        }
         bar.addView(reload, LinearLayout.LayoutParams(dp(48), dp(56)))
         root.addView(bar, LinearLayout.LayoutParams(-1, dp(56)))
         val scroll = ScrollView(this).apply { isFillViewport = true; clipToPadding = false }

@@ -49,12 +49,26 @@
         <Button
             android:id="@+id/btnDismiss"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="wrap_content"
+            android:minHeight="68dp"
+            android:paddingStart="20dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="10dp"
             android:backgroundTint="#FFFFFF"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:lineSpacingExtra="2dp"
+            android:maxLines="2"
+            android:textAlignment="center"
             android:textColor="#FF0000"
-            android:textSize="18sp"
+            android:textSize="17sp"
             android:textStyle="bold"
-            android:text="BUKA APLIKASI &amp; MATIKAN ALARM"/>
+            android:text="BUKA APLIKASI &amp; MATIKAN ALARM"
+            app:autoSizeMaxTextSize="17sp"
+            app:autoSizeMinTextSize="14sp"
+            app:autoSizeStepGranularity="1sp"
+            app:autoSizeTextType="uniform"/>
 
     </LinearLayout>
 </LinearLayout>

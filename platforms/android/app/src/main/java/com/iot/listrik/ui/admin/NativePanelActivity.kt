@@ -9,6 +9,7 @@ import android.graphics.drawable.GradientDrawable
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.net.Uri
+import android.text.InputFilter
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -49,6 +50,10 @@ class NativePanelActivity : AppCompatActivity() {
     private var telegramActionStatus: TextView? = null
     private var discordBotSummaryHost: LinearLayout? = null
     private var adminActionStatus: TextView? = null
+    private var databaseBackupStatus: TextView? = null
+    private var monitoringWipeStatus: TextView? = null
+    private var monitoringWipeActionId = ""
+    private var monitoringWipeExpiresAt = 0L
 
     data class TelegramRecipient(
         var name: String,
@@ -266,9 +271,12 @@ class NativePanelActivity : AppCompatActivity() {
 
         section("Administrasi Data", "Pengosongan data realtime memerlukan konfirmasi nama project.")
         field("liveConfirmation", "Ketik: IoT Listrik Dashboard", "")
-        adminActionStatus = TextView(this).apply { text = "Status operasi akan ditampilkan di sini."; textSize = 11.5f; setTextColor(Color.rgb(148, 163, 184)); setPadding(0, dp(6), 0, dp(6)) }
+        adminActionStatus = operationStatus("Siap", "Aksi ini hanya mengosongkan data realtime /listrik setelah nama project dikonfirmasi.")
         addToSection(adminActionStatus!!)
         action("Kosongkan Data Realtime") { api("confirm-live-reset", mapOf("confirmationText" to value("liveConfirmation"))) }
+
+        renderDatabaseBackupSection()
+        renderMonitoringWipeSection()
 
         section("Backend Web / Local", "Konfigurasi ini disimpan lokal pada Android.")
         field("publicApiBase", "Public API", "")
@@ -281,6 +289,159 @@ class NativePanelActivity : AppCompatActivity() {
         action("Simpan Konfigurasi Backend") { saveLocalConfig() }
         loadSettings()
         loadLocalConfig()
+    }
+
+    private fun renderDatabaseBackupSection() {
+        section(
+            "Backup Database Firebase",
+            "Membuat snapshot Realtime Database dan mengirimkannya ke email admin tanpa mengubah data."
+        )
+        addToSection(infoPanel(
+            "Khusus admin utama",
+            "Aksi ini membuat salinan Realtime Database dalam format JSON dan melampirkan database.rules.json aktif dari workspace project ke email admin.",
+            AMBER
+        ))
+        addToSection(infoPanel(
+            "Cocok digunakan sebelum reset",
+            "Snapshot dibuat saat tombol dijalankan sehingga tersedia arsip sebelum reset atau penghapusan data monitoring.",
+            Color.rgb(96, 165, 250)
+        ))
+        addToSection(infoPanel(
+            "Email tujuan",
+            "Backup akan dikirim ke email admin yang sedang login: ${auth.currentUser?.email ?: "email belum tersedia"}",
+            Color.rgb(125, 211, 252)
+        ))
+        addToSection(detailGrid(listOf(
+            "Lampiran Backup" to "Dua lampiran: default-rtdb-export.json dan database-rules.json.",
+            "Dampak Aksi" to "Hanya membuat dan mengirim backup. Data realtime, histori log, settings, dan user tidak disentuh."
+        )))
+        databaseBackupStatus = operationStatus(
+            "Siap",
+            "Bagian ini membuat snapshot Realtime Database saat ini dan mengirimkannya bersama file rules ke email admin yang sedang login."
+        )
+        addToSection(databaseBackupStatus!!)
+        lateinit var backupButton: Button
+        backupButton = action("Kirim Backup Database ke Email Admin") {
+            backupButton.isEnabled = false
+            setOperationStatus(databaseBackupStatus, "Memproses", "Snapshot database sedang dibuat dan dikirim ke email admin.", AMBER)
+            api(
+                "send-database-backup-email",
+                emptyMap(),
+                onError = { error ->
+                    backupButton.isEnabled = true
+                    setOperationStatus(databaseBackupStatus, "Gagal", error, RED)
+                },
+                onSuccess = { json ->
+                    backupButton.isEnabled = true
+                    val sentAt = json.optLong("sentAt", 0L)
+                    val label = if (sentAt > 0) SimpleDateFormat("dd/MM/yyyy, HH.mm.ss", Locale("id", "ID")).format(Date(sentAt)) else "baru saja"
+                    setOperationStatus(databaseBackupStatus, "Berhasil", "Backup database berhasil dikirim pada $label WIB.", GREEN)
+                }
+            )
+        }
+    }
+
+    private fun renderMonitoringWipeSection() {
+        section(
+            "Hapus Semua Data Monitoring",
+            "Mengosongkan /listrik dan menghapus seluruh histori /logs setelah verifikasi OTP email."
+        )
+        addToSection(infoPanel(
+            "Khusus admin utama",
+            "Aksi ini mengosongkan data monitoring pada /listrik dan menghapus histori /logs. Settings, data user, dan bootstrap device tidak ikut dihapus.",
+            AMBER
+        ))
+        addToSection(infoPanel(
+            "Alur verifikasi",
+            "Kirim OTP, buka email admin yang sedang login, lalu masukkan kode 6 digit untuk menyetujui penghapusan.",
+            Color.rgb(96, 165, 250)
+        ))
+        addToSection(infoPanel(
+            "Email tujuan OTP",
+            "OTP akan dikirim ke email admin yang sedang login: ${auth.currentUser?.email ?: "email belum tersedia"}",
+            Color.rgb(125, 211, 252)
+        ))
+        field("monitoringWipeOtp", "Kode OTP Email Admin", "")
+        fields["monitoringWipeOtp"]?.apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            filters = arrayOf(InputFilter.LengthFilter(6))
+            hint = "Masukkan 6 digit OTP"
+        }
+        addToSection(infoPanel(
+            "Ketentuan OTP",
+            "OTP hanya berlaku beberapa menit dan hanya dapat dipakai satu kali untuk menghapus semua data monitoring.",
+            Color.rgb(134, 239, 172)
+        ))
+        addToSection(detailGrid(listOf(
+            "Dampak Hapus Semua" to "Data /listrik dikosongkan ke nilai default dan histori /logs dihapus sampai kosong.",
+            "Data yang Dipertahankan" to "Pengaturan sistem, pengguna, konfigurasi Telegram/Discord, dan bootstrap device tetap tersimpan."
+        )))
+        monitoringWipeStatus = operationStatus(
+            "Siap",
+            "Aksi ini akan mengosongkan data realtime /listrik dan menghapus histori /logs setelah OTP email diverifikasi."
+        )
+        addToSection(monitoringWipeStatus!!)
+
+        lateinit var sendOtpButton: Button
+        lateinit var wipeButton: Button
+        sendOtpButton = action("Kirim OTP ke Email Admin") {
+            sendOtpButton.isEnabled = false
+            setOperationStatus(monitoringWipeStatus, "Mengirim OTP", "Menyiapkan kode verifikasi untuk email admin.", AMBER)
+            api(
+                "request-monitoring-wipe-otp",
+                emptyMap(),
+                onError = { error ->
+                    sendOtpButton.isEnabled = true
+                    setOperationStatus(monitoringWipeStatus, "Gagal Mengirim OTP", error, RED)
+                },
+                onSuccess = { json ->
+                    sendOtpButton.isEnabled = true
+                    monitoringWipeActionId = json.optString("actionId", "")
+                    monitoringWipeExpiresAt = json.optLong("expiresAt", 0L)
+                    val expiry = if (monitoringWipeExpiresAt > 0) SimpleDateFormat("HH.mm.ss", Locale("id", "ID")).format(Date(monitoringWipeExpiresAt)) else "beberapa menit"
+                    setOperationStatus(monitoringWipeStatus, "OTP Terkirim", "Masukkan 6 digit OTP dari email admin. Kode berlaku sampai $expiry WIB.", GREEN)
+                }
+            )
+        }
+        wipeButton = action("Hapus Semua Data Monitoring") {
+            val otp = value("monitoringWipeOtp")
+            if (!otp.matches(Regex("\\d{6}"))) {
+                message("OTP harus terdiri dari 6 digit angka.", true)
+                setOperationStatus(monitoringWipeStatus, "OTP Tidak Valid", "Masukkan tepat 6 digit kode dari email admin.", RED)
+                return@action
+            }
+            if (monitoringWipeActionId.isBlank()) {
+                message("Kirim OTP terlebih dahulu.", true)
+                setOperationStatus(monitoringWipeStatus, "OTP Belum Diminta", "Tekan Kirim OTP ke Email Admin terlebih dahulu.", AMBER)
+                return@action
+            }
+            AlertDialogBuilder(this)
+                .setTitle("Hapus semua data monitoring?")
+                .setMessage("Data /listrik akan dikosongkan dan seluruh histori /logs akan dihapus. Aksi ini tidak dapat dibatalkan.")
+                .setNegativeButton("Batal", null)
+                .setPositiveButton("Hapus Data") { _, _ ->
+                    wipeButton.isEnabled = false
+                    setOperationStatus(monitoringWipeStatus, "Memverifikasi", "Memeriksa OTP dan menghapus data monitoring.", AMBER)
+                    api(
+                        "confirm-monitoring-wipe",
+                        mapOf("otp" to otp, "actionId" to monitoringWipeActionId),
+                        onError = { error ->
+                            wipeButton.isEnabled = true
+                            setOperationStatus(monitoringWipeStatus, "Gagal", error, RED)
+                        },
+                        onSuccess = { json ->
+                            wipeButton.isEnabled = true
+                            monitoringWipeActionId = ""
+                            monitoringWipeExpiresAt = 0L
+                            fields["monitoringWipeOtp"]?.setText("")
+                            val clearedAt = json.optLong("clearedAt", 0L)
+                            val label = if (clearedAt > 0) SimpleDateFormat("dd/MM/yyyy, HH.mm.ss", Locale("id", "ID")).format(Date(clearedAt)) else "baru saja"
+                            setOperationStatus(monitoringWipeStatus, "Berhasil", "Semua data monitoring berhasil dikosongkan pada $label WIB.", GREEN)
+                        }
+                    )
+                }
+                .show()
+        }
     }
 
     private fun showTelegram() {
@@ -536,7 +697,12 @@ class NativePanelActivity : AppCompatActivity() {
             .addOnFailureListener { message("Gagal: ${it.message}", true) }
     }
 
-    private fun api(path: String, body: Map<String, Any?>, onSuccess: (JSONObject) -> Unit = {}) {
+    private fun api(
+        path: String,
+        body: Map<String, Any?>,
+        onError: (String) -> Unit = {},
+        onSuccess: (JSONObject) -> Unit = {}
+    ) {
         auth.currentUser?.getIdToken(false)?.addOnSuccessListener { id ->
             thread {
                 try {
@@ -555,8 +721,20 @@ class NativePanelActivity : AppCompatActivity() {
                         else if (path == "get-discord-bot-status" && code in 200..299) "Ringkasan Discord Bot berhasil diperbarui."
                         else json?.optString("error")?.takeIf { it.isNotBlank() }
                         ?: "HTTP $code"
-                    runOnUiThread { message(label, code !in 200..299); adminActionStatus?.text = label; adminActionStatus?.setTextColor(if (code in 200..299) GREEN else RED); if (code in 200..299 && json != null) onSuccess(json) }
-                } catch (e: Exception) { runOnUiThread { message("Gagal: ${e.message}", true) } }
+                    runOnUiThread {
+                        val failed = code !in 200..299
+                        message(label, failed)
+                        adminActionStatus?.text = label
+                        adminActionStatus?.setTextColor(if (failed) RED else GREEN)
+                        if (!failed && json != null) onSuccess(json) else if (failed) onError(label)
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        val label = "Gagal: ${e.message}"
+                        message(label, true)
+                        onError(label)
+                    }
+                }
             }
         } ?: message("Sesi login tidak ditemukan.", true)
     }
@@ -866,7 +1044,7 @@ class NativePanelActivity : AppCompatActivity() {
         switches[k] = toggle
     }
 
-    private fun action(label: String, run: () -> Unit) {
+    private fun action(label: String, run: () -> Unit): Button {
         val button = Button(this).apply {
             text = label
             setAllCaps(false)
@@ -886,12 +1064,79 @@ class NativePanelActivity : AppCompatActivity() {
             setPadding(dp(10), 0, dp(10), 0)
             setOnClickListener { run() }
         }
-        addToSection(button, LinearLayout.LayoutParams(-1, dp(42)).apply {
-            topMargin = dp(5)
-            bottomMargin = dp(7)
-            leftMargin = dp(4)
-            rightMargin = dp(4)
+        addToSection(button, LinearLayout.LayoutParams(-1, dp(46)).apply {
+            topMargin = dp(6)
+            bottomMargin = dp(8)
+            leftMargin = dp(2)
+            rightMargin = dp(2)
         })
+        return button
+    }
+
+    private fun infoPanel(title: String, body: String, accent: Int): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(12), dp(10), dp(12), dp(10))
+        background = rounded(Color.rgb(13, 24, 36), accent, 10)
+        addView(TextView(this@NativePanelActivity).apply {
+            text = title
+            textSize = 12f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(accent)
+            includeFontPadding = false
+        })
+        addView(TextView(this@NativePanelActivity).apply {
+            text = body
+            textSize = 11.5f
+            setTextColor(Color.rgb(203, 213, 225))
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(0, dp(5), 0, 0)
+        })
+        layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+            topMargin = dp(5)
+            bottomMargin = dp(5)
+        }
+    }
+
+    private fun detailGrid(items: List<Pair<String, String>>): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        items.forEachIndexed { index, (title, body) ->
+            val card = LinearLayout(this@NativePanelActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(11), dp(10), dp(11), dp(10))
+                background = rounded(Color.rgb(10, 46, 29), Color.rgb(34, 197, 94), 10)
+                addView(TextView(this@NativePanelActivity).apply {
+                    text = title
+                    textSize = 11.5f
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(Color.rgb(134, 239, 172))
+                })
+                addView(TextView(this@NativePanelActivity).apply {
+                    text = body
+                    textSize = 11f
+                    setTextColor(Color.rgb(203, 213, 225))
+                    setLineSpacing(dp(2).toFloat(), 1f)
+                    setPadding(0, dp(4), 0, 0)
+                })
+            }
+            addView(card, LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = if (index == 0) dp(5) else dp(4)
+                bottomMargin = dp(4)
+            })
+        }
+    }
+
+    private fun operationStatus(title: String, body: String): TextView = TextView(this).apply {
+        textSize = 11.5f
+        setLineSpacing(dp(2).toFloat(), 1f)
+        setPadding(dp(12), dp(10), dp(12), dp(10))
+        setOperationStatus(this, title, body, Color.rgb(125, 211, 252))
+    }
+
+    private fun setOperationStatus(view: TextView?, title: String, body: String, accent: Int) {
+        view ?: return
+        view.text = "$title\n$body"
+        view.setTextColor(Color.rgb(226, 232, 240))
+        view.background = rounded(Color.rgb(13, 20, 28), accent, 10)
     }
 
     private fun card(parent: LinearLayout, heading: String, body: String, color: Int) {

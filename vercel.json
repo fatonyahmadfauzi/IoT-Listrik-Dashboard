@@ -99,6 +99,7 @@
     { "source": "/users.html",     "destination": "/app/users",     "permanent": true }
   ],
   "rewrites": [
+    { "source": "/api/user-admin-action", "destination": "/api/request-live-reset-otp" },
     { "source": "/api/get-telegram-bot-profile", "destination": "/api/telegram-admin-action?action=profile" },
     { "source": "/api/test-telegram-config",     "destination": "/api/telegram-admin-action?action=test" },
 

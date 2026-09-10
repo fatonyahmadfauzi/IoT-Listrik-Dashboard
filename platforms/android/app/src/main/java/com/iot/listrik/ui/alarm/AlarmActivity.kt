@@ -43,11 +43,7 @@ class AlarmActivity : AppCompatActivity() {
         binding = ActivityAlarmBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val title = intent.getStringExtra("EXTRA_TITLE") ?: "BAHAYA KRITIS!"
-        val message = intent.getStringExtra("EXTRA_MESSAGE") ?: "Kebocoran arus dideteksi."
-        
-        binding.tvAlarmTitle.text = title
-        binding.tvAlarmBody.text = message
+        renderAlarm(intent)
 
         if (!AlarmForegroundService.isActive(this)) {
             finish()
@@ -63,6 +59,23 @@ class AlarmActivity : AppCompatActivity() {
             AlarmForegroundService.stop(this)
             finish() // Close alarm, returns to previous app or home
         }
+    }
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // AlarmActivity memakai SINGLE_TOP. Saat WARNING meningkat menjadi
+        // DANGER, perbarui isi layar yang sudah terbuka tanpa membuat duplikat.
+        renderAlarm(intent)
+    }
+
+    private fun renderAlarm(sourceIntent: Intent) {
+        val title = sourceIntent.getStringExtra("EXTRA_TITLE") ?: "BAHAYA KRITIS!"
+        val message = sourceIntent.getStringExtra("EXTRA_MESSAGE")
+            ?: "Arus mencapai atau melebihi threshold. Periksa beban dan instalasi!"
+        binding.tvAlarmTitle.text = title
+        binding.tvAlarmBody.text = message
     }
 
     override fun onStart() {

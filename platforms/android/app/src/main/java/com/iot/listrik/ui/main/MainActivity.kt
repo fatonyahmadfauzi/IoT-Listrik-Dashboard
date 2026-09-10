@@ -2008,14 +2008,22 @@ class MainActivity : AppCompatActivity() {
         val dangerStatuses = setOf("WARNING", "DANGER", "SENSOR_ERROR")
         val isDanger = dangerStatuses.contains(status)
         val wasDanger = dangerStatuses.contains(lastStatus)
+        // DANGER harus selalu ditampilkan saat status baru masuk DANGER, termasuk
+        // eskalasi WARNING -> DANGER. WARNING/SENSOR_ERROR hanya membuka alarm
+        // ketika sebelumnya sistem berada pada kondisi aman.
+        val shouldShowAlarm = when (status) {
+            "DANGER" -> lastStatus != "DANGER"
+            "WARNING", "SENSOR_ERROR" -> !wasDanger
+            else -> false
+        }
 
-        if (isDanger && !wasDanger) {
+        if (shouldShowAlarm) {
             // Munculkan di Notification Tray Android
             val notifTitle = if (status == "DANGER") "BAHAYA KRITIS!" else "PERINGATAN!"
             val notifBody = when (status) {
-                "DANGER" -> "Arus mencapai atau melebihi threshold. Periksa beban dan instalasi!"
+                "DANGER" -> "Arus mencapai atau melebihi threshold. Relay diputus otomatis; periksa beban dan instalasi!"
                 "SENSOR_ERROR" -> "Sensor PZEM-004T tidak terbaca. Periksa koneksi sensor!"
-                else -> "Beban listrik melebihi batas. Periksa pemakaian!"
+                else -> "Arus mendekati batas threshold. Periksa pemakaian!"
             }
             triggerLocalNotification(notifTitle, notifBody)
 

@@ -1,30 +1,17 @@
 /**
  * settings.js — Settings page (Admin only)
- * ─────────────────────────────────────────────────────────────────────
- * User management utama tetap tanpa Firebase Functions:
  *
- *   LIST   → baca /users dari RTDB langsung
- *   CREATE → pakai Secondary Firebase App (admin tidak ter-logout)
- *   DELETE → hapus /users/{uid} dari RTDB (Auth account tetap ada)
- *   ROLE   → tulis langsung ke /users/{uid}/role di RTDB
- *   RESET  → sendPasswordResetEmail() — kirim email ke user
+ * Manajemen pengguna memakai Vercel API + Firebase Admin SDK agar akun
+ * Firebase Authentication dan profil /users selalu disinkronkan. Reset
+ * password tetap dikirim melalui Firebase Authentication pada sesi admin.
  *
- * Tradeoff vs Functions:
- *  ✅ Tanpa Functions, tanpa Cloud APIs yang perlu diaktifkan
- *  ✅ Lebih simpel untuk thesis project
- *  ⚠️  Delete hanya menghapus RTDB profile, bukan Firebase Auth account
- *      (user masih bisa login tapi tidak punya role → dianggap unauthorized)
- *  ⚠️  Admin tidak bisa set password langsung — hanya bisa kirim reset email
- *  ⚠️  List user hanya menampilkan yang pernah login (ada di RTDB /users)
- *
- * Fitur sensitif yang memakai Vercel API + Admin SDK:
+ * Fitur sensitif lain yang memakai API Admin:
  *   - Konfirmasi nama project untuk reset data realtime /listrik
  *   - OTP email untuk hapus semua data monitoring (/listrik + /logs)
  *   - Backup snapshot RTDB + database.rules.json ke email admin
- * ─────────────────────────────────────────────────────────────────────
  */
 
-import { db, auth, firebaseConfig }  from './firebase-config.js';
+import { db, auth } from './firebase-config.js';
 import { loadClientConfig, saveClientConfig } from './client-config.js';
 import { initPage, populateSidebar, initSidebarToggle, logout, getDbPrefix, isTempAccount, getCurrentUser } from './auth.js';
 import { requestNotificationPermission, checkAndNotify, checkAdminResetNotify, startSystemNotificationFeed, initAudio, showToast, stopWebSiren } from './notifications.js';
@@ -32,13 +19,7 @@ import { ref, onValue, set, update, remove, get }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   sendPasswordResetEmail,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  signOut,
-  getAuth,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { initializeApp, deleteApp }
-  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
 // ── DOM: System settings ──────────────────────────────────────
 const inpThreshold    = document.getElementById('inpThreshold');
@@ -2155,7 +2136,6 @@ async function testDiscordDiagnosticsWebhook() {
  * Baca dari /users di RTDB (hanya user yang pernah login akan tampil).
  * User yang dibuat via "Tambah User" langsung ditulis ke /users juga.
  */
-let usersUnsubscribe = null;
 let unsubListrik = null;
 
 function startAlarmMonitor() {
@@ -2175,48 +2155,25 @@ function loadUsers() {
   if (!usersTbody) return;
   usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
     <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-      <div class="spinner"></div>Memuat pengguna...
+      <div class="spinner"></div>Memuat pengguna dari Authentication dan RTDB...
     </div></td></tr>`;
   renderUserSummary([]);
 
-  if (usersUnsubscribe) usersUnsubscribe();
-
-  usersUnsubscribe = onValue(ref(db, '/users'), async (snap) => {
-    const users = [];
-    if (snap.exists()) {
-      snap.forEach(child => users.push({ uid: child.key, ...child.val() }));
-    }
-
-    // Pastikan akun yang sedang login tetap terlihat pada daftar. Ini menjaga
-    // konsistensi UI ketika snapshot RTDB yang diterima browser terlambat,
-    // berasal dari cache lama, atau belum memuat child akun saat listener awal.
-    const currentUser = auth.currentUser;
-    if (currentUser && !users.some((item) => item.uid === currentUser.uid)) {
-      try {
-        const ownSnap = await get(ref(db, `/users/${currentUser.uid}`));
-        const ownProfile = ownSnap.exists() ? ownSnap.val() : {};
-        users.push({
-          uid: currentUser.uid,
-          email: ownProfile.email || currentUser.email || '',
-          displayName: ownProfile.displayName || currentUser.displayName || '',
-          role: ownProfile.role === 'admin' ? 'admin' : 'user',
-          createdAt: ownProfile.createdAt || ownProfile.created_at || '',
-        });
-      } catch (error) {
-        console.warn('[Users] Profil akun aktif belum dapat dimuat:', error);
+  callLiveResetApi('user-admin-action', { action: 'list' })
+    .then((data) => {
+      const users = Array.isArray(data?.users) ? data.users : [];
+      if (!users.length) {
+        renderUserSummary([]);
+        usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">Belum ada pengguna</td></tr>`;
+        return;
       }
-    }
-
-    if (!users.length) {
+      renderUsers(users);
+    })
+    .catch((err) => {
       renderUserSummary([]);
-      usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-secondary);">
-        Belum ada pengguna</td></tr>`;
-      return;
-    }
-    renderUsers(users);
-  }, (err) => {
-    showToast('Gagal memuat users: ' + err.message, 'error');
-  });
+      usersTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--red-light);">${escapeHtml(err.message || 'Gagal memuat pengguna')}</td></tr>`;
+      showToast('Gagal memuat users: ' + err.message, 'error');
+    });
 }
 
 function renderUserSummary(users = []) {
@@ -2243,11 +2200,16 @@ function renderUsers(users) {
     const uidAttr = escapeJsString(u.uid);
     const emailAttr = escapeJsString(u.email);
     const displayName = escapeHtml(u.displayName || '—');
+    const syncState = u.state === 'PROFILE_MISSING'
+      ? '<span class="role-pill user" style="margin-left:6px">Profil RTDB belum ada</span>'
+      : u.state === 'AUTH_MISSING'
+        ? '<span class="role-pill user" style="margin-left:6px">Akun Auth tidak ada</span>'
+        : '';
     const email = escapeHtml(u.email || '—');
     const createdAt = u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '—';
     return `<tr>
       <td data-label="Pengguna">
-        <div style="font-weight:600;">${displayName}${isMe ? ' <span style="font-size:10px;color:var(--primary-light);">(kamu)</span>' : ''}</div>
+        <div style="font-weight:600;">${displayName}${isMe ? ' <span style="font-size:10px;color:var(--primary-light);">(kamu)</span>' : ''}${syncState}</div>
         <div style="font-size:12px;color:var(--text-secondary);">${email}</div>
       </td>
       <td data-label="Role">${badge}</td>
@@ -2276,8 +2238,9 @@ function renderUsers(users) {
 window.changeRole = async (uid, role) => {
   try {
     if (!['admin', 'user'].includes(role)) throw new Error('Role tidak valid.');
-    await set(ref(db, `/users/${uid}/role`), role);
+    await callLiveResetApi('user-admin-action', { action: 'set_role', uid, role });
     showToast(`Role diubah ke "${role}"`, 'success');
+    await loadUsers();
   } catch (err) {
     showToast('Gagal ubah role: ' + err.message, 'error');
   }
@@ -2291,9 +2254,9 @@ window.deleteUser = async (uid, email) => {
     `Untuk hapus permanen, gunakan Firebase Console → Authentication.`
   )) return;
   try {
-    await remove(ref(db, `/users/${uid}`));
+    await callLiveResetApi('user-admin-action', { action: 'delete_profile', uid });
     showToast(`Profile "${email}" dihapus dari RTDB`, 'success');
-    // Note: loadUsers listener akan otomatis update karena onValue
+    await loadUsers();
   } catch (err) {
     showToast('Gagal hapus: ' + err.message, 'error');
   }
@@ -2335,50 +2298,23 @@ modalSubmit?.addEventListener('click', async () => {
   modalSubmit.disabled    = true;
   modalSubmit.textContent = 'Membuat akun...';
 
-  // Pakai secondary app agar admin tidak ter-logout dari sesi utama
-  let secondaryApp = null;
   try {
-    secondaryApp = initializeApp(firebaseConfig, 'secondary-' + Date.now());
-    const secondaryAuth = getAuth(secondaryApp);
-
-    // Buat akun di Firebase Auth
-    const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-    const newUid = cred.user.uid;
-
-    // Atur display name
-    if (displayName) {
-      await updateProfile(cred.user, { displayName });
-    }
-
-    // Logout dari secondary app sebelum dihapus
-    await signOut(secondaryAuth);
-
-    // Tulis profile ke RTDB (menggunakan admin session utama)
-    await set(ref(db, `/users/${newUid}`), {
+    const data = await callLiveResetApi('user-admin-action', {
+      action: 'create',
       email,
-      displayName: displayName || '',
+      password,
+      displayName,
       role,
-      createdAt: new Date().toISOString(),
     });
-
-    showToast(`Akun "${email}" berhasil dibuat`, 'success');
+    showToast(data?.message || `Akun "${email}" berhasil dibuat`, 'success');
     closeAddModal();
     [formEmail, formPassword, formDisplayName].forEach(el => { if (el) el.value = ''; });
     if (formRole) formRole.value = 'user';
-    // loadUsers() tidak perlu dipanggil manual — onValue listener auto-update
-
+    await loadUsers();
   } catch (err) {
-    const msgs = {
-      'auth/email-already-in-use': 'Email sudah terdaftar.',
-      'auth/weak-password':        'Password terlalu lemah.',
-      'auth/invalid-email':        'Format email tidak valid.',
-    };
-    showToast('Gagal: ' + (msgs[err.code] || err.message), 'error');
+    showToast('Gagal: ' + (err.message || 'Tidak dapat membuat pengguna.'), 'error');
   } finally {
-    if (secondaryApp) {
-      try { await deleteApp(secondaryApp); } catch (_) {}
-    }
-    modalSubmit.disabled    = false;
+    modalSubmit.disabled = false;
     modalSubmit.textContent = 'Buat Akun';
   }
 });

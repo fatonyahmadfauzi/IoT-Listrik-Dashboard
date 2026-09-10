@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useDataStore, useAuthStore } from '../lib/store';
-import { db, auth as mainAuth, firebaseConfig } from '../lib/firebase';
+import { db, auth as mainAuth } from '../lib/firebase';
 import { ref, update, remove, set } from 'firebase/database';
-import { initializeApp, deleteApp } from 'firebase/app';
 import {
-  getAuth,
-  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  signOut,
-  updateProfile,
 } from 'firebase/auth';
 import { showNotification } from '../lib/notifikasi';
 import {
@@ -1254,9 +1249,7 @@ export function Settings() {
     if (!isAdmin) return;
     setLoading(true);
     try {
-      await update(ref(db, `users/${uid}`), {
-        role: newRole,
-      });
+      await callLiveResetApi('user-admin-action', { action: 'set_role', uid, role: newRole });
     } catch (error) {
       console.error('Error changing role:', error);
     } finally {
@@ -1269,7 +1262,7 @@ export function Settings() {
     if (!confirm('Hapus profile user ini dari sistem?\n\nAkun Firebase Auth-nya tetap ada (bisa login ulang).\nUntuk hapus permanen, gunakan Firebase Console → Authentication.')) return;
     setLoading(true);
     try {
-      await remove(ref(db, `users/${uid}`));
+      await callLiveResetApi('user-admin-action', { action: 'delete_profile', uid });
       notifyDesktop('User dihapus', 'Profile user berhasil dihapus dari RTDB.');
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -1297,50 +1290,23 @@ export function Settings() {
 
     setAddUserLoading(true);
 
-    // Use secondary app so admin doesn't get logged out
-    let secondaryApp = null;
     try {
-      secondaryApp = initializeApp(firebaseConfig, 'secondary-' + Date.now());
-      const secondaryAuth = getAuth(secondaryApp);
-
-      // Create account in Firebase Auth
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-      const newUid = cred.user.uid;
-
-      // Set display name
-      if (displayName) {
-        await updateProfile(cred.user, { displayName });
-      }
-
-      // Logout from secondary app before deleting it
-      await signOut(secondaryAuth);
-
-      // Write profile to RTDB (using main admin session)
-      await set(ref(db, `/users/${newUid}`), {
+      const data = await callLiveResetApi('user-admin-action', {
+        action: 'create',
         email,
-        displayName: displayName || '',
+        password,
+        displayName,
         role: userRole,
-        createdAt: new Date().toISOString(),
       });
-
-      notifyDesktop('User dibuat', `Akun "${email}" berhasil dibuat sebagai ${userRole}.`);
+      notifyDesktop('User dibuat', String(data?.message || `Akun "${email}" berhasil dibuat sebagai ${userRole}.`));
       setShowAddUserModal(false);
       setNewUserEmail('');
       setNewUserPassword('');
       setNewUserDisplayName('');
       setNewUserRole('user');
     } catch (error: any) {
-      const msgs: Record<string, string> = {
-        'auth/email-already-in-use': 'Email sudah terdaftar.',
-        'auth/weak-password': 'Password terlalu lemah.',
-        'auth/invalid-email': 'Format email tidak valid.',
-      };
-      const msg = msgs[error?.code] || error?.message || 'Gagal membuat user.';
-      notifyDesktop('Gagal membuat user', msg);
+      notifyDesktop('Gagal membuat user', error?.message || 'Gagal membuat user.');
     } finally {
-      if (secondaryApp) {
-        try { await deleteApp(secondaryApp); } catch (_) {}
-      }
       setAddUserLoading(false);
     }
   };

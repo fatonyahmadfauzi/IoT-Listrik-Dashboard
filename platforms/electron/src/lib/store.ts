@@ -290,15 +290,36 @@ export const useDataStore = create<DataStore>((set) => {
       const usersRef = ref(db, 'users');
       const unsub = onValue(
         usersRef,
-        (snapshot) => {
+        async (snapshot) => {
           const data = snapshot.val();
-          const usersArray = data
+          const fallbackUsers = data
             ? Object.entries(data).map(([uid, val]) => ({
                 uid,
                 ...(val as any),
               }))
             : [];
-          set({ users: usersArray });
+          try {
+            const currentUser = auth.currentUser;
+            const token = await currentUser?.getIdToken();
+            if (!token) {
+              set({ users: fallbackUsers });
+              return;
+            }
+            const response = await fetch('https://iot-listrik-dashboard.vercel.app/api/user-admin-action', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ action: 'list' }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+            set({ users: Array.isArray(payload?.users) ? payload.users : fallbackUsers });
+          } catch (error) {
+            console.warn('Admin user list fallback to RTDB:', error);
+            set({ users: fallbackUsers });
+          }
         },
         (error) => {
           console.error('Error fetching users:', error);

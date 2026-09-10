@@ -16,7 +16,6 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.database.*
@@ -43,6 +42,7 @@ class NativePanelActivity : AppCompatActivity() {
     private var currentData = mapOf<String, Any?>()
     private var currentSettings = mapOf<String, Any?>()
     private var latestUsers = mutableMapOf<String, Map<String, Any?>>()
+    private var userListHost: LinearLayout? = null
     private val telegramRecipients = mutableListOf<TelegramRecipient>()
     private var editingTelegramIndex = -1
     private var telegramList: LinearLayout? = null
@@ -593,13 +593,89 @@ class NativePanelActivity : AppCompatActivity() {
     }
 
     private fun showUsers() {
-        section("Manajemen Pengguna", "Kelola profil, peran, dan akses pengguna Firebase dari satu halaman.")
+        section("Manajemen Pengguna", "Daftar menggabungkan Firebase Authentication dan profil RTDB agar akun tidak hilang dari tampilan.")
         action("Tambah Pengguna") { showAddUserDialog() }
-        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        addToSection(list)
-        db.getReference("users").addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(s: DataSnapshot) { list.removeAllViews(); latestUsers.clear(); s.children.forEach { val m=snapMap(it); val uid=it.key ?: return@forEach; latestUsers[uid]=m; val role = m["role"]?.toString() ?: "user"; val row = LinearLayout(this@NativePanelActivity).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(11), dp(12), dp(11)); background = rounded(Color.rgb(13, 20, 28), Color.rgb(42, 54, 68), 12); setOnClickListener { chooseUser(uid) } }; val top = LinearLayout(this@NativePanelActivity).apply { gravity = Gravity.CENTER_VERTICAL }; top.addView(TextView(this@NativePanelActivity).apply { text = m["displayName"]?.toString() ?: "—"; textSize = 13f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD) }, LinearLayout.LayoutParams(0, -2, 1f)); top.addView(TextView(this@NativePanelActivity).apply { text = role.uppercase(Locale.US); textSize = 9f; setTypeface(null, Typeface.BOLD); setTextColor(if (role == "admin") Color.rgb(253, 230, 138) else Color.rgb(147, 197, 253)); gravity = Gravity.CENTER; setPadding(dp(8), dp(3), dp(8), dp(3)); background = rounded(if (role == "admin") Color.rgb(69, 52, 20) else Color.rgb(23, 49, 82), if (role == "admin") Color.rgb(245, 158, 11) else Color.rgb(59, 130, 246), 999) }, LinearLayout.LayoutParams(-2, dp(24))); row.addView(top); row.addView(TextView(this@NativePanelActivity).apply { text = m["email"]?.toString() ?: "—"; textSize = 12f; setTextColor(Color.rgb(148, 163, 184)); setPadding(0, dp(4), 0, 0) }); list.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) }) } }
-            override fun onCancelled(e: DatabaseError) { message(e.message, true) }
+        userListHost = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        addToSection(userListHost!!)
+        loadManagedUsers()
+    }
+
+    private fun loadManagedUsers() {
+        val host = userListHost ?: return
+        host.removeAllViews()
+        host.addView(TextView(this).apply {
+            text = "Memuat akun Authentication dan profil RTDB..."
+            textSize = 12f
+            setTextColor(Color.rgb(148, 163, 184))
+            setPadding(dp(4), dp(10), dp(4), dp(10))
+        })
+        api("user-admin-action", mapOf("action" to "list"), onError = { error ->
+            host.removeAllViews()
+            host.addView(TextView(this).apply {
+                text = error
+                textSize = 12f
+                setTextColor(RED)
+                setPadding(dp(4), dp(10), dp(4), dp(10))
+            })
+        }, onSuccess = { json ->
+            host.removeAllViews()
+            latestUsers.clear()
+            val users = json.optJSONArray("users") ?: JSONArray()
+            if (users.length() == 0) {
+                host.addView(TextView(this).apply {
+                    text = "Belum ada pengguna."
+                    textSize = 12f
+                    setTextColor(Color.rgb(148, 163, 184))
+                    setPadding(dp(4), dp(10), dp(4), dp(10))
+                })
+                return@api
+            }
+            for (i in 0 until users.length()) {
+                val item = users.optJSONObject(i) ?: continue
+                val uid = item.optString("uid")
+                val role = item.optString("role", "user")
+                val state = item.optString("state", "SYNCED")
+                val m = mapOf<String, Any?>(
+                    "uid" to uid,
+                    "email" to item.optString("email"),
+                    "displayName" to item.optString("displayName"),
+                    "role" to role,
+                    "state" to state,
+                    "authExists" to item.optBoolean("authExists"),
+                    "profileExists" to item.optBoolean("profileExists")
+                )
+                latestUsers[uid] = m
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(dp(12), dp(11), dp(12), dp(11))
+                    background = rounded(Color.rgb(13, 20, 28), Color.rgb(42, 54, 68), 12)
+                    setOnClickListener { chooseUser(uid) }
+                }
+                val top = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+                top.addView(TextView(this).apply {
+                    text = item.optString("displayName").ifBlank { "—" }
+                    textSize = 13f
+                    setTextColor(Color.WHITE)
+                    setTypeface(null, Typeface.BOLD)
+                }, LinearLayout.LayoutParams(0, -2, 1f))
+                top.addView(badge(role.uppercase(Locale.US), if (role == "admin") AMBER else Color.rgb(96, 165, 250)), LinearLayout.LayoutParams(-2, dp(27)))
+                row.addView(top)
+                row.addView(TextView(this).apply {
+                    text = item.optString("email").ifBlank { "—" }
+                    textSize = 12f
+                    setTextColor(Color.rgb(148, 163, 184))
+                    setPadding(0, dp(4), 0, 0)
+                })
+                if (state != "SYNCED") {
+                    row.addView(TextView(this).apply {
+                        text = if (state == "PROFILE_MISSING") "Profil RTDB belum ada — ubah role untuk memulihkan" else "Akun Authentication tidak ditemukan"
+                        textSize = 10.5f
+                        setTextColor(AMBER)
+                        setPadding(0, dp(5), 0, 0)
+                    })
+                }
+                host.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+            }
         })
     }
 
@@ -626,14 +702,12 @@ class NativePanelActivity : AppCompatActivity() {
             }
 
             when (which) {
-                0 -> updatePath("users/$uid/role", "admin")
-                1 -> updatePath("users/$uid/role", "user")
+                0 -> api("user-admin-action", mapOf("action" to "set_role", "uid" to uid, "role" to "admin")) { loadManagedUsers() }
+                1 -> api("user-admin-action", mapOf("action" to "set_role", "uid" to uid, "role" to "user")) { loadManagedUsers() }
                 2 -> if (email.isNotBlank()) auth.sendPasswordResetEmail(email)
                     .addOnSuccessListener { message("Email reset password dikirim.", false) }
                     .addOnFailureListener { message("Gagal: ${it.message}", true) }
-                3 -> db.getReference("users/$uid").removeValue()
-                    .addOnSuccessListener { message("Profil RTDB dihapus.", false) }
-                    .addOnFailureListener { message("Gagal: ${it.message}", true) }
+                3 -> api("user-admin-action", mapOf("action" to "delete_profile", "uid" to uid)) { loadManagedUsers() }
             }
         }.setNegativeButton("Tutup", null).show()
     }
@@ -656,16 +730,20 @@ class NativePanelActivity : AppCompatActivity() {
     }
 
     private fun createSecondaryUser(name: String, email: String, password: String, role: String) {
-        if (email.isBlank() || password.length < 8) { message("Email wajib dan password minimal 8 karakter.", true); return }
-        val appName = "secondary-${System.currentTimeMillis()}"
-        val secondaryApp = FirebaseApp.initializeApp(this, FirebaseApp.getInstance().options, appName)
-        val secondaryAuth = FirebaseAuth.getInstance(secondaryApp)
-        secondaryAuth.createUserWithEmailAndPassword(email, password).addOnSuccessListener { result ->
-            val uid = result.user?.uid.orEmpty()
-            secondaryAuth.signOut()
-            secondaryApp.delete()
-            if (uid.isNotBlank()) updatePath("users/$uid", mapOf("email" to email, "displayName" to name, "role" to role, "createdAt" to ServerValue.TIMESTAMP))
-        }.addOnFailureListener { secondaryApp.delete(); message("Gagal membuat akun: ${it.message}", true) }
+        if (email.isBlank() || password.length < 8) {
+            message("Email wajib dan password minimal 8 karakter.", true)
+            return
+        }
+        api(
+            "user-admin-action",
+            mapOf(
+                "action" to "create",
+                "email" to email,
+                "password" to password,
+                "displayName" to name,
+                "role" to role
+            )
+        ) { loadManagedUsers() }
     }
 
     private fun loadSettings() { db.getReference("settings").addListenerForSingleValueEvent(object: ValueEventListener { override fun onDataChange(s:DataSnapshot){ currentSettings=snapMap(s); fields.forEach{(k,v)-> if(k in currentSettings) v.setText(currentSettings[k].toString())}; switches.forEach{(k,v)-> if(k in currentSettings) v.isChecked=currentSettings[k] as? Boolean ?: v.isChecked }; fields["telegramChatIds"]?.setText((currentSettings["telegramChatIds"] as? List<*>)?.joinToString(",") ?: currentSettings["telegramChatId"]?.toString() ?: "") }; override fun onCancelled(e:DatabaseError){message(e.message,true)} }) }

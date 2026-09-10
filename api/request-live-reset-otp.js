@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   try {
     const action = String(req.body?.action || "").trim().toLowerCase();
-    if (["list", "create", "set_role", "delete_profile"].includes(action)) {
+    if (["list", "create", "set_role", "delete_profile", "delete_account"].includes(action)) {
       return res.status(200).json(await handleUserAdminAction(req));
     }
     // Kompatibilitas endpoint lama. Alur reset realtime saat ini memakai

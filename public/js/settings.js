@@ -2199,13 +2199,16 @@ function renderUsers(users) {
       : `<span class="role-pill user">User</span>`;
     const uidAttr = escapeJsString(u.uid);
     const emailAttr = escapeJsString(u.email);
-    const displayName = escapeHtml(u.displayName || '—');
+    const emailValue = String(u.email || '').trim();
+    const displayFallback = emailValue.includes('@') ? emailValue.split('@')[0] : 'Tanpa nama';
+    const displayName = escapeHtml(String(u.displayName || '').trim() || displayFallback);
     const syncState = u.state === 'PROFILE_MISSING'
-      ? '<span class="role-pill user" style="margin-left:6px">Profil RTDB belum ada</span>'
+      ? '<span class="role-pill user" style="margin-left:6px;background:rgba(245,158,11,.16);color:#fbbf24">Profil RTDB belum ada</span>'
       : u.state === 'AUTH_MISSING'
-        ? '<span class="role-pill user" style="margin-left:6px">Akun Auth tidak ada</span>'
+        ? '<span class="role-pill user" style="margin-left:6px;background:rgba(239,68,68,.16);color:#fca5a5">Akun Auth tidak ditemukan</span>'
         : '';
-    const email = escapeHtml(u.email || '—');
+    const email = escapeHtml(emailValue || '—');
+    const authMissing = u.state === 'AUTH_MISSING' || u.authExists === false;
     const createdAt = u.createdAt ? new Date(u.createdAt).toLocaleDateString('id-ID') : '—';
     return `<tr>
       <td data-label="Pengguna">
@@ -2224,10 +2227,12 @@ function renderUsers(users) {
       </td>
       <td data-label="Aksi">
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-sm"
-                  onclick="sendResetEmail('${emailAttr}')"><span class='material-symbols-rounded'>mail</span>Reset PW</button>
+          ${authMissing
+            ? '<span class="text-muted text-sm" title="Profil RTDB ini tidak mempunyai akun Firebase Authentication sehingga reset password tidak tersedia.">Reset PW tidak tersedia</span>'
+            : `<button class="btn btn-ghost btn-sm"
+                  onclick="sendResetEmail('${emailAttr}')"><span class='material-symbols-rounded'>mail</span>Reset PW</button>`}
           ${!isMe ? `<button class="btn btn-danger btn-sm"
-                  onclick="deleteUser('${uidAttr}','${emailAttr}')"><span class='material-symbols-rounded'>delete</span>Hapus</button>` : ''}
+                  onclick="deleteUser('${uidAttr}','${emailAttr}','${u.state || ''}')"><span class='material-symbols-rounded'>delete</span>${authMissing ? 'Hapus Profil Sisa' : 'Hapus Akun Permanen'}</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -2246,16 +2251,19 @@ window.changeRole = async (uid, role) => {
   }
 };
 
-// ─── DELETE USER (hapus RTDB profile saja) ───────────────────
-window.deleteUser = async (uid, email) => {
-  if (!confirm(
-    `Hapus profile "${email}" dari sistem?\n\n` +
-    `Akun Firebase Auth-nya tetap ada (bisa login ulang).\n` +
-    `Untuk hapus permanen, gunakan Firebase Console → Authentication.`
-  )) return;
+// ─── DELETE USER ACCOUNT ────────────────────────────────────
+window.deleteUser = async (uid, email, syncState) => {
+  const isOrphan = syncState === 'AUTH_MISSING';
+  const message = isOrphan
+    ? `Hapus profil sisa "${email}" dari RTDB?\n\nAkun Firebase Authentication untuk profil ini memang sudah tidak ada.`
+    : `Hapus akun "${email}" secara permanen?\n\nAkun Firebase Authentication dan profil RTDB akan dihapus.\nPengguna tidak dapat login lagi dan tindakan ini tidak dapat dibatalkan.`;
+  if (!confirm(message)) return;
   try {
-    await callLiveResetApi('user-admin-action', { action: 'delete_profile', uid });
-    showToast(`Profile "${email}" dihapus dari RTDB`, 'success');
+    await callLiveResetApi('user-admin-action', {
+      action: isOrphan ? 'delete_profile' : 'delete_account',
+      uid,
+    });
+    showToast(isOrphan ? `Profil sisa "${email}" dihapus` : `Akun "${email}" dihapus permanen`, 'success');
     await loadUsers();
   } catch (err) {
     showToast('Gagal hapus: ' + err.message, 'error');

@@ -1257,13 +1257,17 @@ export function Settings() {
     }
   };
 
-  const handleDeleteUser = async (uid: string) => {
+  const handleDeleteUser = async (uid: string, email: string, state?: string) => {
     if (!isAdmin || uid === user?.uid) return; // Prevent self-delete
-    if (!confirm('Hapus profile user ini dari sistem?\n\nAkun Firebase Auth-nya tetap ada (bisa login ulang).\nUntuk hapus permanen, gunakan Firebase Console → Authentication.')) return;
+    const isOrphan = state === 'AUTH_MISSING';
+    const message = isOrphan
+      ? `Hapus profil sisa "${email}" dari RTDB?\n\nAkun Firebase Authentication untuk profil ini memang sudah tidak ada.`
+      : `Hapus akun "${email}" secara permanen?\n\nAkun Firebase Authentication dan profil RTDB akan dihapus.\nPengguna tidak dapat login lagi dan tindakan ini tidak dapat dibatalkan.`;
+    if (!confirm(message)) return;
     setLoading(true);
     try {
-      await callLiveResetApi('user-admin-action', { action: 'delete_profile', uid });
-      notifyDesktop('User dihapus', 'Profile user berhasil dihapus dari RTDB.');
+      await callLiveResetApi('user-admin-action', { action: isOrphan ? 'delete_profile' : 'delete_account', uid });
+      notifyDesktop(isOrphan ? 'Profil sisa dihapus' : 'Akun dihapus permanen', isOrphan ? `Profil ${email} dihapus dari RTDB.` : `Akun ${email} tidak dapat login lagi.`);
     } catch (error) {
       console.error('Error deleting user:', error);
       notifyDesktop('Gagal hapus user', String(error));
@@ -2908,8 +2912,10 @@ export function Settings() {
                   <tr key={u.uid} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-2 px-2">
                       <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {u.displayName || '—'}
+                        {u.displayName || String(u.email || '').split('@')[0] || 'Tanpa nama'}
                         {u.uid === user?.uid && <span className="ml-2 text-xs text-blue-600">(kamu)</span>}
+                        {u.state === 'AUTH_MISSING' && <span className="ml-2 text-xs font-semibold text-red-500">Akun Auth tidak ditemukan</span>}
+                        {u.state === 'PROFILE_MISSING' && <span className="ml-2 text-xs font-semibold text-amber-500">Profil RTDB belum ada</span>}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         {u.email}
@@ -2944,21 +2950,23 @@ export function Settings() {
                     </td>
                     <td className="py-2 px-2 text-right">
                       <div className="flex items-center justify-end gap-2 flex-wrap">
-                        <button
-                          onClick={() => handleResetPassword(u.email)}
-                          disabled={loading}
-                          className="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded transition"
-                          title="Kirim email reset password"
-                        >
-                          Reset PW
-                        </button>
+                        {u.state !== 'AUTH_MISSING' && (
+                          <button
+                            onClick={() => handleResetPassword(u.email)}
+                            disabled={loading}
+                            className="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded transition"
+                            title="Kirim email reset password"
+                          >
+                            Reset PW
+                          </button>
+                        )}
                         {u.uid !== user?.uid && (
                           <button
-                            onClick={() => handleDeleteUser(u.uid)}
+                            onClick={() => handleDeleteUser(u.uid, u.email, u.state)}
                             disabled={loading}
                             className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded transition"
                           >
-                            Hapus
+                            {u.state === 'AUTH_MISSING' ? 'Hapus Profil Sisa' : 'Hapus Akun Permanen'}
                           </button>
                         )}
                       </div>

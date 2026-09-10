@@ -17,6 +17,12 @@ function normalizeName(value) {
   return String(value || "").trim().slice(0, 120);
 }
 
+const IOT_DEVICE_EMAIL = "listrik.iot.device@gmail.com";
+
+function isDeviceAuthUser(userOrProfile) {
+  return normalizeEmail(userOrProfile?.email) === IOT_DEVICE_EMAIL;
+}
+
 function isTemporaryAuthUser(user) {
   return user?.customClaims?.isTempAccount === true
     || String(user?.email || "").toLowerCase().startsWith("sim_")
@@ -52,10 +58,13 @@ async function listManagedUsers() {
   const profiles = profileSnap.val() || {};
   const authMap = new Map();
   authResult.users.forEach((user) => {
-    if (!isTemporaryAuthUser(user)) authMap.set(user.uid, user);
+    if (!isTemporaryAuthUser(user) && !isDeviceAuthUser(user)) authMap.set(user.uid, user);
   });
 
-  const ids = new Set([...authMap.keys(), ...Object.keys(profiles)]);
+  const managedProfileIds = Object.entries(profiles)
+    .filter(([, profile]) => !isDeviceAuthUser(profile))
+    .map(([uid]) => uid);
+  const ids = new Set([...authMap.keys(), ...managedProfileIds]);
   return [...ids]
     .map((uid) => serializeUser(uid, authMap.get(uid) || null, profiles[uid] || null))
     .sort((a, b) => {
@@ -70,6 +79,7 @@ async function createManagedUser(req) {
   const displayName = normalizeName(req.body?.displayName);
   const role = normalizeRole(req.body?.role);
 
+  if (email === IOT_DEVICE_EMAIL) throw httpError(400, "Akun ini khusus untuk autentikasi ESP32 dan tidak boleh dikelola sebagai akun pengguna.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw httpError(400, "Format email tidak valid.");
   if (password.length < 8) throw httpError(400, "Password minimal 8 karakter.");
 
@@ -151,6 +161,33 @@ async function updateManagedRole(req) {
   return { success: true, message: `Role pengguna berhasil diubah menjadi ${role}.` };
 }
 
+async function deleteManagedAccount(req, adminUid) {
+  const uid = String(req.body?.uid || "").trim();
+  if (!uid) throw httpError(400, "UID pengguna tidak valid.");
+  if (uid === adminUid) throw httpError(400, "Akun admin yang sedang digunakan tidak dapat dihapus.");
+
+  let authExists = true;
+  try {
+    await admin.auth().getUser(uid);
+  } catch (error) {
+    if (error?.code === "auth/user-not-found") authExists = false;
+    else throw error;
+  }
+
+  // Hapus akun Auth terlebih dahulu agar kredensial login benar-benar tidak berlaku.
+  // Profil RTDB kemudian dibersihkan; bila gagal, profil akan terlihat sebagai AUTH_MISSING
+  // dan dapat dibersihkan kembali tanpa menghidupkan akun login.
+  if (authExists) await admin.auth().deleteUser(uid);
+  await admin.database().ref(`/users/${uid}`).remove();
+
+  return {
+    success: true,
+    message: authExists
+      ? "Akun Firebase Authentication dan profil RTDB berhasil dihapus permanen."
+      : "Profil RTDB sisa berhasil dihapus; akun Authentication sudah tidak ada.",
+  };
+}
+
 async function deleteManagedProfile(req, adminUid) {
   const uid = String(req.body?.uid || "").trim();
   if (!uid) throw httpError(400, "UID pengguna tidak valid.");
@@ -169,6 +206,7 @@ async function handleUserAdminAction(req) {
   if (action === "create") return createManagedUser(req);
   if (action === "set_role") return updateManagedRole(req);
   if (action === "delete_profile") return deleteManagedProfile(req, caller.uid);
+  if (action === "delete_account") return deleteManagedAccount(req, caller.uid);
   throw httpError(400, "Aksi manajemen pengguna tidak dikenali.");
 }
 

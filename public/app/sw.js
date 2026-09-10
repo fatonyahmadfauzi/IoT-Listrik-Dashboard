@@ -13,7 +13,7 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-const CACHE_NAME = "iot-app-v20260910-users-sync";
+const CACHE_NAME = "iot-app-v20260911-users-sync-label";
 
 // App shell — only /app/* pages and shared assets used by the app
 const CACHE_URLS = [

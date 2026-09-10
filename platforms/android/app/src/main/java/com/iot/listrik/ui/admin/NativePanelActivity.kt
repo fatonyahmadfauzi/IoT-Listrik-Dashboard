@@ -128,7 +128,7 @@ class NativePanelActivity : AppCompatActivity() {
         bar.addView(reload, LinearLayout.LayoutParams(dp(48), dp(56)))
         root.addView(bar, LinearLayout.LayoutParams(-1, dp(56)))
         val scroll = ScrollView(this).apply { isFillViewport = true; clipToPadding = false }
-        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(9), dp(12), dp(24)) }
+        content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(8), dp(16), dp(24)) }
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         setContentView(root)
@@ -236,52 +236,63 @@ class NativePanelActivity : AppCompatActivity() {
     }
 
     private fun showSettings() {
-        section("Sistem & Sensor", "Perubahan disimpan ke /settings dan dibaca ESP32 pada sinkronisasi berikutnya.")
+        section("Sistem & Sensor", "Atur batas deteksi, interval data, buzzer, dan perlindungan relay. Perubahan disimpan ke node settings dan dibaca ESP32 pada sinkronisasi berikutnya.")
         field("thresholdArus", "Threshold arus (A)", "0.5")
-        field("warningPercent", "Warning (%)", "80")
+        field("warningPercent", "Batas warning (%)", "80")
         field("sendIntervalMs", "Interval pengiriman (ms)", "2000")
-        toggle("realtimeStreamEnabled", "Realtime streaming", true)
+        toggle("realtimeStreamEnabled", "Stream data realtime ke Firebase", true)
         toggle("buzzerEnabled", "Buzzer", true)
-        toggle("autoCutoffEnabled", "Auto-cutoff", true)
+        toggle("autoCutoffEnabled", "Auto-cutoff relay", true)
+
+        section("Kalibrasi Sensor", "Bandingkan pembacaan ESP32 dengan alat ukur referensi, lalu masukkan faktor koreksi tanpa mengubah fungsi deteksi.")
+        field("arusCalibration", "Faktor kalibrasi arus", "1.000")
+        field("teganganCalibration", "Faktor kalibrasi tegangan", "1.000")
         field("powerFactorEstimate", "Estimasi faktor daya", "0.85")
         field("frequencyHz", "Frekuensi (Hz)", "50")
-        field("arusCalibration", "Kalibrasi arus", "1.000")
-        field("teganganCalibration", "Kalibrasi tegangan", "1.000")
-        action("Simpan Sistem, Sensor, dan Kalibrasi") { saveSettings() }
+        action("Simpan Pengaturan Sistem") { saveSettings() }
 
-        section("Auto Learning Beban Normal", "Proses berjalan pada ESP32. Durasi default 120 detik dan dapat dihentikan manual.")
-        field("learningDuration", "Durasi (detik)", "120")
-        field("learningMargin", "Margin (%)", "25")
-        toggle("learningApply", "Terapkan hasil ke threshold", true)
-        val learningState = TextView(this).apply { setTextColor(Color.LTGRAY); text = "Memuat status auto learning..." }
-        addToSection(learningState, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6); bottomMargin = dp(8) })
-        db.getReference("settings/autoLearning").addValueEventListener(simple { m -> learningState.text = "Status: ${m["status"] ?: "idle"} · Sampel: ${m["sampleCount"] ?: 0} · Threshold hasil: ${m["learnedThresholdArus"] ?: 0}" })
+        section("Auto Learning Beban Normal", "ESP32 merekam beban normal selama durasi yang ditentukan. Proses selesai otomatis atau dapat dihentikan manual.")
+        field("learningDuration", "Durasi learning (detik)", "120")
+        field("learningMargin", "Margin keamanan (%)", "25")
+        toggle("learningApply", "Terapkan threshold otomatis", true)
+        val learningState = operationStatus("Memuat", "Mengambil status auto learning dari perangkat.")
+        addToSection(learningState)
+        db.getReference("settings/autoLearning").addValueEventListener(simple { m ->
+            val status = m["status"] ?: "idle"
+            val samples = m["sampleCount"] ?: 0
+            val learned = m["learnedThresholdArus"] ?: 0
+            setOperationStatus(learningState, status.toString().uppercase(Locale("id", "ID")), "Sampel: $samples · Threshold hasil: $learned A", if (status.toString().equals("running", true)) AMBER else Color.rgb(125, 211, 252))
+        })
         action("Mulai Auto Learning") { startLearning() }
         action("Hentikan Auto Learning") { updateLearning(false) }
 
-        section("Bootstrap Device", "Mengirim konfigurasi Wi-Fi dan Firebase ke ESP32 melalui Firebase.")
+        section("Bootstrap Device & Wi-Fi ESP32", "Khusus admin utama. Kirim konfigurasi Wi-Fi dan Firebase ke perangkat fisik melalui Realtime Database.")
+        addToSection(compactDetails(listOf(
+            "Akun device" to "Gunakan akun khusus ESP32, bukan akun pengguna dashboard.",
+            "Penerapan" to "ESP32 membaca konfigurasi bootstrap, menyimpannya, lalu melakukan restart otomatis."
+        )))
         field("wifiSsid", "SSID Wi-Fi", "")
         field("wifiPassword", "Password Wi-Fi", "", true)
-        field("firebaseApiKey", "Firebase API key", "")
+        field("firebaseApiKey", "Firebase API Key", "")
         field("firebaseDbUrl", "Realtime Database URL", "https://iot-listrik-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app")
         field("iotEmail", "Email akun device", "")
         field("iotPassword", "Password akun device", "", true)
         action("Simpan & Terapkan Bootstrap") { saveBootstrap("save") }
         action("Hapus Wi-Fi & Buka Setup") { saveBootstrap("clear") }
 
-        section("Administrasi Data", "Pengosongan data realtime memerlukan konfirmasi nama project.")
+        section("Administrasi Data Realtime", "Khusus admin utama. Pengosongan node listrik memerlukan konfirmasi nama project dan tidak menghapus settings atau pengguna.")
         field("liveConfirmation", "Ketik: IoT Listrik Dashboard", "")
-        adminActionStatus = operationStatus("Siap", "Aksi ini hanya mengosongkan data realtime /listrik setelah nama project dikonfirmasi.")
+        adminActionStatus = operationStatus("Siap", "Data realtime pada node listrik akan dikembalikan ke nilai default setelah nama project dikonfirmasi.")
         addToSection(adminActionStatus!!)
         action("Kosongkan Data Realtime") { api("confirm-live-reset", mapOf("confirmationText" to value("liveConfirmation"))) }
 
         renderDatabaseBackupSection()
         renderMonitoringWipeSection()
 
-        section("Backend Web / Local", "Konfigurasi ini disimpan lokal pada Android.")
+        section("Backend & Failover Android", "Disimpan pada perangkat Android ini saja. ESP32 tidak membaca konfigurasi klien berikut.")
         field("publicApiBase", "Public API", "")
         field("localApiBase", "Local API", "http://localhost:3000")
-        dropdown("dataMode", "Mode data", listOf("AUTO (Firebase → fallback REST lokal)" to "AUTO", "PUBLIC (hanya Firebase / API publik)" to "PUBLIC", "LOCAL (hanya REST lokal)" to "LOCAL"), "AUTO")
+        dropdown("dataMode", "Mode data", listOf("AUTO (Firebase → fallback REST lokal)" to "AUTO", "PUBLIC (Firebase / API publik)" to "PUBLIC", "LOCAL (REST lokal)" to "LOCAL"), "AUTO")
         field("healthPath", "Health path", "/health")
         field("retryIntervalMs", "Interval retry (ms)", "6000")
         field("timeoutMs", "Timeout (ms)", "4000")
@@ -294,30 +305,21 @@ class NativePanelActivity : AppCompatActivity() {
     private fun renderDatabaseBackupSection() {
         section(
             "Backup Database Firebase",
-            "Membuat snapshot Realtime Database dan mengirimkannya ke email admin tanpa mengubah data."
+            "Membuat snapshot Realtime Database dan mengirimkannya ke email admin tanpa mengubah data apa pun."
         )
         addToSection(infoPanel(
             "Khusus admin utama",
-            "Aksi ini membuat salinan Realtime Database dalam format JSON dan melampirkan database.rules.json aktif dari workspace project ke email admin.",
+            "Gunakan sebelum reset atau penghapusan data monitoring agar tersedia arsip database dan rules aktif.",
             AMBER
         ))
-        addToSection(infoPanel(
-            "Cocok digunakan sebelum reset",
-            "Snapshot dibuat saat tombol dijalankan sehingga tersedia arsip sebelum reset atau penghapusan data monitoring.",
-            Color.rgb(96, 165, 250)
-        ))
-        addToSection(infoPanel(
-            "Email tujuan",
-            "Backup akan dikirim ke email admin yang sedang login: ${auth.currentUser?.email ?: "email belum tersedia"}",
-            Color.rgb(125, 211, 252)
-        ))
-        addToSection(detailGrid(listOf(
-            "Lampiran Backup" to "Dua lampiran: default-rtdb-export.json dan database-rules.json.",
-            "Dampak Aksi" to "Hanya membuat dan mengirim backup. Data realtime, histori log, settings, dan user tidak disentuh."
+        addToSection(compactDetails(listOf(
+            "Email tujuan" to (auth.currentUser?.email ?: "Email admin belum tersedia"),
+            "Lampiran backup" to "default-rtdb-export.json dan database-rules.json",
+            "Dampak aksi" to "Hanya membuat dan mengirim backup; data realtime, histori log, settings, dan pengguna tidak disentuh."
         )))
         databaseBackupStatus = operationStatus(
             "Siap",
-            "Bagian ini membuat snapshot Realtime Database saat ini dan mengirimkannya bersama file rules ke email admin yang sedang login."
+            "Snapshot akan dibuat ketika tombol dijalankan dan dikirim ke email admin yang sedang login."
         )
         addToSection(databaseBackupStatus!!)
         lateinit var backupButton: Button
@@ -344,41 +346,28 @@ class NativePanelActivity : AppCompatActivity() {
     private fun renderMonitoringWipeSection() {
         section(
             "Hapus Semua Data Monitoring",
-            "Mengosongkan /listrik dan menghapus seluruh histori /logs setelah verifikasi OTP email."
+            "Mengosongkan node listrik dan menghapus seluruh histori logs setelah OTP email diverifikasi."
         )
         addToSection(infoPanel(
-            "Khusus admin utama",
-            "Aksi ini mengosongkan data monitoring pada /listrik dan menghapus histori /logs. Settings, data user, dan bootstrap device tidak ikut dihapus.",
-            AMBER
+            "Tindakan permanen · khusus admin utama",
+            "Data monitoring yang dihapus tidak dapat dipulihkan tanpa file backup. Buat backup terlebih dahulu jika datanya masih diperlukan.",
+            RED
         ))
-        addToSection(infoPanel(
-            "Alur verifikasi",
-            "Kirim OTP, buka email admin yang sedang login, lalu masukkan kode 6 digit untuk menyetujui penghapusan.",
-            Color.rgb(96, 165, 250)
-        ))
-        addToSection(infoPanel(
-            "Email tujuan OTP",
-            "OTP akan dikirim ke email admin yang sedang login: ${auth.currentUser?.email ?: "email belum tersedia"}",
-            Color.rgb(125, 211, 252)
-        ))
+        addToSection(compactDetails(listOf(
+            "Data yang dihapus" to "Data realtime pada node listrik dan seluruh histori pada node logs",
+            "Data yang dipertahankan" to "Settings, pengguna, Telegram, Discord, dan bootstrap device",
+            "Email OTP" to (auth.currentUser?.email ?: "Email admin belum tersedia"),
+            "Ketentuan OTP" to "Kode 6 digit berlaku beberapa menit dan hanya dapat dipakai satu kali."
+        )))
         field("monitoringWipeOtp", "Kode OTP Email Admin", "")
         fields["monitoringWipeOtp"]?.apply {
             inputType = InputType.TYPE_CLASS_NUMBER
             filters = arrayOf(InputFilter.LengthFilter(6))
             hint = "Masukkan 6 digit OTP"
         }
-        addToSection(infoPanel(
-            "Ketentuan OTP",
-            "OTP hanya berlaku beberapa menit dan hanya dapat dipakai satu kali untuk menghapus semua data monitoring.",
-            Color.rgb(134, 239, 172)
-        ))
-        addToSection(detailGrid(listOf(
-            "Dampak Hapus Semua" to "Data /listrik dikosongkan ke nilai default dan histori /logs dihapus sampai kosong.",
-            "Data yang Dipertahankan" to "Pengaturan sistem, pengguna, konfigurasi Telegram/Discord, dan bootstrap device tetap tersimpan."
-        )))
         monitoringWipeStatus = operationStatus(
             "Siap",
-            "Aksi ini akan mengosongkan data realtime /listrik dan menghapus histori /logs setelah OTP email diverifikasi."
+            "Kirim OTP ke email admin, lalu masukkan kode untuk menyetujui penghapusan."
         )
         addToSection(monitoringWipeStatus!!)
 
@@ -862,43 +851,30 @@ class NativePanelActivity : AppCompatActivity() {
     private fun section(h: String, sub: String) {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setPadding(dp(14), dp(13), dp(14), dp(13))
             background = rounded(Color.rgb(17, 24, 32), Color.rgb(42, 54, 68), 14)
         }
-        val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
-        val icon = TextView(this).apply {
-            text = sectionIcon(h)
-            textSize = 18f
-            gravity = Gravity.CENTER
-            setTextColor(Color.rgb(125, 211, 252))
-            background = rounded(Color.rgb(25, 58, 82), Color.rgb(39, 110, 160), 10)
-        }
-        header.addView(icon, LinearLayout.LayoutParams(dp(36), dp(36)))
-        val copy = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), 0, 0, 0)
-        }
-        copy.addView(TextView(this).apply {
+        panel.addView(TextView(this).apply {
             text = h
             textSize = 15f
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
+            includeFontPadding = false
         })
-        copy.addView(TextView(this).apply {
+        panel.addView(TextView(this).apply {
             text = sub
-            textSize = 12f
+            textSize = 11.5f
             setTextColor(Color.rgb(148, 163, 184))
-            setPadding(0, dp(3), 0, 0)
+            setLineSpacing(dp(1).toFloat(), 1f)
+            setPadding(0, dp(5), 0, 0)
         })
-        header.addView(copy, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        panel.addView(header)
         panel.addView(View(this).apply { setBackgroundColor(Color.rgb(42, 54, 68)) }, LinearLayout.LayoutParams(-1, dp(1)).apply {
-            topMargin = dp(12)
-            bottomMargin = dp(10)
+            topMargin = dp(11)
+            bottomMargin = dp(8)
         })
         content.addView(panel, LinearLayout.LayoutParams(-1, -2).apply {
-            topMargin = dp(10)
-            bottomMargin = dp(10)
+            topMargin = dp(8)
+            bottomMargin = dp(4)
         })
         activeSection = panel
     }
@@ -1082,7 +1058,7 @@ class NativePanelActivity : AppCompatActivity() {
         })
         val edit = EditText(this).apply {
             setText(default)
-            textSize = 15f
+            textSize = 14f
             setTextColor(Color.WHITE)
             setHintTextColor(Color.rgb(100, 116, 139))
             setSingleLine(true)
@@ -1091,10 +1067,10 @@ class NativePanelActivity : AppCompatActivity() {
             inputType = if (secret) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_NORMAL
         }
-        wrap.addView(edit, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(5) })
+        wrap.addView(edit, LinearLayout.LayoutParams(-1, dp(46)).apply { topMargin = dp(4) })
         addToSection(wrap, LinearLayout.LayoutParams(-1, -2).apply {
-            topMargin = dp(4)
-            bottomMargin = dp(7)
+            topMargin = dp(3)
+            bottomMargin = dp(5)
         })
         fields[k] = edit
     }
@@ -1108,14 +1084,14 @@ class NativePanelActivity : AppCompatActivity() {
             text = label
             textSize = 13f
             setTextColor(Color.rgb(226, 232, 240))
-        }, LinearLayout.LayoutParams(0, dp(52), 1f))
+        }, LinearLayout.LayoutParams(0, dp(46), 1f))
         val toggle = Switch(this).apply {
             isChecked = default
             thumbTintList = ColorStateList.valueOf(Color.rgb(125, 211, 252))
             trackTintList = ColorStateList.valueOf(Color.rgb(51, 65, 85))
         }
-        row.addView(toggle, LinearLayout.LayoutParams(dp(52), dp(52)))
-        addToSection(row, LinearLayout.LayoutParams(-1, dp(54)).apply {
+        row.addView(toggle, LinearLayout.LayoutParams(dp(48), dp(46)))
+        addToSection(row, LinearLayout.LayoutParams(-1, dp(48)).apply {
             topMargin = dp(2)
             bottomMargin = dp(2)
         })
@@ -1142,9 +1118,9 @@ class NativePanelActivity : AppCompatActivity() {
             setPadding(dp(10), 0, dp(10), 0)
             setOnClickListener { run() }
         }
-        addToSection(button, LinearLayout.LayoutParams(-1, dp(46)).apply {
-            topMargin = dp(6)
-            bottomMargin = dp(8)
+        addToSection(button, LinearLayout.LayoutParams(-1, dp(44)).apply {
+            topMargin = dp(5)
+            bottomMargin = dp(5)
             leftMargin = dp(2)
             rightMargin = dp(2)
         })
@@ -1153,60 +1129,64 @@ class NativePanelActivity : AppCompatActivity() {
 
     private fun infoPanel(title: String, body: String, accent: Int): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(12), dp(10), dp(12), dp(10))
-        background = rounded(Color.rgb(13, 24, 36), accent, 10)
+        setPadding(dp(11), dp(9), dp(11), dp(9))
+        background = rounded(Color.rgb(13, 20, 28), accent, 10)
         addView(TextView(this@NativePanelActivity).apply {
             text = title
-            textSize = 12f
+            textSize = 11.5f
             setTypeface(null, Typeface.BOLD)
             setTextColor(accent)
             includeFontPadding = false
         })
         addView(TextView(this@NativePanelActivity).apply {
             text = body
-            textSize = 11.5f
+            textSize = 11f
             setTextColor(Color.rgb(203, 213, 225))
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(0, dp(5), 0, 0)
+            setLineSpacing(dp(1).toFloat(), 1f)
+            setPadding(0, dp(4), 0, 0)
         })
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
-            topMargin = dp(5)
+            topMargin = dp(3)
             bottomMargin = dp(5)
         }
     }
 
-    private fun detailGrid(items: List<Pair<String, String>>): LinearLayout = LinearLayout(this).apply {
+    private fun compactDetails(items: List<Pair<String, String>>): LinearLayout = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
+        setPadding(dp(11), dp(5), dp(11), dp(5))
+        background = rounded(Color.rgb(13, 20, 28), Color.rgb(42, 54, 68), 10)
         items.forEachIndexed { index, (title, body) ->
-            val card = LinearLayout(this@NativePanelActivity).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(11), dp(10), dp(11), dp(10))
-                background = rounded(Color.rgb(10, 46, 29), Color.rgb(34, 197, 94), 10)
-                addView(TextView(this@NativePanelActivity).apply {
-                    text = title
-                    textSize = 11.5f
-                    setTypeface(null, Typeface.BOLD)
-                    setTextColor(Color.rgb(134, 239, 172))
-                })
-                addView(TextView(this@NativePanelActivity).apply {
-                    text = body
-                    textSize = 11f
-                    setTextColor(Color.rgb(203, 213, 225))
-                    setLineSpacing(dp(2).toFloat(), 1f)
-                    setPadding(0, dp(4), 0, 0)
-                })
-            }
-            addView(card, LinearLayout.LayoutParams(-1, -2).apply {
-                topMargin = if (index == 0) dp(5) else dp(4)
-                bottomMargin = dp(4)
+            if (index > 0) addView(View(this@NativePanelActivity).apply { setBackgroundColor(Color.rgb(35, 47, 60)) }, LinearLayout.LayoutParams(-1, dp(1)).apply {
+                topMargin = dp(6)
+                bottomMargin = dp(6)
             })
+            addView(TextView(this@NativePanelActivity).apply {
+                text = title.uppercase(Locale("id", "ID"))
+                textSize = 9.5f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(Color.rgb(125, 211, 252))
+                includeFontPadding = false
+            })
+            addView(TextView(this@NativePanelActivity).apply {
+                text = body
+                textSize = 11.25f
+                setTextColor(Color.rgb(226, 232, 240))
+                setLineSpacing(dp(1).toFloat(), 1f)
+                setPadding(0, dp(3), 0, 0)
+            })
+        }
+        layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+            topMargin = dp(3)
+            bottomMargin = dp(5)
         }
     }
 
+    private fun detailGrid(items: List<Pair<String, String>>): LinearLayout = compactDetails(items)
+
     private fun operationStatus(title: String, body: String): TextView = TextView(this).apply {
-        textSize = 11.5f
-        setLineSpacing(dp(2).toFloat(), 1f)
-        setPadding(dp(12), dp(10), dp(12), dp(10))
+        textSize = 11f
+        setLineSpacing(dp(1).toFloat(), 1f)
+        setPadding(dp(11), dp(9), dp(11), dp(9))
         setOperationStatus(this, title, body, Color.rgb(125, 211, 252))
     }
 

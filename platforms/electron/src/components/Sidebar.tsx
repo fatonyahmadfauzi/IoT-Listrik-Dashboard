@@ -32,9 +32,9 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
     { key: 'serial', label: 'Serial Monitor', icon: Terminal },
   ];
 
-  if (role === 'admin' || isTempAccount) {
-    items.push({ key: 'analytics', label: 'Analytics', icon: BarChart3 });
-  }
+  // Analytics adalah fitur baca-saja dan tersedia untuk semua akun yang sudah login,
+  // termasuk User dan akun Simulator. Hak admin tetap hanya diperlukan untuk Pengaturan.
+  items.push({ key: 'analytics', label: 'Analytics', icon: BarChart3 });
 
   if (role === 'admin' && !isTempAccount) {
     items.push({ key: 'settings', label: 'Pengaturan', icon: Settings });

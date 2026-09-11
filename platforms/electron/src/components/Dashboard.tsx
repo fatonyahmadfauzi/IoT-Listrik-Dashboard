@@ -134,7 +134,7 @@ export function Dashboard() {
 
   const endpoint = String(connectionMeta?.endpointBadge || 'CLOUD');
   const connection = String(connectionMeta?.connection || 'Memeriksa perangkat...');
-  const deviceOffline = ['Device Offline', 'Offline', 'Memulihkan...'].includes(connection);
+  const deviceOffline = ['Device Offline', 'Offline', 'Memulihkan...', 'Memeriksa perangkat...'].includes(connection);
   // Saat koneksi/cloud atau heartbeat perangkat terputus, kartu realtime
   // harus menunjukkan kondisi aman/nihil; grafik dan tabel tetap memakai logs.
   const displayData = deviceOffline

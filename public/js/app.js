@@ -188,7 +188,7 @@ function renderConnectionMeta(m) {
         ? "ep-fallback"
         : "ep-cloud");
   const rawConnection = m.connection || "—";
-  renderOfflineSnapshot(["Device Offline", "Offline", "Memulihkan..."].includes(rawConnection));
+  renderOfflineSnapshot(["Device Offline", "Offline", "Memulihkan...", "Memeriksa perangkat..."].includes(rawConnection));
   elConnState.textContent =
     rawConnection === "Connected" ? "Device Online" : rawConnection;
   if (elHeartbeatText) {

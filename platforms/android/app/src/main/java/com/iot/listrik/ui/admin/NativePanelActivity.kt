@@ -671,11 +671,14 @@ class NativePanelActivity : AppCompatActivity() {
     private fun chooseUser(uid: String) {
         val m = latestUsers[uid] ?: return
         val email = m["email"]?.toString().orEmpty()
+        val state = m["state"]?.toString().orEmpty().uppercase(Locale.US)
         val isCurrentAccount = uid == auth.currentUser?.uid
-        val actions = if (isCurrentAccount) {
-            arrayOf("Kirim Reset Password")
-        } else {
-            arrayOf("Jadikan Admin", "Jadikan User", "Kirim Reset Password", "Hapus Profil RTDB")
+        val authExists = m["authExists"] == true
+        val isOrphan = state == "AUTH_MISSING" || !authExists
+        val actions = when {
+            isCurrentAccount -> arrayOf("Kirim Reset Password")
+            isOrphan -> arrayOf("Jadikan Admin", "Jadikan User", "Hapus Profil Sisa")
+            else -> arrayOf("Jadikan Admin", "Jadikan User", "Kirim Reset Password", "Hapus Akun Permanen")
         }
 
         AlertDialogBuilder(this).setTitle(email.ifBlank { uid }).setItems(actions) { _, which ->
@@ -684,19 +687,35 @@ class NativePanelActivity : AppCompatActivity() {
                     auth.sendPasswordResetEmail(email)
                         .addOnSuccessListener { message("Email reset password dikirim.", false) }
                         .addOnFailureListener { message("Gagal: ${it.message}", true) }
-                } else {
-                    message("Email akun tidak tersedia.", true)
-                }
+                } else message("Email akun tidak tersedia.", true)
                 return@setItems
             }
 
-            when (which) {
-                0 -> api("user-admin-action", mapOf("action" to "set_role", "uid" to uid, "role" to "admin")) { loadManagedUsers() }
-                1 -> api("user-admin-action", mapOf("action" to "set_role", "uid" to uid, "role" to "user")) { loadManagedUsers() }
-                2 -> if (email.isNotBlank()) auth.sendPasswordResetEmail(email)
+            when {
+                which == 0 -> api("user-admin-action", mapOf("action" to "set_role", "uid" to uid, "role" to "admin")) { loadManagedUsers() }
+                which == 1 -> api("user-admin-action", mapOf("action" to "set_role", "uid" to uid, "role" to "user")) { loadManagedUsers() }
+                !isOrphan && which == 2 -> if (email.isNotBlank()) auth.sendPasswordResetEmail(email)
                     .addOnSuccessListener { message("Email reset password dikirim.", false) }
                     .addOnFailureListener { message("Gagal: ${it.message}", true) }
-                3 -> api("user-admin-action", mapOf("action" to "delete_profile", "uid" to uid)) { loadManagedUsers() }
+                else -> {
+                    val title = if (isOrphan) "Hapus profil sisa?" else "Hapus akun secara permanen?"
+                    val text = if (isOrphan)
+                        "Profil RTDB akan dihapus. Akun Firebase Authentication untuk akun ini memang sudah tidak ada."
+                    else
+                        "Firebase Authentication dan profil RTDB akan dihapus. Pengguna tidak dapat login lagi. Tindakan ini tidak dapat dibatalkan."
+                    AlertDialogBuilder(this)
+                        .setTitle(title)
+                        .setMessage(text)
+                        .setNegativeButton("Batal", null)
+                        .setPositiveButton(if (isOrphan) "Hapus Profil" else "Hapus Akun") { _, _ ->
+                            val action = if (isOrphan) "delete_profile" else "delete_account"
+                            api("user-admin-action", mapOf("action" to action, "uid" to uid), onError = { error -> message(error, true) }) {
+                                message(if (isOrphan) "Profil RTDB berhasil dihapus." else "Akun dihapus permanen dan tidak dapat login lagi.", false)
+                                loadManagedUsers()
+                            }
+                        }
+                        .show()
+                }
             }
         }.setNegativeButton("Tutup", null).show()
     }

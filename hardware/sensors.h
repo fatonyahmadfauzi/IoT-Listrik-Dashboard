@@ -77,6 +77,22 @@ bool isValidMeterValue(float value) {
   return !isnan(value) && isfinite(value) && value >= 0.0f;
 }
 
+// PZEM dapat mengembalikan angka korup saat frame UART rusak. Nilai finite
+// saja tidak cukup: 97991 A, 4920 V, dan 6199 Hz harus dianggap invalid,
+// bukan diproses sebagai DANGER.
+bool isPlausibleVoltage(float value) {
+  return isValidMeterValue(value) && value <= 300.0f;
+}
+
+bool isPlausibleCurrent(float value) {
+  // PZEM-004T + Open CT pada proyek ini menggunakan rentang sampai 100 A.
+  return isValidMeterValue(value) && value <= 100.0f;
+}
+
+bool isPlausibleFrequency(float value) {
+  return isValidMeterValue(value) && value >= 45.0f && value <= 65.0f;
+}
+
 float clampPowerFactor(float pf, float fallback) {
   if (!isValidMeterValue(pf) || pf <= 0.0f || pf > 1.0f) return fallback;
   return pf;
@@ -100,8 +116,8 @@ ElectricalReading readElectrical(RuntimeSettings& settings,
   float pzemVoltage = pzem->voltage();
   float pzemCurrent = pzem->current();
 
-  if (isValidMeterValue(pzemVoltage) && pzemVoltage > 1.0f &&
-      isValidMeterValue(pzemCurrent)) {
+  if (isPlausibleVoltage(pzemVoltage) && pzemVoltage > 1.0f &&
+      isPlausibleCurrent(pzemCurrent)) {
     float pzemPower = pzem->power();
     float pzemEnergy = pzem->energy();
     float pzemFrequency = pzem->frequency();
@@ -113,10 +129,13 @@ ElectricalReading readElectrical(RuntimeSettings& settings,
     r.powerFactor = clampPowerFactor(pzemPf, settings.powerFactorEstimate);
     float powerScale = settings.arusCalibration * settings.teganganCalibration;
     if (powerScale <= 0.0f) powerScale = 1.0f;
-    r.dayaW = isValidMeterValue(pzemPower)
+    const float maxPlausiblePower = fmaxf(r.apparentPowerVa * 1.5f, 100.0f);
+    const bool powerPlausible = isValidMeterValue(pzemPower) &&
+                                 pzemPower <= maxPlausiblePower;
+    r.dayaW = powerPlausible
       ? fmaxf(pzemPower * powerScale, 0.0f)
       : fmaxf(r.apparentPowerVa * r.powerFactor, 0.0f);
-    r.frekuensi = isValidMeterValue(pzemFrequency) && pzemFrequency > 0.0f
+    r.frekuensi = isPlausibleFrequency(pzemFrequency)
       ? pzemFrequency
       : settings.frequencyHz;
     if (isValidMeterValue(pzemEnergy)) {

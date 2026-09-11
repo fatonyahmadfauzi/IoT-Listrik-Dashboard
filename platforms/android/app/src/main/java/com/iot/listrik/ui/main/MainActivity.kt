@@ -651,7 +651,7 @@ class MainActivity : AppCompatActivity() {
         // Offline bukan error sensor. Kartu realtime dikosongkan agar tidak
         // menampilkan snapshot lama, sedangkan grafik dan tabel histori tetap
         // memakai data yang sudah tersimpan.
-        binding.tvStatus.text = "NORMAL"
+        binding.tvStatus.text = "OFFLINE"
         binding.tvArus.text = "0.00 A"
         binding.tvTegangan.text = "0.0 V"
         binding.tvDayaW.text = "0 W"
@@ -659,8 +659,8 @@ class MainActivity : AppCompatActivity() {
         binding.tvPowerFactor.text = "0.00"
         binding.tvFrekuensi.text = "0 Hz"
         binding.tvApparentPower.text = "0 VA"
-        lastDeviceStatus = "NORMAL"
-        updateStatusColor("NORMAL")
+        lastDeviceStatus = "OFFLINE"
+        updateStatusColor("OFFLINE")
     }
 
     private fun refreshPresenceUi() {
@@ -2064,6 +2064,7 @@ class MainActivity : AppCompatActivity() {
         val colorTo = when (status) {
             "DANGER" -> Color.parseColor("#ef4444")
             "SENSOR_ERROR" -> Color.parseColor("#7c879b")
+            "OFFLINE" -> Color.parseColor("#94a3b8")
                 "NORMAL" -> Color.parseColor("#2eea72")
             else -> Color.parseColor("#fee58a")
         }
@@ -2104,6 +2105,7 @@ class MainActivity : AppCompatActivity() {
         "SENSOR_ERROR" -> "Sensor tidak terbaca"
         "WARNING" -> "Peringatan — mendekati batas"
         "UNKNOWN" -> "Status belum dikenali"
+        "OFFLINE" -> "Perangkat offline"
         else -> "Sistem stabil"
     }
 
@@ -2112,6 +2114,7 @@ class MainActivity : AppCompatActivity() {
         "SENSOR_ERROR" -> "Data sensor tidak valid. Periksa catu daya, kabel TX/RX, koneksi PZEM-004T, dan tunggu pembacaan berikutnya."
         "WARNING" -> "Arus mendekati ambang batas. Pantau perubahan beban dan pastikan konsumsi masih sesuai kapasitas uji."
         "UNKNOWN" -> "Status belum dikenali. Tunggu data berikutnya atau periksa koneksi perangkat."
+        "OFFLINE" -> "Tidak ada heartbeat terbaru. Nilai realtime dikosongkan, sedangkan grafik dan tabel tetap menggunakan data terakhir."
         else -> "Data realtime dibaca dari perangkat dan dievaluasi berdasarkan ambang sistem."
     }
 

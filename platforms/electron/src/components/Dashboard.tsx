@@ -54,6 +54,14 @@ const statusCopy: Record<
     title: 'Kondisi berbahaya',
     hint: 'Relay perlu berada pada kondisi aman sampai data kembali normal.',
   },
+  OFFLINE: {
+    panel: 'border-slate-500/60 bg-slate-500/10',
+    badge: 'border-slate-400/50 bg-slate-500/15 text-slate-200',
+    text: 'text-slate-200',
+    iconBox: 'text-slate-200 bg-slate-500/20 border-slate-400/30',
+    title: 'Perangkat offline',
+    hint: 'Tidak ada heartbeat terbaru. Nilai kartu realtime dikosongkan, sedangkan grafik dan tabel tetap menggunakan data terakhir.',
+  },
   SENSOR_ERROR: {
     panel: 'border-slate-400/55 bg-slate-500/10',
     badge: 'border-slate-400/50 bg-slate-500/15 text-slate-200',
@@ -132,7 +140,7 @@ export function Dashboard() {
   const displayData = deviceOffline
     ? { arus: 0, tegangan: 0, daya: 0, energi_kwh: 0, power_factor: 0, frekuensi: 0, apparent_power: 0 }
     : currentData;
-  const status = deviceOffline ? 'NORMAL' : String(currentData?.status || 'NORMAL').toUpperCase();
+  const status = deviceOffline ? 'OFFLINE' : String(currentData?.status || 'NORMAL').toUpperCase();
   const statusUi = getStatusCopy(status);
   const StatusIcon = getStatusIcon(status);
   const relayControlAllowed = role === 'admin' && connection === 'Connected';
@@ -412,7 +420,7 @@ export function Dashboard() {
               </div>
               <div>
                 <h2 className="text-2xl font-black text-white">{statusUi.title}</h2>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200">{deviceOffline ? 'Perangkat atau cloud sedang offline. Kartu realtime dikosongkan; grafik dan tabel tetap menampilkan data terakhir yang tersimpan.' : statusUi.hint}</p>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200">{statusUi.hint}</p>
               </div>
             </div>
             <div className={`hidden sm:flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border ${statusUi.iconBox}`}>

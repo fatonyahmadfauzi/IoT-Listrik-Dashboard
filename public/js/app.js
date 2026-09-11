@@ -92,6 +92,7 @@ function getStatusLabel(status) {
   if (status === "WARNING") return "Peringatan — mendekati batas";
   if (status === "SENSOR_ERROR") return "Sensor tidak terbaca";
   if (status === "UNKNOWN") return "Status belum dikenali";
+  if (status === "OFFLINE") return "Perangkat offline";
   return "Sistem stabil";
 }
 
@@ -108,6 +109,9 @@ function getStatusHint(status) {
   if (status === "UNKNOWN") {
     return "Status belum dikenali. Tunggu data berikutnya atau periksa koneksi perangkat.";
   }
+  if (status === "OFFLINE") {
+    return "Tidak ada heartbeat terbaru. Nilai realtime dikosongkan, sedangkan grafik dan tabel tetap menggunakan data terakhir.";
+  }
   return "Data realtime dibaca dari perangkat dan dievaluasi berdasarkan ambang sistem.";
 }
 
@@ -115,7 +119,7 @@ function normalizeStatus(status) {
   const value = String(status || "NORMAL").toUpperCase();
   // LEAKAGE adalah status legacy; firmware ESP32 saat ini memakai DANGER.
   if (value === "LEAKAGE") return "DANGER";
-  return ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"].includes(value)
+  return ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR", "OFFLINE"].includes(value)
     ? value
     : "UNKNOWN";
 }
@@ -124,7 +128,8 @@ function renderStatus(status) {
   if (!elStatus) return;
   const safeStatus = normalizeStatus(status);
   elStatus.textContent = safeStatus;
-  elStatus.className = `status-badge status-${safeStatus}`;
+  const visualStatus = safeStatus === "OFFLINE" ? "UNKNOWN" : safeStatus;
+  elStatus.className = `status-badge status-${safeStatus} status-${visualStatus}`;
   if (elStatusSummary) elStatusSummary.textContent = getStatusLabel(safeStatus);
   if (elStatusHint) elStatusHint.textContent = getStatusHint(safeStatus);
 
@@ -136,9 +141,10 @@ function renderStatus(status) {
       "status-DANGER",
       "status-SENSOR_ERROR",
       "status-UNKNOWN",
+      "status-OFFLINE",
       "status-pulse-danger",
     );
-    statusSurface.classList.add(`status-${safeStatus}`);
+    statusSurface.classList.add(`status-${visualStatus}`);
     if (safeStatus === "DANGER") {
       statusSurface.classList.add("status-pulse-danger");
     } else {
@@ -166,7 +172,7 @@ function renderOfflineSnapshot(isOffline) {
   if (elPF) elPF.textContent = "0.00";
   if (elFreq) elFreq.textContent = "0 Hz";
   // Offline bukan error sensor: status keselamatan tetap NORMAL/stabil.
-  renderStatus("NORMAL");
+  renderStatus("OFFLINE");
 }
 
 function renderConnectionMeta(m) {

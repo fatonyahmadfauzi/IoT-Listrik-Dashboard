@@ -218,6 +218,22 @@ struct PendingRelaySync {
   int relayVal = -1;
 } pendingRelaySync;
 
+// Snapshot DANGER wajib ditulis Core 0 sebelum pembacaan relay-off berikutnya
+// mengembalikan status menjadi NORMAL pada /listrik.
+struct PendingDangerMonitor {
+  bool active = false;
+  float arus = 0;
+  float tegangan = 0;
+  float dayaW = 0;
+  float apparentPowerVa = 0;
+  float energiKwh = 0;
+  float frekuensi = 0;
+  float powerFactor = 0;
+  int relay = 0;
+  String sensorSource = "PZEM-004T";
+  unsigned long uptimeSeconds = 0;
+} pendingDangerMonitor;
+
 // Flag Discord relay notification: di-set oleh Core 0/1, diproses di Core 0 Firebase task
 struct PendingRelayNotif {
   bool active = false;
@@ -1251,6 +1267,36 @@ void firebaseTaskCore0(void *pvParameters) {
         }
       }
 
+      // Publish the DANGER snapshot before the next relay-off reading can
+      // downgrade /listrik back to NORMAL. This keeps PWA/EXE/APK/CLI in sync
+      // with the Telegram/Discord event and the physical cutoff.
+      PendingDangerMonitor dangerSnapshot;
+      if (xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+        if (pendingDangerMonitor.active) {
+          dangerSnapshot = pendingDangerMonitor;
+          pendingDangerMonitor.active = false;
+        }
+        localState = state;
+        xSemaphoreGive(dataMutex);
+      }
+      if (dangerSnapshot.active) {
+        bool dangerLcdOk = false;
+        int dangerLcdAddress = 0;
+#ifdef USE_LCD
+        dangerLcdOk = lcdReady && lcdBusHealthy;
+        dangerLcdAddress = lcdActiveAddress;
+#endif
+        bool dangerMonitorOk = writeMonitorData(
+          dangerSnapshot.arus, dangerSnapshot.tegangan, dangerSnapshot.dayaW,
+          dangerSnapshot.apparentPowerVa, dangerSnapshot.energiKwh,
+          dangerSnapshot.frekuensi, dangerSnapshot.powerFactor, "DANGER",
+          dangerSnapshot.relay, dangerSnapshot.sensorSource,
+          dangerSnapshot.uptimeSeconds, true, dangerLcdOk, dangerLcdAddress,
+          WiFi.RSSI(), ESP.getFreeHeap());
+        Serial.printf("[Firebase] DANGER snapshot: %s relay=%d\n",
+                      dangerMonitorOk ? "published" : "failed", dangerSnapshot.relay);
+      }
+
       // 3. Read Web Relay Command (BEFORE streaming, so writeMonitorData uses latest relay state)
       if (now - lastRelayCheckMs >= RELAY_COMMAND_POLL_MS) {
         lastRelayCheckMs = now;
@@ -1804,6 +1850,20 @@ void loop() {
       saveRelayStateToNvs(0);
       setRelay(0);
       currentRelay = 0;
+      state.status = newStatus;
+      state.relay = 0;
+      state.meterValid = true;
+      pendingDangerMonitor.active = true;
+      pendingDangerMonitor.arus = reading.arus;
+      pendingDangerMonitor.tegangan = reading.tegangan;
+      pendingDangerMonitor.dayaW = reading.dayaW;
+      pendingDangerMonitor.apparentPowerVa = reading.apparentPowerVa;
+      pendingDangerMonitor.energiKwh = g_energiKwh;
+      pendingDangerMonitor.frekuensi = reading.frekuensi;
+      pendingDangerMonitor.powerFactor = reading.powerFactor;
+      pendingDangerMonitor.relay = 0;
+      pendingDangerMonitor.sensorSource = reading.sensorSource;
+      pendingDangerMonitor.uptimeSeconds = now / 1000UL;
       // JANGAN panggil updateRelayState() di sini — fbData bukan thread-safe!
       // Gunakan flag agar Core 0 yang handle Firebase write.
       pendingRelaySync.active = true;

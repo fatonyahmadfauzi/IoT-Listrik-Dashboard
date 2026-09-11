@@ -113,7 +113,7 @@ class NativePanelActivity : AppCompatActivity() {
             setOnClickListener { finish() }
         }
         bar.addView(back, LinearLayout.LayoutParams(dp(48), dp(56)))
-        viewTitle = TextView(this).apply { this.text = text; textSize = 17f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER_VERTICAL; includeFontPadding = false }
+        viewTitle = TextView(this).apply { this.text = text; textSize = 16f; setTextColor(Color.WHITE); setTypeface(null, Typeface.BOLD); gravity = Gravity.CENTER_VERTICAL; includeFontPadding = false }
         bar.addView(viewTitle, LinearLayout.LayoutParams(0, dp(56), 1f))
         val reload = ImageButton(this).apply {
             setImageResource(R.drawable.ic_refresh_24)
@@ -856,14 +856,14 @@ class NativePanelActivity : AppCompatActivity() {
         }
         panel.addView(TextView(this).apply {
             text = h
-            textSize = 15f
+            textSize = 14f
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
             includeFontPadding = false
         })
         panel.addView(TextView(this).apply {
             text = sub
-            textSize = 11.5f
+            textSize = 10.5f
             setTextColor(Color.rgb(148, 163, 184))
             setLineSpacing(dp(1).toFloat(), 1f)
             setPadding(0, dp(5), 0, 0)
@@ -873,14 +873,17 @@ class NativePanelActivity : AppCompatActivity() {
             bottomMargin = dp(8)
         })
         content.addView(panel, LinearLayout.LayoutParams(-1, -2).apply {
-            topMargin = dp(8)
-            bottomMargin = dp(4)
+            topMargin = dp(6)
+            bottomMargin = dp(3)
         })
         activeSection = panel
     }
 
-    private fun addToSection(view: View, params: LinearLayout.LayoutParams = LinearLayout.LayoutParams(-1, -2)) {
-        (activeSection ?: content).addView(view, params)
+    private fun addToSection(view: View, params: LinearLayout.LayoutParams? = null) {
+        val target = activeSection ?: content
+        val resolved = params ?: (view.layoutParams as? LinearLayout.LayoutParams
+            ?: LinearLayout.LayoutParams(-1, -2))
+        target.addView(view, resolved)
     }
 
     private fun loadDiscordBotStatusNative() {
@@ -1053,12 +1056,12 @@ class NativePanelActivity : AppCompatActivity() {
         }
         wrap.addView(TextView(this).apply {
             text = label
-            textSize = 12f
+            textSize = 10.5f
             setTextColor(Color.rgb(203, 213, 225))
         })
         val edit = EditText(this).apply {
             setText(default)
-            textSize = 14f
+            textSize = 13f
             setTextColor(Color.WHITE)
             setHintTextColor(Color.rgb(100, 116, 139))
             setSingleLine(true)
@@ -1082,16 +1085,16 @@ class NativePanelActivity : AppCompatActivity() {
         }
         row.addView(TextView(this).apply {
             text = label
-            textSize = 13f
+            textSize = 11.5f
             setTextColor(Color.rgb(226, 232, 240))
-        }, LinearLayout.LayoutParams(0, dp(46), 1f))
+        }, LinearLayout.LayoutParams(0, dp(44), 1f))
         val toggle = Switch(this).apply {
             isChecked = default
             thumbTintList = ColorStateList.valueOf(Color.rgb(125, 211, 252))
             trackTintList = ColorStateList.valueOf(Color.rgb(51, 65, 85))
         }
-        row.addView(toggle, LinearLayout.LayoutParams(dp(48), dp(46)))
-        addToSection(row, LinearLayout.LayoutParams(-1, dp(48)).apply {
+        row.addView(toggle, LinearLayout.LayoutParams(dp(48), dp(44)))
+        addToSection(row, LinearLayout.LayoutParams(-1, dp(46)).apply {
             topMargin = dp(2)
             bottomMargin = dp(2)
         })
@@ -1102,7 +1105,7 @@ class NativePanelActivity : AppCompatActivity() {
         val button = Button(this).apply {
             text = label
             setAllCaps(false)
-            textSize = 13f
+            textSize = 12f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
             val destructive = label.contains("Hapus", true) || label.contains("Kosongkan", true) || label.contains("Ban Pengguna", true)
@@ -1119,8 +1122,8 @@ class NativePanelActivity : AppCompatActivity() {
             setOnClickListener { run() }
         }
         addToSection(button, LinearLayout.LayoutParams(-1, dp(44)).apply {
-            topMargin = dp(5)
-            bottomMargin = dp(5)
+            topMargin = dp(4)
+            bottomMargin = dp(4)
             leftMargin = dp(2)
             rightMargin = dp(2)
         })

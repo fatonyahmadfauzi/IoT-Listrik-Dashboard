@@ -451,6 +451,7 @@ export function Dashboard() {
         ))}
       </section>
 
+      {role === 'admin' && (
       <section className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-700/70 pb-4">
           <div>
@@ -488,6 +489,8 @@ export function Dashboard() {
             : relayDisabledReason}
         </p>
       </section>
+
+      )}
 
       <section className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/70 pb-4">

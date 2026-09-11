@@ -31,6 +31,7 @@ function App() {
     useDataStore();
 
   const [page, setPage] = useState<Page>('dashboard');
+  const prevAccountUid = useRef<string | null>(null);
   const prevStatus = useRef<string | undefined>(undefined);
   const prevResetAt = useRef<string | number | null | undefined>(undefined);
   const prevSystemEventId = useRef<string | undefined>(undefined);
@@ -43,6 +44,24 @@ function App() {
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  // Setiap akun yang baru login selalu mulai dari dashboard. Ini juga
+  // mencegah akun User mewarisi halaman Pengaturan dari sesi Admin sebelumnya.
+  useEffect(() => {
+    const uid = user?.uid ?? null;
+    if (uid !== prevAccountUid.current) {
+      prevAccountUid.current = uid;
+      setPage('dashboard');
+    }
+  }, [user?.uid]);
+
+  // Pertahanan tambahan: halaman admin tidak boleh tetap terbuka ketika role
+  // berubah menjadi User atau ketika akun non-admin login tanpa reload aplikasi.
+  useEffect(() => {
+    if (user && role !== 'admin' && page === 'settings') {
+      setPage('dashboard');
+    }
+  }, [user, role, page]);
 
   // Subscribe to data when user is logged in
   useEffect(() => {

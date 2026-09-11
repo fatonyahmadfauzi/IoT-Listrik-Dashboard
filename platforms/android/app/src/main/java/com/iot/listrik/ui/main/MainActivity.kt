@@ -647,6 +647,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun renderOfflineDashboardSnapshot() {
+        // Offline bukan error sensor. Kartu realtime dikosongkan agar tidak
+        // menampilkan snapshot lama, sedangkan grafik dan tabel histori tetap
+        // memakai data yang sudah tersimpan.
+        binding.tvStatus.text = "NORMAL"
+        binding.tvArus.text = "0.00 A"
+        binding.tvTegangan.text = "0.0 V"
+        binding.tvDayaW.text = "0 W"
+        binding.tvEnergiKwh.text = "0.000 kWh"
+        binding.tvPowerFactor.text = "0.00"
+        binding.tvFrekuensi.text = "0 Hz"
+        binding.tvApparentPower.text = "0 VA"
+        lastDeviceStatus = "NORMAL"
+        updateStatusColor("NORMAL")
+    }
+
     private fun refreshPresenceUi() {
         val label = currentConnectionLabel()
         val color = when (label) {
@@ -657,6 +673,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val isOnline = label == "Connected"
+        if (!isOnline) renderOfflineDashboardSnapshot()
         if (!isOnline) {
             // Snapshot DANGER lama tidak boleh membuat sirene terus berbunyi
             // setelah perangkat offline atau koneksi cloud terputus.

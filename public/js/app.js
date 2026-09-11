@@ -156,6 +156,19 @@ function renderStatus(status) {
   lastDeviceStatus = safeStatus;
 }
 
+function renderOfflineSnapshot(isOffline) {
+  if (!isOffline) return;
+  if (elArus) elArus.textContent = "0.00 A";
+  if (elTegangan) elTegangan.textContent = "0.0 V";
+  if (elDayaW) elDayaW.textContent = "0 W";
+  if (elVA) elVA.textContent = "0 VA";
+  if (elEnergi) elEnergi.textContent = "0.000 kWh";
+  if (elPF) elPF.textContent = "0.00";
+  if (elFreq) elFreq.textContent = "0 Hz";
+  // Offline bukan error sensor: status keselamatan tetap NORMAL/stabil.
+  renderStatus("NORMAL");
+}
+
 function renderConnectionMeta(m) {
   if (!elEndpointBadge || !elConnState) return;
   const b = isTempAccount() ? "SIM" : (m.endpointBadge || (m.source === "LOCAL" ? "LOCAL" : "CLOUD"));
@@ -169,6 +182,7 @@ function renderConnectionMeta(m) {
         ? "ep-fallback"
         : "ep-cloud");
   const rawConnection = m.connection || "—";
+  renderOfflineSnapshot(["Device Offline", "Offline", "Memulihkan..."].includes(rawConnection));
   elConnState.textContent =
     rawConnection === "Connected" ? "Device Online" : rawConnection;
   if (elHeartbeatText) {

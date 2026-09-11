@@ -126,7 +126,13 @@ export function Dashboard() {
 
   const endpoint = String(connectionMeta?.endpointBadge || 'CLOUD');
   const connection = String(connectionMeta?.connection || 'Memeriksa perangkat...');
-  const status = String(currentData?.status || 'NORMAL').toUpperCase();
+  const deviceOffline = ['Device Offline', 'Offline', 'Memulihkan...'].includes(connection);
+  // Saat koneksi/cloud atau heartbeat perangkat terputus, kartu realtime
+  // harus menunjukkan kondisi aman/nihil; grafik dan tabel tetap memakai logs.
+  const displayData = deviceOffline
+    ? { arus: 0, tegangan: 0, daya: 0, energi_kwh: 0, power_factor: 0, frekuensi: 0, apparent_power: 0 }
+    : currentData;
+  const status = deviceOffline ? 'NORMAL' : String(currentData?.status || 'NORMAL').toUpperCase();
   const statusUi = getStatusCopy(status);
   const StatusIcon = getStatusIcon(status);
   const relayControlAllowed = role === 'admin' && connection === 'Connected';
@@ -169,7 +175,7 @@ export function Dashboard() {
   const metricCards = [
     {
       label: 'Arus',
-      value: formatNumber(currentData?.arus, 2),
+      value: formatNumber(displayData?.arus, 2),
       unit: 'A',
       tone: 'text-emerald-300',
       border: 'border-t-emerald-400',
@@ -177,7 +183,7 @@ export function Dashboard() {
     },
     {
       label: 'Tegangan',
-      value: formatNumber(currentData?.tegangan, 1),
+      value: formatNumber(displayData?.tegangan, 1),
       unit: 'V',
       tone: 'text-sky-200',
       border: 'border-t-sky-400',
@@ -185,7 +191,7 @@ export function Dashboard() {
     },
     {
       label: 'Daya Aktif (W)',
-      value: formatNumber(currentData?.daya, 0),
+      value: formatNumber(displayData?.daya, 0),
       unit: 'W',
       tone: 'text-amber-200',
       border: 'border-t-amber-400',
@@ -193,7 +199,7 @@ export function Dashboard() {
     },
     {
       label: 'Energi (kWh)',
-      value: formatNumber(currentData?.energi_kwh, 3, '0.000'),
+      value: formatNumber(displayData?.energi_kwh, 3, '0.000'),
       unit: 'kWh',
       tone: 'text-slate-100',
       border: 'border-t-violet-400/70',
@@ -201,7 +207,7 @@ export function Dashboard() {
     },
     {
       label: 'Power Factor',
-      value: formatNumber(currentData?.power_factor, 2, '0.00'),
+      value: formatNumber(displayData?.power_factor, 2, '0.00'),
       unit: '',
       tone: 'text-slate-100',
       border: 'border-t-cyan-400/70',
@@ -209,7 +215,7 @@ export function Dashboard() {
     },
     {
       label: 'Frekuensi',
-      value: formatNumber(currentData?.frekuensi, 0),
+      value: formatNumber(displayData?.frekuensi, 0),
       unit: 'Hz',
       tone: 'text-slate-100',
       border: 'border-t-orange-400/70',
@@ -217,7 +223,7 @@ export function Dashboard() {
     },
     {
       label: 'Apparent (VA)',
-      value: formatNumber(currentData?.apparent_power, 0),
+      value: formatNumber(displayData?.apparent_power, 0),
       unit: 'VA',
       tone: 'text-slate-100',
       border: 'border-t-slate-500',
@@ -406,7 +412,7 @@ export function Dashboard() {
               </div>
               <div>
                 <h2 className="text-2xl font-black text-white">{statusUi.title}</h2>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200">{statusUi.hint}</p>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-200">{deviceOffline ? 'Perangkat atau cloud sedang offline. Kartu realtime dikosongkan; grafik dan tabel tetap menampilkan data terakhir yang tersimpan.' : statusUi.hint}</p>
               </div>
             </div>
             <div className={`hidden sm:flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border ${statusUi.iconBox}`}>

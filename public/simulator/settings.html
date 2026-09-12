@@ -825,7 +825,7 @@
             <div class="settings-section telegram-settings-section" style="grid-column: 1 / -1">
               <div class="settings-section-title"><span class="material-symbols-rounded">send</span>Konfigurasi Telegram</div>
               <div class="info-panel info-panel--green telegram-info-panel">
-                <strong>Aman:</strong> Token dan daftar Chat ID disimpan di Firebase — bukan di firmware. Hanya admin yang dapat mengubahnya. ESP32 membaca nilai ini setiap sinkronisasi.
+                <strong>Aman:</strong> Token dan daftar Chat ID disimpan pada konfigurasi virtual akun simulator. Notifikasi hanya dikirim untuk event simulasi; tidak ada ESP32 atau firmware fisik yang membaca bagian ini.
               </div>
 
               <div class="telegram-config-stack">
@@ -909,7 +909,7 @@
               </div>
               <div class="info-panel info-panel--discord">
                 <strong>Cara mendapatkan Webhook URL:</strong> Buka Discord → klik kanan channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL.<br/>
-                URL disimpan di Firebase RTDB <code>/settings/discord/</code> — dibaca notifier server (lokal atau via ngrok).<br/>
+                URL disimpan pada konfigurasi virtual akun simulator dan digunakan oleh notifier untuk event simulasi.<br/>
                 Belum punya server Discord? <a href="https://discord.gg/WszeM4FVH6" target="_blank" style="color:#7289da;">Join server IoT Listrik Dashboard</a> untuk mendapatkan channel monitoring siap pakai.
               </div>
 

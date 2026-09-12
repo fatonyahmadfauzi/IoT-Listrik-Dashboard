@@ -641,18 +641,18 @@
           <!-- ── Runtime Config notice ─────────────────────────── -->
           <div class="runtime-notice">
             <span class="material-symbols-rounded">sync</span>
-            <span><strong>Runtime Configuration:</strong> Perubahan di halaman ini langsung disimpan ke Firebase <code>/settings</code> dan ESP32 akan membacanya otomatis dalam ~10 detik — <strong>tanpa upload firmware</strong>.</span>
+            <span><strong>Konfigurasi Simulator:</strong> Perubahan di halaman ini disimpan ke konfigurasi virtual akun demo dan langsung dipakai pada simulasi berikutnya — <strong>tanpa perangkat fisik dan tanpa upload firmware</strong>.</span>
           </div>
 
           <!-- ── Settings grid (2 columns) ─────────────────────── -->
           <div class="settings-grid">
             <!-- Card 1: Sistem & Sensor ─────────────────────────── -->
             <div class="settings-section">
-              <div class="settings-section-title"><span class="material-symbols-rounded">sensors</span>Sistem &amp; Sensor</div>
+              <div class="settings-section-title"><span class="material-symbols-rounded">sensors</span>Simulasi Sistem</div>
 
               <div class="form-group">
                 <label class="form-label" for="inpThreshold">
-                  Threshold Arus Maksimal (A)
+                  Threshold Arus Simulasi (A)
                 </label>
                 <input
                   id="inpThreshold"
@@ -693,7 +693,7 @@
 
               <div class="form-group">
                 <label class="form-label" for="inpSendInterval">
-                  Interval Kirim Data (ms)
+                  Interval Pembaruan Simulasi (ms)
                 </label>
                 <input
                   id="inpSendInterval"
@@ -705,7 +705,7 @@
                   value="2000"
                 />
                 <div class="form-hint">
-                  Seberapa sering ESP32 menulis data ke Firebase.<br />
+                  Seberapa sering simulator memperbarui data virtual.<br />
                   Min: 500 ms | Rekomendasi: 2000 ms.
                 </div>
                 <div id="valSendInterval" class="validation-msg"></div>
@@ -713,8 +713,8 @@
 
               <div class="toggle-row">
                 <div class="toggle-info">
-                  <h4>Buzzer</h4>
-                  <p>Bunyi saat kondisi abnormal terdeteksi</p>
+                  <h4>Alarm Virtual</h4>
+                  <p>Menandai kondisi abnormal pada simulasi</p>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" id="inpBuzzer" checked />
@@ -724,8 +724,8 @@
 
               <div class="toggle-row">
                 <div class="toggle-info">
-                  <h4>Auto-Cutoff Relay</h4>
-                  <p>Relay dimatikan otomatis saat DANGER (arus ≥ threshold)</p>
+                  <h4>Auto-Cutoff Virtual</h4>
+                  <p>Aksi virtual diterapkan otomatis saat DANGER (arus ≥ threshold)</p>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" id="inpAutoCutoff" checked />

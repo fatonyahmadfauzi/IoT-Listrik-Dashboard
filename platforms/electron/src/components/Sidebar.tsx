@@ -28,9 +28,15 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
   const items: Array<{ key: any, label: string, icon: any }> = [
     { key: 'dashboard', label: 'Dashboard', icon: Home },
     { key: 'history', label: 'Riwayat Log', icon: Clock },
-    { key: 'diagnostics', label: 'Diagnostik', icon: HeartPulse },
-    { key: 'serial', label: 'Serial Monitor', icon: Terminal },
   ];
+
+  // Diagnostik fisik dan Serial Monitor hanya untuk sesi perangkat fisik.
+  // Akun Demo/Simulator memakai data virtual sehingga tidak boleh menampilkan
+  // status SENSOR_ERROR atau pemeriksaan ESP32/LCD/PZEM fisik.
+  if (!isTempAccount) {
+    items.push({ key: 'diagnostics', label: 'Diagnostik', icon: HeartPulse });
+    items.push({ key: 'serial', label: 'Serial Monitor', icon: Terminal });
+  }
 
   // Analytics adalah fitur baca-saja dan tersedia untuk semua akun yang sudah login,
   // termasuk User dan akun Simulator. Hak admin tetap hanya diperlukan untuk Pengaturan.

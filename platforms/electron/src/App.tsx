@@ -61,7 +61,10 @@ function App() {
     if (user && role !== 'admin' && page === 'settings') {
       setPage('dashboard');
     }
-  }, [user, role, page]);
+    if (user && isTempAccount && (page === 'diagnostics' || page === 'serial')) {
+      setPage('dashboard');
+    }
+  }, [user, role, isTempAccount, page]);
 
   // Subscribe to data when user is logged in
   useEffect(() => {

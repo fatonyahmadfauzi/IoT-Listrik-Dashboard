@@ -68,6 +68,25 @@ async function sendDiscordFallback(webhookUrl, embed) {
   } catch { return false; }
 }
 
+async function sendSimulatorLogToDiscord(settings, log) {
+  const webhook = settings?.discord?.webhookLogs;
+  if (settings?.discord?.enabled === false || !webhook) return false;
+  return sendDiscordFallback(webhook, {
+    title: `📋 [SIM] Aktivitas Log — ${log.status}`,
+    description: log.message || 'Log baru dari simulator.',
+    color: log.status === 'DANGER' ? 0xED4245 : log.status === 'WARNING' ? 0xFEE75C : 0x57F287,
+    fields: [
+      { name: '⚡ Arus', value: `${log.arus ?? '-'} A`, inline: true },
+      { name: '🔋 Tegangan', value: `${log.tegangan ?? '-'} V`, inline: true },
+      { name: '💡 Daya Aktif', value: `${log.daya_w ?? '-'} W`, inline: true },
+      { name: '🔌 Relay Virtual', value: Number(log.relay) === 1 ? 'ON' : 'OFF', inline: true },
+      { name: 'Status', value: String(log.status || '-'), inline: true },
+      { name: 'Sumber', value: 'SIMULATOR', inline: true },
+    ],
+    footer: { text: `IoT Listrik Simulator • ${new Date().toLocaleString('id-ID')}` },
+  });
+}
+
 // ── Kirim Telegram langsung dari browser (fallback jika CF gagal) ─────────
 function normalizeTelegramChatId(value) {
   const id = String(value ?? '').trim();
@@ -183,7 +202,7 @@ async function injectData(prefix, isDanger = false) {
     // Selalu log saat DANGER; throttle log NORMAL (1 dari 3 inject)
     const shouldLog = isDanger || (++_logThrottleCount % 3 === 0);
     if (shouldLog) {
-      await push(ref(db, prefix + "/logs"), {
+      const log = {
         waktu:        new Date().toISOString(),
         arus:         payload.arus,
         tegangan:     payload.tegangan,
@@ -196,9 +215,14 @@ async function injectData(prefix, isDanger = false) {
         relay:        payload.relay,
         source:       "SIMULATOR",
         message:      isDanger
-          ? "⚠️ Overcurrent terdeteksi — relay diputuskan otomatis"
+          ? "⚠️ Overcurrent terdeteksi — relay virtual diputuskan otomatis"
           : "📡 Telemetri normal dari simulator",
-      });
+      };
+      await push(ref(db, prefix + "/logs"), log);
+      // Log simulator berada di /sim/{uid}/logs, sehingga Cloud Function
+      // hardware pada /logs tidak akan menangkapnya. Kirim langsung ke #logs.
+      const simSettings = await getSimSettings(prefix);
+      await sendSimulatorLogToDiscord(simSettings, log);
     }
     return payload;
   } catch (error) {
@@ -402,6 +426,11 @@ function initControlPanel() {
         relay:        1,
         source:       "TEST_ALERT",
         message:      "Manual test notifikasi dari Control Panel",
+      });
+      await sendSimulatorLogToDiscord(settings, {
+        arus: testData.arus, tegangan: testData.tegangan, daya_w: testData.daya_w,
+        status: "WARNING", relay: 1, source: "TEST_ALERT",
+        message: "Manual test notifikasi WARNING dari Control Console",
       });
 
       // 3. Auto restore ke NORMAL setelah 8 detik dan lepas lock

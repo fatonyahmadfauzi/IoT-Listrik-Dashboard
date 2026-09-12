@@ -81,6 +81,7 @@ struct DeviceState {
 };
 DeviceState state;
 String lastStatus = "NORMAL";  // previous iteration status for change detection
+bool dangerLatched = false;  // tetap DANGER setelah auto-cutoff sampai Auto Learning dimulai
 
 struct AutoLearningState {
   bool running = false;
@@ -702,6 +703,9 @@ void resetAutoLearningRuntime() {
 }
 
 void beginAutoLearning(unsigned long now) {
+  // Auto Learning menjadi titik pemulihan yang diminta admin: setelah request
+  // benar-benar dimulai, latch DANGER dilepas dan status dapat kembali NORMAL.
+  dangerLatched = false;
   resetAutoLearningRuntime();
   autoLearning.running = true;
   autoLearning.requestId = rt.autoLearningRequestId.isEmpty()
@@ -1828,6 +1832,9 @@ void loop() {
   // ── Determine status using RUNTIME threshold ─────────────────
   if (trace) { Serial.println("[Loop] 4. Determine status..."); Serial.flush(); }
   String newStatus = reading.valid ? determineStatus(reading.arus, localRt.thresholdArus, localRt.warningPercent) : "SENSOR_ERROR";
+  if (dangerLatched && reading.valid && !autoLearning.running) {
+    newStatus = "DANGER";
+  }
   if (trace) { Serial.printf("[Loop] 4. Status OK: %s\n", newStatus.c_str()); Serial.flush(); }
   bool statusChanged = (newStatus != lastStatus);
 
@@ -1841,6 +1848,7 @@ void loop() {
                           && currentRelay == 1;
 
   if (shouldAutoCutoff) {
+    dangerLatched = true;
     Serial.printf("[Auto-Cutoff] Kondisi %s — Relay OFF + Lock.\n", newStatus.c_str());
 
     // Set lock SEBELUM acquire mutex (NVS di luar mutex, ok karena hanya Core 1 yang call ini)

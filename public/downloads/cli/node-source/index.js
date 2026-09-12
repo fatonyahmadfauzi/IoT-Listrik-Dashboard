@@ -196,18 +196,22 @@ function renderLiveMonitoring(data) {
     return;
   }
 
-  const status = String(data.status || "NORMAL").toUpperCase();
-  const arus = Number(data.arus ?? 0);
-  const tegangan = Number(data.tegangan ?? 0);
-  const energi = Number(data.energi_kwh ?? 0);
-  const frekuensi = Number(data.frekuensi ?? 0);
-  const pf = Number(data.power_factor ?? 0);
-  const apparentPower = Number(data.apparent_power ?? data.daya ?? 0);
-  const activePower = Number(data.daya_w ?? (pf > 0 ? apparentPower * pf : 0));
+  const isOffline = connection === "Device Offline" || connection === "Offline";
+  // Kartu/live summary mengikuti kontrak web dan Windows: ketika heartbeat
+  // stale, nilai realtime menjadi 0 dan status menjadi OFFLINE. Snapshot lama
+  // tetap disimpan di latestListrikSnapshot untuk histori/diagnostik.
+  const status = isOffline ? "OFFLINE" : String(data.status || "NORMAL").toUpperCase();
+  const arus = isOffline ? 0 : Number(data.arus ?? 0);
+  const tegangan = isOffline ? 0 : Number(data.tegangan ?? 0);
+  const energi = isOffline ? 0 : Number(data.energi_kwh ?? 0);
+  const frekuensi = isOffline ? 0 : Number(data.frekuensi ?? 0);
+  const pf = isOffline ? 0 : Number(data.power_factor ?? 0);
+  const apparentPower = isOffline ? 0 : Number(data.apparent_power ?? data.daya ?? 0);
+  const activePower = isOffline ? 0 : Number(data.daya_w ?? (pf > 0 ? apparentPower * pf : 0));
 
   const rawUpdatedAt = data.updated_at ?? data.timestamp ?? data.waktu;
   const updatedAtMs = Number(rawUpdatedAt);
-  const waktuStr = Number.isFinite(updatedAtMs) && updatedAtMs > 1e12
+  const waktuStr = !isOffline && Number.isFinite(updatedAtMs) && updatedAtMs > 1e12
     ? new Date(updatedAtMs).toLocaleString('id-ID')
     : "-";
   console.log(`${chalk.blue("Waktu      :")} ${chalk.white(waktuStr)}`);
@@ -219,7 +223,7 @@ function renderLiveMonitoring(data) {
   console.log(`${chalk.blue("Energi     :")} ${chalk.white(`${energi.toFixed(3)} kWh`)} ${chalk.gray("akumulasi meter")}`);
   console.log(`${chalk.blue("PF / Freq  :")} ${chalk.white(pf.toFixed(2))} / ${chalk.white(`${frekuensi.toFixed(1)} Hz`)}`);
   console.log(
-    `${chalk.blue("Relay      :")} ${data.relay ? chalk.green("ON") : chalk.red("OFF")}`
+    `${chalk.blue("Relay      :")} ${isOffline ? chalk.red("OFF") : data.relay ? chalk.green("ON") : chalk.red("OFF")}`
   );
 }
 

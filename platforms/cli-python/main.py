@@ -685,29 +685,34 @@ def stream_handler(message):
         source_label = "SIM" if is_temp_session else "CLOUD"
         console.print(f"[blue]Sumber     :[/blue] {source_label}")
         console.print(f"[blue]Koneksi    :[/blue] {conn_str}")
+        offline = connection in ("Device Offline", "Offline")
+        # Saat heartbeat stale, live summary mengikuti web/Windows: nilai
+        # realtime dikosongkan menjadi 0 dan status menjadi OFFLINE. Snapshot
+        # lama tetap disimpan untuk histori, bukan ditampilkan sebagai realtime.
         raw_updated_at = full_data.get("updated_at") or full_data.get("timestamp") or full_data.get("waktu")
         try:
             upd_ms = float(raw_updated_at) if raw_updated_at is not None else None
             from datetime import datetime as _dt
-            if upd_ms and upd_ms > 1_000_000_000_000:
+            if not offline and upd_ms and upd_ms > 1_000_000_000_000:
                 waktu_live = _dt.fromtimestamp(upd_ms / 1000).strftime("%d/%m/%Y %H:%M:%S")
             else:
-                waktu_live = str(raw_updated_at) if raw_updated_at else "-"
+                waktu_live = "-"
         except (ValueError, TypeError):
             waktu_live = "-"
+        live_data = {} if offline else full_data
         console.print(f"[blue]Waktu      :[/blue] {waktu_live}")
-        console.print(f"[blue]Arus (A)   :[/blue] [white]{full_data.get('arus', '0')}[/white]")
-        console.print(f"[blue]Tegangan(V):[/blue] [white]{full_data.get('tegangan', '0')}[/white]")
-        console.print(f"[blue]Daya (VA)  :[/blue] [white]{full_data.get('apparent_power', full_data.get('daya', '0'))}[/white]")
+        console.print(f"[blue]Arus (A)   :[/blue] [white]{live_data.get('arus', 0)}[/white]")
+        console.print(f"[blue]Tegangan(V):[/blue] [white]{live_data.get('tegangan', 0)}[/white]")
+        console.print(f"[blue]Daya (VA)  :[/blue] [white]{live_data.get('apparent_power', live_data.get('daya', 0))}[/white]")
         
-        status = full_data.get('status', 'NORMAL')
+        status = 'OFFLINE' if offline else full_data.get('status', 'NORMAL')
         color = "green"
         if status == "WARNING": color = "yellow"
         elif status == "DANGER": color = "bold red"
         
         console.print(f"[blue]Status     :[/blue] [{color}]{status}[/{color}]")
         
-        relay_val = full_data.get('relay', False)
+        relay_val = False if offline else full_data.get('relay', False)
         relay_str = "[bold green]ON[/bold green]" if relay_val else "[bold red]OFF[/bold red]"
         console.print(f"[blue]Relay      :[/blue] {relay_str}\n")
     except Exception as e:

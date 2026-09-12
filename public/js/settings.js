@@ -1770,7 +1770,9 @@ async function saveSettings() {
     }
     // Gunakan update() bukan set() agar /settings/discord subpath TIDAK TERHAPUS
     await update(ref(db, getDbPrefix() + '/settings'), payload);
-    showToast(`${settingsPageLabel} tersimpan — ESP32 sinkron dalam ~10 detik`, 'success');
+    showToast(isTempAccount()
+      ? 'Pengaturan simulator tersimpan.'
+      : `${settingsPageLabel} tersimpan — ESP32 sinkron dalam ~10 detik`, 'success');
     if (saveStatus) saveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
     // Reload config di sim-notifier agar notifikasi langsung sinkron
     reloadSimNotifierConfig().catch(() => {});

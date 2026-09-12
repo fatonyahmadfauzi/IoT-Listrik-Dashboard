@@ -353,11 +353,13 @@ function createStatusChart(canvas) {
   return new Chart(canvas, {
     type: "doughnut",
     data: {
-      labels: ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"],
+      labels: isTempAccount() ? ["NORMAL", "WARNING", "DANGER"] : ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"],
       datasets: [
         {
-          data: [0, 0, 0, 0],
-          backgroundColor: [COLORS.normal, COLORS.warning, COLORS.danger, COLORS.sensorError],
+          data: isTempAccount() ? [0, 0, 0] : [0, 0, 0, 0],
+          backgroundColor: isTempAccount()
+            ? [COLORS.normal, COLORS.warning, COLORS.danger]
+            : [COLORS.normal, COLORS.warning, COLORS.danger, COLORS.sensorError],
           borderColor: "rgba(7,12,24,0.92)",
           borderWidth: 4,
           hoverOffset: 6,
@@ -630,22 +632,21 @@ function updateSupportCharts(entries) {
 }
 
 function updateStatusChart(stats) {
-  const counts = [
-    stats.statusCounts.NORMAL,
-    stats.statusCounts.WARNING,
-    stats.statusCounts.DANGER,
-    stats.statusCounts.SENSOR_ERROR,
-  ];
+  const simulator = isTempAccount();
+  const counts = simulator
+    ? [stats.statusCounts.NORMAL, stats.statusCounts.WARNING, stats.statusCounts.DANGER]
+    : [stats.statusCounts.NORMAL, stats.statusCounts.WARNING, stats.statusCounts.DANGER, stats.statusCounts.SENSOR_ERROR];
+  const labels = simulator ? ["NORMAL", "WARNING", "DANGER"] : ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"];
+  const colors = simulator
+    ? [COLORS.normal, COLORS.warning, COLORS.danger]
+    : [COLORS.normal, COLORS.warning, COLORS.danger, COLORS.sensorError];
+  statusChart.data.labels = labels;
+  statusChart.data.datasets[0].backgroundColor = colors;
   statusChart.data.datasets[0].data = counts;
   statusChart.update("none");
 
   const total = Math.max(1, counts.reduce((sum, value) => sum + value, 0));
-  const rows = [
-    ["NORMAL", counts[0], COLORS.normal],
-    ["WARNING", counts[1], COLORS.warning],
-    ["DANGER", counts[2], COLORS.danger],
-    ["SENSOR_ERROR", counts[3], COLORS.sensorError],
-  ];
+  const rows = labels.map((label, index) => [label, counts[index], colors[index]]);
 
   if (statusLegendEl) {
     statusLegendEl.innerHTML = rows

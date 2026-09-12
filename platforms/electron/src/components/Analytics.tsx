@@ -11,7 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { useDataStore } from '../lib/store';
+import { useAuthStore, useDataStore } from '../lib/store';
 import { LogDateFilter, useLogDateFilter } from './LogDateFilter';
 
 ChartJS.register(
@@ -116,6 +116,7 @@ function statusBadgeClass(status?: string) {
 
 export function Analytics() {
   const { logs, currentData } = useDataStore();
+  const { isTempAccount } = useAuthStore();
   const dateFilter = useLogDateFilter(logs);
   const filteredLogs = dateFilter.filteredLogs;
   const snapshotSource = filteredLogs[0] || currentData;
@@ -155,12 +156,18 @@ export function Analytics() {
   };
 
   const statusTotal = Object.values(statusCounts).reduce((sum, value) => sum + value, 0);
-  const statusRows = [
-    ['NORMAL', statusCounts.NORMAL, colors.normal],
-    ['WARNING', statusCounts.WARNING, colors.warning],
-    ['DANGER', statusCounts.DANGER, colors.danger],
-    ['SENSOR_ERROR', statusCounts.SENSOR_ERROR, colors.sensorError],
-  ] as const;
+  const statusRows = (isTempAccount
+    ? [
+        ['NORMAL', statusCounts.NORMAL, colors.normal],
+        ['WARNING', statusCounts.WARNING, colors.warning],
+        ['DANGER', statusCounts.DANGER, colors.danger],
+      ]
+    : [
+        ['NORMAL', statusCounts.NORMAL, colors.normal],
+        ['WARNING', statusCounts.WARNING, colors.warning],
+        ['DANGER', statusCounts.DANGER, colors.danger],
+        ['SENSOR_ERROR', statusCounts.SENSOR_ERROR, colors.sensorError],
+      ]) as const;
 
   const trendData = {
     labels: chartLogs.map((log) => formatClock(number(log.timestamp))),
@@ -230,16 +237,15 @@ export function Analytics() {
   };
 
   const statusData = {
-    labels: ['NORMAL', 'WARNING', 'DANGER', 'SENSOR_ERROR'],
+    labels: isTempAccount ? ['NORMAL', 'WARNING', 'DANGER'] : ['NORMAL', 'WARNING', 'DANGER', 'SENSOR_ERROR'],
     datasets: [
       {
-        data: [
-          statusCounts.NORMAL,
-          statusCounts.WARNING,
-          statusCounts.DANGER,
-          statusCounts.SENSOR_ERROR,
-        ],
-        backgroundColor: [colors.normal, colors.warning, colors.danger, colors.sensorError],
+        data: isTempAccount
+          ? [statusCounts.NORMAL, statusCounts.WARNING, statusCounts.DANGER]
+          : [statusCounts.NORMAL, statusCounts.WARNING, statusCounts.DANGER, statusCounts.SENSOR_ERROR],
+        backgroundColor: isTempAccount
+          ? [colors.normal, colors.warning, colors.danger]
+          : [colors.normal, colors.warning, colors.danger, colors.sensorError],
         borderColor: 'rgba(7, 12, 24, 0.92)',
         borderWidth: 4,
       },
@@ -451,7 +457,7 @@ export function Analytics() {
         <article className="rounded-xl border border-slate-700/75 bg-slate-900/70 p-6 shadow-xl">
           <div className="border-b border-slate-700/70 pb-4">
             <h2 className="text-lg font-black text-white">Distribusi Status</h2>
-            <p className="mt-1 text-sm text-slate-400">Perbandingan NORMAL, WARNING, DANGER, dan SENSOR_ERROR.</p>
+            <p className="mt-1 text-sm text-slate-400">{isTempAccount ? 'Perbandingan NORMAL, WARNING, dan DANGER pada data simulator.' : 'Perbandingan NORMAL, WARNING, DANGER, dan SENSOR_ERROR.'}</p>
           </div>
           <div className="mt-6 h-80 min-w-0">
             <Doughnut data={statusData} options={commonChartOptions} />

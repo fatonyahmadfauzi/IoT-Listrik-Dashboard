@@ -1412,13 +1412,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateAnalyticsStatusChart(statusCounts: Map<String, Int>) {
-        val labels = listOf("NORMAL", "WARNING", "DANGER", "SENSOR_ERROR")
-        val colors = listOf(
-            Color.parseColor("#22c55e"),
-            Color.parseColor("#fcd34d"),
-            Color.parseColor("#ef4444"),
-            Color.parseColor("#7c879b")
-        )
+        // Akun simulator hanya memiliki data virtual; SENSOR_ERROR adalah status
+        // perangkat fisik dan tidak boleh ditampilkan pada analytics simulator.
+        val labels = if (isTempAccount) {
+            listOf("NORMAL", "WARNING", "DANGER")
+        } else {
+            listOf("NORMAL", "WARNING", "DANGER", "SENSOR_ERROR")
+        }
+        val colors = if (isTempAccount) {
+            listOf(
+                Color.parseColor("#22c55e"),
+                Color.parseColor("#fcd34d"),
+                Color.parseColor("#ef4444")
+            )
+        } else {
+            listOf(
+                Color.parseColor("#22c55e"),
+                Color.parseColor("#fcd34d"),
+                Color.parseColor("#ef4444"),
+                Color.parseColor("#7c879b")
+            )
+        }
         val counts = labels.map { statusCounts[it] ?: 0 }
         val total = counts.sum()
         val chart = analyticsPageBinding.analyticsStatusChart

@@ -75,6 +75,7 @@ let lastDeviceStatus = "NORMAL"; // track status terbaru dari perangkat
 let stopHybrid = null;
 let stopLogs = null;
 let relayControlAllowed = false;
+let realtimeOffline = false;
 let relayControlReason = "Menunggu status perangkat";
 
 function formatSeenTime(value) {
@@ -188,7 +189,8 @@ function renderConnectionMeta(m) {
         ? "ep-fallback"
         : "ep-cloud");
   const rawConnection = m.connection || "—";
-  renderOfflineSnapshot(["Device Offline", "Offline", "Memulihkan...", "Memeriksa perangkat..."].includes(rawConnection));
+  realtimeOffline = ["Device Offline", "Offline", "Memulihkan...", "Memeriksa perangkat..."].includes(rawConnection);
+  renderOfflineSnapshot(realtimeOffline);
   elConnState.textContent =
     rawConnection === "Connected" ? "Device Online" : rawConnection;
   if (elHeartbeatText) {
@@ -527,13 +529,17 @@ function startRealtimeListener() {
   if (stopHybrid) stopHybrid();
   stopHybrid = startHybridListrik(db, {
     onData: (d) => {
-      if (elArus) elArus.textContent = d.arus.toFixed(2) + " A";
-      if (elTegangan) elTegangan.textContent = d.tegangan.toFixed(1) + " V";
-      if (elDayaW) elDayaW.textContent = d.daya_w.toFixed(0) + " W";
-      if (elVA) elVA.textContent = d.daya.toFixed(0) + " VA";
-      if (elEnergi) elEnergi.textContent = d.energi_kwh.toFixed(3) + " kWh";
-      if (elPF) elPF.textContent = d.power_factor.toFixed(2);
-      if (elFreq) elFreq.textContent = d.frekuensi.toFixed(0) + " Hz";
+      // Saat heartbeat sudah stale/offline, kartu realtime harus tetap 0.
+      // Data d tetap dipakai untuk grafik dan tabel histori, bukan kartu realtime.
+      if (!realtimeOffline) {
+        if (elArus) elArus.textContent = d.arus.toFixed(2) + " A";
+        if (elTegangan) elTegangan.textContent = d.tegangan.toFixed(1) + " V";
+        if (elDayaW) elDayaW.textContent = d.daya_w.toFixed(0) + " W";
+        if (elVA) elVA.textContent = d.daya.toFixed(0) + " VA";
+        if (elEnergi) elEnergi.textContent = d.energi_kwh.toFixed(3) + " kWh";
+        if (elPF) elPF.textContent = d.power_factor.toFixed(2);
+        if (elFreq) elFreq.textContent = d.frekuensi.toFixed(0) + " Hz";
+      }
 
       if (elUpdated && Number(d.updated_at) > 1e12) {
         elUpdated.textContent = `Update ${new Date(Number(d.updated_at)).toLocaleTimeString("id-ID")}`;

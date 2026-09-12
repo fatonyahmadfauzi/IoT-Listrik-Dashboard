@@ -1362,12 +1362,11 @@ export function Settings() {
           [
             ['system', 'System'],
             ['learning', 'Auto Learning'],
-            ['calibration', 'Calibration'],
             ['telegram', 'Telegram'],
             ['discord', 'Discord'],
             ['device', 'Device'],
             ['backup', 'Backup'],
-            ...(!isTempAccount ? [['backend', 'Backend'] as const] : []),
+            ...(!isTempAccount ? [['calibration', 'Calibration'] as const, ['backend', 'Backend'] as const] : []),
             ['users', 'Users'],
           ] as const
         ).map(([t, label]) => (
@@ -1615,7 +1614,7 @@ export function Settings() {
       )}
 
       {/* Calibration Tab */}
-      {tab === 'calibration' && (
+      {tab === 'calibration' && !isTempAccount && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Sensor Calibration

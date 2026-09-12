@@ -2093,6 +2093,7 @@ class MainActivity : AppCompatActivity() {
         val statusBackground = when (status) {
             "DANGER" -> R.drawable.bg_status_danger
             "SENSOR_ERROR" -> R.drawable.bg_status_sensor_error
+            "OFFLINE" -> R.drawable.bg_status_offline
             "NORMAL" -> R.drawable.bg_status_normal
             else -> R.drawable.bg_status_warning
         }

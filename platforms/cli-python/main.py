@@ -524,6 +524,10 @@ def _github_release():
 
 
 def view_diagnostics():
+    if is_temp_session:
+        console.print("\n[yellow]Diagnostik perangkat fisik tidak tersedia untuk akun Demo/Simulator.[/yellow]")
+        hold_for_enter()
+        return
     while True:
         print_header(live_countdown=True)
         data = {}
@@ -756,11 +760,12 @@ def main_menu():
         choices = [
             questionary.Choice("[1] Mengakses Live Monitoring", "live"),
             questionary.Choice("[2] Riwayat Log (20 entri)", "log"),
-            questionary.Choice("[3] Diagnostik Sistem", "diagnostics"),
         ]
+        if not is_temp_session:
+            choices.append(questionary.Choice("[3] Diagnostik Sistem", "diagnostics"))
         if current_role == "admin" and not is_temp_session:
             choices.append(questionary.Choice("[4] Kontrol Relay Power", "relay"))
-        logout_number = 5 if current_role == "admin" and not is_temp_session else 4
+        logout_number = 5 if current_role == "admin" and not is_temp_session else (3 if is_temp_session else 4)
         choices.extend([
             questionary.Choice(f"[{logout_number}] Keluar Sesi (Logout)", "logout"),
             questionary.Choice("[0] Matikan Aplikasi (Exit)", "exit")

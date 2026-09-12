@@ -136,6 +136,14 @@ function initPage(callbacks = {}) {
         localStorage.removeItem("iot_alarm_disable");
       } catch (_) {}
 
+      // Akun demo/simulator hanya memakai data virtual. Jangan tampilkan atau buka
+      // halaman yang membutuhkan perangkat fisik (diagnostik dan serial monitor).
+      const currentPath = window.location.pathname.replace(/\/$/, "");
+      if (_isTempAccount && ["/app/diagnostics", "/app/serial-monitor"].includes(currentPath)) {
+        window.location.replace("/simulator/dashboard");
+        return;
+      }
+
       // Admin-only page guard (Simulator temp accounts bypass this for their own settings)
       const bypassAdminCheck = isSim && _isTempAccount;
       if (
@@ -201,7 +209,7 @@ function populateSidebar(user, role) {
     historyLink?.insertAdjacentElement("afterend", analyticsLink);
   }
 
-  if (nav && !nav.querySelector('a[href="/app/diagnostics"]')) {
+  if (nav && !_isTempAccount && !nav.querySelector('a[href="/app/diagnostics"]')) {
     const analyticsLink = nav.querySelector('a[href="/app/analytics"]');
     const diagnosticsLink = document.createElement("a");
     diagnosticsLink.href = "/app/diagnostics";
@@ -210,7 +218,7 @@ function populateSidebar(user, role) {
     analyticsLink?.insertAdjacentElement("afterend", diagnosticsLink);
   }
 
-  if (nav && !nav.querySelector('a[href="/app/serial-monitor"]')) {
+  if (nav && !_isTempAccount && !nav.querySelector('a[href="/app/serial-monitor"]')) {
     const diagnosticsLink = nav.querySelector('a[href="/app/diagnostics"]');
     const serialLink = document.createElement("a");
     serialLink.href = "/app/serial-monitor";
@@ -225,6 +233,10 @@ function populateSidebar(user, role) {
     style.textContent = "@media (max-width: 900px) { .serial-monitor-nav { display: none !important; } }";
     document.head.appendChild(style);
   }
+  }
+
+  if (_isTempAccount && nav) {
+    nav.querySelectorAll('a[href="/app/diagnostics"], a[href="/app/serial-monitor"]').forEach((item) => item.remove());
   }
 
   const currentPath = window.location.pathname.replace(/\/$/, "");

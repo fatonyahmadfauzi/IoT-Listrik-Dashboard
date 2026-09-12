@@ -201,7 +201,13 @@ class MainActivity : AppCompatActivity() {
         drawerBinding.btnDrawerDashboard.setOnClickListener { showPage(AppPage.DASHBOARD) }
         drawerBinding.btnDrawerHistory.setOnClickListener { showPage(AppPage.HISTORY) }
         drawerBinding.btnDrawerAnalytics.setOnClickListener { showPage(AppPage.ANALYTICS) }
-        drawerBinding.btnDrawerDiagnostics.setOnClickListener { openNativePanel("diagnostics", "Diagnostik Sistem") }
+        drawerBinding.btnDrawerDiagnostics.setOnClickListener {
+            if (isTempAccount) {
+                showToast("Diagnostik perangkat fisik tidak tersedia untuk akun Demo/Simulator.")
+            } else {
+                openNativePanel("diagnostics", "Diagnostik Sistem")
+            }
+        }
         drawerBinding.btnDrawerSettings.setOnClickListener { openNativePanel("settings", "Pengaturan Sistem") }
         drawerBinding.btnDrawerTelegram.setOnClickListener { openNativePanel("telegram", "Telegram") }
         drawerBinding.btnDrawerDiscord.setOnClickListener { openNativePanel("discord", "Discord") }
@@ -460,6 +466,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.relaySection.visibility = if (isAdmin) View.VISIBLE else View.GONE
         val adminVisibility = if (isAdmin && !isTempAccount) View.VISIBLE else View.GONE
+        drawerBinding.btnDrawerDiagnostics.visibility = if (isTempAccount) View.GONE else View.VISIBLE
         drawerBinding.btnDrawerSettings.visibility = adminVisibility
         drawerBinding.btnDrawerTelegram.visibility = adminVisibility
         drawerBinding.btnDrawerDiscord.visibility = adminVisibility

@@ -516,6 +516,11 @@ async function checkLatestFirmware() {
 }
 
 async function viewDiagnostics() {
+  if (isTempSession) {
+    console.log(chalk.yellow("\nDiagnostik perangkat fisik tidak tersedia untuk akun Demo/Simulator."));
+    await holdForEnter();
+    return;
+  }
   let running = true;
   while (running) {
     printHeader(true);
@@ -720,13 +725,14 @@ async function mainMenu() {
     const choices = [
       { name: "[1] Mengakses Live Monitoring", value: "live" },
       { name: "[2] Riwayat Log (20 entri)", value: "log" },
-      { name: "[3] Diagnostik Sistem", value: "diagnostics" },
     ];
+    if (!isTempSession) choices.push({ name: "[3] Diagnostik Sistem", value: "diagnostics" });
     if (currentRole === "admin" && !isTempSession) {
       choices.push({ name: "[4] Kontrol Relay Power", value: "relay" });
     }
+    const logoutNumber = currentRole === "admin" && !isTempSession ? 5 : (isTempSession ? 3 : 4);
     choices.push(
-      { name: `[${currentRole === "admin" && !isTempSession ? 5 : 4}] Keluar Sesi (Logout)`, value: "logout" },
+      { name: `[${logoutNumber}] Keluar Sesi (Logout)`, value: "logout" },
       { name: "[0] Matikan Aplikasi (Exit)", value: "exit" },
     );
 

@@ -67,6 +67,11 @@ class NativePanelActivity : AppCompatActivity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         val route = intent.getStringExtra(EXTRA_ROUTE) ?: "diagnostics"
+        if (route == "diagnostics" && auth.currentUser?.email?.trim()?.startsWith("sim_", ignoreCase = true) == true) {
+            Toast.makeText(this, "Diagnostik perangkat fisik tidak tersedia untuk akun Demo/Simulator.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
         val panelTitle = intent.getStringExtra(EXTRA_TITLE) ?: "Panel Sistem"
         buildShell(panelTitle)
         if (route == "diagnostics") {

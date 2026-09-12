@@ -1353,7 +1353,7 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{isTempAccount ? 'Pengaturan Simulator' : 'System Settings'}</h1>
       </div>
 
       {/* Tabs */}
@@ -1394,7 +1394,7 @@ export function Settings() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Batas Arus Maksimal (A)
+                {isTempAccount ? 'Threshold Arus Simulasi (A)' : 'Batas Arus Maksimal (A)'}
               </label>
               <input
                 type="number"
@@ -1417,7 +1417,7 @@ export function Settings() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Delay Stream Data ke Firebase (ms)
+                {isTempAccount ? 'Interval Pembaruan Simulasi (ms)' : 'Delay Stream Data ke Firebase (ms)'}
               </label>
               <input
                 type="number"
@@ -1428,7 +1428,7 @@ export function Settings() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Power Factor Fallback
+                {isTempAccount ? 'Power Factor Simulasi' : 'Power Factor Fallback'}
               </label>
               <input
                 type="number"
@@ -1440,7 +1440,7 @@ export function Settings() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Frekuensi Fallback (Hz)
+                {isTempAccount ? 'Frekuensi Simulasi (Hz)' : 'Frekuensi Fallback (Hz)'}
               </label>
               <input
                 type="number"
@@ -1460,7 +1460,7 @@ export function Settings() {
               className="rounded"
             />
             <label htmlFor="realtimeStreamEnabled" className="text-gray-700 dark:text-gray-300">
-              Stream data realtime ke Firebase (/listrik). Saat dimatikan, device tetap membaca settings dan command relay, tetapi dashboard bisa terlihat offline karena heartbeat realtime dihentikan.
+              {isTempAccount ? 'Perbarui data virtual simulator ke Firebase secara realtime.' : 'Stream data realtime ke Firebase (/listrik). Saat dimatikan, device tetap membaca settings dan command relay, tetapi dashboard bisa terlihat offline karena heartbeat realtime dihentikan.'}
             </label>
           </div>
 
@@ -1473,7 +1473,7 @@ export function Settings() {
               className="rounded"
             />
             <label htmlFor="buzzer" className="text-gray-700 dark:text-gray-300">
-              Enable Buzzer on Controller
+              {isTempAccount ? 'Aktifkan alarm virtual' : 'Enable Buzzer on Controller'}
             </label>
           </div>
 
@@ -1486,7 +1486,7 @@ export function Settings() {
               className="rounded"
             />
             <label htmlFor="autoCutoff" className="text-gray-700 dark:text-gray-300">
-              Auto Cutoff on Danger Overload
+              {isTempAccount ? 'Auto-cutoff virtual saat DANGER' : 'Auto Cutoff on Danger Overload'}
             </label>
           </div>
 

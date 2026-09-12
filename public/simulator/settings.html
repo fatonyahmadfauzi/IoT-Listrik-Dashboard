@@ -927,7 +927,7 @@
                   </div>
                   <div class="form-hint">Notifikasi status BAHAYA, WARNING, dan recovery NORMAL.</div>
                 </div>
-                <div class="form-group field-sensitive">
+                <div class="form-group field-sensitive simulator-physical-only" style="display:none">
                   <label class="form-label" for="inpDiscordRelay">
                     <span class="material-symbols-rounded" style="color:#57F287; font-size: 1.1em; vertical-align: middle; margin-right: 2px;">power</span> Webhook #relay (Kontrol Relay)
                   </label>
@@ -943,7 +943,7 @@
               </div>
 
               <div class="input-row" style="margin-bottom: 14px;">
-                <div class="form-group field-sensitive">
+                <div class="form-group field-sensitive simulator-physical-only" style="display:none">
                   <label class="form-label" for="inpDiscordDiagnostics">
                     <span class="material-symbols-rounded" style="color:#22D3EE; font-size: 1.1em; vertical-align: middle; margin-right: 2px;">health_and_safety</span> Webhook #diagnostik-sistem
                   </label>
@@ -1006,7 +1006,7 @@
                 <button id="testDiscordBtn" class="btn btn-ghost">
                   <span class="material-symbols-rounded">send</span> Test #alerts
                 </button>
-                <button id="testDiscordDiagnosticsBtn" class="btn btn-ghost">
+                <button id="testDiscordDiagnosticsBtn" class="btn btn-ghost simulator-physical-only" style="display:none">
                   <span class="material-symbols-rounded">health_and_safety</span> Test #diagnostik-sistem
                 </button>
                 <a href="https://discord.gg/WszeM4FVH6" target="_blank" class="btn btn-ghost" style="color:#7289da; border-color:rgba(114,137,218,0.3);">

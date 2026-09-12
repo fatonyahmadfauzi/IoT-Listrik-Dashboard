@@ -762,11 +762,11 @@ export function Settings() {
     try {
       await set(ref(db, 'settings/discord'), {
         webhookAlerts: discordAlerts,
-        webhookRelay: discordRelay,
+        webhookRelay: isTempAccount ? '' : discordRelay,
         webhookMonitoring: discordMonitoring,
         webhookDailyReport: discordDailyReport,
         webhookLogs: discordLogs,
-        webhookDiagnostics: discordDiagnostics,
+        webhookDiagnostics: isTempAccount ? '' : discordDiagnostics,
         enabled: discordEnabled,
       });
       notifyDesktop('Discord tersimpan', 'Konfigurasi Discord berhasil diperbarui.');
@@ -1907,7 +1907,7 @@ export function Settings() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className={isTempAccount ? 'hidden' : ''}>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Webhook #relay (Status Relay Aktif/Mati)
                     </label>
@@ -1944,7 +1944,7 @@ export function Settings() {
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div>
+                    <div className={isTempAccount ? 'hidden' : ''}>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Webhook #diagnostik-sistem
                       </label>
@@ -2050,7 +2050,7 @@ export function Settings() {
                   <button
                     onClick={() => testDiscordWebhook('diagnostics')}
                     disabled={loading || !discordEnabled || !discordDiagnostics.startsWith('https://discord.com/api/webhooks/')}
-                    className="px-4 py-2 bg-transparent border border-cyan-500 text-cyan-600 dark:text-cyan-300 hover:bg-cyan-500 hover:text-white rounded-lg font-semibold transition disabled:opacity-50"
+                    className={`px-4 py-2 bg-transparent border border-cyan-500 text-cyan-600 dark:text-cyan-300 hover:bg-cyan-500 hover:text-white rounded-lg font-semibold transition disabled:opacity-50 ${isTempAccount ? 'hidden' : ''}`}
                   >
                     Test #diagnostik-sistem
                   </button>

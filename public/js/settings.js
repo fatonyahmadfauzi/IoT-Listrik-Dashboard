@@ -1953,11 +1953,11 @@ async function saveDiscordSettings() {
 
   const payload = {
     webhookAlerts:     inpDiscordAlerts?.value.trim()     || '',
-    webhookRelay:      inpDiscordRelay?.value.trim()      || '',
+    webhookRelay:      isTempAccount() ? '' : (inpDiscordRelay?.value.trim()      || ''),
     webhookMonitoring: inpDiscordMonitoring?.value.trim() || '',
     webhookDailyReport: inpDiscordDailyReport?.value.trim() || '',
     webhookLogs:       inpDiscordLogs?.value.trim()       || '',
-    webhookDiagnostics: inpDiscordDiagnostics?.value.trim() || '',
+    webhookDiagnostics: isTempAccount() ? '' : (inpDiscordDiagnostics?.value.trim() || ''),
     enabled:           enabledValue,
   };
 

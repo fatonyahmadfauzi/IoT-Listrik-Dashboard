@@ -640,8 +640,8 @@
         <main class="page-content">
           <!-- ── Runtime Config notice ─────────────────────────── -->
           <div class="runtime-notice">
-            <span class="material-symbols-rounded">sync</span>
-            <span><strong>Konfigurasi Simulator:</strong> Perubahan di halaman ini disimpan ke konfigurasi virtual akun demo dan langsung dipakai pada simulasi berikutnya — <strong>tanpa perangkat fisik dan tanpa upload firmware</strong>.</span>
+            <span class="material-symbols-rounded">tune</span>
+            <span><strong>Parameter Simulator:</strong> Pengaturan di bawah hanya mengatur status dan data virtual akun demo — <strong>tanpa perangkat fisik dan tanpa upload firmware</strong>.</span>
           </div>
 
           <!-- ── Settings grid (2 columns) ─────────────────────── -->
@@ -691,47 +691,8 @@
                 <div id="valWarningPercent" class="validation-msg"></div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label" for="inpSendInterval">
-                  Interval Pembaruan Simulasi (ms)
-                </label>
-                <input
-                  id="inpSendInterval"
-                  class="form-input"
-                  type="number"
-                  min="500"
-                  max="60000"
-                  step="100"
-                  value="2000"
-                />
-                <div class="form-hint">
-                  Seberapa sering simulator memperbarui data virtual.<br />
-                  Min: 500 ms | Rekomendasi: 2000 ms.
-                </div>
-                <div id="valSendInterval" class="validation-msg"></div>
-              </div>
 
-              <div class="toggle-row">
-                <div class="toggle-info">
-                  <h4>Alarm Virtual</h4>
-                  <p>Menandai kondisi abnormal pada simulasi</p>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="inpBuzzer" checked />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
 
-              <div class="toggle-row">
-                <div class="toggle-info">
-                  <h4>Auto-Cutoff Virtual</h4>
-                  <p>Aksi virtual diterapkan otomatis saat DANGER (arus ≥ threshold)</p>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="inpAutoCutoff" checked />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
             </div>
 
             <!-- Card 2: Kalibrasi Sensor ─────────────────────────── -->

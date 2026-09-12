@@ -18,6 +18,7 @@ import {
   pushRealtimeDetailData,
   pushRealtimeElectricalDetailData,
   resetChartZoom,
+  clearRealtimeChart,
 } from "./charts.js";
 import {
   requestNotificationPermission,
@@ -165,6 +166,9 @@ function renderStatus(status) {
 
 function renderOfflineSnapshot(isOffline) {
   if (!isOffline) return;
+  clearRealtimeChart(chart);
+  clearRealtimeChart(detailChart);
+  clearRealtimeChart(electricalDetailChart);
   if (elArus) elArus.textContent = "0.00 A";
   if (elTegangan) elTegangan.textContent = "0.0 V";
   if (elDayaW) elDayaW.textContent = "0 W";
@@ -549,7 +553,7 @@ function startRealtimeListener() {
       renderRelay(d.relay);
       checkAdminResetNotify(d);
 
-      if (chart) {
+      if (chart && !realtimeOffline) {
         const label = new Date().toLocaleTimeString("id-ID");
         pushRealtimeData(chart, label, d.arus, d.tegangan, d.daya_w);
         if (detailChart) pushRealtimeDetailData(detailChart, label, d);

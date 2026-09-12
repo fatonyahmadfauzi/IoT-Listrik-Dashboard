@@ -655,9 +655,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderOfflineDashboardSnapshot() {
-        // Offline bukan error sensor. Kartu realtime dikosongkan agar tidak
-        // menampilkan snapshot lama, sedangkan grafik dan tabel histori tetap
-        // memakai data yang sudah tersimpan.
+        // Offline bukan error sensor. Kartu dan grafik realtime dikosongkan
+        // agar snapshot lama tidak terlihat sebagai data live; histori tetap
+        // tersedia pada menu Riwayat.
         binding.tvStatus.text = "OFFLINE"
         binding.tvArus.text = "0.00 A"
         binding.tvTegangan.text = "0.0 V"
@@ -680,7 +680,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         val isOnline = label == "Connected"
-        if (!isOnline) renderOfflineDashboardSnapshot()
+        if (!isOnline) {
+            renderOfflineDashboardSnapshot()
+            clearRealtimeCharts()
+        }
         if (!isOnline) {
             // Snapshot DANGER lama tidak boleh membuat sirene terus berbunyi
             // setelah perangkat offline atau koneksi cloud terputus.
@@ -866,6 +869,15 @@ class MainActivity : AppCompatActivity() {
             -(width / 2f),
             -height.toFloat() - 10f
         )
+    }
+
+    private fun clearRealtimeCharts() {
+        chartLabels.clear()
+        chartTimeIndex = 0f
+        listOf(binding.lineChart, binding.detailLineChart, binding.electricalLineChart).forEach { chart ->
+            chart.clear()
+            chart.invalidate()
+        }
     }
 
     private fun resetChartZoom() {
@@ -1695,7 +1707,7 @@ class MainActivity : AppCompatActivity() {
                 renderRelayState(relayState)
 
                 updateStatusColor(lastDeviceStatus)
-                addChartEntry(
+                if (currentConnectionLabel() == "Connected") addChartEntry(
                     arus = arus.toFloat(),
                     tegangan = tegangan.toFloat(),
                     dayaAktif = dayaW.toFloat(),
@@ -1862,7 +1874,7 @@ class MainActivity : AppCompatActivity() {
 
         // Gunakan log sebagai bootstrap grafik hanya bila stream realtime belum memberi titik data.
         val chartHasData = (binding.lineChart.data?.entryCount ?: 0) > 0
-        if (!chartHasData && allLogsList.isNotEmpty()) {
+        if (currentConnectionLabel() == "Connected" && !chartHasData && allLogsList.isNotEmpty()) {
             val toPlot = allLogsList.take(maxDataPoints).reversed()
             for (log in toPlot) {
                 val arus = logNumber(log.arus).toFloat()
@@ -2136,7 +2148,7 @@ class MainActivity : AppCompatActivity() {
         "SENSOR_ERROR" -> "Data sensor tidak valid. Periksa catu daya, kabel TX/RX, koneksi PZEM-004T, dan tunggu pembacaan berikutnya."
         "WARNING" -> "Arus mendekati ambang batas. Pantau perubahan beban dan pastikan konsumsi masih sesuai kapasitas uji."
         "UNKNOWN" -> "Status belum dikenali. Tunggu data berikutnya atau periksa koneksi perangkat."
-        "OFFLINE" -> "Tidak ada heartbeat terbaru. Nilai realtime dikosongkan, sedangkan grafik dan tabel tetap menggunakan data terakhir."
+        "OFFLINE" -> "Tidak ada heartbeat terbaru. Nilai dan grafik realtime dikosongkan; histori tetap tersedia pada menu Riwayat."
         else -> "Data realtime dibaca dari perangkat dan dievaluasi berdasarkan ambang sistem."
     }
 

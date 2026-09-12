@@ -153,7 +153,7 @@ export function Dashboard() {
           ? 'Koneksi cloud sedang dipulihkan.'
           : 'Perangkat belum siap menerima perintah.';
   const recentLogs = useMemo(() => logs.slice(0, 15), [logs]);
-  const chartLogs = useMemo(() => logs.slice(0, 30).reverse(), [logs]);
+  const chartLogs = useMemo(() => (deviceOffline ? [] : logs.slice(0, 30).reverse()), [deviceOffline, logs]);
 
   const handleRelayToggle = async (nextRelay: boolean) => {
     if (role !== 'admin') {

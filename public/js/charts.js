@@ -486,6 +486,14 @@ function loadHistoryIntoElectricalDetailChart(chart, logs) {
  * Reset zoom/pan back to default view.
  * @param {Chart} chart
  */
+function clearRealtimeChart(chart) {
+  if (!chart) return;
+  chart.data.labels = [];
+  chart.data.datasets.forEach((dataset) => { dataset.data = []; });
+  chart.resetZoom?.();
+  chart.update('none');
+}
+
 function resetChartZoom(chart) {
   if (chart.resetZoom) chart.resetZoom();
 }
@@ -501,4 +509,5 @@ export {
   loadHistoryIntoDetailChart,
   loadHistoryIntoElectricalDetailChart,
   resetChartZoom,
+  clearRealtimeChart,
 };

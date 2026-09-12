@@ -1768,7 +1768,22 @@ async function saveSettings() {
       saveBtn.disabled = true;
       saveBtn.innerHTML = '<span class="material-symbols-rounded">save</span> Menyimpan...';
     }
-    // Gunakan update() bukan set() agar /settings/discord subpath TIDAK TERHAPUS
+    // Simpan juga konfigurasi Discord ketika pengguna menekan "Simpan Semua Settings".
+    // Sebelumnya tombol ini hanya menyimpan Telegram/general settings; Discord
+    // hanya tersimpan jika tombol khusus Discord ditekan.
+    const discordInputsPresent = Boolean(inpDiscordAlerts || inpDiscordMonitoring || inpDiscordLogs || inpDiscordEnabled);
+    if (discordInputsPresent) {
+      await update(ref(db, getDbPrefix() + '/settings/discord'), {
+        webhookAlerts: inpDiscordAlerts?.value.trim() || '',
+        webhookRelay: isTempAccount() ? '' : (inpDiscordRelay?.value.trim() || ''),
+        webhookMonitoring: inpDiscordMonitoring?.value.trim() || '',
+        webhookDailyReport: inpDiscordDailyReport?.value.trim() || '',
+        webhookLogs: inpDiscordLogs?.value.trim() || '',
+        webhookDiagnostics: isTempAccount() ? '' : (inpDiscordDiagnostics?.value.trim() || ''),
+        enabled: inpDiscordEnabled?.checked !== false,
+      });
+    }
+    // Gunakan update() bukan set() agar /settings subpath tidak terhapus.
     await update(ref(db, getDbPrefix() + '/settings'), payload);
     showToast(isTempAccount()
       ? 'Pengaturan simulator tersimpan.'
@@ -1972,7 +1987,7 @@ async function saveDiscordSettings() {
 
   if (saveDiscordBtn) { saveDiscordBtn.disabled = true; saveDiscordBtn.textContent = 'Menyimpan...'; }
   try {
-    await set(ref(db, getDbPrefix() + '/settings/discord'), payload);
+    await update(ref(db, getDbPrefix() + '/settings/discord'), payload);
     showToast('Konfigurasi Discord tersimpan ke Firebase RTDB', 'success');
     if (discordSaveStatus) discordSaveStatus.textContent = 'Disimpan ' + new Date().toLocaleTimeString('id-ID');
     // Reload config di sim-notifier agar notifikasi Discord langsung aktif

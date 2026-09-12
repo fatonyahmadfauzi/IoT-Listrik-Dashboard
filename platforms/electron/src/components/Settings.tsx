@@ -194,7 +194,8 @@ export function Settings() {
   const [localSrvMsg, setLocalSrvMsg] = useState('');
 
   useEffect(() => {
-    if (tab === 'backend') setClientCfg(loadClientConfig());
+    if (tab === 'backend' && !isTempAccount) setClientCfg(loadClientConfig());
+    if (isTempAccount && tab === 'backend') setTab('system');
   }, [tab]);
 
   // System
@@ -1366,7 +1367,7 @@ export function Settings() {
             ['discord', 'Discord'],
             ['device', 'Device'],
             ['backup', 'Backup'],
-            ['backend', 'Backend'],
+            ...(!isTempAccount ? [['backend', 'Backend'] as const] : []),
             ['users', 'Users'],
           ] as const
         ).map(([t, label]) => (
@@ -2684,7 +2685,7 @@ export function Settings() {
       )}
 
       {/* Backend & Failover Tab */}
-      {tab === 'backend' && (
+      {tab === 'backend' && !isTempAccount && (
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Backend &amp; failover

@@ -122,6 +122,11 @@ public/downloads/**/*.zip
 public/downloads/**/*.msi
 public/downloads/**/*.apk
 public/downloads/cli/iot-listrik-dashboard-cli-linux
+platforms/public/downloads/**/*.exe
+platforms/public/downloads/**/*.zip
+platforms/public/downloads/**/*.msi
+platforms/public/downloads/**/*.apk
+platforms/public/downloads/cli/iot-listrik-dashboard-cli-linux
 
 # Junk binary files
 test-msi-download.msi
@@ -161,3 +166,6 @@ test-results/
 _tmp*/
 release-assets-*/
 backups/
+
+.vercel
+.env*

@@ -1952,8 +1952,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         "NORMAL" -> "NORMAL"
         "WARNING" -> "WARNING"
-        "LEAKAGE" -> "DANGER" // status legacy
-        "DANGER" -> "DANGER"
+                "DANGER" -> "DANGER"
         "SENSOR_ERROR" -> "SENSOR_ERROR"
         else -> "UNKNOWN"
     }

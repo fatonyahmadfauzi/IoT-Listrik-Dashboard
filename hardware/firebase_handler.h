@@ -328,7 +328,7 @@ bool writeLog(float arus, float tegangan,
 
   String safeStatus = status;
   if (safeStatus != "NORMAL" && safeStatus != "WARNING" &&
-      safeStatus != "LEAKAGE" && safeStatus != "DANGER" &&
+      safeStatus != "DANGER" &&
       safeStatus != "SENSOR_ERROR") {
     safeStatus = "SENSOR_ERROR";
   }

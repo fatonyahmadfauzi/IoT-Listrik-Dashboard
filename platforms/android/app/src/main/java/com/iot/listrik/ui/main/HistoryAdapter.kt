@@ -168,8 +168,7 @@ class HistoryAdapter(private var logs: List<HistoryLog>) :
 
     private fun normalizeStatus(raw: String?): String = when (raw?.trim()?.uppercase(Locale.ROOT)) {
         "DANGER" -> "DANGER"
-        "LEAKAGE" -> "DANGER" // status legacy
-        "WARNING" -> "WARNING"
+                "WARNING" -> "WARNING"
         "NORMAL" -> "NORMAL"
         "SENSOR_ERROR" -> "SENSOR_ERROR"
         else -> "UNKNOWN"

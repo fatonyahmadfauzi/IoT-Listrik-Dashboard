@@ -1,8 +1,0 @@
-IoT Listrik Dashboard
-Release terbaru: v1.1.8 (2 September 2026)
-
-Perubahan utama:
-- Windows Desktop dan Android APK mengenali SENSOR_ERROR sebagai status resmi.
-- Dashboard, Analytics, Riwayat, filter, grafik, warna, dan notifikasi diperbarui secara konsisten.
-- Alarm tetap berhenti saat perangkat offline sesuai mekanisme presence/heartbeat.
-- APK, Windows Setup, Portable, MSI, serta paket CLI tersedia dalam satu release v1.1.8.

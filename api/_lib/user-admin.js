@@ -61,10 +61,7 @@ async function listManagedUsers() {
     if (!isTemporaryAuthUser(user) && !isDeviceAuthUser(user)) authMap.set(user.uid, user);
   });
 
-  const managedProfileIds = Object.entries(profiles)
-    .filter(([, profile]) => !isDeviceAuthUser(profile))
-    .map(([uid]) => uid);
-  const ids = new Set([...authMap.keys(), ...managedProfileIds]);
+  const ids = new Set([...authMap.keys()]);
   return [...ids]
     .map((uid) => serializeUser(uid, authMap.get(uid) || null, profiles[uid] || null))
     .sort((a, b) => {
@@ -188,24 +185,12 @@ async function deleteManagedAccount(req, adminUid) {
   };
 }
 
-async function deleteManagedProfile(req, adminUid) {
-  const uid = String(req.body?.uid || "").trim();
-  if (!uid) throw httpError(400, "UID pengguna tidak valid.");
-  if (uid === adminUid) throw httpError(400, "Profil akun admin yang sedang digunakan tidak dapat dihapus.");
-  await admin.database().ref(`/users/${uid}`).remove();
-  return {
-    success: true,
-    message: "Profil RTDB berhasil dihapus. Akun Firebase Authentication tetap tersedia.",
-  };
-}
-
 async function handleUserAdminAction(req) {
   const caller = await requireAdminRequest(req);
   const action = String(req.body?.action || "list").trim().toLowerCase();
   if (action === "list") return { success: true, message: "Daftar pengguna berhasil dimuat.", users: await listManagedUsers() };
   if (action === "create") return createManagedUser(req);
   if (action === "set_role") return updateManagedRole(req);
-  if (action === "delete_profile") return deleteManagedProfile(req, caller.uid);
   if (action === "delete_account") return deleteManagedAccount(req, caller.uid);
   throw httpError(400, "Aksi manajemen pengguna tidak dikenali.");
 }

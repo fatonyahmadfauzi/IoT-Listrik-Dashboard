@@ -1400,8 +1400,7 @@ function statusColor(s) {
   switch ((s || '').toUpperCase()) {
     case 'DANGER':  return 0xED4245;
     case 'WARNING': return 0xFEE75C;
-    case 'LEAKAGE': return 0xF97316;
-    case 'NORMAL':  return 0x57F287;
+        case 'NORMAL':  return 0x57F287;
     case 'SENSOR_ERROR': return 0x808080;
     default:        return 0x5865F2;
   }
@@ -1410,8 +1409,7 @@ function statusEmoji(s) {
   switch ((s || '').toUpperCase()) {
     case 'DANGER':  return '🔴';
     case 'WARNING': return '🟡';
-    case 'LEAKAGE': return '🟠';
-    case 'NORMAL':  return '🟢';
+        case 'NORMAL':  return '🟢';
     case 'SENSOR_ERROR': return '⚠️';
     default:        return '🔵';
   }
@@ -1752,7 +1750,7 @@ db.ref('/listrik/status').on('value', async (snap) => {
   const d = listrikSnap.val() || {};
 
   const isBahaya = status === 'DANGER' || status === 'SENSOR_ERROR';
-  const isPulih  = status === 'NORMAL' && (prev === 'DANGER' || prev === 'WARNING' || prev === 'SENSOR_ERROR' || prev === 'LEAKAGE');
+  const isPulih  = status === 'NORMAL' && (prev === 'DANGER' || prev === 'WARNING' || prev === 'SENSOR_ERROR');
 
   const embed = {
     title:       `${statusEmoji(status)} Status Kelistrikan: ${status}`,
@@ -2088,7 +2086,6 @@ db.ref('/logs').orderByKey().limitToLast(1).on('child_added', async (snap) => {
 
     const statusColor = status === 'DANGER' ? 0xE74C3C
       : status === 'WARNING' ? 0xF1C40F
-      : status === 'LEAKAGE' ? 0xE67E22
       : status === 'NORMAL' ? 0x2ECC71
       : 0x99AAB5;
 

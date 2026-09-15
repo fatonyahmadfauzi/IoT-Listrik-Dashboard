@@ -682,7 +682,7 @@ class NativePanelActivity : AppCompatActivity() {
         val isOrphan = state == "AUTH_MISSING" || !authExists
         val actions = when {
             isCurrentAccount -> arrayOf("Kirim Reset Password")
-            isOrphan -> arrayOf("Jadikan Admin", "Jadikan User", "Hapus Profil Sisa")
+            isOrphan -> arrayOf("Jadikan Admin", "Jadikan User", "Hapus Akun Permanen")
             else -> arrayOf("Jadikan Admin", "Jadikan User", "Kirim Reset Password", "Hapus Akun Permanen")
         }
 
@@ -703,19 +703,19 @@ class NativePanelActivity : AppCompatActivity() {
                     .addOnSuccessListener { message("Email reset password dikirim.", false) }
                     .addOnFailureListener { message("Gagal: ${it.message}", true) }
                 else -> {
-                    val title = if (isOrphan) "Hapus profil sisa?" else "Hapus akun secara permanen?"
+                    val title = if (isOrphan) "Hapus data akun tersisa?" else "Hapus akun secara permanen?"
                     val text = if (isOrphan)
-                        "Profil RTDB akan dihapus. Akun Firebase Authentication untuk akun ini memang sudah tidak ada."
+                        "Akun Authentication sudah tidak ada; data pengguna yang tersisa akan dihapus."
                     else
                         "Firebase Authentication dan profil RTDB akan dihapus. Pengguna tidak dapat login lagi. Tindakan ini tidak dapat dibatalkan."
                     AlertDialogBuilder(this)
                         .setTitle(title)
                         .setMessage(text)
                         .setNegativeButton("Batal", null)
-                        .setPositiveButton(if (isOrphan) "Hapus Profil" else "Hapus Akun") { _, _ ->
-                            val action = if (isOrphan) "delete_profile" else "delete_account"
+                        .setPositiveButton("Hapus Akun") { _, _ ->
+                            val action = "delete_account"
                             api("user-admin-action", mapOf("action" to action, "uid" to uid), onError = { error -> message(error, true) }) {
-                                message(if (isOrphan) "Profil RTDB berhasil dihapus." else "Akun dihapus permanen dan tidak dapat login lagi.", false)
+                                message("Akun/data pengguna dihapus permanen dan tidak dapat login lagi.", false)
                                 loadManagedUsers()
                             }
                         }

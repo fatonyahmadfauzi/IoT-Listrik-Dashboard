@@ -119,8 +119,6 @@ function getStatusHint(status) {
 
 function normalizeStatus(status) {
   const value = String(status || "NORMAL").toUpperCase();
-  // LEAKAGE adalah status legacy; firmware ESP32 saat ini memakai DANGER.
-  if (value === "LEAKAGE") return "DANGER";
   return ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR", "OFFLINE"].includes(value)
     ? value
     : "UNKNOWN";

@@ -97,8 +97,7 @@ function readApparent(source: any) {
 
 function normalizeStatus(status?: string) {
   const value = String(status || 'NORMAL').toUpperCase();
-  if (value === 'LEAKAGE') return 'DANGER'; // status legacy
-  return ['NORMAL', 'WARNING', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
+    return ['NORMAL', 'WARNING', 'DANGER', 'SENSOR_ERROR'].includes(value) ? value : 'UNKNOWN';
 }
 
 function statusBadgeClass(status?: string) {

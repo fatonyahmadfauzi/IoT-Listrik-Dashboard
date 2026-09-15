@@ -1370,7 +1370,7 @@ void firebaseTaskCore0(void *pvParameters) {
           } else if (cmdRelay == 1) {
             // ── Perintah ON ──────────────────────────────────────────
             // Tolak perintah ON jika kondisi belum aman atau sensor tidak valid.
-            bool conditionUnsafe = (localState.status == "DANGER" || localState.status == "LEAKAGE" || localState.status == "SENSOR_ERROR");
+            bool conditionUnsafe = (localState.status == "DANGER" || localState.status == "SENSOR_ERROR");
             if (localRt.autoCutoffEnabled && conditionUnsafe) {
               Serial.printf("[Relay] ON ditolak: kondisi %s masih tidak aman.\n",
                             localState.status.c_str());

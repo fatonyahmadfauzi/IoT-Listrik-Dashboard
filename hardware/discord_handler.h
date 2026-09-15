@@ -6,7 +6,7 @@
  *
  * Notifikasi yang dikirim:
  *   - Boot: device online
- *   - Status change: WARNING / LEAKAGE / DANGER / NORMAL recovery
+ *   - Status change: WARNING / DANGER / NORMAL recovery
  *   - Relay ON / OFF (oleh web command atau auto-cutoff)
  *
  * Required library:
@@ -142,9 +142,6 @@ void buildDiscordStatusEmbed(const String& status, const String& previousStatus,
   } else if (status == "WARNING") {
     outTitle = "🔔 Peringatan — Arus Mendekati Batas";
     outColor = DISCORD_COLOR_YELLOW;
-  } else if (status == "LEAKAGE") {
-    outTitle = "⚠️  Kebocoran Arus Terdeteksi!";
-    outColor = DISCORD_COLOR_ORANGE;
   } else if (status == "SENSOR_ERROR") {
     outTitle = "⚠️  SENSOR ERROR \xE2\x80\x94 Pembacaan Sensor Gagal!";
     outColor = DISCORD_COLOR_GRAY;
@@ -254,7 +251,7 @@ void buildDiscordRelayEmbed(int relayVal, const String& cause,
 
 // --- sendDiscordStatusAlert() ---
 /**
- * Kirim notifikasi Discord saat status berubah (WARNING/LEAKAGE/DANGER/NORMAL).
+ * Kirim notifikasi Discord saat status berubah (WARNING/DANGER/NORMAL).
  * Hanya kirim saat transisi yang relevan (anti-spam).
  */
 void sendDiscordStatusAlert(const String& newStatus, const String& lastStatus,
@@ -266,11 +263,10 @@ void sendDiscordStatusAlert(const String& newStatus, const String& lastStatus,
                              unsigned long cooldownMs) {
   bool shouldSend = false;
   if (newStatus == "DANGER"       && lastStatus != "DANGER")       shouldSend = true;
-  if (newStatus == "LEAKAGE"      && lastStatus != "LEAKAGE")      shouldSend = true;
   if (newStatus == "WARNING"      && lastStatus == "NORMAL")       shouldSend = true;
   if (newStatus == "SENSOR_ERROR" && lastStatus != "SENSOR_ERROR") shouldSend = true;
   if (newStatus == "NORMAL"       && (lastStatus == "DANGER" || lastStatus == "WARNING" 
-                                      || lastStatus == "LEAKAGE" || lastStatus == "SENSOR_ERROR")) shouldSend = true;
+                                      || lastStatus == "SENSOR_ERROR")) shouldSend = true;
 
   if (!shouldSend) return;
 

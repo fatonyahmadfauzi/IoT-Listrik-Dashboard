@@ -437,8 +437,6 @@ def view_logs():
                     status_rich = f"[bold red]{status}[/bold red]"
                 elif status == "WARNING":
                     status_rich = f"[yellow]{status}[/yellow]"
-                elif status == "LEAKAGE":
-                    status_rich = "[red]DANGER[/red]"  # status legacy
                 else:
                     status_rich = f"[green]{status}[/green]"
 

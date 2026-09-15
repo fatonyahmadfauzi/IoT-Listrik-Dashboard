@@ -65,10 +65,6 @@
   --status-warning: var(--yellow);
   --status-warning-light: var(--yellow-light);
   --status-warning-soft: rgba(245, 158, 11, 0.14);
-  --status-leakage: #f97316;
-  --status-leakage-light: #fed7aa;
-  --status-leakage-soft: rgba(249, 115, 22, 0.16);
-  --status-leakage-glow: rgba(249, 115, 22, 0.24);
   --status-danger: var(--red);
   --status-danger-light: var(--red-light);
   --status-danger-soft: rgba(220, 38, 38, 0.18);
@@ -586,26 +582,6 @@ body.page-bg {
   background: var(--status-warning-soft);
   border-color: rgba(245, 158, 11, 0.24);
 }
-.safety-status-panel.status-LEAKAGE {
-  --safety-pulse-rest: rgba(249, 115, 22, 0.14);
-  --safety-pulse-peak: rgba(249, 115, 22, 0.24);
-  border-color: rgba(249, 115, 22, 0.44);
-  background:
-    linear-gradient(135deg, var(--status-leakage-soft), rgba(255, 255, 255, 0.04) 42%),
-    var(--glass-bg);
-  box-shadow:
-    0 18px 48px rgba(249, 115, 22, 0.14),
-    inset 0 1px 0 var(--card-shine);
-}
-.safety-status-panel.status-LEAKAGE::before {
-  background: var(--status-leakage);
-  box-shadow: 0 0 24px var(--status-leakage-glow);
-}
-.safety-status-panel.status-LEAKAGE .safety-status-icon {
-  color: var(--status-leakage-light);
-  background: var(--status-leakage-soft);
-  border-color: rgba(249, 115, 22, 0.3);
-}
 .safety-status-panel.status-DANGER {
   --safety-pulse-rest: rgba(220, 38, 38, 0.18);
   --safety-pulse-peak: rgba(220, 38, 38, 0.3);
@@ -781,15 +757,6 @@ body.page-bg {
 .status-WARNING::before {
   background: var(--status-warning);
   animation-duration: 0.9s;
-}
-.status-LEAKAGE {
-  background: var(--status-leakage-soft);
-  color: var(--status-leakage-light);
-  border: 1px solid rgba(249, 115, 22, 0.38);
-}
-.status-LEAKAGE::before {
-  background: var(--status-leakage);
-  animation-duration: 0.7s;
 }
 .status-DANGER {
   background: var(--status-danger-strong);
@@ -5030,10 +4997,6 @@ body > header > nav {
   .log-row.log-status-WARNING {
     border-left-color: rgba(245, 158, 11, 0.55);
     background: rgba(245, 158, 11, 0.03);
-  }
-  .log-row.log-status-LEAKAGE {
-    border-left-color: rgba(249, 115, 22, 0.62);
-    background: rgba(249, 115, 22, 0.04);
   }
   .log-row.log-status-DANGER {
     border-left-color: rgba(220, 38, 38, 0.68);
@@ -9572,7 +9535,7 @@ html.lenis, html.lenis body {
 
 .status-text.status-NORMAL { color: var(--green); }
 .status-text.status-WARNING { color: var(--yellow-light); }
-.status-text.status-LEAKAGE { color: var(--status-leakage-light); }
+.status-text.status-LEAKAGE { color: var(--status-danger-light); }
 .status-text.status-DANGER { color: var(--red-light); }
 .status-text.status-UNKNOWN { color: var(--text-muted); }
 
@@ -9631,7 +9594,7 @@ html.lenis, html.lenis body {
 .analytics-stat-card.accent-yellow::before { background: var(--yellow); }
 .analytics-stat-card.accent-purple::before { background: var(--purple); }
 .analytics-stat-card.accent-cyan::before { background: var(--cyan); }
-.analytics-stat-card.accent-orange::before { background: var(--status-leakage); }
+.analytics-stat-card.accent-orange::before { background: var(--status-danger); }
 .analytics-stat-card.accent-red::before { background: var(--red); }
 
 .analytics-stat-card.accent-green strong { color: var(--green); }
@@ -9639,7 +9602,7 @@ html.lenis, html.lenis body {
 .analytics-stat-card.accent-yellow strong { color: var(--yellow-light); }
 .analytics-stat-card.accent-purple strong { color: var(--purple); }
 .analytics-stat-card.accent-cyan strong { color: var(--cyan); }
-.analytics-stat-card.accent-orange strong { color: var(--status-leakage-light); }
+.analytics-stat-card.accent-orange strong { color: var(--status-danger-light); }
 .analytics-stat-card.accent-red strong { color: var(--red-light); }
 
 .analytics-chart-grid {

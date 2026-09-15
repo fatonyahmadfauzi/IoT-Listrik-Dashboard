@@ -81,8 +81,7 @@ function number(value, fallback = 0) {
 
 function normalizeStatus(status) {
   const value = String(status || "NORMAL").toUpperCase();
-  if (value === "LEAKAGE") return "DANGER"; // status legacy
-  return ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"].includes(value)
+    return ["NORMAL", "WARNING", "DANGER", "SENSOR_ERROR"].includes(value)
     ? value
     : "UNKNOWN";
 }

@@ -63,7 +63,7 @@ Seluruh artefak unduhan tersedia melalui release terpadu `v1.1.9`.
 ## Catatan Logika Deteksi
 
 - Sistem membaca parameter listrik utama menggunakan **PZEM-004T**. Rangkaian sensor analog tambahan tidak lagi dipakai pada firmware utama.
-- Dashboard menampilkan **indikasi arus abnormal berdasarkan threshold** sebagai peringatan dini, bukan pengukuran residual current presisi seperti **RCD/ELCB**. Status operasional perangkat adalah NORMAL, WARNING, DANGER, dan SENSOR_ERROR; LEAKAGE hanya dipertahankan untuk kompatibilitas data lama dan dipetakan sebagai DANGER.
+- Dashboard menampilkan **indikasi arus abnormal berdasarkan threshold** sebagai peringatan dini, bukan pengukuran residual current presisi seperti **RCD/ELCB**. Status operasional perangkat adalah NORMAL, WARNING, DANGER, dan SENSOR_ERROR.
 - **Beban tinggi normal** tidak otomatis dianggap kebocoran selama nilai arus masih sesuai kapasitas beban uji dan belum melewati ambang yang ditentukan.
 - **Short circuit / gangguan ekstrem** diperlakukan sebagai kondisi bahaya dengan lonjakan arus sangat besar dan cepat.
 - **MCB / ELCB** tetap menjadi proteksi utama instalasi listrik, sedangkan sistem ini berfungsi sebagai monitoring, notifikasi, dan auto-cutoff tambahan.
@@ -282,10 +282,10 @@ Untuk membuat release versi baru:
 | Platform | Download | Status |
 |----------|----------|--------|
 | Web PWA | [iot-listrik-dashboard.vercel.app](https://iot-listrik-dashboard.vercel.app) | ✅ Live |
-| Android APK | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
-| Windows Setup/Portable/MSI | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
-| CLI Node.js (Win x64) | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
-| CLI Python (Win x64) | [GitHub Releases v1.1.0](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.0) | ✅ v1.1.0 |
+| Android APK | [GitHub Releases v1.1.9](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.9) | ✅ v1.1.9 |
+| Windows Setup/Portable/MSI | [GitHub Releases v1.1.9](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.9) | ✅ v1.1.9 |
+| CLI Node.js (Win x64) | [GitHub Releases v1.1.9](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.9) | ✅ v1.1.9 |
+| CLI Python (Win x64) | [GitHub Releases v1.1.9](https://github.com/fatonyahmadfauzi/IoT-Listrik-Dashboard/releases/tag/v1.1.9) | ✅ v1.1.9 |
 | CLI Linux/Mac/Termux | `curl -sL https://iot-listrik-dashboard.vercel.app/downloads/cli/install.sh \| bash` | ✅ v1.1.9 |
 
 ## Setup Awal

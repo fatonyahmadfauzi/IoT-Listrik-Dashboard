@@ -276,7 +276,7 @@ void sendAlertIfNeeded(const String& newStatus, const String& lastStatus,
   if (newStatus == "WARNING"      && lastStatus == "NORMAL")        shouldSend = true;
   if (newStatus == "SENSOR_ERROR" && lastStatus != "SENSOR_ERROR") shouldSend = true;
   if (newStatus == "NORMAL"       && (lastStatus == "DANGER" || lastStatus == "WARNING" 
-                                      || lastStatus == "LEAKAGE" || lastStatus == "SENSOR_ERROR")) shouldSend = true;
+                                      || lastStatus == "SENSOR_ERROR")) shouldSend = true;
 
   if (shouldSend) {
     String msg = buildAlertMessage(

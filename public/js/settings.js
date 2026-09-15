@@ -2249,7 +2249,7 @@ function renderUsers(users) {
             : `<button class="btn btn-ghost btn-sm"
                   onclick="sendResetEmail('${emailAttr}')"><span class='material-symbols-rounded'>mail</span>Reset PW</button>`}
           ${!isMe ? `<button class="btn btn-danger btn-sm"
-                  onclick="deleteUser('${uidAttr}','${emailAttr}','${u.state || ''}')"><span class='material-symbols-rounded'>delete</span>${authMissing ? 'Hapus Profil Sisa' : 'Hapus Akun Permanen'}</button>` : ''}
+                  onclick="deleteUser('${uidAttr}','${emailAttr}','${u.state || ''}')"><span class='material-symbols-rounded'>delete</span>'Hapus Akun Permanen'</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -2272,15 +2272,15 @@ window.changeRole = async (uid, role) => {
 window.deleteUser = async (uid, email, syncState) => {
   const isOrphan = syncState === 'AUTH_MISSING';
   const message = isOrphan
-    ? `Hapus profil sisa "${email}" dari RTDB?\n\nAkun Firebase Authentication untuk profil ini memang sudah tidak ada.`
+    ? `Hapus data akun tersisa "${email}" dari RTDB?\n\nAkun Firebase Authentication untuk profil ini memang sudah tidak ada.`
     : `Hapus akun "${email}" secara permanen?\n\nAkun Firebase Authentication dan profil RTDB akan dihapus.\nPengguna tidak dapat login lagi dan tindakan ini tidak dapat dibatalkan.`;
   if (!confirm(message)) return;
   try {
     await callLiveResetApi('user-admin-action', {
-      action: isOrphan ? 'delete_profile' : 'delete_account',
+      action: 'delete_account',
       uid,
     });
-    showToast(isOrphan ? `Profil sisa "${email}" dihapus` : `Akun "${email}" dihapus permanen`, 'success');
+    showToast(`Akun/data pengguna \"${email}\" dihapus permanen`, 'success');
     await loadUsers();
   } catch (err) {
     showToast('Gagal hapus: ' + err.message, 'error');

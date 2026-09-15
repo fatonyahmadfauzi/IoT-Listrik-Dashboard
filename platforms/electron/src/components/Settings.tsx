@@ -1260,15 +1260,12 @@ export function Settings() {
 
   const handleDeleteUser = async (uid: string, email: string, state?: string) => {
     if (!isAdmin || uid === user?.uid) return; // Prevent self-delete
-    const isOrphan = state === 'AUTH_MISSING';
-    const message = isOrphan
-      ? `Hapus profil sisa "${email}" dari RTDB?\n\nAkun Firebase Authentication untuk profil ini memang sudah tidak ada.`
-      : `Hapus akun "${email}" secara permanen?\n\nAkun Firebase Authentication dan profil RTDB akan dihapus.\nPengguna tidak dapat login lagi dan tindakan ini tidak dapat dibatalkan.`;
+    const message = `Hapus akun "${email}" secara permanen?\n\nAkun Firebase Authentication dan data pengguna RTDB akan dihapus.\nPengguna tidak dapat login lagi dan tindakan ini tidak dapat dibatalkan.`;
     if (!confirm(message)) return;
     setLoading(true);
     try {
-      await callLiveResetApi('user-admin-action', { action: isOrphan ? 'delete_profile' : 'delete_account', uid });
-      notifyDesktop(isOrphan ? 'Profil sisa dihapus' : 'Akun dihapus permanen', isOrphan ? `Profil ${email} dihapus dari RTDB.` : `Akun ${email} tidak dapat login lagi.`);
+      await callLiveResetApi('user-admin-action', { action: 'delete_account', uid });
+      notifyDesktop('Akun dihapus permanen', `Akun ${email} tidak dapat login lagi.`);
     } catch (error) {
       console.error('Error deleting user:', error);
       notifyDesktop('Gagal hapus user', String(error));

@@ -108,7 +108,7 @@
       },
       "status": {
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
-        ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'LEAKAGE' || newData.val() === 'DANGER' || newData.val() === 'SENSOR_ERROR')"
+        ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'DANGER' || newData.val() === 'SENSOR_ERROR')"
       },
       "updated_at": {
         ".write": "auth != null && auth.token.email === 'listrik.iot.device@gmail.com'",
@@ -158,7 +158,7 @@
           ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 4294968"
         },
         "status": {
-          ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'LEAKAGE' || newData.val() === 'DANGER' || newData.val() === 'SENSOR_ERROR')"
+          ".validate": "newData.isString() && (newData.val() === 'NORMAL' || newData.val() === 'WARNING' || newData.val() === 'DANGER' || newData.val() === 'SENSOR_ERROR')"
         },
         "relay": {
           ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 1)"
